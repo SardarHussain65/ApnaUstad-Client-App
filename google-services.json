@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "69359738445",
+    "project_id": "apnaustad-eab72",
+    "storage_bucket": "apnaustad-eab72.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:69359738445:android:48926d6444ead110f74604",
+        "android_client_info": {
+          "package_name": "com.apnaustad.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "69359738445-ik372gafmchtt2alar3hb33fbc7fi6j4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.apnaustad.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "69359738445-si95fboe7rq9jrlomcoj9tqvsfhabs4d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvHiMbRym0rM5bmKmLrr7BEl5BVBnUtzQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "69359738445-bva8e2915tlet0nlj9tmsvo1sep09euj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
