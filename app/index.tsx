@@ -1,15 +1,7 @@
-import { Text, View } from "react-native";
+import { Redirect } from 'expo-router';
 
 export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
-    </View>
-  );
+  // For now, we redirect to the signup screen by default.
+  // In a real app, you would check if the user is authenticated here.
+  return <Redirect href="/(auth)/signup" />;
 }
