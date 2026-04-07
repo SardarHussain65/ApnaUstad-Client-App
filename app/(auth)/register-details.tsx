@@ -1,21 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { BorderRadius, Colors, Spacing, Typography } from '../../constants/Theme';
 
-const BASE_URL = 'http://192.168.18.103:5000'; // Update this to your local IP for mobile dev
+import { BASE_URL } from '../../constants/Config';
 
 export default function RegisterDetailsScreen() {
   const router = useRouter();
-  const { phone: otpPhone, idToken, email: googleEmail, fullName: googleName, profileImage, isGoogle } = useLocalSearchParams<{ 
-    phone?: string, 
-    idToken?: string, 
-    email?: string, 
-    fullName?: string, 
+  const { phone: otpPhone, idToken, email: googleEmail, fullName: googleName, profileImage, isGoogle } = useLocalSearchParams<{
+    phone?: string,
+    idToken?: string,
+    email?: string,
+    fullName?: string,
     profileImage?: string,
     isGoogle?: string
   }>();
-  
+
   const [name, setName] = useState(googleName || '');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +39,7 @@ export default function RegisterDetailsScreen() {
       return response.json();
     },
     onSuccess: (data) => {
-      Alert.alert('Success', 'Account created successfully!');
+      Alert.alert('Success', 'Profile completed! Welcome to ApnaUstad.');
       router.replace('/');
     },
     onError: (error: any) => {
@@ -48,13 +49,13 @@ export default function RegisterDetailsScreen() {
 
   const handleRegister = () => {
     const finalPhone = isGoogle === 'true' ? phoneNumber : otpPhone;
-    const finalEmail = isGoogle === 'true' ? googleEmail : ''; // Standard OTP flow could collect email later
-    
+    const finalEmail = isGoogle === 'true' ? googleEmail : '';
+
     if (!name || !password || (isGoogle === 'true' && !phoneNumber)) {
-      Alert.alert('Required Fields', 'Please fill in all fields.');
+      Alert.alert('Details Missing', 'Please fill in all required fields to proceed.');
       return;
     }
-    
+
     registerMutation.mutate({
       phone: finalPhone,
       fullName: name,
@@ -67,58 +68,88 @@ export default function RegisterDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Complete Profile</Text>
-        <Text style={styles.subtitle}>Just a few more details to get started.</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="#888"
-            autoCapitalize="words"
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
-        {isGoogle === 'true' && (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Phone Number (e.g. +92...)"
-              placeholderTextColor="#888"
-              keyboardType="phone-pad"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-            />
+          <View style={styles.hero}>
+            <Text style={styles.title}>Complete{'\n'}<Text style={styles.accentText}>Profile</Text></Text>
+            <Text style={styles.subtitle}>Help us get to know you better. These details will be shown on your profile.</Text>
           </View>
-        )}
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Create Password"
-            placeholderTextColor="#888"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
+          <View style={styles.card}>
+            <Text style={styles.label}>Full Name</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="John Doe"
+                placeholderTextColor={Colors.textDim}
+                autoCapitalize="words"
+                value={name}
+                onChangeText={setName}
+                selectionColor={Colors.cyan}
+              />
+            </View>
 
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={handleRegister}
-          disabled={registerMutation.isPending}
-          activeOpacity={0.8}
-        >
-          {registerMutation.isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Finalize Registration</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            {isGoogle === 'true' && (
+              <>
+                <Text style={styles.label}>Phone Number</Text>
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="+92 300 1234567"
+                    placeholderTextColor={Colors.textDim}
+                    keyboardType="phone-pad"
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    selectionColor={Colors.cyan}
+                  />
+                </View>
+              </>
+            )}
+
+            <Text style={styles.label}>New Password</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={Colors.textDim}
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                selectionColor={Colors.cyan}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: Colors.cyan }]}
+              onPress={handleRegister}
+              disabled={registerMutation.isPending}
+              activeOpacity={0.8}
+            >
+              {registerMutation.isPending ? (
+                <ActivityIndicator color={Colors.background} />
+              ) : (
+                <Text style={styles.buttonText}>Finalize Setup</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              You can change these details later in your <Text style={styles.link}>Profile Settings</Text>.
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -126,59 +157,103 @@ export default function RegisterDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC', 
+    backgroundColor: Colors.background,
   },
-  content: {
-    flex: 1,
-    padding: 24,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.l,
+    paddingBottom: Spacing.xl,
+  },
+  backButton: {
+    marginTop: Spacing.m,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: Colors.text,
+    marginTop: -4,
+  },
+  hero: {
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    ...Typography.h1,
+    marginBottom: Spacing.s,
+    lineHeight: 44,
+  },
+  accentText: {
+    color: Colors.cyan,
   },
   subtitle: {
+    ...Typography.caption,
     fontSize: 16,
-    color: '#4B5563',
-    marginBottom: 32,
+    lineHeight: 22,
+    color: Colors.textMuted,
   },
-  inputContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.l,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  label: {
+    ...Typography.caption,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: Spacing.s,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  inputWrapper: {
+    backgroundColor: Colors.inputBackground,
+    borderRadius: BorderRadius.m,
+    marginBottom: Spacing.l,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   input: {
     padding: 18,
     fontSize: 16,
-    color: '#1F2937',
+    color: Colors.text,
+    fontWeight: '600',
   },
   button: {
-    backgroundColor: '#3B82F6', 
-    paddingVertical: 18,
-    borderRadius: 16,
+    marginTop: Spacing.s,
+    paddingVertical: 20,
+    borderRadius: BorderRadius.m,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    marginTop: 8
   },
   buttonText: {
     fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  footer: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+  },
+  footerText: {
+    ...Typography.caption,
+    textAlign: 'center',
+    color: Colors.textDim,
+  },
+  link: {
+    color: Colors.cyan,
     fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
   },
 });

@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useMutation } from '@tanstack/react-query';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { auth } from '../../firebaseConfig'; 
+import { useMutation } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BorderRadius, Colors, Spacing, Typography } from '../../constants/Theme';
+import { auth } from '../../firebaseConfig';
 
-const BASE_URL = 'http://192.168.18.103:5000'; // Make sure your backend API is running locally and bound to 0.0.0.0
+import { BASE_URL } from '../../constants/Config';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -16,9 +17,7 @@ export default function SignupScreen() {
     mutationFn: async (phone: string) => {
       const response = await fetch(`${BASE_URL}/api/v1/users/check-user?phone=${encodeURIComponent(phone)}`);
       if (!response.ok) {
-        if (response.status === 404) {
-          return { exists: false };
-        }
+        if (response.status === 404) return { exists: false };
         throw new Error('Failed to check user');
       }
       return response.json();
@@ -27,22 +26,20 @@ export default function SignupScreen() {
       if (data.exists) {
         Alert.alert('Account Exists', 'This phone number is already registered. Please login instead.');
       } else {
-        // Trigger Native Firebase OTP
         try {
-          // Format phone number to E.164 (e.g. +923001234567)
           const cleanPhone = variables.replace(/\D/g, '');
-          const phoneNumberWithCode = variables.startsWith('+') 
-            ? variables 
+          const phoneNumberWithCode = variables.startsWith('+')
+            ? variables
             : `+92${cleanPhone.startsWith('92') ? cleanPhone.slice(2) : cleanPhone.replace(/^0+/, '')}`;
 
           const confirmationResult = await auth().signInWithPhoneNumber(phoneNumberWithCode);
 
-          router.push({ 
-            pathname: '/(auth)/verify', 
-            params: { 
-              phone: variables, 
-              verificationId: confirmationResult.verificationId 
-            } 
+          router.push({
+            pathname: '/(auth)/verify',
+            params: {
+              phone: variables,
+              verificationId: confirmationResult.verificationId
+            }
           });
         } catch (error: any) {
           Alert.alert('Error', error.message || 'Failed to trigger OTP. Please check your network.');
@@ -66,12 +63,12 @@ export default function SignupScreen() {
     },
     onSuccess: (data) => {
       if (data.data.exists) {
-        Alert.alert('Success', 'Logged in with Google');
+        Alert.alert('Success', 'Logged in successfully');
         router.replace('/');
       } else {
         router.push({
           pathname: '/(auth)/register-details',
-          params: { 
+          params: {
             email: data.data.googleData.email,
             fullName: data.data.googleData.fullName,
             profileImage: data.data.googleData.profileImage,
@@ -90,16 +87,9 @@ export default function SignupScreen() {
       await GoogleSignin.hasPlayServices();
       const { data } = await GoogleSignin.signIn();
       if (data?.idToken) {
-        // 1. Create a Firebase credential from the Google ID token
         const credential = auth.GoogleAuthProvider.credential(data.idToken);
-        
-        // 2. Sign in to Firebase with the credential
         const userCredential = await auth().signInWithCredential(credential);
-        
-        // 3. Get the *Firebase* ID token from the user
         const firebaseToken = await userCredential.user.getIdToken();
-        
-        // 4. Send the Firebase token to your backend
         googleAuthMutation.mutate(firebaseToken);
       }
     } catch (error: any) {
@@ -107,62 +97,73 @@ export default function SignupScreen() {
     }
   };
 
-  const handleContinue = () => {
-    if (!phoneNumber) {
-      Alert.alert('Hold on', 'Please enter your phone number.');
-      return;
-    }
-    checkUserMutation.mutate(phoneNumber);
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Join ApnaUstad</Text>
-        <Text style={styles.subtitle}>Enter your phone number to proceed</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+          {/* Hero Section */}
+          <View style={styles.hero}>
+            <View style={styles.accentCircle} />
+            <Text style={styles.title}>Welcome to{'\n'}<Text style={styles.brandText}>ApnaUstad</Text></Text>
+            <Text style={styles.subtitle}>Find the best experts for any task. Get started with your phone number.</Text>
+          </View>
 
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. +923001234567"
-            placeholderTextColor="#888"
-            keyboardType="phone-pad"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-          />
-        </View>
+          {/* Form Card */}
+          <View style={styles.card}>
+            <Text style={styles.label}>Phone Number</Text>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.countryCode}>+92</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="300 0000000"
+                placeholderTextColor={Colors.textDim}
+                keyboardType="phone-pad"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                selectionColor={Colors.cyan}
+              />
+            </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleContinue}
-          disabled={checkUserMutation.isPending}
-          activeOpacity={0.8}
-        >
-          {checkUserMutation.isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: Colors.cyan }]}
+              onPress={() => phoneNumber && checkUserMutation.mutate(phoneNumber)}
+              disabled={checkUserMutation.isPending}
+              activeOpacity={0.8}
+            >
+              {checkUserMutation.isPending ? (
+                <ActivityIndicator color={Colors.background} />
+              ) : (
+                <Text style={styles.buttonText}>Get Started</Text>
+              )}
+            </TouchableOpacity>
 
-        <View style={styles.divider}>
-          <View style={styles.line} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.line} />
-        </View>
+            <View style={styles.divider}>
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.line} />
+            </View>
 
-        <TouchableOpacity
-          style={styles.googleButton}
-          onPress={handleGoogleSignIn}
-          disabled={googleAuthMutation.isPending}
-        >
-          {googleAuthMutation.isPending ? (
-            <ActivityIndicator color="#1F2937" />
-          ) : (
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={googleAuthMutation.isPending}
+              activeOpacity={0.7}
+            >
+              <View style={styles.googleIconPlaceholder} />
+              <Text style={styles.googleButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              By continuing you agree to our <Text style={styles.link}>Terms</Text> and <Text style={styles.link}>Privacy Policy</Text>
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -170,93 +171,146 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F9FC', // Very light cool grey for a fresh look
+    backgroundColor: Colors.background,
   },
-  content: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing.l,
+    paddingBottom: Spacing.xl,
+  },
+  hero: {
+    marginTop: Spacing.xxl,
+    marginBottom: Spacing.xl,
+    position: 'relative',
+  },
+  accentCircle: {
+    position: 'absolute',
+    top: -40,
+    left: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Colors.cyan,
+    opacity: 0.15,
+    filter: Platform.OS === 'ios' ? 'blur(30px)' : undefined,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    ...Typography.h1,
+    marginBottom: Spacing.s,
+    lineHeight: 40,
+  },
+  brandText: {
+    color: Colors.cyan,
   },
   subtitle: {
+    ...Typography.caption,
     fontSize: 16,
-    color: '#4B5563',
-    marginBottom: 32,
+    lineHeight: 22,
+    color: Colors.textMuted,
   },
-  inputContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+  card: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.l,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 24,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  label: {
+    ...Typography.caption,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: Spacing.s,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.inputBackground,
+    borderRadius: BorderRadius.m,
+    paddingHorizontal: Spacing.m,
+    marginBottom: Spacing.l,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  countryCode: {
+    ...Typography.body,
+    fontWeight: '700',
+    color: Colors.text,
+    marginRight: Spacing.s,
   },
   input: {
-    padding: 18,
-    fontSize: 16,
-    color: '#1F2937',
+    flex: 1,
+    paddingVertical: 18,
+    fontSize: 18,
+    color: Colors.text,
+    fontWeight: '600',
   },
   button: {
-    backgroundColor: '#3B82F6', // Beautiful, modern blue
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingVertical: 20,
+    borderRadius: BorderRadius.m,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
   },
   buttonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    color: '#000',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: Spacing.l,
   },
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: Colors.border,
   },
   dividerText: {
-    marginHorizontal: 16,
-    color: '#9CA3AF',
-    fontWeight: '600',
+    marginHorizontal: Spacing.m,
+    color: Colors.textDim,
+    fontSize: 12,
+    fontWeight: '800',
   },
   googleButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.inputBackground,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: BorderRadius.m,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: Colors.border,
+  },
+  googleIconPlaceholder: {
+    width: 20,
+    height: 20,
+    backgroundColor: Colors.textDim,
+    borderRadius: 4,
+    marginRight: 12,
   },
   googleButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
-    letterSpacing: 0.5,
+    color: Colors.text,
+  },
+  footer: {
+    marginTop: 'auto',
+    alignItems: 'center',
+    paddingTop: Spacing.xl,
+  },
+  footerText: {
+    ...Typography.caption,
+    textAlign: 'center',
+  },
+  link: {
+    color: Colors.cyan,
+    fontWeight: '600',
   },
 });
