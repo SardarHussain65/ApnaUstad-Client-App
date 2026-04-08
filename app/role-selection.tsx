@@ -15,7 +15,7 @@ export default function RoleSelectionScreen() {
     if (selectedRole) {
       // In a real app, you might save this in global state or AsyncStorage
       router.push({
-        pathname: '/(auth)/signup',
+        pathname: '/(auth)/login',
         params: { role: selectedRole }
       });
     }

@@ -1,30 +1,69 @@
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { useMutation } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Dimensions
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/Theme';
+import { useMutation } from '@tanstack/react-query';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withDelay,
+  withTiming,
+  interpolate
+} from 'react-native-reanimated';
+import { ChevronLeft, User, Mail, Phone, ChevronRight } from 'lucide-react-native';
+import { Colors, Spacing, Typography, BorderRadius } from '../../constants/Theme';
+import { BASE_URL } from '../../constants/Config';
 import { auth } from '../../firebaseConfig';
 
-import { BASE_URL } from '../../constants/Config';
+const { width } = Dimensions.get('window');
 
-export default function SignupScreen() {
+export default function SignupStep1() {
   const router = useRouter();
+  const { role } = useLocalSearchParams<{ role: string }>();
+
+  // 🎨 Dynamic accent color based on role
+  const accentColor = role === 'worker' ? Colors.orange : Colors.cyan;
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [secondaryNumber, setSecondaryNumber] = useState('');
+
+  // Animation values
+  const entranceAnim = useSharedValue(0);
+  const progressAnim = useSharedValue(0.33); // Step 1 = 33%
+
+  useEffect(() => {
+    entranceAnim.value = withDelay(100, withSpring(1, { damping: 15 }));
+    progressAnim.value = withSpring(0.33, { damping: 20 });
+  }, []);
 
   const checkUserMutation = useMutation({
     mutationFn: async (phone: string) => {
-      const response = await fetch(`${BASE_URL}/api/v1/users/check-user?phone=${encodeURIComponent(phone)}`);
+      const endpoint = role === 'worker' ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
+      const response = await fetch(`${BASE_URL}${endpoint}?phone=${encodeURIComponent(phone)}`);
       if (!response.ok) {
-        if (response.status === 404) return { exists: false };
-        throw new Error('Failed to check user');
+        if (response.status === 404) return { data: { exists: false } };
+        throw new Error(`Failed to check ${role === 'worker' ? 'worker' : 'user'} availability`);
       }
       return response.json();
     },
     onSuccess: async (data, variables) => {
-      if (data.exists) {
-        Alert.alert('Account Exists', 'This phone number is already registered. Please login instead.');
+      if (data.data.exists) {
+        Alert.alert('Account Exists', `This phone number is already registered as a ${role === 'worker' ? 'worker' : 'client'}.`);
       } else {
         try {
           const cleanPhone = variables.replace(/\D/g, '');
@@ -37,84 +76,107 @@ export default function SignupScreen() {
           router.push({
             pathname: '/(auth)/verify',
             params: {
+              fullName,
+              email,
               phone: variables,
-              verificationId: confirmationResult.verificationId
+              secondaryPhone: secondaryNumber,
+              verificationId: confirmationResult.verificationId,
+              role
             }
           });
         } catch (error: any) {
-          Alert.alert('Error', error.message || 'Failed to trigger OTP. Please check your network.');
+          Alert.alert('OTP Error', error.message || 'Failed to send verification code.');
         }
       }
     },
     onError: (error: any) => {
-      Alert.alert('Error', error.message || 'Something went wrong');
+      Alert.alert('Error', error.message);
     }
   });
 
-  const googleAuthMutation = useMutation({
-    mutationFn: async (idToken: string) => {
-      const response = await fetch(`${BASE_URL}/api/v1/users/google-auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
-      });
-      if (!response.ok) throw new Error('Backend verification failed');
-      return response.json();
-    },
-    onSuccess: (data) => {
-      if (data.data.exists) {
-        Alert.alert('Success', 'Logged in successfully');
-        router.replace('/');
-      } else {
-        router.push({
-          pathname: '/(auth)/register-details',
-          params: {
-            email: data.data.googleData.email,
-            fullName: data.data.googleData.fullName,
-            profileImage: data.data.googleData.profileImage,
-            isGoogle: 'true'
-          }
-        });
-      }
-    },
-    onError: (error: any) => {
-      Alert.alert('Google Auth Error', error.message);
+  const handleNext = () => {
+    if (!fullName || !phoneNumber || !email) {
+      Alert.alert('Missing Fields', 'All fields except Secondary Number are required.');
+      return;
     }
-  });
-
-  const handleGoogleSignIn = async () => {
-    try {
-      await GoogleSignin.hasPlayServices();
-      const { data } = await GoogleSignin.signIn();
-      if (data?.idToken) {
-        const credential = auth.GoogleAuthProvider.credential(data.idToken);
-        const userCredential = await auth().signInWithCredential(credential);
-        const firebaseToken = await userCredential.user.getIdToken();
-        googleAuthMutation.mutate(firebaseToken);
-      }
-    } catch (error: any) {
-      Alert.alert('Google Sign-In Error', error.message);
-    }
+    checkUserMutation.mutate(phoneNumber);
   };
+
+  const animatedHero = useAnimatedStyle(() => ({
+    opacity: entranceAnim.value,
+    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [30, 0]) }]
+  }));
+
+  const animatedForm = useAnimatedStyle(() => ({
+    opacity: entranceAnim.value,
+    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [50, 0]) }]
+  }));
+
+  const animatedProgressBar = useAnimatedStyle(() => ({
+    width: `${progressAnim.value * 100}%`,
+  }));
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          {/* Hero Section */}
-          <View style={styles.hero}>
-            <View style={styles.accentCircle} />
-            <Text style={styles.title}>Welcome to{'\n'}<Text style={styles.brandText}>ApnaUstad</Text></Text>
-            <Text style={styles.subtitle}>Find the best experts for any task. Get started with your phone number.</Text>
-          </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header */}
+          <Animated.View style={[styles.header, animatedHero]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeft size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Sign Up</Text>
+            <View style={{ width: 44 }} />
+          </Animated.View>
 
-          {/* Form Card */}
-          <View style={styles.card}>
-            <Text style={styles.label}>Phone Number</Text>
+          {/* Premium Progress Bar */}
+          <Animated.View style={[styles.progressContainer, animatedHero]}>
+            <View style={styles.progressBackground}>
+              <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor, shadowColor: accentColor }]} />
+            </View>
+            <View style={styles.stepsRow}>
+              <Text style={[styles.stepLabel, { color: accentColor }]}>Basic Info</Text>
+              <Text style={styles.stepLabel}>OTP</Text>
+              <Text style={styles.stepLabel}>Finalize</Text>
+            </View>
+          </Animated.View>
+
+          {/* Hero Section */}
+          <Animated.View style={[styles.hero, animatedHero]}>
+            <Text style={styles.title}>Let's Get{'\n'}<Text style={[styles.brandText, { color: accentColor }]}>Started</Text></Text>
+            <Text style={styles.subtitle}>Step 1: Fill in your basic information.</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.form, animatedForm]}>
+            <Text style={styles.label}>Full Name</Text>
             <View style={styles.inputWrapper}>
+              <View style={styles.iconContainer}><User size={20} color={accentColor} /></View>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your full name"
+                placeholderTextColor={Colors.textDim}
+                value={fullName}
+                onChangeText={setFullName}
+              />
+            </View>
+
+            <Text style={[styles.label, { marginTop: 20 }]}>Email Address</Text>
+            <View style={styles.inputWrapper}>
+              <View style={styles.iconContainer}><Mail size={20} color={accentColor} /></View>
+              <TextInput
+                style={styles.input}
+                placeholder="ustad@example.com"
+                placeholderTextColor={Colors.textDim}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+
+            <Text style={[styles.label, { marginTop: 20 }]}>Phone Number</Text>
+            <View style={styles.inputWrapper}>
+              <View style={styles.iconContainer}><Phone size={20} color={accentColor} /></View>
               <Text style={styles.countryCode}>+92</Text>
               <TextInput
                 style={styles.input}
@@ -123,45 +185,31 @@ export default function SignupScreen() {
                 keyboardType="phone-pad"
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
-                selectionColor={Colors.cyan}
               />
             </View>
 
+
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: Colors.cyan }]}
-              onPress={() => phoneNumber && checkUserMutation.mutate(phoneNumber)}
+              style={[styles.nextBtn, { backgroundColor: accentColor, shadowColor: accentColor }, checkUserMutation.isPending && { opacity: 0.7 }]}
+              onPress={handleNext}
               disabled={checkUserMutation.isPending}
-              activeOpacity={0.8}
             >
               {checkUserMutation.isPending ? (
-                <ActivityIndicator color={Colors.background} />
+                <ActivityIndicator color="#000" />
               ) : (
-                <Text style={styles.buttonText}>Get Started</Text>
+                <>
+                  <Text style={styles.nextBtnText}>Next Step</Text>
+                  <ChevronRight size={20} color="#000" />
+                </>
               )}
             </TouchableOpacity>
 
-            <View style={styles.divider}>
-              <View style={styles.line} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.line} />
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                Already have an account? <Text style={[styles.link, { color: accentColor }]} onPress={() => router.push({ pathname: '/(auth)/login', params: { role } })}>Sign In</Text>
+              </Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.googleButton}
-              onPress={handleGoogleSignIn}
-              disabled={googleAuthMutation.isPending}
-              activeOpacity={0.7}
-            >
-              <View style={styles.googleIconPlaceholder} />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              By continuing you agree to our <Text style={styles.link}>Terms</Text> and <Text style={styles.link}>Privacy Policy</Text>
-            </Text>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -175,29 +223,70 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.l,
-    paddingBottom: Spacing.xl,
+    paddingHorizontal: 24,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  progressContainer: {
+    marginTop: 20,
+    marginBottom: 32,
+  },
+  progressBackground: {
+    height: 6,
+    backgroundColor: Colors.card,
+    borderRadius: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  progressActive: {
+    height: '100%',
+    backgroundColor: Colors.cyan,
+    shadowColor: Colors.cyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+  },
+  stepsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  stepLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textDim,
+  },
+  stepLabelActive: {
+    color: Colors.cyan,
   },
   hero: {
-    marginTop: Spacing.xxl,
-    marginBottom: Spacing.xl,
-    position: 'relative',
-  },
-  accentCircle: {
-    position: 'absolute',
-    top: -40,
-    left: -20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: Colors.cyan,
-    opacity: 0.15,
-    filter: Platform.OS === 'ios' ? 'blur(30px)' : undefined,
+    marginBottom: 32,
   },
   title: {
     ...Typography.h1,
-    marginBottom: Spacing.s,
     lineHeight: 40,
+    fontSize: 32,
+    marginBottom: 8,
   },
   brandText: {
     color: Colors.cyan,
@@ -205,26 +294,16 @@ const styles = StyleSheet.create({
   subtitle: {
     ...Typography.caption,
     fontSize: 16,
-    lineHeight: 22,
     color: Colors.textMuted,
   },
-  card: {
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.l,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+  form: {
+    flex: 1,
   },
   label: {
     ...Typography.caption,
     textTransform: 'uppercase',
     letterSpacing: 1.5,
-    marginBottom: Spacing.s,
+    marginBottom: 8,
     color: Colors.textMuted,
     fontWeight: '600',
   },
@@ -233,84 +312,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.inputBackground,
     borderRadius: BorderRadius.m,
-    paddingHorizontal: Spacing.m,
-    marginBottom: Spacing.l,
+    paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  iconContainer: {
+    marginRight: 12,
+  },
   countryCode: {
-    ...Typography.body,
+    fontSize: 16,
     fontWeight: '700',
     color: Colors.text,
-    marginRight: Spacing.s,
+    marginRight: 8,
   },
   input: {
     flex: 1,
-    paddingVertical: 18,
-    fontSize: 18,
-    color: Colors.text,
-    fontWeight: '600',
-  },
-  button: {
-    paddingVertical: 20,
-    borderRadius: BorderRadius.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.l,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    marginHorizontal: Spacing.m,
-    color: Colors.textDim,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  googleButton: {
-    backgroundColor: Colors.inputBackground,
-    paddingVertical: 18,
-    borderRadius: BorderRadius.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  googleIconPlaceholder: {
-    width: 20,
-    height: 20,
-    backgroundColor: Colors.textDim,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  googleButtonText: {
+    paddingVertical: 16,
     fontSize: 16,
-    fontWeight: '600',
     color: Colors.text,
+  },
+  nextBtn: {
+    backgroundColor: Colors.cyan,
+    borderRadius: BorderRadius.m,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    marginTop: 40,
+    shadowColor: Colors.cyan,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  nextBtnText: {
+    color: '#000',
+    fontSize: 18,
+    fontWeight: '800',
+    marginRight: 8,
   },
   footer: {
-    marginTop: 'auto',
+    marginTop: 24,
     alignItems: 'center',
-    paddingTop: Spacing.xl,
+    marginBottom: 40,
   },
   footerText: {
     ...Typography.caption,
-    textAlign: 'center',
+    color: Colors.textDim,
   },
   link: {
     color: Colors.cyan,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
