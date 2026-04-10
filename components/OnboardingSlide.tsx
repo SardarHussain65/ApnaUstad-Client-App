@@ -8,6 +8,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors, Spacing, Typography } from '../constants/Theme';
 
+import { GlassCard } from './home/GlassCard';
+
 const { width, height } = Dimensions.get('window');
 
 interface OnboardingSlideProps {
@@ -26,50 +28,45 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item, index, s
     const scale = interpolate(
       scrollX.value,
       [(index - 1) * width, index * width, (index + 1) * width],
-      [0.8, 1, 0.8],
+      [0.6, 1, 0.6],
       Extrapolate.CLAMP
     );
 
-    const opacity = interpolate(
-      scrollX.value,
-      [(index - 1) * width, index * width, (index + 1) * width],
-      [0, 1, 0],
-      Extrapolate.CLAMP
-    );
-
-    return {
-      transform: [{ scale }],
-      opacity,
-    };
-  });
-
-  const animatedTextStyle = useAnimatedStyle(() => {
     const translateY = interpolate(
       scrollX.value,
       [(index - 1) * width, index * width, (index + 1) * width],
-      [50, 0, 50],
+      [40, 0, 40],
       Extrapolate.CLAMP
     );
 
     return {
-      transform: [{ translateY }],
+      transform: [{ scale }, { translateY }],
+      opacity: interpolate(
+        scrollX.value,
+        [(index - 1) * width, index * width, (index + 1) * width],
+        [0, 1, 0],
+        Extrapolate.CLAMP
+      ),
     };
   });
 
   return (
     <View style={styles.container}>
       <View style={styles.imageContainer}>
+        {/* Subtle Backdrop Glow */}
+        <View style={styles.slideGlow} />
         <Animated.Image 
           source={item.image} 
           style={[styles.image, animatedImageStyle]} 
           resizeMode="contain"
         />
       </View>
+      
       <View style={styles.content}>
-        <Animated.View style={animatedTextStyle}>
-          <Text style={styles.title}>{item.title}</Text>
+        <GlassCard intensity={25} style={styles.glassInfo}>
+          <Text style={[styles.title, Typography.threeD]}>{item.title}</Text>
           <Text style={styles.description}>{item.description}</Text>
-        </Animated.View>
+        </GlassCard>
       </View>
     </View>
   );
@@ -78,37 +75,52 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item, index, s
 const styles = StyleSheet.create({
   container: {
     width,
-    height,
     alignItems: 'center',
-    padding: Spacing.l,
+    padding: Spacing.xl,
   },
   imageContainer: {
-    flex: 0.6,
+    flex: 0.55,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
   },
+  slideGlow: {
+    position: 'absolute',
+    width: width * 0.6,
+    height: width * 0.6,
+    borderRadius: (width * 0.6) / 2,
+    backgroundColor: Colors.cyan,
+    opacity: 0.1,
+    filter: 'blur(40px)',
+  },
   image: {
-    width: width * 0.85,
-    height: width * 0.85,
+    width: width * 0.8,
+    height: width * 0.8,
   },
   content: {
-    flex: 0.4,
+    flex: 0.45,
     width: '100%',
-    paddingTop: Spacing.m,
+    justifyContent: 'center',
+  },
+  glassInfo: {
+    padding: 30,
+    borderRadius: 35,
+    alignItems: 'center',
   },
   title: {
-    ...Typography.h1,
-    fontSize: 34,
+    fontSize: 28,
     textAlign: 'center',
-    marginBottom: Spacing.m,
-    color: Colors.cyan,
+    marginBottom: Spacing.l,
+    color: '#fff',
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
   description: {
     ...Typography.body,
     textAlign: 'center',
-    color: Colors.textMuted,
-    lineHeight: 26,
-    paddingHorizontal: Spacing.m,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 24,
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

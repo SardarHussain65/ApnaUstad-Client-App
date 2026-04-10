@@ -24,36 +24,32 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { ChevronLeft, Eye, EyeOff, Mail, Phone, Lock } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/Theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get('window');
+import { useAuth } from '../../context/AuthContext';
+
+import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { GlassCard } from '../../components/home/GlassCard';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { role } = useLocalSearchParams<{ role: string }>();
+  const { role: urlRole } = useLocalSearchParams<{ role: string }>();
+  const { setRole } = useAuth();
 
   // 🎨 Dynamic accent color based on role
-  const accentColor = role === 'worker' ? Colors.orange : Colors.cyan;
+  const accentColor = urlRole === 'worker' ? Colors.worker : Colors.cyan;
 
   const [loginType, setLoginType] = useState<'phone' | 'email'>('email');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const entranceAnim = useSharedValue(0);
-  const tabSlide = useSharedValue(1);
-
-  useEffect(() => {
-    entranceAnim.value = withDelay(100, withSpring(1, { damping: 15 }));
-  }, []);
-
   const handleTabChange = (type: 'phone' | 'email') => {
     if (type === loginType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoginType(type);
-    tabSlide.value = withSpring(type === 'phone' ? 0 : 1, { damping: 20 });
   };
 
   const loginMutation = useMutation({
@@ -62,7 +58,7 @@ export default function LoginScreen() {
         ? { email: identifier, password } 
         : { phone: identifier, password };
 
-      const endpoint = role === 'worker' ? '/api/v1/workers/login' : '/api/v1/users/login';
+      const endpoint = urlRole === 'worker' ? '/api/v1/workers/login' : '/api/v1/users/login';
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,235 +71,241 @@ export default function LoginScreen() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      if (urlRole) {
+        await setRole(urlRole as 'client' | 'worker');
+      }
       Alert.alert('Success', 'Logged in successfully!');
-      router.replace('/');
+      router.replace('/(tabs)' as any);
     },
     onError: (error: any) => {
       Alert.alert('Login Error', error.message);
     }
   });
 
-  const animatedHero = useAnimatedStyle(() => ({
-    opacity: entranceAnim.value,
-    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [30, 0]) }]
-  }));
-
-  const animatedForm = useAnimatedStyle(() => ({
-    opacity: entranceAnim.value,
-    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [50, 0]) }]
-  }));
-
-  const tabIndicator = useAnimatedStyle(() => {
-    const tabWidth = (width - 48 - 8) / 2;
-    return {
-      transform: [{ translateX: tabSlide.value * tabWidth }],
-    };
-  });
-
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-          {/* Header */}
-          <Animated.View style={[styles.header, animatedHero]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeft size={24} color={Colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Sign In</Text>
-            <View style={{ width: 44 }} />
-          </Animated.View>
-
-          {/* Hero */}
-          <Animated.View style={[styles.hero, animatedHero]}>
-            <Text style={styles.title}>Welcome Back!</Text>
-            <Text style={styles.subtitle}>
-              Sign in as a <Text style={[styles.roleText, { color: accentColor }]}>{role || 'User'}</Text> to continue.
-            </Text>
-          </Animated.View>
-
-          {/* Animated Tab Control */}
-          <Animated.View style={[styles.tabContainer, animatedForm]}>
-            <Animated.View style={[styles.tabIndicator, tabIndicator, { backgroundColor: accentColor }]} />
-            <TouchableOpacity style={styles.tabBtn} onPress={() => handleTabChange('phone')}>
-              <Text style={[styles.tabLabel, loginType === 'phone' && styles.tabLabelActive]}>Phone Number</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.tabBtn} onPress={() => handleTabChange('email')}>
-              <Text style={[styles.tabLabel, loginType === 'email' && styles.tabLabelActive]}>Email Address</Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* Inputs */}
-          <Animated.View style={[styles.form, animatedForm]}>
-            <Text style={styles.label}>{loginType === 'email' ? 'Email Address' : 'Phone Number'}</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}>
-                {loginType === 'email' 
-                  ? <Mail size={20} color={accentColor} /> 
-                  : <Phone size={20} color={accentColor} />}
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder={loginType === 'email' ? "Enter email address" : "Enter phone number"}
-                placeholderTextColor={Colors.textDim}
-                value={identifier}
-                onChangeText={setIdentifier}
-                keyboardType={loginType === 'email' ? 'email-address' : 'phone-pad'}
-                autoCapitalize="none"
-              />
-            </View>
-
-            <Text style={[styles.label, { marginTop: 20 }]}>Password</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}>
-                <Lock size={20} color={accentColor} />
-              </View>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Enter password"
-                placeholderTextColor={Colors.textDim}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                {showPassword ? <EyeOff size={20} color={Colors.textDim} /> : <Eye size={20} color={Colors.textDim} />}
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent} 
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ChevronLeft size={24} color="#fff" />
               </TouchableOpacity>
+              <Text style={[styles.headerTitle, Typography.threeD]}>SECURE ENTRY</Text>
+              <View style={{ width: 44 }} />
             </View>
 
-            <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.7}>
-              <Text style={[styles.forgotText, { color: accentColor }]}>Forget Password?</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.signInBtn, { backgroundColor: accentColor, shadowColor: accentColor }, loginMutation.isPending && { opacity: 0.7 }]} 
-              onPress={() => loginMutation.mutate()}
-              disabled={loginMutation.isPending}
-            >
-              {loginMutation.isPending ? (
-                <ActivityIndicator color={Colors.background} />
-              ) : (
-                <Text style={styles.signInBtnText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Don't have an account?{' '}
-                <Text 
-                  style={[styles.link, { color: accentColor }]} 
-                  onPress={() => router.push({ pathname: '/(auth)/signup', params: { role } })}
-                >
-                  Signup
-                </Text>
+            <Animated.View style={styles.hero}>
+              <Text style={[styles.title, Typography.threeD]}>WELCOME {'\n'}BACK</Text>
+              <Text style={styles.subtitle}>
+                RE-ESTABLISHING CONNECTION AS <Text style={[styles.roleText, { color: accentColor }]}>{urlRole?.toUpperCase() || 'USER'}</Text>
               </Text>
-            </View>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            </Animated.View>
+
+            {/* Glass Login Form */}
+            <GlassCard intensity={25} style={styles.loginCard}>
+              {/* Tab Selector */}
+              <View style={styles.tabContainer}>
+                <TouchableOpacity 
+                   style={[styles.tabBtn, loginType === 'phone' && { backgroundColor: accentColor + '30', borderColor: accentColor + '50' }]} 
+                   onPress={() => handleTabChange('phone')}
+                >
+                  <Text style={[styles.tabLabel, loginType === 'phone' && { color: '#fff' }]}>PHONE</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                   style={[styles.tabBtn, loginType === 'email' && { backgroundColor: accentColor + '30', borderColor: accentColor + '50' }]} 
+                   onPress={() => handleTabChange('email')}
+                >
+                  <Text style={[styles.tabLabel, loginType === 'email' && { color: '#fff' }]}>EMAIL</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Input Fields */}
+              <View style={styles.form}>
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>{loginType === 'email' ? 'QUANTUM MAIL' : 'COMM LINK'}</Text>
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.iconContainer}>
+                      {loginType === 'email' 
+                        ? <Mail size={18} color={accentColor} /> 
+                        : <Phone size={18} color={accentColor} />}
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder={loginType === 'email' ? "address@system.com" : "+92 300 0000000"}
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      value={identifier}
+                      onChangeText={setIdentifier}
+                      keyboardType={loginType === 'email' ? 'email-address' : 'phone-pad'}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+
+                <View style={[styles.inputSection, { marginTop: 20 }]}>
+                  <Text style={styles.label}>ACCESS KEY</Text>
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.iconContainer}>
+                      <Lock size={18} color={accentColor} />
+                    </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="••••••••••••"
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      secureTextEntry={!showPassword}
+                      value={password}
+                      onChangeText={setPassword}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                      {showPassword ? <EyeOff size={18} color="rgba(255,255,255,0.5)" /> : <Eye size={18} color="rgba(255,255,255,0.5)" />}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.forgotBtn} activeOpacity={0.7}>
+                  <Text style={[styles.forgotText, { color: accentColor }]}>FORGOT ACCESS KEY?</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.signInBtn, { backgroundColor: accentColor }, loginMutation.isPending && { opacity: 0.7 }]} 
+                  onPress={() => loginMutation.mutate()}
+                  disabled={loginMutation.isPending}
+                >
+                  {loginMutation.isPending ? (
+                    <ActivityIndicator color={urlRole === 'worker' ? '#000' : '#000'} />
+                  ) : (
+                    <Text style={styles.signInBtnText}>AUTHORIZE LOGIN</Text>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>
+                    NEW TO THE SYSTEM?{' '}
+                    <Text 
+                      style={[styles.link, { color: accentColor }]} 
+                      onPress={() => router.push({ pathname: '/(auth)/signup', params: { role: urlRole } })}
+                    >
+                      INITIALIZE ACCOUNT
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 20,
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   hero: {
-    marginTop: 40,
+    marginTop: 20,
     marginBottom: 40,
   },
   title: {
-    ...Typography.h1,
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: 46,
+    letterSpacing: -1,
   },
   subtitle: {
-    ...Typography.caption,
-    fontSize: 16,
-    color: Colors.textMuted,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '700',
+    marginTop: 10,
+    letterSpacing: 1,
   },
   roleText: {
-    fontWeight: '800',
-    textTransform: 'capitalize',
+    fontWeight: '900',
+  },
+  loginCard: {
+    padding: 24,
+    borderRadius: 35,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius.m,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 20,
     padding: 4,
+    marginBottom: 30,
     borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 32,
-    position: 'relative',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 4,
-    width: (width - 48 - 8) / 2,
-    borderRadius: BorderRadius.m - 4,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
-    zIndex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   tabLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textMuted,
-  },
-  tabLabelActive: {
-    color: '#000',
+    fontSize: 11,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1,
   },
   form: {
     flex: 1,
   },
+  inputSection: {
+    marginBottom: 0,
+  },
   label: {
-    ...Typography.caption,
-    textTransform: 'uppercase',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '900',
     letterSpacing: 1.5,
-    marginBottom: 8,
-    color: Colors.textMuted,
-    fontWeight: '600',
+    marginBottom: 10,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.inputBackground,
-    borderRadius: BorderRadius.m,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 18,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   iconContainer: {
     marginRight: 12,
@@ -311,46 +313,46 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingVertical: 16,
-    fontSize: 16,
-    color: Colors.text,
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '600',
   },
   eyeBtn: {
     padding: 4,
   },
   forgotBtn: {
     alignSelf: 'flex-end',
-    marginTop: 12,
-    marginBottom: 32,
+    marginTop: 15,
+    marginBottom: 35,
   },
   forgotText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   signInBtn: {
-    borderRadius: BorderRadius.m,
+    borderRadius: 20,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    ...Shadows.glow,
   },
   signInBtnText: {
     color: '#000',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   footer: {
-    marginTop: 24,
+    marginTop: 30,
     alignItems: 'center',
-    marginBottom: 40,
   },
   footerText: {
-    ...Typography.caption,
-    color: Colors.textDim,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '600',
   },
   link: {
-    fontWeight: '700',
+    fontWeight: '900',
   },
 });

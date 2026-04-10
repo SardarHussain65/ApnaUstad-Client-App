@@ -10,6 +10,8 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, BorderRadius, Spacing, Typography, Animation, Shadows } from '../constants/Theme';
 
+import { GlassCard } from './home/GlassCard';
+
 const { width } = Dimensions.get('window');
 
 interface RoleCardProps {
@@ -29,55 +31,31 @@ export const RoleCard: React.FC<RoleCardProps> = ({
   variant,
   isSelected
 }) => {
-  const scale = useSharedValue(1);
-  const borderOpacity = useSharedValue(0);
-
-  const colors = variant === 'client' ? Colors.cyanGradient : Colors.orangeGradient;
   const mainColor = variant === 'client' ? Colors.cyan : Colors.worker;
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      borderColor: mainColor,
-      borderWidth: isSelected ? 2 : 1,
-      opacity: isSelected ? 1 : 0.8,
-      backgroundColor: isSelected ? Colors.cardSelected : Colors.card,
-    };
-  });
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.98, Animation.spring);
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, Animation.spring);
-  };
 
   return (
     <TouchableOpacity
-      activeOpacity={1}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      activeOpacity={0.9}
       onPress={onPress}
       style={styles.touchable}
     >
-      <Animated.View style={[styles.container, animatedStyle]}>
-        <View style={[styles.iconContainer, { backgroundColor: `${mainColor}20` }]}>
+      <GlassCard 
+        intensity={isSelected ? 40 : 15} 
+        style={[styles.container, isSelected && { borderColor: mainColor + '60' }]}
+        hasGlow={isSelected}
+        glowColor={mainColor}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: isSelected ? mainColor + '30' : 'rgba(255,255,255,0.05)' }]}>
           {icon}
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
+          <Text style={[styles.title, Typography.threeD, isSelected && { color: '#fff' }]}>{title}</Text>
+          <Text style={[styles.description, isSelected && { color: 'rgba(255,255,255,0.7)' }]}>{description}</Text>
         </View>
         {isSelected && (
-          <LinearGradient
-            colors={colors as any}
-            style={styles.activeIndicator}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          />
+           <View style={[styles.activeIndicator, { backgroundColor: mainColor }]} />
         )}
-      </Animated.View>
+      </GlassCard>
     </TouchableOpacity>
   );
 };
@@ -88,40 +66,47 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.m,
   },
   container: {
-    padding: Spacing.l,
-    borderRadius: BorderRadius.xl,
+    padding: 24,
+    borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
     minHeight: 120,
-    ...Shadows.card,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: BorderRadius.l,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.l,
+    marginRight: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   content: {
     flex: 1,
   },
   title: {
-    ...Typography.h3,
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 6,
   },
   description: {
-    ...Typography.caption,
+    fontSize: 12,
+    color: Colors.textDim,
     lineHeight: 18,
+    fontWeight: '600',
   },
   activeIndicator: {
     position: 'absolute',
-    right: Spacing.m,
-    top: Spacing.m,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    right: 20,
+    top: 20,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
   }
 });

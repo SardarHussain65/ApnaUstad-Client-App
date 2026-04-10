@@ -14,25 +14,27 @@ import { OnboardingSlide } from '../components/OnboardingSlide';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { Colors, Spacing, Typography, Animation } from '../constants/Theme';
 
+import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+
 const { width } = Dimensions.get('window');
 
 const DATA = [
   {
     id: '1',
-    title: 'Find the Best Experts',
-    description: 'Connect with skilled professionals for any task, from home repairs to digital services.',
+    title: 'The Service Nebula',
+    description: 'Drift through a galaxy of elite professionals ready for any terrestrial or quantum challenge.',
     image: require('../assets/images/onboarding1.png'),
   },
   {
     id: '2',
-    title: 'Showcase Your Craft',
-    description: 'Build your profile, share your skills, and get hired by clients in your area.',
+    title: 'Your Craft, Your Galaxy',
+    description: 'Broadcast your skills across the system. Build your legacy and command your professional orbit.',
     image: require('../assets/images/onboarding2.png'),
   },
   {
     id: '3',
-    title: 'Secure & Seamless',
-    description: 'Enjoy peace of mind with secure payments and verified user profiles.',
+    title: 'Zero-Gravity Security',
+    description: 'Execute missions with absolute peace of mind. Every flow is encrypted and every asset is secured.',
     image: require('../assets/images/onboarding3.png'),
   },
 ];
@@ -69,76 +71,79 @@ export default function OnboardingScreen() {
   }).current;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Animated.FlatList
-        ref={flatListRef as any}
-        data={DATA}
-        renderItem={({ item, index }) => (
-          <OnboardingSlide item={item} index={index} scrollX={scrollX} />
-        )}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
-      />
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <Animated.FlatList
+          ref={flatListRef as any}
+          data={DATA}
+          renderItem={({ item, index }) => (
+            <OnboardingSlide item={item} index={index} scrollX={scrollX} />
+          )}
+          keyExtractor={(item) => item.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+        />
 
-      <View style={styles.footer}>
-        {/* Pagination Dots */}
-        <View style={styles.pagination}>
-          {DATA.map((_, i) => {
-            const dotStyle = useAnimatedStyle(() => {
-              const dotWidth = interpolate(
-                scrollX.value,
-                [(i - 1) * width, i * width, (i + 1) * width],
-                [10, 24, 10],
-                'clamp'
-              );
-              const opacity = interpolate(
-                scrollX.value,
-                [(i - 1) * width, i * width, (i + 1) * width],
-                [0.3, 1, 0.3],
-                'clamp'
-              );
-              return {
-                width: dotWidth,
-                opacity,
-              };
-            });
-            return <Animated.View key={i} style={[styles.dot, dotStyle]} />;
-          })}
-        </View>
+        <View style={styles.footer}>
+          {/* Pagination Dots */}
+          <View style={styles.pagination}>
+            {DATA.map((_, i) => {
+              const dotStyle = useAnimatedStyle(() => {
+                const isActive = Math.round(scrollX.value / width) === i;
+                const dotWidth = interpolate(
+                  scrollX.value,
+                  [(i - 1) * width, i * width, (i + 1) * width],
+                  [8, 28, 8],
+                  'clamp'
+                );
+                return {
+                  width: dotWidth,
+                  backgroundColor: isActive ? Colors.cyan : 'rgba(255,255,255,0.2)',
+                  opacity: interpolate(
+                    scrollX.value,
+                    [(i - 1) * width, i * width, (i + 1) * width],
+                    [0.3, 1, 0.3],
+                    'clamp'
+                  ),
+                };
+              });
+              return <Animated.View key={i} style={[styles.dot, dotStyle]} />;
+            })}
+          </View>
 
-        <View style={styles.buttonContainer}>
-          {currentIndex < DATA.length - 1 ? (
-            <View style={styles.row}>
+          <View style={styles.buttonContainer}>
+            {currentIndex < DATA.length - 1 ? (
+              <View style={styles.row}>
+                <AnimatedButton 
+                  title="SKIP" 
+                  variant="ghost" 
+                  onPress={handleSkip} 
+                  style={styles.skipBtn}
+                />
+                <AnimatedButton 
+                  title="NEXT" 
+                  variant="cyan" 
+                  onPress={handleNext} 
+                  style={styles.nextBtn}
+                />
+              </View>
+            ) : (
               <AnimatedButton 
-                title="Skip" 
-                variant="ghost" 
-                onPress={handleSkip} 
-                style={styles.skipBtn}
-              />
-              <AnimatedButton 
-                title="Next" 
+                title="INITIATE ADVENTURE" 
                 variant="cyan" 
                 onPress={handleNext} 
-                style={styles.nextBtn}
+                style={styles.startBtn}
               />
-            </View>
-          ) : (
-            <AnimatedButton 
-              title="Get Started" 
-              variant="cyan" 
-              onPress={handleNext} 
-              style={styles.startBtn}
-            />
-          )}
+            )}
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }
 

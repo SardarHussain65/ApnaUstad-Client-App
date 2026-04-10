@@ -24,30 +24,30 @@ import Animated, {
   interpolate
 } from 'react-native-reanimated';
 import { ChevronLeft, User, Mail, Phone, ChevronRight } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/Theme';
+import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import { auth } from '../../firebaseConfig';
 
 const { width } = Dimensions.get('window');
+
+import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { GlassCard } from '../../components/home/GlassCard';
 
 export default function SignupStep1() {
   const router = useRouter();
   const { role } = useLocalSearchParams<{ role: string }>();
 
   // 🎨 Dynamic accent color based on role
-  const accentColor = role === 'worker' ? Colors.orange : Colors.cyan;
+  const accentColor = role === 'worker' ? Colors.worker : Colors.cyan;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [secondaryNumber, setSecondaryNumber] = useState('');
 
   // Animation values
-  const entranceAnim = useSharedValue(0);
   const progressAnim = useSharedValue(0.33); // Step 1 = 33%
 
   useEffect(() => {
-    entranceAnim.value = withDelay(100, withSpring(1, { damping: 15 }));
     progressAnim.value = withSpring(0.33, { damping: 20 });
   }, []);
 
@@ -79,7 +79,6 @@ export default function SignupStep1() {
               fullName,
               email,
               phone: variables,
-              secondaryPhone: secondaryNumber,
               verificationId: confirmationResult.verificationId,
               role
             }
@@ -96,272 +95,275 @@ export default function SignupStep1() {
 
   const handleNext = () => {
     if (!fullName || !phoneNumber || !email) {
-      Alert.alert('Missing Fields', 'All fields except Secondary Number are required.');
+      Alert.alert('Missing Fields', 'All fields are required.');
       return;
     }
     checkUserMutation.mutate(phoneNumber);
   };
-
-  const animatedHero = useAnimatedStyle(() => ({
-    opacity: entranceAnim.value,
-    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [30, 0]) }]
-  }));
-
-  const animatedForm = useAnimatedStyle(() => ({
-    opacity: entranceAnim.value,
-    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [50, 0]) }]
-  }));
 
   const animatedProgressBar = useAnimatedStyle(() => ({
     width: `${progressAnim.value * 100}%`,
   }));
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <Animated.View style={[styles.header, animatedHero]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeft size={24} color={Colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Sign Up</Text>
-            <View style={{ width: 44 }} />
-          </Animated.View>
-
-          {/* Premium Progress Bar */}
-          <Animated.View style={[styles.progressContainer, animatedHero]}>
-            <View style={styles.progressBackground}>
-              <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor, shadowColor: accentColor }]} />
-            </View>
-            <View style={styles.stepsRow}>
-              <Text style={[styles.stepLabel, { color: accentColor }]}>Basic Info</Text>
-              <Text style={styles.stepLabel}>OTP</Text>
-              <Text style={styles.stepLabel}>Finalize</Text>
-            </View>
-          </Animated.View>
-
-          {/* Hero Section */}
-          <Animated.View style={[styles.hero, animatedHero]}>
-            <Text style={styles.title}>Let's Get{'\n'}<Text style={[styles.brandText, { color: accentColor }]}>Started</Text></Text>
-            <Text style={styles.subtitle}>Step 1: Fill in your basic information.</Text>
-          </Animated.View>
-
-          <Animated.View style={[styles.form, animatedForm]}>
-            <Text style={styles.label}>Full Name</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}><User size={20} color={accentColor} /></View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your full name"
-                placeholderTextColor={Colors.textDim}
-                value={fullName}
-                onChangeText={setFullName}
-              />
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ChevronLeft size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={[styles.headerTitle, Typography.threeD]}>INITIALIZE</Text>
+              <View style={{ width: 44 }} />
             </View>
 
-            <Text style={[styles.label, { marginTop: 20 }]}>Email Address</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}><Mail size={20} color={accentColor} /></View>
-              <TextInput
-                style={styles.input}
-                placeholder="ustad@example.com"
-                placeholderTextColor={Colors.textDim}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
+            {/* Premium Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBackground}>
+                <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor }]} />
+              </View>
+              <View style={styles.stepsRow}>
+                <Text style={[styles.stepLabel, { color: accentColor }]}>PHASE 01</Text>
+                <Text style={styles.stepLabel}>PHASE 02</Text>
+                <Text style={styles.stepLabel}>FINAL</Text>
+              </View>
             </View>
 
-            <Text style={[styles.label, { marginTop: 20 }]}>Phone Number</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}><Phone size={20} color={accentColor} /></View>
-              <Text style={styles.countryCode}>+92</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="300 0000000"
-                placeholderTextColor={Colors.textDim}
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-              />
+            {/* Hero Section */}
+            <View style={styles.hero}>
+              <Text style={[styles.title, Typography.threeD]}>CREATE {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>PROFILE</Text></Text>
+              <Text style={styles.subtitle}>ESTABLISHING YOUR UNIQUE IDENTITY LINK</Text>
             </View>
 
+            <GlassCard intensity={25} style={styles.signupCard}>
+              <View style={styles.form}>
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>FULL NAME</Text>
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.iconContainer}><User size={18} color={accentColor} /></View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ENTER NAME"
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      value={fullName}
+                      onChangeText={setFullName}
+                    />
+                  </View>
+                </View>
 
-            <TouchableOpacity
-              style={[styles.nextBtn, { backgroundColor: accentColor, shadowColor: accentColor }, checkUserMutation.isPending && { opacity: 0.7 }]}
-              onPress={handleNext}
-              disabled={checkUserMutation.isPending}
-            >
-              {checkUserMutation.isPending ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <>
-                  <Text style={styles.nextBtnText}>Next Step</Text>
-                  <ChevronRight size={20} color="#000" />
-                </>
-              )}
-            </TouchableOpacity>
+                <View style={[styles.inputSection, { marginTop: 20 }]}>
+                  <Text style={styles.label}>QUANTUM MAIL</Text>
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.iconContainer}><Mail size={18} color={accentColor} /></View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="address@system.com"
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      value={email}
+                      onChangeText={setEmail}
+                    />
+                  </View>
+                </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Already have an account? <Text style={[styles.link, { color: accentColor }]} onPress={() => router.push({ pathname: '/(auth)/login', params: { role } })}>Sign In</Text>
-              </Text>
-            </View>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                <View style={[styles.inputSection, { marginTop: 20 }]}>
+                  <Text style={styles.label}>COMM LINK (PHONE)</Text>
+                  <View style={styles.inputWrapper}>
+                    <View style={styles.iconContainer}><Phone size={18} color={accentColor} /></View>
+                    <Text style={styles.countryCode}>+92</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="300 0000000"
+                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      keyboardType="phone-pad"
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.nextBtn, { backgroundColor: accentColor }, checkUserMutation.isPending && { opacity: 0.7 }]}
+                  onPress={handleNext}
+                  disabled={checkUserMutation.isPending}
+                >
+                  {checkUserMutation.isPending ? (
+                    <ActivityIndicator color="#000" />
+                  ) : (
+                    <>
+                      <Text style={styles.nextBtnText}>NEXT PHASE</Text>
+                      <ChevronRight size={20} color="#000" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>
+                    ALREADY REGISTERED? <Text style={[styles.link, { color: accentColor }]} onPress={() => router.push({ pathname: '/(auth)/login', params: { role } })}>AUTHORIZE LOGIN</Text>
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 20,
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   progressContainer: {
-    marginTop: 20,
-    marginBottom: 32,
+    marginTop: 10,
+    marginBottom: 30,
   },
   progressBackground: {
-    height: 6,
-    backgroundColor: Colors.card,
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 2,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   progressActive: {
     height: '100%',
-    backgroundColor: Colors.cyan,
-    shadowColor: Colors.cyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
+    borderRadius: 2,
+    ...Shadows.glow,
   },
   stepsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 10,
   },
   stepLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textDim,
-  },
-  stepLabelActive: {
-    color: Colors.cyan,
+    fontSize: 9,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 1,
   },
   hero: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   title: {
-    ...Typography.h1,
-    lineHeight: 40,
-    fontSize: 32,
-    marginBottom: 8,
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: 46,
+    letterSpacing: -1,
   },
   brandText: {
-    color: Colors.cyan,
+    fontWeight: '900',
   },
   subtitle: {
-    ...Typography.caption,
-    fontSize: 16,
-    color: Colors.textMuted,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '700',
+    marginTop: 10,
+    letterSpacing: 1,
+  },
+  signupCard: {
+    padding: 24,
+    borderRadius: 35,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   form: {
     flex: 1,
   },
+  inputSection: {
+    marginBottom: 0,
+  },
   label: {
-    ...Typography.caption,
-    textTransform: 'uppercase',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '900',
     letterSpacing: 1.5,
-    marginBottom: 8,
-    color: Colors.textMuted,
-    fontWeight: '600',
+    marginBottom: 10,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.inputBackground,
-    borderRadius: BorderRadius.m,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 18,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   iconContainer: {
     marginRight: 12,
   },
   countryCode: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#fff',
     marginRight: 8,
   },
   input: {
     flex: 1,
     paddingVertical: 16,
-    fontSize: 16,
-    color: Colors.text,
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '600',
   },
   nextBtn: {
-    backgroundColor: Colors.cyan,
-    borderRadius: BorderRadius.m,
+    borderRadius: 20,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     marginTop: 40,
-    shadowColor: Colors.cyan,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    ...Shadows.glow,
   },
   nextBtnText: {
     color: '#000',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
     marginRight: 8,
   },
   footer: {
-    marginTop: 24,
+    marginTop: 30,
     alignItems: 'center',
-    marginBottom: 40,
   },
   footerText: {
-    ...Typography.caption,
-    color: Colors.textDim,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '600',
   },
   link: {
-    color: Colors.cyan,
-    fontWeight: '700',
+    fontWeight: '900',
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -18,9 +18,10 @@ interface AnimatedButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'cyan' | 'orange' | 'outline' | 'ghost';
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
@@ -29,7 +30,8 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   variant = 'cyan',
   style,
   textStyle,
-  icon
+  icon,
+  disabled = false
 }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
@@ -50,6 +52,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   });
 
   const handlePressIn = () => {
+    if (disabled) return;
     scale.value = withSpring(0.96, Animation.spring);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -63,11 +66,13 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
+      disabled={disabled}
       activeOpacity={1}
       style={[
         styles.container,
         variant === 'outline' && styles.outline,
         variant === 'ghost' && styles.ghost,
+        disabled && styles.disabled,
         style,
         animatedStyle
       ]}
@@ -129,5 +134,8 @@ const styles = StyleSheet.create({
   },
   textAlt: {
     color: Colors.text,
+  },
+  disabled: {
+    opacity: 0.4,
   }
 });

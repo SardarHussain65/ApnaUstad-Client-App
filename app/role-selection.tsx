@@ -7,13 +7,14 @@ import { RoleCard } from '../components/RoleCard';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { Colors, Spacing, Typography } from '../constants/Theme';
 
+import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+
 export default function RoleSelectionScreen() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<'client' | 'worker' | null>(null);
 
   const handleContinue = () => {
     if (selectedRole) {
-      // In a real app, you might save this in global state or AsyncStorage
       router.push({
         pathname: '/(auth)/login',
         params: { role: selectedRole }
@@ -22,83 +23,94 @@ export default function RoleSelectionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Join as a{'\n'}<Text style={styles.highlight}>Member</Text></Text>
-          <Text style={styles.subtitle}>Choose your role to get started with ApnaUstad. You can always change this later.</Text>
-        </View>
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={[styles.title, Typography.threeD]}>IDENTIFY YOUR {'\n'}<Text style={styles.highlight}>DIMENSION</Text></Text>
+            <Text style={styles.subtitle}>Select your operational mode within the ApnaUstad ecosystem.</Text>
+          </View>
 
-        <View style={styles.cardsContainer}>
-          <RoleCard 
-            title="I am a Client"
-            description="I want to hire professionals and get my tasks done efficiently."
-            icon={<User color={Colors.cyan} size={32} />}
-            variant="client"
-            isSelected={selectedRole === 'client'}
-            onPress={() => setSelectedRole('client')}
-          />
+          <View style={styles.cardsContainer}>
+            <RoleCard 
+              title="MISSION COMMANDER"
+              description="Initiate service requests and manage professional deployments."
+              icon={<User color={Colors.cyan} size={28} />}
+              variant="client"
+              isSelected={selectedRole === 'client'}
+              onPress={() => setSelectedRole('client')}
+            />
 
-          <RoleCard 
-            title="I am a Worker"
-            description="I want to offer my services, build my profile, and find new jobs."
-            icon={<Briefcase color={Colors.worker} size={32} />}
-            variant="worker"
-            isSelected={selectedRole === 'worker'}
-            onPress={() => setSelectedRole('worker')}
-          />
-        </View>
+            <RoleCard 
+              title="ELITE SPECIALIST"
+              description="Deploy your expertise and command your own professional orbit."
+              icon={<Briefcase color={Colors.worker} size={28} />}
+              variant="worker"
+              isSelected={selectedRole === 'worker'}
+              onPress={() => setSelectedRole('worker')}
+            />
+          </View>
 
-        <View style={styles.footer}>
-          <AnimatedButton 
-            title="Continue" 
-            variant={selectedRole === 'worker' ? 'orange' : 'cyan'}
-            onPress={handleContinue}
-            style={[styles.button, !selectedRole ? styles.disabledButton : null] as any}
-            icon={<ChevronRight color="#000" size={20} style={{ marginLeft: 8 }} />}
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.footer}>
+            <AnimatedButton 
+              title="INITIATE PROTOCOL" 
+              variant={selectedRole === 'worker' ? 'orange' : 'cyan'}
+              onPress={handleContinue}
+              style={styles.button}
+              disabled={!selectedRole}
+            />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: Spacing.l,
-    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: 40,
+    paddingBottom: 40,
   },
   header: {
-    marginBottom: Spacing.xxl,
+    marginBottom: 60,
   },
   title: {
-    ...Typography.h1,
-    lineHeight: 48,
-    marginBottom: Spacing.s,
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: 45,
+    marginBottom: 15,
   },
   highlight: {
     color: Colors.cyan,
   },
   subtitle: {
-    ...Typography.caption,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
+    color: Colors.textDim,
+    lineHeight: 22,
+    fontWeight: '600',
+    maxWidth: '90%',
   },
   cardsContainer: {
-    gap: Spacing.m,
+    gap: 15,
   },
   footer: {
-    marginTop: Spacing.xxl,
+    marginTop: 'auto',
+    paddingTop: 40,
   },
   button: {
     width: '100%',
+    height: 56,
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.3,
   }
 });

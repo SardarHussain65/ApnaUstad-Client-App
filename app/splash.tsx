@@ -16,74 +16,75 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Typography, Animation } from '../constants/Theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+
 const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
   
   // Animation values
-  const logoScale = useSharedValue(0.2);
+  const logoScale = useSharedValue(0.1);
   const logoOpacity = useSharedValue(0);
   const logoTranslateY = useSharedValue(0);
   const taglineOpacity = useSharedValue(0);
-  const taglineTranslateY = useSharedValue(30);
-  const bgOpacity = useSharedValue(0);
-  const glowScale = useSharedValue(0.8);
+  const taglineTranslateY = useSharedValue(20);
+  const glowScale = useSharedValue(0.5);
   const glowOpacity = useSharedValue(0);
   const loadingWidth = useSharedValue(0);
 
   useEffect(() => {
-    // 1. Background Fade In
-    bgOpacity.value = withTiming(1, { duration: 1200 });
-
-    // 2. Logo Entrance - Pop & Settle (Spring with overshoot)
-    logoOpacity.value = withDelay(200, withTiming(1, { duration: 800 }));
+    // 1. Logo Entrance - High Impact
+    logoOpacity.value = withDelay(300, withTiming(1, { duration: 1000 }));
     logoScale.value = withDelay(
-      200,
+      300,
       withSpring(1, { 
-        damping: 10, 
-        stiffness: 70,
+        damping: 12, 
+        stiffness: 60,
         mass: 1,
-        overshootClamping: false,
       } as any)
     );
 
-    // 3. Floating Idle Animation (Rhythmic Y-axis movement)
+    // 2. Floating Idle 
     logoTranslateY.value = withDelay(
-      1000,
+      1500,
       withRepeat(
-        withTiming(-8, { duration: 2500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-12, { duration: 2500, easing: Easing.inOut(Easing.sin) }),
         -1,
         true
       )
     );
 
-    // 4. Tagline Entrance
-    taglineOpacity.value = withDelay(1400, withTiming(1, { duration: 1000 }));
+    // 3. Tagline Entrance
+    taglineOpacity.value = withDelay(1600, withTiming(1, { duration: 1200 }));
     taglineTranslateY.value = withDelay(
-      1400,
+      1600,
       withSpring(0, { damping: 15, stiffness: 80 })
     );
 
-    // 5. Pulsing Glow (Subtle support glow)
-    glowOpacity.value = withDelay(1200, withTiming(0.4, { duration: 1500 }));
+    // 4. Pulsing Cosmic Glow
+    glowOpacity.value = withDelay(800, withTiming(0.6, { duration: 2000 }));
     glowScale.value = withDelay(
-      1200,
+      800,
       withRepeat(
-        withTiming(1.3, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.5, { duration: 3500, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       )
     );
 
-    // 6. Loading Bar
-    loadingWidth.value = withTiming(100, { duration: 3500 });
+    // 5. Loading Progress
+    loadingWidth.value = withTiming(100, { duration: 4000 });
 
-    // 7. Navigation Logic
+    // 6. Navigation Logic
     const timeout = setTimeout(async () => {
-      // For development, forcing onboarding check
-      router.replace('/onboarding');
-    }, 4500);
+      const onboarded = await AsyncStorage.getItem('onboarding_completed');
+      if (onboarded === 'true') {
+        router.replace('/role-selection');
+      } else {
+        router.replace('/onboarding');
+      }
+    }, 5000);
 
     return () => clearTimeout(timeout);
   }, []);
@@ -101,10 +102,6 @@ export default function SplashScreen() {
     transform: [{ translateY: taglineTranslateY.value }],
   }));
 
-  const bgStyle = useAnimatedStyle(() => ({
-    opacity: bgOpacity.value,
-  }));
-
   const glowStyle = useAnimatedStyle(() => ({
     transform: [{ scale: glowScale.value }],
     opacity: glowOpacity.value,
@@ -115,98 +112,113 @@ export default function SplashScreen() {
   }));
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[StyleSheet.absoluteFill, bgStyle]}>
-        <LinearGradient
-          colors={[Colors.background, '#0A0A0A', Colors.background] as any}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+    <BackgroundWrapper>
+      <View style={styles.container}>
+        {/* Central Cosmic Glow */}
+        <Animated.View style={[styles.glow, glowStyle]} />
 
-      {/* Pulse Glow Effect (Centered behind logo) */}
-      <Animated.View style={[styles.glow, glowStyle]} />
+        <View style={styles.contentContainer}>
+          <Animated.View style={[styles.logoContainer, logoStyle]}>
+            <Image 
+              source={require('../assets/images/logo_premium.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-      <View style={styles.contentContainer}>
-        <Animated.View style={[styles.logoContainer, logoStyle]}>
-          <Image 
-            source={require('../assets/images/logo_premium.png')} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
-
-        <Animated.View style={[styles.taglineContainer, taglineStyle]}>
-          <Text style={styles.tagline}>Expert Services at Your Doorstep</Text>
-        </Animated.View>
-      </View>
-
-      <View style={styles.footer}>
-        <View style={styles.loadingBar}>
-          <Animated.View style={[styles.loadingProgress, loadingStyle]} />
+          <Animated.View style={[styles.taglineContainer, taglineStyle]}>
+            <Text style={[styles.tagline, Typography.threeD]}>The Service Galaxy</Text>
+            <Text style={styles.subtext}>EXPANDING POSSIBILITIES</Text>
+          </Animated.View>
         </View>
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+
+        <View style={styles.footer}>
+          <View style={styles.loadingContainer}>
+            <View style={styles.loadingBar}>
+              <Animated.View style={[styles.loadingProgress, loadingStyle]} />
+            </View>
+          </View>
+          <Text style={styles.versionText}>VER 2.50.0 ALPHA</Text>
+        </View>
       </View>
-    </View>
+    </BackgroundWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   glow: {
     position: 'absolute',
-    width: width * 0.9,
-    height: width * 0.9,
-    borderRadius: (width * 0.9) / 2,
+    width: width * 0.5,
+    height: width * 0.5,
+    borderRadius: (width * 0.5) / 2,
     backgroundColor: Colors.cyan,
-    opacity: 0, // Driven by animation
-    filter: 'blur(70px)',
+    opacity: 0,
+    shadowColor: Colors.cyan,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 60,
+    elevation: 20,
   },
   contentContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
   },
   logoContainer: {
-    width: width * 0.65,
-    height: width * 0.65,
-    backgroundColor: 'transparent',
+    width: width * 0.55,
+    height: width * 0.55,
     alignItems: 'center',
     justifyContent: 'center',
-    // Removed marginBottom to keep float centered
   },
   logo: {
     width: '100%',
     height: '100%',
   },
   taglineContainer: {
-    marginTop: Spacing.m,
+    marginTop: Spacing.xl,
+    alignItems: 'center',
   },
   tagline: {
-    ...Typography.body,
-    fontSize: 18,
-    color: Colors.textMuted,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '900',
+    letterSpacing: 1,
     textAlign: 'center',
-    textTransform: 'uppercase',
+  },
+  subtext: {
+    fontSize: 9,
+    color: Colors.cyan,
+    fontWeight: '900',
+    letterSpacing: 4,
+    marginTop: 8,
+    textAlign: 'center',
+    opacity: 0.8,
   },
   footer: {
     position: 'absolute',
-    bottom: 60,
+    bottom: 80,
     alignItems: 'center',
     width: width * 0.7,
   },
+  loadingContainer: {
+    width: '100%',
+    padding: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    marginBottom: 15,
+  },
   loadingBar: {
     width: '100%',
-    height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    height: 4,
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: Spacing.m,
   },
   loadingProgress: {
     height: '100%',
@@ -214,10 +226,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   versionText: {
-    ...Typography.caption,
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.textDim,
-    letterSpacing: 4,
-    textTransform: 'uppercase',
+    letterSpacing: 5,
+    fontWeight: '900',
   }
 });

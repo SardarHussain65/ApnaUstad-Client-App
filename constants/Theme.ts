@@ -1,14 +1,15 @@
 export const Colors = {
-  background: '#080808', // Deepest black
-  card: '#121212',       // Dark charcoal for cards
-  cardSelected: '#1A1A1A',
+  background: '#050510', // Deep Cosmic Navy
+  card: '#0F0F1A',       // Subtle Navy card
+  cardSelected: '#1A1A2E',
   
   text: '#FFFFFF',
   textMuted: '#8E8E93',
   textDim: '#5B5B5E',
 
-  primary: '#00F5FF',    // Electric Cyan for Customers
-  worker: '#FF8C00',     // Vibrant Orange for Workers
+  primary: '#00F5FF',    // Electric Cyan
+  secondary: '#BF5AF2',  // Cosmic Purple
+  worker: '#FF8C00',     // Vibrant Orange
   success: '#34C759',
   error: '#FF3B30',
   
@@ -17,14 +18,23 @@ export const Colors = {
   orange: '#FF8C00',
   green: '#00FF7F',
   pink: '#FF1493',
-  purple: '#AF52DE',
+  purple: '#BF5AF2',
+  deepBlue: '#121225',
   
-  border: '#2C2C2E',
-  inputBackground: '#1C1C1E',
+  border: '#1C1C2E',
+  inputBackground: '#0F0F1A',
+  
+  // Modern Surface Variants
+  surface: '#0A0A1F',
+  surfaceLight: '#1C1C2E',
+  surfaceHighlight: '#2C2C4E',
   
   // Gradients
   cyanGradient: ['#00F5FF', '#007AFF'],
   orangeGradient: ['#FF8C00', '#FF5E00'],
+  purpleGradient: ['#BF5AF2', '#FF2D55'],
+  cosmicGradient: ['#050510', '#121225', '#050510'],
+  glowingGradient: ['rgba(0, 245, 255, 0.15)', 'rgba(191, 90, 242, 0.15)'],
 };
 
 export const Spacing = {
@@ -73,22 +83,56 @@ export const Typography = {
     color: Colors.textMuted,
     fontWeight: '500' as const,
   },
+  threeD: {
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  threeDLight: {
+    textShadowColor: 'rgba(255, 255, 255, 0.3)',
+    textShadowOffset: { width: 0, height: -1 },
+    textShadowRadius: 1,
+  }
 };
 
 export const Shadows = {
   glow: {
     shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  neonPurple: {
+    shadowColor: Colors.purple,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 12,
   },
   card: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
     elevation: 8,
+  },
+  depth: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.6,
+    shadowRadius: 25,
+    elevation: 20,
+  },
+  bevel: {
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderLeftColor: 'rgba(255,255,255,0.1)',
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.4)',
+    borderRightColor: 'rgba(0,0,0,0.3)',
   }
 };
 

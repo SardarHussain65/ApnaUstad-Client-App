@@ -30,10 +30,13 @@ import {
   Lock, CreditCard, Briefcase, Award, PenTool,
   BadgeDollarSign, FileText, CheckCircle
 } from 'lucide-react-native';
-import { Colors, Typography, BorderRadius } from '../../constants/Theme';
+import { Colors, Typography, BorderRadius, Shadows } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
 
+
+import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { GlassCard } from '../../components/home/GlassCard';
 
 export default function RegisterDetailsScreen() {
   const router = useRouter();
@@ -41,13 +44,12 @@ export default function RegisterDetailsScreen() {
     fullName: string;
     email: string;
     phone: string;
-    secondaryPhone: string;
     role: string;
     idToken: string;
   }>();
 
   // 🎨 Dynamic accent color based on role
-  const accentColor = params.role === 'worker' ? Colors.orange : Colors.cyan;
+  const accentColor = params.role === 'worker' ? Colors.worker : Colors.cyan;
 
   const [image, setImage] = useState<string | null>(null);
   const [address, setAddress] = useState('');
@@ -69,12 +71,10 @@ export default function RegisterDetailsScreen() {
   const [uploadProgress, setUploadProgress] = useState('');
 
   // Animation values
-  const entranceAnim = useSharedValue(0);
-  const progressAnim = useSharedValue(0.66); // Start from 66% (Step 2)
+  const progressAnim = useSharedValue(0.66); 
 
   useEffect(() => {
-    entranceAnim.value = withDelay(100, withSpring(1, { damping: 15 }));
-    progressAnim.value = withSpring(1.0, { damping: 20 }); // Move to 100% (Complete)
+    progressAnim.value = withSpring(1.0, { damping: 20 }); 
 
     if (params.role === 'worker') {
       fetchCategories();
@@ -144,7 +144,6 @@ export default function RegisterDetailsScreen() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        // If there are detailed validation errors, flatten them into a string
         if (errorData.errors && Array.isArray(errorData.errors)) {
           console.warn('Frontend Validation Errors:', errorData.errors);
           const detail = errorData.errors.map((e: any) => `${e.field}: ${e.message}`).join('\n');
@@ -177,7 +176,7 @@ export default function RegisterDetailsScreen() {
     // Worker Validation
     if (params.role === 'worker') {
       if (!cnicNumber || !category || !cnicFront || !cnicBack || !hourlyRate || !experience) {
-        Alert.alert('Missing Fields', 'Workers must provide CNIC, Category, Rate, Experience, and CNIC Photos.');
+        Alert.alert('Missing Fields', 'All identity and professional fields are required.');
         return;
       }
     }
@@ -188,9 +187,8 @@ export default function RegisterDetailsScreen() {
       let cnicFrontUrl = '';
       let cnicBackUrl = '';
 
-      // 1. Profile Image
       if (image) {
-        setUploadProgress('Uploading profile photo...');
+        setUploadProgress('SYNCING AVATAR...');
         profileImageUrl = await uploadImageMutation.mutateAsync({
           uri: image,
           fieldName: 'profileImage',
@@ -198,10 +196,9 @@ export default function RegisterDetailsScreen() {
         });
       }
 
-      // 2. Worker Images
       if (params.role === 'worker') {
         if (cnicFront) {
-          setUploadProgress('Uploading CNIC Front...');
+          setUploadProgress('SYNCING CNIC FRONT...');
           cnicFrontUrl = await uploadImageMutation.mutateAsync({
             uri: cnicFront,
             fieldName: 'cnicFrontImage',
@@ -209,7 +206,7 @@ export default function RegisterDetailsScreen() {
           });
         }
         if (cnicBack) {
-          setUploadProgress('Uploading CNIC Back...');
+          setUploadProgress('SYNCING CNIC BACK...');
           cnicBackUrl = await uploadImageMutation.mutateAsync({
             uri: cnicBack,
             fieldName: 'cnicBackImage',
@@ -218,9 +215,8 @@ export default function RegisterDetailsScreen() {
         }
       }
 
-      setUploadProgress('Finalizing registration...');
+      setUploadProgress('FINALIZING PROTOCOL...');
 
-      // 3. Final Payload
       const payload: any = {
         fullName: params.fullName,
         email: params.email || undefined,
@@ -229,7 +225,7 @@ export default function RegisterDetailsScreen() {
         address,
         city,
         profileImage: profileImageUrl,
-        latitude: 31.5204, // Default placeholders for now
+        latitude: 31.5204, 
         longitude: 74.3587,
         fcmToken: '',
       };
@@ -254,393 +250,405 @@ export default function RegisterDetailsScreen() {
     }
   };
 
-  const animatedHero = useAnimatedStyle(() => ({
-    opacity: entranceAnim.value,
-    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [30, 0]) }]
-  }));
-
-  const animatedForm = useAnimatedStyle(() => ({
-    opacity: entranceAnim.value,
-    transform: [{ translateY: interpolate(entranceAnim.value, [0, 1], [50, 0]) }]
-  }));
-
   const animatedProgressBar = useAnimatedStyle(() => ({
     width: `${progressAnim.value * 100}%`,
   }));
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <Animated.View style={[styles.header, animatedHero]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeft size={24} color={Colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Finalize Profile</Text>
-            <View style={{ width: 44 }} />
-          </Animated.View>
-
-          {/* Premium Progress Bar */}
-          <Animated.View style={[styles.progressContainer, animatedHero]}>
-            <View style={styles.progressBackground}>
-              <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor, shadowColor: accentColor }]} />
+    <BackgroundWrapper>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ChevronLeft size={24} color="#fff" />
+              </TouchableOpacity>
+              <Text style={[styles.headerTitle, Typography.threeD]}>CONFIGURATION</Text>
+              <View style={{ width: 44 }} />
             </View>
-            <View style={styles.stepsRow}>
-              <Text style={styles.stepLabel}>Basic Info</Text>
-              <Text style={styles.stepLabel}>OTP</Text>
-              <Text style={[styles.stepLabel, { color: accentColor }]}>Finalize</Text>
+
+            {/* Premium Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBackground}>
+                <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor }]} />
+              </View>
+              <View style={styles.stepsRow}>
+                <Text style={styles.stepLabel}>PHASE 01</Text>
+                <Text style={styles.stepLabel}>PHASE 02</Text>
+                <Text style={[styles.stepLabel, { color: accentColor }]}>FINAL PHASE</Text>
+              </View>
             </View>
-          </Animated.View>
 
-          {/* Hero Section */}
-          <Animated.View style={[styles.hero, animatedHero]}>
-            <Text style={styles.title}>Finish{'\n'}<Text style={[styles.brandText, { color: accentColor }]}>Setup</Text></Text>
-            <Text style={styles.subtitle}>Last step! Tell us a bit more about yourself to get started.</Text>
-          </Animated.View>
+            {/* Hero Section */}
+            <View style={styles.hero}>
+              <Text style={[styles.title, Typography.threeD]}>FINALIZE {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>SETUP</Text></Text>
+              <Text style={styles.subtitle}>COMPLETE YOUR DIMENSIONAL PARAMETERS</Text>
+            </View>
 
-          <Animated.View style={[styles.form, animatedForm]}>
-            {/* Profile Image Picker */}
-            <TouchableOpacity
-              style={[styles.imagePicker, image && [styles.imagePickerSelected, { borderColor: accentColor }]]}
-              onPress={() => pickImage('profile')}
-              activeOpacity={0.8}
-            >
-              {image ? (
-                <Image source={{ uri: image }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Camera size={32} color={accentColor} />
-                  <Text style={[styles.pickerText, { color: accentColor }]}>Add Photo</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            <View style={styles.form}>
+              {/* Profile Image Picker with Glow */}
+              <TouchableOpacity
+                style={[styles.imagePicker, { borderColor: image ? accentColor : 'rgba(255,255,255,0.1)' }]}
+                onPress={() => pickImage('profile')}
+                activeOpacity={0.8}
+              >
+                {image ? (
+                  <Image source={{ uri: image }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Camera size={32} color={accentColor} />
+                    <Text style={[styles.pickerText, { color: accentColor }]}>SYNC PHOTO</Text>
+                  </View>
+                )}
+                {image && <View style={[styles.imageGlow, { backgroundColor: accentColor }]} />}
+              </TouchableOpacity>
 
-            {/* Worker Specific Fields */}
-            {params.role === 'worker' && (
-              <Animated.View style={styles.workerSection}>
-                <View style={styles.sectionHeader}>
-                  <CreditCard size={18} color={accentColor} />
-                  <Text style={[styles.sectionTitle, { color: accentColor }]}>Identity Verification</Text>
-                </View>
+              {/* Worker Specific Sections */}
+              {params.role === 'worker' && (
+                <View style={styles.workerSection}>
+                  <GlassCard intensity={25} style={styles.formSection}>
+                    <View style={styles.sectionHeader}>
+                      <CreditCard size={18} color={accentColor} />
+                      <Text style={[styles.sectionTitle, { color: accentColor }]}>IDENTITY VERIFICATION</Text>
+                    </View>
 
-                <Text style={styles.label}>CNIC Number</Text>
-                <View style={styles.inputWrapper}>
-                  <View style={styles.iconContainer}><CreditCard size={20} color={accentColor} /></View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="42101-0000000-0"
-                    placeholderTextColor={Colors.textDim}
-                    keyboardType="numeric"
-                    value={cnicNumber}
-                    onChangeText={setCnicNumber}
-                  />
-                </View>
+                    <Text style={styles.label}>CNIC IDENTIFIER</Text>
+                    <View style={styles.inputWrapper}>
+                      <View style={styles.iconContainer}><CreditCard size={18} color={accentColor} /></View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="42101-0000000-0"
+                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        keyboardType="numeric"
+                        value={cnicNumber}
+                        onChangeText={setCnicNumber}
+                      />
+                    </View>
 
-                <View style={styles.cnicImagesRow}>
-                  <TouchableOpacity
-                    style={[styles.cnicPicker, cnicFront && styles.cnicPickerSelected]}
-                    onPress={() => pickImage('cnicFront')}
-                  >
-                    {cnicFront ? (
-                      <Image source={{ uri: cnicFront }} style={styles.cnicPreview} />
-                    ) : (
-                      <>
-                        <Camera size={24} color={accentColor} />
-                        <Text style={styles.cnicPickerText}>CNIC Front</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                    <View style={styles.cnicImagesRow}>
+                      <TouchableOpacity
+                        style={[styles.cnicPicker, cnicFront && { borderColor: accentColor }]}
+                        onPress={() => pickImage('cnicFront')}
+                      >
+                        {cnicFront ? (
+                          <Image source={{ uri: cnicFront }} style={styles.cnicPreview} />
+                        ) : (
+                          <>
+                            <Camera size={20} color={accentColor} />
+                            <Text style={styles.cnicPickerText}>FRONT SIDE</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.cnicPicker, cnicBack && styles.cnicPickerSelected]}
-                    onPress={() => pickImage('cnicBack')}
-                  >
-                    {cnicBack ? (
-                      <Image source={{ uri: cnicBack }} style={styles.cnicPreview} />
-                    ) : (
-                      <>
-                        <Camera size={24} color={accentColor} />
-                        <Text style={styles.cnicPickerText}>CNIC Back</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                      <TouchableOpacity
+                        style={[styles.cnicPicker, cnicBack && { borderColor: accentColor }]}
+                        onPress={() => pickImage('cnicBack')}
+                      >
+                        {cnicBack ? (
+                          <Image source={{ uri: cnicBack }} style={styles.cnicPreview} />
+                        ) : (
+                          <>
+                            <Camera size={20} color={accentColor} />
+                            <Text style={styles.cnicPickerText}>BACK SIDE</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </GlassCard>
 
-                <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-                  <Briefcase size={18} color={accentColor} />
-                  <Text style={[styles.sectionTitle, { color: accentColor }]}>Professional Details</Text>
-                </View>
+                  <GlassCard intensity={25} style={[styles.formSection, { marginTop: 20 }]}>
+                    <View style={styles.sectionHeader}>
+                      <Briefcase size={18} color={accentColor} />
+                      <Text style={[styles.sectionTitle, { color: accentColor }]}>PROFESSIONAL LINK</Text>
+                    </View>
 
-                <Text style={styles.label}>Category / Profession</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.categoryScroll}
-                >
-                  {categories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat._id}
-                      style={[
-                        styles.categoryChip,
-                        category === cat.name && { backgroundColor: accentColor, borderColor: accentColor }
-                      ]}
-                      onPress={() => setCategory(cat.name)}
+                    <Text style={styles.label}>SELECT ARCHETYPE (CATEGORY)</Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.categoryScroll}
+                      contentContainerStyle={{ gap: 10 }}
                     >
-                      <Text style={[
-                        styles.categoryChipText,
-                        category === cat.name && { color: '#000' }
-                      ]}>{cat.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                      {categories.map((cat) => (
+                        <TouchableOpacity
+                          key={cat._id}
+                          style={[
+                            styles.categoryChip,
+                            category === cat.name && { backgroundColor: accentColor + '40', borderColor: accentColor }
+                          ]}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setCategory(cat.name);
+                          }}
+                        >
+                          <Text style={[
+                            styles.categoryChipText,
+                            category === cat.name && { color: '#fff' }
+                          ]}>{cat.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
 
-                <Text style={styles.label}>Skills (Comma separated)</Text>
+                    <Text style={styles.label}>SKILLSET (COMMA SEPARATED)</Text>
+                    <View style={styles.inputWrapper}>
+                      <View style={styles.iconContainer}><PenTool size={18} color={accentColor} /></View>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Plumbing, Painting, Repair"
+                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        value={skills}
+                        onChangeText={setSkills}
+                      />
+                    </View>
+
+                    <View style={styles.rowInputs}>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={styles.label}>RATE / HR</Text>
+                        <View style={styles.inputWrapper}>
+                          <View style={styles.iconContainer}><BadgeDollarSign size={18} color={accentColor} /></View>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="500"
+                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            keyboardType="numeric"
+                            value={hourlyRate}
+                            onChangeText={setHourlyRate}
+                          />
+                        </View>
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.label}>EXP (YRS)</Text>
+                        <View style={styles.inputWrapper}>
+                          <View style={styles.iconContainer}><Award size={18} color={accentColor} /></View>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="5"
+                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            keyboardType="numeric"
+                            value={experience}
+                            onChangeText={setExperience}
+                          />
+                        </View>
+                      </View>
+                    </View>
+
+                    <Text style={[styles.label, { marginTop: 20 }]}>MISSION DESCRIPTION (BIO)</Text>
+                    <View style={[styles.inputWrapper, { alignItems: 'flex-start', paddingTop: 12, minHeight: 100 }]}>
+                      <View style={[styles.iconContainer, { marginTop: 4 }]}><FileText size={18} color={accentColor} /></View>
+                      <TextInput
+                        style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                        placeholder="Briefly describe your expertise..."
+                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        multiline
+                        value={bio}
+                        onChangeText={setBio}
+                      />
+                    </View>
+                  </GlassCard>
+                </View>
+              )}
+
+              <GlassCard intensity={25} style={[styles.formSection, { marginTop: 20 }]}>
+                <View style={styles.sectionHeader}>
+                  <MapPin size={18} color={accentColor} />
+                  <Text style={[styles.sectionTitle, { color: accentColor }]}>DIMENSIONAL CO-ORDINATES</Text>
+                </View>
+
+                <Text style={styles.label}>STREET ADDRESS</Text>
                 <View style={styles.inputWrapper}>
-                  <View style={styles.iconContainer}><PenTool size={20} color={accentColor} /></View>
+                  <View style={styles.iconContainer}><MapPin size={18} color={accentColor} /></View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Plumbing, Painting, Repair"
-                    placeholderTextColor={Colors.textDim}
-                    value={skills}
-                    onChangeText={setSkills}
+                    placeholder="Enter your street address"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    value={address}
+                    onChangeText={setAddress}
                   />
                 </View>
 
-                <View style={styles.rowInputs}>
-                  <View style={{ flex: 1, marginRight: 8 }}>
-                    <Text style={styles.label}>Hourly Rate</Text>
-                    <View style={styles.inputWrapper}>
-                      <View style={styles.iconContainer}><BadgeDollarSign size={20} color={accentColor} /></View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="500"
-                        placeholderTextColor={Colors.textDim}
-                        keyboardType="numeric"
-                        value={hourlyRate}
-                        onChangeText={setHourlyRate}
-                      />
-                    </View>
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 8 }}>
-                    <Text style={styles.label}>Experience (Yrs)</Text>
-                    <View style={styles.inputWrapper}>
-                      <View style={styles.iconContainer}><Award size={20} color={accentColor} /></View>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="5"
-                        placeholderTextColor={Colors.textDim}
-                        keyboardType="numeric"
-                        value={experience}
-                        onChangeText={setExperience}
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <Text style={styles.label}>Bio / Description</Text>
-                <View style={[styles.inputWrapper, { alignItems: 'flex-start', paddingTop: 12 }]}>
-                  <View style={[styles.iconContainer, { marginTop: 4 }]}><FileText size={20} color={accentColor} /></View>
+                <Text style={[styles.label, { marginTop: 20 }]}>CITY</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.iconContainer}><Building size={18} color={accentColor} /></View>
                   <TextInput
-                    style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-                    placeholder="Tell us about your work experience..."
-                    placeholderTextColor={Colors.textDim}
-                    multiline
-                    value={bio}
-                    onChangeText={setBio}
+                    style={styles.input}
+                    placeholder="Karachi, Lahore, etc."
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    value={city}
+                    onChangeText={setCity}
                   />
                 </View>
-              </Animated.View>
-            )}
 
-            <View style={[styles.sectionHeader, { marginTop: 32 }]}>
-              <MapPin size={18} color={accentColor} />
-              <Text style={[styles.sectionTitle, { color: accentColor }]}>Location Info</Text>
-            </View>
-
-            <Text style={styles.label}>Street Address</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}><MapPin size={20} color={accentColor} /></View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your street address"
-                placeholderTextColor={Colors.textDim}
-                value={address}
-                onChangeText={setAddress}
-              />
-            </View>
-
-            <Text style={[styles.label, { marginTop: 20 }]}>City</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}><Building size={20} color={accentColor} /></View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your city"
-                placeholderTextColor={Colors.textDim}
-                value={city}
-                onChangeText={setCity}
-              />
-            </View>
-
-            <Text style={[styles.label, { marginTop: 20 }]}>Create Password</Text>
-            <View style={styles.inputWrapper}>
-              <View style={styles.iconContainer}><Lock size={20} color={accentColor} /></View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter password"
-                placeholderTextColor={Colors.textDim}
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.completeBtn,
-                { backgroundColor: accentColor, shadowColor: accentColor },
-                (isUploading || registerMutation.isPending) && { opacity: 0.7 }
-              ]}
-              onPress={handleCompleteProfile}
-              disabled={isUploading || registerMutation.isPending}
-            >
-              {(isUploading || registerMutation.isPending) ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <ActivityIndicator color="#000" style={{ marginRight: 10 }} />
-                  <Text style={styles.completeBtnText}>{uploadProgress || 'Processing...'}</Text>
+                <Text style={[styles.label, { marginTop: 20 }]}>ACCESS KEY (PASSWORD)</Text>
+                <View style={styles.inputWrapper}>
+                  <View style={styles.iconContainer}><Lock size={18} color={accentColor} /></View>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••••••"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                  />
                 </View>
-              ) : (
-                <>
-                  <Text style={styles.completeBtnText}>Finalize Setup</Text>
-                  <CheckCircle size={20} color="#000" />
-                </>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+              </GlassCard>
+
+              <TouchableOpacity
+                style={[
+                  styles.completeBtn,
+                  { backgroundColor: accentColor },
+                  (isUploading || registerMutation.isPending) && { opacity: 0.7 }
+                ]}
+                onPress={handleCompleteProfile}
+                disabled={isUploading || registerMutation.isPending}
+              >
+                {(isUploading || registerMutation.isPending) ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <ActivityIndicator color="#000" style={{ marginRight: 10 }} />
+                    <Text style={styles.completeBtnText}>{uploadProgress || 'UPLOADING...'}</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.completeBtnText}>INITIALIZE PROFILE</Text>
+                    <CheckCircle size={20} color="#000" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </BackgroundWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 20,
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.card,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   progressContainer: {
-    marginTop: 20,
-    marginBottom: 32,
+    marginTop: 10,
+    marginBottom: 30,
   },
   progressBackground: {
-    height: 6,
-    backgroundColor: Colors.card,
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 2,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   progressActive: {
     height: '100%',
-    backgroundColor: Colors.cyan,
-    shadowColor: Colors.cyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
+    borderRadius: 2,
+    ...Shadows.glow,
   },
   stepsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 10,
   },
   stepLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.textDim,
-  },
-  stepLabelActive: {
-    color: Colors.cyan,
+    fontSize: 9,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 1,
   },
   hero: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   title: {
-    ...Typography.h1,
-    fontSize: 32,
-    lineHeight: 40,
-    marginBottom: 12,
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#fff',
+    lineHeight: 46,
+    letterSpacing: -1,
   },
   brandText: {
-    color: Colors.cyan,
+    fontWeight: '900',
   },
   subtitle: {
-    ...Typography.caption,
-    fontSize: 16,
-    color: Colors.textMuted,
-    lineHeight: 24,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '700',
+    marginTop: 10,
+    letterSpacing: 1,
   },
   form: {
     flex: 1,
   },
   imagePicker: {
     alignSelf: 'center',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: Colors.inputBackground,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
-    overflow: 'hidden',
+    marginBottom: 40,
     position: 'relative',
-  },
-  imagePickerSelected: {
-    borderStyle: 'solid',
-    borderColor: Colors.cyan,
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
   },
   profileImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 65,
   },
   imagePlaceholder: {
     alignItems: 'center',
   },
   pickerText: {
-    color: Colors.cyan,
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 8,
+    letterSpacing: 1,
+  },
+  imageGlow: {
+    position: 'absolute',
+    top: -5,
+    left: -5,
+    right: -5,
+    bottom: -5,
+    borderRadius: 70,
+    zIndex: -1,
+    opacity: 0.2,
   },
   workerSection: {
-    marginTop: 8,
+    marginTop: 0,
+  },
+  formSection: {
+    padding: 24,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -648,31 +656,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '900',
     marginLeft: 10,
-    letterSpacing: 0.5,
+    letterSpacing: 1.5,
   },
   cnicImagesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 20,
   },
   cnicPicker: {
     width: '48%',
     height: 100,
-    borderRadius: BorderRadius.m,
-    backgroundColor: Colors.inputBackground,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.1)',
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  cnicPickerSelected: {
-    borderStyle: 'solid',
   },
   cnicPreview: {
     width: '100%',
@@ -680,49 +684,50 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   cnicPickerText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.textMuted,
-    marginTop: 4,
+    fontSize: 9,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.4)',
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
   categoryScroll: {
     marginBottom: 20,
+    marginHorizontal: -5,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: Colors.card,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: Colors.border,
-    marginRight: 10,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   categoryChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textDim,
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1,
   },
   rowInputs: {
     flexDirection: 'row',
-    marginTop: 20,
-    marginBottom: 8,
+    marginTop: 15,
   },
   label: {
-    ...Typography.caption,
-    textTransform: 'uppercase',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '900',
     letterSpacing: 1.5,
-    marginBottom: 8,
-    color: Colors.textMuted,
-    fontWeight: '600',
+    marginBottom: 10,
+    marginTop: 20,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.inputBackground,
-    borderRadius: BorderRadius.m,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 18,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   iconContainer: {
     marginRight: 12,
@@ -730,28 +735,25 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingVertical: 16,
-    fontSize: 16,
-    color: Colors.text,
+    fontSize: 15,
+    color: '#fff',
+    fontWeight: '600',
   },
   completeBtn: {
-    backgroundColor: Colors.cyan,
-    borderRadius: BorderRadius.m,
+    borderRadius: 22,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     marginTop: 40,
-    shadowColor: Colors.cyan,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    ...Shadows.glow,
     marginBottom: 40,
   },
   completeBtnText: {
     color: '#000',
-    fontSize: 18,
-    fontWeight: '800',
-    marginRight: 8,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginRight: 10,
   },
 });
