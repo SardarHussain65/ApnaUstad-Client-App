@@ -31,16 +31,61 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { GlassCard } from '../../components/home/GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import Svg, { Path } from 'react-native-svg';
+import api from '../../services/api';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ProfileTab() {
-  const { logout, role } = useAuth();
+  const { logout, role, user } = useAuth();
   const router = useRouter();
   const scrollY = useSharedValue(0);
+
+  const [stats, setStats] = React.useState({ jobs: 0, rating: 0 });
+  const [workerProfile, setWorkerProfile] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchProfileData();
+  }, [user?._id]);
+
+  const fetchProfileData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch bookings
+      const bookingsResponse = await api.get('/bookings');
+      const allBookings = bookingsResponse.data.data || [];
+      
+      // Fetch worker profile if user is worker
+      if (role === 'worker' && user?._id) {
+        try {
+          const workerResponse = await api.get(`/workers/${user._id}`);
+          const workerData = workerResponse.data.data;
+          setWorkerProfile(workerData);
+          setStats({
+            jobs: allBookings.length,
+            rating: workerData?.rating || 0
+          });
+        } catch (error) {
+          console.error('Error fetching worker profile:', error);
+          setStats({
+            jobs: allBookings.length,
+            rating: (user as any)?.rating || 0
+          });
+        }
+      } else {
+        setStats({
+          jobs: allBookings.length,
+          rating: (user as any)?.rating || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -98,7 +143,7 @@ export default function ProfileTab() {
                 style={styles.avatarGlow}
               />
               <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop' }}
+                source={{ uri: workerProfile?.profileImage || user?.profileImage || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop' }}
                 style={styles.avatar}
               />
               <TouchableOpacity style={styles.editBtn}>
@@ -106,8 +151,8 @@ export default function ProfileTab() {
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.userName, Typography.threeD]}>Ahmed Malik</Text>
-            <Text style={styles.userEmail}>ahmed.malik@cosmic.io</Text>
+            <Text style={[styles.userName, Typography.threeD]}>{workerProfile?.fullName || user?.fullName || 'User'}</Text>
+            <Text style={styles.userEmail}>{workerProfile?.email || workerProfile?.phone || user?.email || 'No contact'}</Text>
 
             <View style={styles.badgeRow}>
               <View style={[styles.roleBadge, { backgroundColor: role === 'worker' ? Colors.orange : Colors.primary }]}>
@@ -119,20 +164,48 @@ export default function ProfileTab() {
           {/* 3D Stats Row */}
           <Animated.View entering={FadeInDown.delay(400)} style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={[styles.statVal, Typography.threeD]}>128</Text>
+              <Text style={[styles.statVal, Typography.threeD]}>{stats.jobs}</Text>
               <Text style={styles.statLabel}>Jobs</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statVal, Typography.threeD]}>4.9</Text>
+              <Text style={[styles.statVal, Typography.threeD]}>{stats.rating?.toFixed(1) || '0'}</Text>
               <Text style={styles.statLabel}>Rating</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={[styles.statVal, Typography.threeD]}>2y</Text>
-              <Text style={styles.statLabel}>Exp</Text>
+              <Text style={[styles.statVal, Typography.threeD]}>{workerProfile?.category || role === 'worker' ? 'Worker' : 'Client'}</Text>
+              <Text style={styles.statLabel}>Category</Text>
             </View>
           </Animated.View>
+
+          {/* Worker Details Card */}
+          {role === 'worker' && workerProfile && (
+            <Animated.View entering={FadeInUp.delay(450)} style={styles.workerDetailsCard}>
+              <GlassCard intensity={20} style={{ padding: Spacing.l, borderRadius: 20 }}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Hourly Rate</Text>
+                  <Text style={[styles.detailValue, Typography.threeD]}>Rs. {workerProfile?.hourlyRate || '0'}</Text>
+                </View>
+                <View style={[styles.detailRow, { marginTop: 12 }]}>
+                  <Text style={styles.detailLabel}>Experience</Text>
+                  <Text style={[styles.detailValue, Typography.threeD]}>{workerProfile?.experience || '0'} years</Text>
+                </View>
+                <View style={[styles.detailRow, { marginTop: 12 }]}>
+                  <Text style={styles.detailLabel}>Status</Text>
+                  <Text style={[styles.detailValue, { color: workerProfile?.isAvailable ? Colors.success : '#ff9500' }, Typography.threeD]}>
+                    {workerProfile?.isAvailable ? '🟢 Available' : '🔴 Offline'}
+                  </Text>
+                </View>
+                {workerProfile?.bio && (
+                  <View style={[styles.detailRow, { marginTop: 12 }]}>
+                    <Text style={styles.bioLabel}>Bio</Text>
+                    <Text style={styles.bioText}>{workerProfile.bio}</Text>
+                  </View>
+                )}
+              </GlassCard>
+            </Animated.View>
+          )}
 
           {/* Settings Menu with Compact Vibrant Cards */}
           <View style={styles.menuSection}>
@@ -424,5 +497,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: Spacing.xl,
     fontWeight: '600',
+  },
+  workerDetailsCard: {
+    marginBottom: Spacing.xl,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  detailValue: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  bioLabel: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  bioText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
   }
 });

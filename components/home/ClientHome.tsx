@@ -21,21 +21,62 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CosmicCircle } from './CosmicCircle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
+import api from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
-const CATEGORIES = [
-  { id: '1', title: 'Electrical', icon: Zap, gradient: ['#FFD700', '#FF8C00'] as [string, string, ...string[]] },
-  { id: '2', title: 'Plumbing', icon: Droplets, gradient: ['#00BFFF', '#1E90FF'] as [string, string, ...string[]] },
-  { id: '3', title: 'AC Repair', icon: Wind, gradient: ['#00FA9A', '#3CB371'] as [string, string, ...string[]] },
-  { id: '4', title: 'Carpentry', icon: Hammer, gradient: ['#DEB887', '#8B4513'] as [string, string, ...string[]] },
-  { id: '5', title: 'Painting', icon: Paintbrush, gradient: ['#FF69B4', '#C71585'] as [string, string, ...string[]] },
-  { id: '6', title: 'Mechanic', icon: Wrench, gradient: ['#A9A9A9', '#696969'] as [string, string, ...string[]] },
-];
+const CATEGORY_MAP: Record<string, any> = {
+  'Electrical': Zap,
+  'Electrician': Zap,
+  'Plumbing': Droplets,
+  'Plumber': Droplets,
+  'AC Repair': Wind,
+  'Carpentry': Hammer,
+  'Carpenter': Hammer,
+  'Painting': Paintbrush,
+  'Painter': Paintbrush,
+  'Mechanic': Wrench,
+};
+
+const DEFAULT_GRADIENT = ['#6366f1', '#a855f7'] as [string, string, ...string[]];
 
 export function ClientHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const [categories, setCategories] = React.useState<any[]>([]);
+  const [workers, setWorkers] = React.useState<any[]>([]);
+  const [stats, setStats] = React.useState({ jobs: 0, rating: 0 });
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [catRes, workerRes, bookingRes] = await Promise.all([
+        api.get('/users/categories'),
+        api.get('/workers'),
+        api.get('/bookings')
+      ]);
+
+      setCategories(catRes.data.data);
+      // Filter for some "elite" workers for the home screen
+      setWorkers(workerRes.data.data.slice(0, 5));
+      
+      const allBookings = bookingRes.data.data || [];
+      const completed = allBookings.filter((b: any) => b.status === 'completed');
+      setStats({
+        jobs: allBookings.length,
+        rating: 4.8 // Mock rating since User model doesn't have it yet
+      });
+    } catch (error) {
+      console.error('Error fetching home data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <BackgroundWrapper>
@@ -53,31 +94,39 @@ export function ClientHome() {
             <TouchableOpacity><Text style={styles.viewAll}>VIEW ALL</Text></TouchableOpacity>
           </View>
           <View style={styles.categoriesGrid}>
-            {CATEGORIES.map((cat, index) => (
-              <Animated.View
-                key={cat.id}
-                entering={FadeInDown.delay(400 + index * 100).duration(800)}
-                style={styles.categoryWrap}
-              >
-                <GlassCard
-                  style={styles.categoryItem}
-                  onPress={() => router.push({
-                    pathname: '/category-details',
-                    params: { 
-                      id: cat.id, 
-                      title: cat.title, 
-                      color: cat.gradient[0] 
-                    }
-                  })}
-                  gradient={cat.gradient}
+            {categories.map((cat, index) => {
+              const Icon = CATEGORY_MAP[cat.name] || Sparkles;
+              const gradient = cat.color ? [cat.color, cat.color + '40'] as [string, string, ...string[]] : DEFAULT_GRADIENT;
+              
+              return (
+                <Animated.View
+                  key={cat._id}
+                  entering={FadeInDown.delay(400 + index * 100).duration(800)}
+                  style={styles.categoryWrap}
                 >
-                  <View style={styles.categoryIconBox}>
-                    <cat.icon size={20} color="#fff" strokeWidth={2.5} />
-                  </View>
-                  <Text style={styles.categoryTitle}>{cat.title}</Text>
-                </GlassCard>
-              </Animated.View>
-            ))}
+                  <GlassCard
+                    style={styles.categoryItem}
+                    onPress={() => router.push({
+                      pathname: '/category-details',
+                      params: { 
+                        id: cat._id, 
+                        title: cat.name, 
+                        color: cat.color || '#fff'
+                      }
+                    })}
+                    gradient={gradient}
+                  >
+                    <View style={styles.categoryIconBox}>
+                      <Icon size={20} color="#fff" strokeWidth={2.5} />
+                    </View>
+                    <Text style={styles.categoryTitle}>{cat.name}</Text>
+                  </GlassCard>
+                </Animated.View>
+              );
+            })}
+            {categories.length === 0 && !isLoading && (
+               <Text style={styles.emptyText}>No categories found</Text>
+            )}
           </View>
         </View>
 
@@ -102,12 +151,12 @@ export function ClientHome() {
               />
               <View style={styles.insightStats}>
                 <View style={styles.statChip}>
-                  <Text style={styles.statVal}>12</Text>
+                  <Text style={styles.statVal}>{stats.jobs}</Text>
                   <Text style={styles.statLab}>ORBITS</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statChip}>
-                  <Text style={styles.statVal}>4.9</Text>
+                  <Text style={styles.statVal}>{stats.rating}</Text>
                   <Text style={styles.statLab}>STARS</Text>
                 </View>
               </View>
@@ -120,43 +169,47 @@ export function ClientHome() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, Typography.threeD, { marginBottom: 20, paddingHorizontal: Spacing.l }]}>Elite Talents</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {[1, 2].map((_, i) => (
+            {workers.map((worker, i) => (
               <Animated.View
-                key={i}
+                key={worker._id}
                 entering={FadeInRight.delay(800 + i * 200)}
                 style={styles.talentCardWrap}
               >
                 <GlassCard
                   style={styles.talentCard}
                   hasGlow
-                  onPress={() => router.push('/worker-details')}
-                  glowColor={i === 0 ? Colors.primary : Colors.secondary}
-                  gradient={i === 0 ? ['#051937', '#004d7a'] as [string, string, ...string[]] : ['#2d0e3e', '#4b0082'] as [string, string, ...string[]]}
+                  onPress={() => router.push({
+                    pathname: '/worker-details',
+                    params: { id: worker._id }
+                  })}
+                  glowColor={i % 2 === 0 ? Colors.primary : Colors.secondary}
+                  gradient={i % 2 === 0 ? ['#051937', '#004d7a'] as [string, string, ...string[]] : ['#2d0e3e', '#4b0082'] as [string, string, ...string[]]}
                 >
                   <View style={styles.talentHeader}>
                     <View>
-                      <Text style={[styles.talentName, Typography.threeD]}>Ahmed Malik</Text>
-                      <Text style={styles.talentRole}>Quantum Mechanic</Text>
+                      <Text style={[styles.talentName, Typography.threeD]}>{worker.fullName}</Text>
+                      <Text style={styles.talentRole}>{worker.category}</Text>
                     </View>
                     <View style={styles.ratingBadge}>
                       <Star size={12} fill="#FFD700" color="#FFD700" />
-                      <Text style={styles.ratingText}>4.9/5</Text>
+                      <Text style={styles.ratingText}>{worker.rating?.toFixed(1) || '5.0'}/5</Text>
                     </View>
                   </View>
 
                   <View style={styles.talentFooter}>
-                    <Text style={[styles.talentPrice, Typography.threeD]}>Rs. 1,200<Text style={styles.priceUnit}>/hr</Text></Text>
+                    <Text style={[styles.talentPrice, Typography.threeD]}>Rs. {worker.hourlyRate}<Text style={styles.priceUnit}>/hr</Text></Text>
                     <View style={styles.eliteBadge}>
                       <ShieldCheck size={14} color={Colors.primary} />
-                      <Text style={styles.eliteText}>Elite</Text>
+                      <Text style={styles.eliteText}>{worker.isVerified ? 'Elite' : 'Ustad'}</Text>
                     </View>
                   </View>
                 </GlassCard>
                 <View style={{ height: 60 }} />
-
               </Animated.View>
             ))}
-
+            {workers.length === 0 && !isLoading && (
+              <Text style={[styles.emptyText, { marginLeft: 20 }]}>No elite USTADS detected in your quadrant.</Text>
+            )}
           </ScrollView>
 
         </View>

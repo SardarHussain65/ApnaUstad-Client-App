@@ -18,8 +18,10 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Star, ShieldCheck, MapPin, Share2, Award, Zap, Clock, MessageSquare, Phone } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import api from '../services/api';
+import { useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const PROFILE_ORB_SIZE = width * 0.45;
@@ -33,16 +35,32 @@ const PORTFOLIO = [
 export default function WorkerDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const scrollY = useSharedValue(0);
   const orbRotation = useSharedValue(0);
 
+  const [worker, setWorker] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
   React.useEffect(() => {
+    fetchWorker();
     orbRotation.value = withRepeat(
       withTiming(360, { duration: 15000 }),
       -1,
       false
     );
-  }, []);
+  }, [params.id]);
+
+  const fetchWorker = async () => {
+    try {
+      const response = await api.get(`/workers/${params.id}`);
+      setWorker(response.data.data);
+    } catch (error) {
+      console.error('Error fetching worker details:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -79,74 +97,82 @@ export default function WorkerDetailsScreen() {
           contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 120 }}
         >
           {/* Profile Section */}
-          <View style={styles.profileHero}>
-            <View style={styles.orbContainer}>
-              <Animated.View style={[styles.cosmicOrb, orbAnimatedStyle]}>
-                <LinearGradient
-                  colors={[Colors.cyan, Colors.primary, Colors.purple]}
-                  style={StyleSheet.absoluteFillObject}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
-              </Animated.View>
-              <View style={styles.avatarWrapper}>
-                <Image 
-                  source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' }} 
-                  style={styles.avatar} 
-                />
+          {isLoading ? (
+             <ActivityIndicator color={Colors.cyan} style={{ marginTop: 50 }} />
+          ) : (
+            <View style={styles.profileHero}>
+              <View style={styles.orbContainer}>
+                <Animated.View style={[styles.cosmicOrb, orbAnimatedStyle]}>
+                  <LinearGradient
+                    colors={[Colors.cyan, Colors.primary, Colors.purple]}
+                    style={StyleSheet.absoluteFillObject}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                </Animated.View>
+                <View style={styles.avatarWrapper}>
+                  <Image 
+                    source={{ uri: worker?.profileImage || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' }} 
+                    style={styles.avatar} 
+                  />
+                </View>
+                {worker?.isVerified && (
+                  <Animated.View entering={FadeInDown.delay(300)} style={styles.verifiedBadge}>
+                    <ShieldCheck size={14} color="#fff" />
+                  </Animated.View>
+                )}
               </View>
-              <Animated.View entering={FadeInDown.delay(300)} style={styles.verifiedBadge}>
-                <ShieldCheck size={14} color="#fff" />
+
+              <Animated.View entering={FadeInUp.delay(400)} style={styles.nameHeader}>
+                <Text style={[styles.workerName, Typography.threeD]}>{worker?.fullName || 'Cosmic Ustad'}</Text>
+                <Text style={styles.workerRole}>{worker?.category?.toUpperCase() || 'DIMENSIONAL SPECIALIST'}</Text>
+                
+                <View style={styles.ratingRow}>
+                  <Star size={16} color="#FFD700" fill="#FFD700" />
+                  <Text style={styles.ratingVal}>{worker?.rating?.toFixed(1) || '5.0'}</Text>
+                  <Text style={styles.reviewCount}>({worker?.totalReviews || 0} Missions)</Text>
+                </View>
               </Animated.View>
             </View>
+          )}
 
-            <Animated.View entering={FadeInUp.delay(400)} style={styles.nameHeader}>
-              <Text style={[styles.workerName, Typography.threeD]}>Sajid Mehmood</Text>
-              <Text style={styles.workerRole}>EXPERT ELECTRICAL ENGINEER</Text>
-              
-              <View style={styles.ratingRow}>
-                <Star size={16} color="#FFD700" fill="#FFD700" />
-                <Text style={styles.ratingVal}>4.9</Text>
-                <Text style={styles.reviewCount}>(124 Missions)</Text>
+          {!isLoading && (
+            <View style={styles.contentSection}>
+              <View style={styles.statsGrid}>
+                <Animated.View entering={FadeInDown.delay(500)} style={styles.statBox}>
+                  <GlassCard intensity={20} style={styles.statCard}>
+                    <Award size={20} color={Colors.orange} />
+                    <Text style={styles.statValue}>{worker?.experience || '1'} Yrs</Text>
+                    <Text style={styles.statLabel}>EXP</Text>
+                  </GlassCard>
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(600)} style={styles.statBox}>
+                  <GlassCard intensity={20} style={styles.statCard}>
+                    <Zap size={20} color={Colors.cyan} />
+                    <Text style={styles.statValue}>100%</Text>
+                    <Text style={styles.statLabel}>SUCCESS</Text>
+                  </GlassCard>
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(700)} style={styles.statBox}>
+                  <GlassCard intensity={20} style={styles.statCard}>
+                    <Clock size={20} color={Colors.success} />
+                    <Text style={styles.statValue}>Rs. {worker?.hourlyRate}</Text>
+                    <Text style={styles.statLabel}>RATE/HR</Text>
+                  </GlassCard>
+                </Animated.View>
               </View>
-            </Animated.View>
-          </View>
 
-          {/* Stats Grid */}
-          <View style={styles.contentSection}>
-            <View style={styles.statsGrid}>
-              <Animated.View entering={FadeInDown.delay(500)} style={styles.statBox}>
-                <GlassCard intensity={20} style={styles.statCard}>
-                  <Award size={20} color={Colors.orange} />
-                  <Text style={styles.statValue}>8 Yrs</Text>
-                  <Text style={styles.statLabel}>EXP</Text>
-                </GlassCard>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(600)} style={styles.statBox}>
-                <GlassCard intensity={20} style={styles.statCard}>
-                  <Zap size={20} color={Colors.cyan} />
-                  <Text style={styles.statValue}>98%</Text>
-                  <Text style={styles.statLabel}>SUCCESS</Text>
-                </GlassCard>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(700)} style={styles.statBox}>
-                <GlassCard intensity={20} style={styles.statCard}>
-                  <Clock size={20} color={Colors.success} />
-                  <Text style={styles.statValue}>30 min</Text>
-                  <Text style={styles.statLabel}>RESPONSE</Text>
+              {/* About Section */}
+              <Animated.View entering={FadeInUp.delay(800)} style={styles.sectionBlock}>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>Professional Bio</Text>
+                <GlassCard intensity={15} style={styles.bioCard}>
+                  <Text style={styles.bioText}>
+                    {worker?.bio || 'No specialized mission transmission received yet. Professional standards apply.'}
+                  </Text>
                 </GlassCard>
               </Animated.View>
             </View>
-
-            {/* About Section */}
-            <Animated.View entering={FadeInUp.delay(800)} style={styles.sectionBlock}>
-              <Text style={[styles.sectionTitle, Typography.threeD]}>Professional Bio</Text>
-              <GlassCard intensity={15} style={styles.bioCard}>
-                <Text style={styles.bioText}>
-                  Specialized in quantum-grade electrical systems and smart home integration. Over 8 years of experience in high-voltage industrial repairs and domestic security setups. Committed to galactic standards of safety and efficiency.
-                </Text>
-              </GlassCard>
-            </Animated.View>
+          )}
 
             {/* Portfolio Section */}
             <Animated.View entering={FadeInUp.delay(900)} style={styles.sectionBlock}>
@@ -162,7 +188,6 @@ export default function WorkerDetailsScreen() {
                 ))}
               </ScrollView>
             </Animated.View>
-          </View>
         </Animated.ScrollView>
 
         {/* Action Footer */}
@@ -175,7 +200,17 @@ export default function WorkerDetailsScreen() {
              <TouchableOpacity style={styles.callBtn}>
                 <Phone color="#fff" size={24} />
              </TouchableOpacity>
-             <TouchableOpacity style={styles.bookBtn}>
+             <TouchableOpacity 
+               style={styles.bookBtn}
+               onPress={() => router.push({
+                 pathname: '/job-creation',
+                 params: { 
+                   title: worker?.category, 
+                   targetWorkerId: worker?._id,
+                   targetWorkerName: worker?.fullName
+                 }
+               })}
+             >
                 <LinearGradient
                   colors={[Colors.primary, Colors.purple]}
                   start={{x: 0, y: 0}}

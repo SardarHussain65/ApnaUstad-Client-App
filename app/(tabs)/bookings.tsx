@@ -1,53 +1,90 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import api from '../../services/api';
+import { socketService } from '../../services/socketService';
+import { useAuth } from '../../context/AuthContext';
 
 const TABS = ['Active', 'Completed', 'Cancelled'] as const;
 type TabType = typeof TABS[number];
 
-const DUMMY_BOOKINGS = {
-  Active: [
-    { id: '1', title: 'Deep Home Cleaning', provider: 'John Doe', date: 'Now 15, 2024', time: '10:00 AM', status: 'In Progress', location: '123 Main St, Block 4' },
-    { id: '2', title: 'AC Repair & Maintenance', provider: 'Ali Khan', date: 'Nov 16, 2024', time: '02:30 PM', status: 'Scheduled', location: '45B Satellite Town' },
-  ],
-  Completed: [
-    { id: '3', title: 'Plumbing Fix', provider: 'Ahmed Raza', date: 'Nov 10, 2024', time: '09:00 AM', status: 'Completed', location: '123 Main St, Block 4' },
-    { id: '4', title: 'Electrical Wiring', provider: 'Zain Abbas', date: 'Nov 05, 2024', time: '11:15 AM', status: 'Completed', location: '45B Satellite Town' },
-  ],
-  Cancelled: [
-    { id: '5', title: 'Pest Control', provider: 'Tariq Mehmood', date: 'Nov 12, 2024', time: '04:00 PM', status: 'Cancelled', location: '123 Main St, Block 4' },
-  ]
-};
-
 export default function BookingsTab() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('Active');
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchBookings();
+
+    // Listen for new bookings
+    const unsubNew = socketService.on('booking:new', (newBooking) => {
+      setBookings(prev => [newBooking, ...prev]);
+    });
+
+    // Listen for status updates
+    const unsubStatus = socketService.on('booking:status', (data) => {
+      setBookings(prev => prev.map(b => 
+        b._id === data.bookingId ? { ...b, status: data.status } : b
+      ));
+    });
+
+    return () => {
+      unsubNew();
+      unsubStatus();
+    };
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      const response = await api.get('/bookings');
+      setBookings(response.data.data);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setIsRefreshing(true);
+    fetchBookings();
+  };
 
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'In Progress': return Colors.cyan;
-      case 'Scheduled': return Colors.orange;
-      case 'Completed': return Colors.success;
-      case 'Cancelled': return Colors.error;
+      case 'ongoing': return Colors.cyan;
+      case 'accepted': return Colors.orange;
+      case 'completed': return Colors.success;
+      case 'cancelled': return Colors.error;
       default: return Colors.primary;
     }
   };
 
   const getStatusIcon = (status: string, color: string) => {
     switch(status) {
-      case 'Completed': return <CheckCircle2 size={12} color={color} />;
-      case 'Cancelled': return <XCircle size={12} color={color} />;
+      case 'completed': return <CheckCircle2 size={12} color={color} />;
+      case 'cancelled': return <XCircle size={12} color={color} />;
+      case 'ongoing': return <Zap size={12} color={color} />;
       default: return <Clock size={12} color={color} />;
     }
   };
+
+  const filteredBookings = bookings.filter(b => {
+    if (activeTab === 'Active') return b.status === 'accepted' || b.status === 'ongoing';
+    return b.status === activeTab.toLowerCase();
+  });
 
   return (
     <BackgroundWrapper>
@@ -55,8 +92,8 @@ export default function BookingsTab() {
         
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>My Bookings</Text>
-          <Text style={styles.headerSubtitle}>Manage your services and jobs</Text>
+          <Text style={[styles.headerTitle, Typography.threeD]}>Mission Log</Text>
+          <Text style={styles.headerSubtitle}>Real-time status of your active protocols</Text>
         </View>
 
         {/* Custom Tab Bar */}
@@ -75,7 +112,7 @@ export default function BookingsTab() {
                     style={StyleSheet.absoluteFillObject}
                   >
                     <LinearGradient
-                      colors={['rgba(30,144,255,0.4)', 'rgba(255,20,147,0.4)']}
+                      colors={['rgba(0,245,255,0.4)', 'rgba(255,20,147,0.4)']}
                       start={{x: 0, y: 0}}
                       end={{x: 1, y: 1}}
                       style={styles.activeTabGradient}
@@ -94,66 +131,96 @@ export default function BookingsTab() {
         </View>
 
         {/* List of Bookings */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {DUMMY_BOOKINGS[activeTab].map((item, index) => {
-            const statusColor = getStatusColor(item.status);
-            return (
-              <Animated.View
-                key={item.id}
-                entering={FadeInDown.delay(index * 100).duration(500)}
-                layout={Layout.springify()}
-              >
-                <GlassCard style={styles.bookingCard} intensity={25}>
-                  <View style={styles.cardHeader}>
-                    <Text style={[styles.itemTitle, Typography.threeD]}>{item.title}</Text>
-                    <View style={[styles.statusBadge, { borderColor: statusColor + '40', backgroundColor: statusColor + '10' }]}>
-                      {getStatusIcon(item.status, statusColor)}
-                      <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
+        {isLoading ? (
+           <ActivityIndicator color={Colors.cyan} style={{ marginTop: 40 }} />
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.cyan} />
+            }
+          >
+            {filteredBookings.map((item, index) => {
+              const statusColor = getStatusColor(item.status);
+              const isWorker = role === 'worker';
+              const counterParty = isWorker ? item.customer : item.worker;
+
+              return (
+                <Animated.View
+                  key={item._id}
+                  entering={FadeInDown.delay(index * 100).duration(500)}
+                  layout={Layout.springify()}
+                >
+                  <GlassCard 
+                    style={styles.bookingCard} 
+                    intensity={25}
+                    onPress={() => router.push({
+                      pathname: '/transaction-details',
+                      params: { id: item._id }
+                    })}
+                  >
+                    <View style={styles.cardHeader}>
+                      <Text style={[styles.itemTitle, Typography.threeD]}>{item.jobPost?.category}</Text>
+                      <View style={[styles.statusBadge, { borderColor: statusColor + '40', backgroundColor: statusColor + '10' }]}>
+                        {getStatusIcon(item.status, statusColor)}
+                        <Text style={[styles.statusText, { color: statusColor }]}>
+                          {item.status.toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <Text style={styles.itemProvider}>Provider: {item.provider}</Text>
+                    <Text style={styles.itemProvider}>
+                      {isWorker ? 'Client: ' : 'Ustad: '}
+                      {counterParty?.fullName || 'Searching...'}
+                    </Text>
 
-                  <View style={styles.detailsRow}>
-                    <View style={styles.detailItem}>
-                      <Calendar size={14} color={Colors.textMuted} />
-                      <Text style={styles.detailText}>{item.date}</Text>
+                    <View style={styles.detailsRow}>
+                      <View style={styles.detailItem}>
+                        <Calendar size={14} color={Colors.textMuted} />
+                        <Text style={styles.detailText}>{item.scheduledDate?.split('T')[0] || 'Today'}</Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Clock size={14} color={Colors.textMuted} />
+                        <Text style={styles.detailText}>{item.scheduledTime || 'ASAP'}</Text>
+                      </View>
                     </View>
-                    <View style={styles.detailItem}>
-                      <Clock size={14} color={Colors.textMuted} />
-                      <Text style={styles.detailText}>{item.time}</Text>
+
+                    <View style={[styles.detailItem, { marginTop: 8 }]}>
+                      <MapPin size={14} color={Colors.textMuted} />
+                      <Text style={styles.detailText} numberOfLines={1}>
+                        {item.jobPost?.address || 'View Details for Location'}
+                      </Text>
                     </View>
-                  </View>
 
-                  <View style={[styles.detailItem, { marginTop: 8 }]}>
-                    <MapPin size={14} color={Colors.textMuted} />
-                    <Text style={styles.detailText}>{item.location}</Text>
-                  </View>
+                    <View style={styles.actionDivider} />
+                    
+                    <TouchableOpacity 
+                      style={styles.actionBtn} 
+                      onPress={() => router.push({
+                        pathname: '/transaction-details',
+                        params: { id: item._id }
+                      })}
+                    >
+                      <Text style={styles.actionBtnText}>ACCESS INTEL</Text>
+                      <ChevronRight size={16} color={Colors.cyan} />
+                    </TouchableOpacity>
 
-                  <View style={styles.actionDivider} />
-                  
-                  <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/job-details')}>
-                    <Text style={styles.actionBtnText}>View Details</Text>
-                    <ChevronRight size={16} color={Colors.cyan} />
-                  </TouchableOpacity>
-
-                </GlassCard>
+                  </GlassCard>
+                </Animated.View>
+              )
+            })}
+            {filteredBookings.length === 0 && (
+              <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
+                 <GlassCard intensity={15} style={styles.emptyCard}>
+                  <Text style={styles.emptyTitle}>NO {activeTab.toUpperCase()} MISSIONS</Text>
+                  <Text style={styles.emptySub}>Your mission log is currently clear in this sector.</Text>
+                 </GlassCard>
               </Animated.View>
-            )
-          })}
-          {DUMMY_BOOKINGS[activeTab].length === 0 && (
-            <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
-               <GlassCard intensity={15} style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No {activeTab} Bookings</Text>
-                <Text style={styles.emptySub}>You have no structured missions in this sector.</Text>
-               </GlassCard>
-            </Animated.View>
-          )}
-          <View style={{ height: 100 }} />
-        </ScrollView>
+            )}
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        )}
       </View>
     </BackgroundWrapper>
   );

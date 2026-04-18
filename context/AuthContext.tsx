@@ -1,12 +1,38 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { socketService } from '../services/socketService';
 
-type UserRole = 'client' | 'worker' | null;
+export type UserRole = 'client' | 'worker' | null;
+
+export interface UserProfile {
+  _id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  profileImage?: string;
+  address?: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+  };
+}
+
+export interface WorkerProfile extends UserProfile {
+  category: string;
+  averageRating: number;
+  hourlyRate: number;
+  isAvailable: boolean;
+  totalBookings: number;
+}
 
 interface AuthContextType {
   role: UserRole;
-  setRole: (role: UserRole) => Promise<void>;
+  user: UserProfile | WorkerProfile | null;
+  token: string | null;
   isLoading: boolean;
+  setAuth: (token: string, role: UserRole, user: any) => Promise<void>;
+  setRole: (role: UserRole) => void;
+  updateUser: (user: any) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -14,51 +40,80 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRoleState] = useState<UserRole>(null);
+  const [user, setUserState] = useState<UserProfile | WorkerProfile | null>(null);
+  const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load role from storage on mount
-    const loadRole = async () => {
+    const loadAuth = async () => {
       try {
-        const savedRole = await AsyncStorage.getItem('user_role');
-        if (savedRole === 'client' || savedRole === 'worker') {
-          setRoleState(savedRole);
+        const [savedRole, savedToken, savedUser] = await Promise.all([
+          AsyncStorage.getItem('user_role'),
+          AsyncStorage.getItem('user_token'),
+          AsyncStorage.getItem('user_data')
+        ]);
+
+        if (savedRole) setRoleState(savedRole as UserRole);
+        if (savedToken) {
+          setTokenState(savedToken);
+          socketService.connect(savedToken);
         }
+        if (savedUser) setUserState(JSON.parse(savedUser));
       } catch (error) {
-        console.error('Error loading role:', error);
+        console.error('Error loading auth state:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadRole();
+    loadAuth();
   }, []);
 
-  const setRole = async (newRole: UserRole) => {
+  const setAuth = async (token: string, role: UserRole, user: any) => {
     try {
-      setRoleState(newRole);
-      if (newRole) {
-        await AsyncStorage.setItem('user_role', newRole);
-      } else {
-        await AsyncStorage.removeItem('user_role');
-      }
+      setTokenState(token);
+      setRoleState(role);
+      setUserState(user);
+
+      socketService.connect(token);
+
+      await Promise.all([
+        AsyncStorage.setItem('user_token', token),
+        AsyncStorage.setItem('user_role', role || ''),
+        user ? AsyncStorage.setItem('user_data', JSON.stringify(user)) : Promise.resolve()
+      ]);
     } catch (error) {
-      console.error('Error saving role:', error);
+      console.error('Error saving auth state:', error);
+    }
+  };
+
+  const updateUser = async (user: any) => {
+    try {
+      setUserState(user);
+      await AsyncStorage.setItem('user_data', JSON.stringify(user));
+    } catch (error) {
+      console.error('Error updating user data:', error);
     }
   };
 
   const logout = async () => {
     try {
+      setTokenState(null);
       setRoleState(null);
-      await AsyncStorage.removeItem('user_role');
-      // Add other logout logic here (e.g. Firebase signout)
+      setUserState(null);
+      socketService.disconnect();
+      await Promise.all([
+        AsyncStorage.removeItem('user_token'),
+        AsyncStorage.removeItem('user_role'),
+        AsyncStorage.removeItem('user_data')
+      ]);
     } catch (error) {
       console.error('Error during logout:', error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ role, setRole, isLoading, logout }}>
+    <AuthContext.Provider value={{ role, user, token, isLoading, setAuth, setRole: setRoleState, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

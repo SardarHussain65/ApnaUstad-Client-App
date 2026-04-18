@@ -33,6 +33,7 @@ export const Colors = {
   cyanGradient: ['#00F5FF', '#007AFF'],
   orangeGradient: ['#FF8C00', '#FF5E00'],
   purpleGradient: ['#BF5AF2', '#FF2D55'],
+  successGradient: ['#34C759', '#11998e'],
   cosmicGradient: ['#050510', '#121225', '#050510'],
   glowingGradient: ['rgba(0, 245, 255, 0.15)', 'rgba(191, 90, 242, 0.15)'],
 };

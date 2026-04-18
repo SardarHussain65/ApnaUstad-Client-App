@@ -21,19 +21,17 @@ import { ChevronLeft, Zap, Star, ShieldCheck, Clock, MapPin, Search, Filter, Spa
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import api from '../services/api';
+import { ActivityIndicator } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-const SPECIALISTS = [
-  { id: '1', name: 'Zeeshan Khan', rating: '4.8', jobs: '210', price: '1,500', avatar: 'https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?q=80&w=150' },
-  { id: '2', name: 'Maria Sharapova', rating: '4.9', jobs: '156', price: '1,800', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=150' },
-  { id: '3', name: 'Hamza Malik', rating: '4.7', jobs: '98', price: '1,200', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=150' },
-];
+// Data will be fetched from API
 
 const QUICK_MISSIONS = [
-  { id: '1', title: 'Power Restoration', price: '2,500', time: '15 min', icon: Zap },
-  { id: '2', title: 'System Diagnostics', price: '1,200', time: '10 min', icon: Search },
-  { id: '3', title: 'Circuit Upgrade', price: '4,500', time: '45 min', icon: Activity },
+  { id: '1', title: 'Power Restoration', price: '2,500', time: '15 min', icon: Zap, description: 'Emergency power failure. Circuit breaker keeps tripping. Need urgent restoration of essential electrical grid.' },
+  { id: '2', title: 'System Diagnostics', price: '1,200', time: '10 min', icon: Search, description: 'Intermittent power flickering across the dwelling. Need a specialist to run diagnostic scans on the main panel.' },
+  { id: '3', title: 'Circuit Upgrade', price: '4,500', time: '45 min', icon: Activity, description: 'Upgrading the internal power grid to support high-intensity cosmic appliances. Standard protocol upgrade required.' },
 ];
 
 export default function CategoryDetailsScreen() {
@@ -41,6 +39,28 @@ export default function CategoryDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const scrollY = useSharedValue(0);
+
+  const [workers, setWorkers] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchWorkers();
+  }, [params.title]);
+
+  const fetchWorkers = async () => {
+    try {
+      const response = await api.get('/workers');
+      // Filter by category name
+      const filtered = response.data.data.filter((w: any) => 
+        w.category.toLowerCase().includes((params.title as string)?.toLowerCase() || '')
+      );
+      setWorkers(filtered);
+    } catch (error) {
+      console.error('Error fetching workers for category:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Dynamic Theme Base Color
   const themeColor = (params.color as string) || Colors.cyan;
@@ -111,7 +131,7 @@ export default function CategoryDetailsScreen() {
               <GlassCard intensity={20} style={styles.analyticsCard}>
                  <View style={styles.anaItem}>
                     <Activity color={Colors.success} size={18} />
-                    <Text style={styles.anaVal}>14</Text>
+                    <Text style={styles.anaVal}>{workers.length}</Text>
                     <Text style={styles.anaLab}>ACTIVE PROS</Text>
                  </View>
                  <View style={styles.anaDivider} />
@@ -136,7 +156,18 @@ export default function CategoryDetailsScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
                {QUICK_MISSIONS.map((task, idx) => (
                  <Animated.View key={task.id} entering={FadeInRight.delay(600 + idx * 100)}>
-                    <GlassCard intensity={30} style={styles.taskCard}>
+                    <GlassCard 
+                        intensity={30} 
+                        style={styles.taskCard}
+                        onPress={() => router.push({
+                          pathname: '/job-creation',
+                          params: { 
+                            title: params.title as string, 
+                            color: themeColor,
+                            initialDescription: (task as any).description 
+                          }
+                        })}
+                      >
                        <View style={[styles.taskIconBox, { backgroundColor: themeColor + '20' }]}>
                           <task.icon color={themeColor} size={22} />
                        </View>
@@ -161,29 +192,69 @@ export default function CategoryDetailsScreen() {
                <TouchableOpacity><Text style={styles.viewAll}>VIEW ALL</Text></TouchableOpacity>
             </View>
             
-            {SPECIALISTS.map((pro, idx) => (
-              <Animated.View key={pro.id} entering={FadeInDown.delay(800 + idx * 100)}>
-                <GlassCard intensity={15} style={styles.proCard} onPress={() => router.push('/worker-details')}>
-                   <Image source={{ uri: pro.avatar }} style={styles.proAvatar} />
-                   <View style={styles.proInfo}>
-                      <Text style={styles.proName}>{pro.name}</Text>
-                      <View style={styles.proStats}>
-                         <View style={styles.proBadge}>
-                            <Star size={10} color="#FFD700" fill="#FFD700" />
-                            <Text style={styles.proRating}>{pro.rating}</Text>
-                         </View>
-                         <Text style={styles.proJobs}>{pro.jobs} Successes</Text>
-                      </View>
-                   </View>
-                   <View style={styles.proAction}>
-                      <Text style={styles.proPrice}>Rs. {pro.price}</Text>
-                      <View style={[styles.onlineDot, { backgroundColor: Colors.success }]} />
-                   </View>
-                </GlassCard>
-              </Animated.View>
-            ))}
+            {isLoading ? (
+               <ActivityIndicator color={themeColor} style={{ marginTop: 20 }} />
+            ) : (
+              <>
+                {workers.map((pro, idx) => (
+                  <Animated.View key={pro._id} entering={FadeInDown.delay(800 + idx * 100)}>
+                    <GlassCard 
+                      intensity={15} 
+                      style={styles.proCard} 
+                      onPress={() => router.push({
+                        pathname: '/worker-details',
+                        params: { id: pro._id }
+                      })}
+                    >
+                       <Image 
+                         source={{ uri: pro.profileImage || `https://images.unsplash.com/photo-${1542909168 + idx}-82c3e7fdca5c?q=80&w=150` }} 
+                         style={styles.proAvatar} 
+                       />
+                       <View style={styles.proInfo}>
+                          <Text style={styles.proName}>{pro.fullName}</Text>
+                          <View style={styles.proStats}>
+                             <View style={styles.proBadge}>
+                                <Star size={10} color="#FFD700" fill="#FFD700" />
+                                <Text style={styles.proRating}>{pro.rating?.toFixed(1) || '5.0'}</Text>
+                             </View>
+                             <Text style={styles.proJobs}>{pro.totalJobs || 0} Successes</Text>
+                          </View>
+                       </View>
+                       <View style={styles.proAction}>
+                          <Text style={styles.proPrice}>Rs. {pro.hourlyRate}</Text>
+                          <View style={[styles.onlineDot, { backgroundColor: pro.isAvailable ? Colors.success : Colors.error }]} />
+                       </View>
+                    </GlassCard>
+                  </Animated.View>
+                ))}
+                {workers.length === 0 && (
+                  <Text style={styles.emptyText}>No specialists detected in this sector yet.</Text>
+                )}
+              </>
+            )}
           </View>
         </Animated.ScrollView>
+
+        {/* Floating Custom Mission Button */}
+        <Animated.View entering={FadeInUp.delay(1000)} style={[styles.floatingAction, { bottom: insets.bottom + 20 }]}>
+           <TouchableOpacity 
+             style={[styles.customBtn, { shadowColor: themeColor }]}
+             onPress={() => router.push({
+               pathname: '/job-creation',
+               params: { title: params.title, color: themeColor }
+             })}
+           >
+              <LinearGradient
+                colors={[themeColor, Colors.card]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.customBtnGradient}
+              >
+                <Zap size={20} color="#fff" fill="#fff" />
+                <Text style={styles.customBtnText}>START CUSTOM MISSION</Text>
+              </LinearGradient>
+           </TouchableOpacity>
+        </Animated.View>
       </View>
     </BackgroundWrapper>
   );
@@ -430,5 +501,35 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  floatingAction: {
+    position: 'absolute',
+    left: Spacing.l,
+    right: Spacing.l,
+    alignItems: 'center',
+    zIndex: 110,
+  },
+  customBtn: {
+    width: '100%',
+    height: 60,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  customBtnGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  customBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 1,
   }
 });

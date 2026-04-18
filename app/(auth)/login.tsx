@@ -36,7 +36,7 @@ import { GlassCard } from '../../components/home/GlassCard';
 export default function LoginScreen() {
   const router = useRouter();
   const { role: urlRole } = useLocalSearchParams<{ role: string }>();
-  const { setRole } = useAuth();
+  const { setRole, setAuth } = useAuth();
 
   // 🎨 Dynamic accent color based on role
   const accentColor = urlRole === 'worker' ? Colors.worker : Colors.cyan;
@@ -72,9 +72,17 @@ export default function LoginScreen() {
       return response.json();
     },
     onSuccess: async (data) => {
-      if (urlRole) {
-        await setRole(urlRole as 'client' | 'worker');
+      // Workers return 'worker' key, clients return 'user' key
+      const token = data.token || data.data?.token;
+      const user = data.user || data.data?.user || data.data?.worker;
+      const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
+      
+      if (token && user) {
+        await setAuth(token, finalRole, user);
+      } else {
+        await setRole(finalRole);
       }
+
       Alert.alert('Success', 'Logged in successfully!');
       router.replace('/(tabs)' as any);
     },

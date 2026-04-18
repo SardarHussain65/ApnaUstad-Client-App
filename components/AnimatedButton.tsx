@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle, StyleProp } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle, StyleProp, ActivityIndicator } from 'react-native';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -17,11 +17,12 @@ const AnimatedPressable = Animated.createAnimatedComponent(TouchableOpacity);
 interface AnimatedButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'cyan' | 'orange' | 'outline' | 'ghost';
+  variant?: 'cyan' | 'orange' | 'outline' | 'ghost' | 'success';
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   icon?: React.ReactNode;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
@@ -31,7 +32,8 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   style,
   textStyle,
   icon,
-  disabled = false
+  disabled = false,
+  isLoading = false
 }) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
@@ -40,6 +42,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     switch (variant) {
       case 'cyan': return Colors.cyanGradient;
       case 'orange': return Colors.orangeGradient;
+      case 'success': return (Colors as any).successGradient;
       default: return ['transparent', 'transparent'];
     }
   };
@@ -83,14 +86,20 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        {icon}
-        <Text style={[
-          styles.text,
-          (variant === 'outline' || variant === 'ghost') && styles.textAlt,
-          textStyle
-        ]}>
-          {title}
-        </Text>
+        {isLoading ? (
+          <ActivityIndicator color={variant === 'outline' || variant === 'ghost' ? Colors.cyan : '#000'} />
+        ) : (
+          <>
+            {icon}
+            <Text style={[
+              styles.text,
+              (variant === 'outline' || variant === 'ghost') && styles.textAlt,
+              textStyle
+            ]}>
+              {title}
+            </Text>
+          </>
+        )}
       </LinearGradient>
     </AnimatedPressable>
   );

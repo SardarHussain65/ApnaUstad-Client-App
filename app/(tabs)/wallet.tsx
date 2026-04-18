@@ -7,26 +7,62 @@ import Animated, { FadeInDown, FadeInRight, LinearTransition, Layout } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowUpRight, ArrowDownRight, Wallet, History, CreditCard, ChevronRight, Download } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { CosmicCircle } from '../../components/home/CosmicCircle';
+import { ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 
 const FILTERS = ['All', 'Income', 'Expense'] as const;
 type FilterType = typeof FILTERS[number];
 
-const TRANSACTIONS = [
-  { id: '1', title: 'Deep Cleaning Service', date: 'Today, 2:30 PM', amount: 4500, type: 'Income', icon: ArrowUpRight },
-  { id: '2', title: 'Withdraw to Bank', date: 'Yesterday, 10:00 AM', amount: -2000, type: 'Expense', icon: ArrowDownRight },
-  { id: '3', title: 'AC Repair', date: 'Nov 14, 2024', amount: 1200, type: 'Income', icon: ArrowUpRight },
-  { id: '4', title: 'Platform Fee', date: 'Nov 14, 2024', amount: -120, type: 'Expense', icon: ArrowDownRight },
-  { id: '5', title: 'Tip from Client', date: 'Nov 12, 2024', amount: 500, type: 'Income', icon: ArrowUpRight },
-];
+// Data will be fetched from API
 
 export default function WalletTab() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { role, user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
+  
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredTransactions = TRANSACTIONS.filter(t => {
+  React.useEffect(() => {
+    fetchFinancialData();
+  }, []);
+
+  const fetchFinancialData = async () => {
+    try {
+      const response = await api.get('/bookings');
+      const allBookings = response.data.data || [];
+      
+      // Filter for completed missions to calculate balance
+      const completed = allBookings.filter((b: any) => b.status === 'completed');
+      
+      // Calculate balance: sum of finalPrice (fallback to job budget)
+      const total = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || b.jobPost?.budget || 0), 0);
+      setBalance(total);
+
+      // Map bookings to transactions
+      const mappedTransactions = completed.map((b: any) => ({
+        id: b._id,
+        title: b.jobPost?.category || 'Mission Secured',
+        date: new Date(b.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        amount: b.finalPrice || b.jobPost?.budget || 0,
+        type: 'Income',
+        icon: ArrowUpRight
+      }));
+
+      setTransactions(mappedTransactions);
+    } catch (error) {
+      console.error('Error fetching financial data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredTransactions = transactions.filter(t => {
     if (activeFilter === 'All') return true;
     return t.type === activeFilter;
   });
@@ -47,9 +83,9 @@ export default function WalletTab() {
           <GlassCard style={styles.balanceCard} intensity={40} glowColor={Colors.cyan}>
             <View style={styles.balanceContent}>
               <View style={styles.balanceTextGroup}>
-                <Text style={styles.balanceLabel}>TOTAL BALANCE</Text>
-                <Text style={[styles.balanceAmount, Typography.threeD]}>Rs. 12,450</Text>
-                <Text style={styles.balanceSubtext}>+Rs. 1,200 this week</Text>
+                <Text style={styles.balanceLabel}>TOTAL EARNINGS</Text>
+                <Text style={[styles.balanceAmount, Typography.threeD]}>Rs. {balance.toLocaleString()}</Text>
+                <Text style={styles.balanceSubtext}>Based on completed missions</Text>
               </View>
               {/* Replacing generic icon with a mini glowing orb effect */}
               <View style={styles.orbContainer}>
@@ -110,57 +146,58 @@ export default function WalletTab() {
 
           {/* Transactions List */}
           <View style={styles.transactionList}>
-            {filteredTransactions.map((item, index) => {
-              const isIncome = item.amount > 0;
-              const accentColor = isIncome ? Colors.success : Colors.error;
-              const IconComponent = item.icon;
+            {isLoading ? (
+               <ActivityIndicator color={Colors.cyan} style={{ marginTop: 20 }} />
+            ) : (
+              <>
+                {filteredTransactions.map((item, index) => {
+                  const isIncome = item.amount > 0;
+                  const accentColor = isIncome ? Colors.success : Colors.error;
+                  const IconComponent = item.icon;
 
-              return (
-                <Animated.View
-                  key={item.id}
-                  entering={FadeInRight.delay(index * 100).duration(500)}
-                  layout={Layout.springify()}
-                >
-                  <GlassCard 
-                    intensity={20} 
-                    style={styles.transactionCard}
-                    onPress={() => router.push({
-                      pathname: '/transaction-details',
-                      params: { 
-                        id: item.id, 
-                        title: item.title, 
-                        amount: item.amount,
-                        date: item.date
-                      }
-                    })}
-                  >
-                    <View style={styles.txRow}>
-                      <View style={[styles.txIconBox, { backgroundColor: accentColor + '20', borderColor: accentColor + '40' }]}>
-                        <IconComponent size={20} color={accentColor} />
-                      </View>
-                      
-                      <View style={styles.txInfo}>
-                        <Text style={[styles.txTitle, Typography.threeD]}>{item.title}</Text>
-                        <Text style={styles.txDate}>{item.date}</Text>
-                      </View>
+                  return (
+                    <Animated.View
+                      key={item.id}
+                      entering={FadeInRight.delay(index * 100).duration(500)}
+                      layout={Layout.springify()}
+                    >
+                      <GlassCard 
+                        intensity={20} 
+                        style={styles.transactionCard}
+                        onPress={() => router.push({
+                          pathname: '/transaction-details',
+                          params: { id: item.id }
+                        })}
+                      >
+                        <View style={styles.txRow}>
+                          <View style={[styles.txIconBox, { backgroundColor: accentColor + '20', borderColor: accentColor + '40' }]}>
+                            <IconComponent size={20} color={accentColor} />
+                          </View>
+                          
+                          <View style={styles.txInfo}>
+                            <Text style={[styles.txTitle, Typography.threeD]}>{item.title}</Text>
+                            <Text style={styles.txDate}>{item.date}</Text>
+                          </View>
 
-                      <View style={styles.txAmountGroup}>
-                        <Text style={[styles.txAmount, { color: accentColor }]}>
-                          {isIncome ? '+' : ''}{item.amount}
-                        </Text>
-                        <Text style={styles.txCurrency}>PKR</Text>
-                      </View>
-                    </View>
-                  </GlassCard>
-                </Animated.View>
-              )
-            })}
-            
-            {filteredTransactions.length === 0 && (
-               <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
-                 <Text style={styles.emptyTitle}>No Transactions</Text>
-                 <Text style={styles.emptySub}>No activity found for this filter.</Text>
-               </Animated.View>
+                          <View style={styles.txAmountGroup}>
+                            <Text style={[styles.txAmount, { color: accentColor }]}>
+                              {isIncome ? '+' : ''}{item.amount.toLocaleString()}
+                            </Text>
+                            <Text style={styles.txCurrency}>PKR</Text>
+                          </View>
+                        </View>
+                      </GlassCard>
+                    </Animated.View>
+                  )
+                })}
+                
+                {filteredTransactions.length === 0 && (
+                  <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
+                    <Text style={styles.emptyTitle}>No Transactions</Text>
+                    <Text style={styles.emptySub}>No mission activity detected in this sector.</Text>
+                  </Animated.View>
+                )}
+              </>
             )}
           </View>
         </View>

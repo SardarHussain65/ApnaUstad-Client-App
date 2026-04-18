@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, Platform, ActivityIndicator } from 'react-native';
 import {
   TrendingUp,
   Clock,
@@ -10,9 +10,11 @@ import {
   MapPin,
   Star,
   Activity,
-  Zap
+  Zap,
+  Briefcase
 } from 'lucide-react-native';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { HomeHeader } from './HomeHeader';
 import { GlassCard } from './GlassCard';
@@ -20,16 +22,58 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CosmicCircle } from './CosmicCircle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
-
-const AGENDA = [
-  { id: '1', customer: 'Sarah Khan', service: 'Deep Cleaning', time: '10:00 AM', status: 'Upcoming', dist: '2.4 km', gradient: ['#FF8C00', '#FF4500'] as [string, string, ...string[]] },
-  { id: '2', customer: 'John Doe', service: 'AC Maintenance', time: '02:30 PM', status: 'Scheduled', dist: '4.1 km', gradient: ['#1E90FF', '#0000FF'] as [string, string, ...string[]] },
-  { id: '3', customer: 'Alice Wong', service: 'Plumbing Fix', time: '05:00 PM', status: 'Requested', dist: '1.2 km', gradient: ['#32CD32', '#006400'] as [string, string, ...string[]] },
-];
+import api from '../../services/api';
+import { socketService } from '../../services/socketService';
 
 export function WorkerHome() {
+  const router = useRouter();
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [stats, setStats] = useState({ revenue: 0, rating: 0, missions: 0 });
+  const [isLoading, setIsLoading] = useState(true);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    fetchNearbyJobs();
+    fetchStats();
+
+    // Listen for new jobs in real-time
+    const unsubscribe = socketService.on('job:new', (newJob) => {
+      setJobs(current => [newJob, ...current]);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/bookings');
+      const allBookings = response.data.data || [];
+      const completed = allBookings.filter((b: any) => b.status === 'completed');
+      
+      const totalRevenue = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || 0), 0);
+      
+      setStats({
+        revenue: totalRevenue,
+        missions: allBookings.length,
+        rating: 4.9 // Default for now
+      });
+    } catch (error) {
+      console.error('Error fetching worker stats:', error);
+    }
+  };
+
+  const fetchNearbyJobs = async () => {
+    try {
+      // Mock coordinates for now
+      const response = await api.get('/jobs/nearby?longitude=74.3587&latitude=31.5204');
+      setJobs(response.data.data);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <BackgroundWrapper>
@@ -65,74 +109,96 @@ export function WorkerHome() {
             <View style={styles.dashboardContent}>
               <CosmicCircle
                 value={0.72}
-                label="Rs. 4,250"
-                subLabel="DAILY REVENUE"
+                label={`Rs. ${stats.revenue.toLocaleString()}`}
+                subLabel="TOTAL REVENUE"
                 size={160}
               />
               <View style={styles.miniStatsContainer}>
-                <View style={[styles.miniStatRow, { backgroundColor: 'rgba(255, 20, 147, 0.3)' }]}>
+                <View style={[styles.miniStatRow, { backgroundColor: 'rgba(255, 20, 147, 0.1)' }]}>
                   <Activity size={18} color={Colors.cyan} />
-                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>98% <Text style={styles.miniStatLab}>SUCCESS</Text></Text>
+                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>100% <Text style={styles.miniStatLab}>SUCCESS</Text></Text>
                 </View>
-                <View style={[styles.miniStatRow, { backgroundColor: 'rgba(0, 122, 255, 0.3)' }]}>
+                <View style={[styles.miniStatRow, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
                   <Star size={18} color="#ffd700" />
-                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>4.9 <Text style={styles.miniStatLab}>RATING</Text></Text>
+                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{stats.rating} <Text style={styles.miniStatLab}>RATING</Text></Text>
                 </View>
-                <View style={[styles.miniStatRow, { backgroundColor: 'rgba(255, 215, 0, 0.3)' }]}>
+                <View style={[styles.miniStatRow, { backgroundColor: 'rgba(255, 215, 0, 0.1)' }]}>
                   <Zap size={18} color="#BF5AF2" />
-                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>12 <Text style={styles.miniStatLab}>MISSIONS</Text></Text>
+                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{stats.missions} <Text style={styles.miniStatLab}>MISSIONS</Text></Text>
                 </View>
               </View>
             </View>
           </GlassCard>
         </Animated.View>
 
-        {/* Agenda Section */}
+        {/* Nearby Jobs Feed */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, Typography.threeD]}>Launch Agenda</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>Full Schedule</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Briefcase color={Colors.cyan} size={24} />
+              <Text style={[styles.sectionTitle, Typography.threeD]}>Open Missions</Text>
+            </View>
+            <TouchableOpacity onPress={fetchNearbyJobs}>
+              <Text style={styles.seeAll}>REFRESH</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.agendaList}>
-            {AGENDA.map((item, index) => (
-              <Animated.View
-                key={item.id}
-                entering={FadeInDown.delay(500 + index * 100).duration(600)}
-              >
-                <GlassCard
-                  style={styles.jobCard}
-                  hasGlow={index === 0}
-                  glowColor={Colors.orange}
-                  gradient={item.gradient}
+          {isLoading ? (
+             <ActivityIndicator color={Colors.cyan} style={{ marginTop: 20 }} />
+          ) : (
+            <View style={styles.agendaList}>
+              {jobs.map((job, index) => (
+                <Animated.View
+                  key={job._id}
+                  entering={FadeInDown.delay(index * 100).duration(600)}
                 >
-                  <View style={styles.jobRow}>
-                    <View style={styles.timeCluster}>
-                      <Text style={[styles.jobTime, Typography.threeD]}>{item.time.split(' ')[0]}</Text>
-                      <Text style={styles.jobPeriod}>{item.time.split(' ')[1]}</Text>
-                    </View>
+                  <GlassCard
+                    style={styles.jobCard}
+                    hasGlow={job.urgency === 'instant'}
+                    glowColor={job.urgency === 'instant' ? Colors.cyan : Colors.primary}
+                    onPress={() => router.push({
+                      pathname: '/bid-submission',
+                      params: { jobId: job._id, title: job.category, urgency: job.urgency }
+                    })}
+                  >
+                    <View style={styles.jobRow}>
+                      <View style={styles.typeCluster}>
+                        {job.urgency === 'instant' ? (
+                          <Zap size={20} color={Colors.cyan} />
+                        ) : (
+                          <Calendar size={20} color={Colors.worker} />
+                        )}
+                        <Text style={[styles.jobTypeLabel, { color: job.urgency === 'instant' ? Colors.cyan : Colors.worker }]}>
+                          {job.urgency.toUpperCase()}
+                        </Text>
+                      </View>
 
-                    <View style={styles.jobMain}>
-                      <Text style={[styles.jobCustomer, Typography.threeD]}>{item.customer}</Text>
-                      <Text style={styles.jobService}>{item.service}</Text>
-                      <View style={styles.jobMeta}>
-                        <MapPin size={12} color="#fff" opacity={0.7} />
-                        <Text style={styles.metaText}>{item.dist}</Text>
-                        <View style={styles.dot} />
-                        <Text style={[styles.statusText, { color: '#fff' }]}>{item.status}</Text>
+                      <View style={styles.jobMain}>
+                        <Text style={[styles.jobCustomer, Typography.threeD]}>{job.category}</Text>
+                        <Text style={styles.jobService} numberOfLines={1}>{job.description}</Text>
+                        <View style={styles.jobMeta}>
+                          <MapPin size={12} color="#fff" opacity={0.7} />
+                          <Text style={styles.metaText}>{job.address || 'Nearby'}</Text>
+                          <View style={styles.dot} />
+                          <Text style={styles.distanceText}>1.2 km away</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.actionArea}>
+                         <ChevronRight size={20} color="#fff" />
                       </View>
                     </View>
+                  </GlassCard>
+                </Animated.View>
+              ))}
 
-                    <TouchableOpacity style={styles.actionBtn}>
-                      <ChevronRight size={20} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                </GlassCard>
-              </Animated.View>
-            ))}
-          </View>
+              {jobs.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No missions detected within your orbit.</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         <View style={{ height: 120 }} />
@@ -250,28 +316,25 @@ const styles = StyleSheet.create({
   jobCard: {
     padding: 0,
     overflow: 'hidden',
+    borderRadius: 24,
   },
   jobRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
   },
-  timeCluster: {
+  typeCluster: {
     alignItems: 'center',
     paddingRight: 16,
     borderRightWidth: 1,
     borderRightColor: 'rgba(255,255,255,0.1)',
-    minWidth: 60,
+    minWidth: 70,
+    gap: 4,
   },
-  jobTime: {
-    color: '#fff',
-    fontSize: 16,
+  jobTypeLabel: {
+    fontSize: 9,
     fontWeight: '900',
-  },
-  jobPeriod: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 10,
-    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   jobMain: {
     flex: 1,
@@ -285,7 +348,7 @@ const styles = StyleSheet.create({
   },
   jobService: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -305,12 +368,23 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
-  statusText: {
+  distanceText: {
     fontSize: 11,
+    color: Colors.cyan,
     fontWeight: '800',
-    textTransform: 'uppercase',
   },
-  actionBtn: {
-    padding: 8,
+  actionArea: {
+    paddingLeft: 10,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: Colors.textDim,
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });

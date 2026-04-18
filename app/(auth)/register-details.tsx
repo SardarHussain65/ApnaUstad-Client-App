@@ -30,6 +30,7 @@ import {
   Lock, CreditCard, Briefcase, Award, PenTool,
   BadgeDollarSign, FileText, CheckCircle
 } from 'lucide-react-native';
+import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, BorderRadius, Shadows } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
@@ -47,6 +48,7 @@ export default function RegisterDetailsScreen() {
     role: string;
     idToken: string;
   }>();
+  const { setAuth } = useAuth();
 
   // 🎨 Dynamic accent color based on role
   const accentColor = params.role === 'worker' ? Colors.worker : Colors.cyan;
@@ -155,10 +157,19 @@ export default function RegisterDetailsScreen() {
       const result = await response.json();
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // 🛠️ FIX: Initialize session after registration
+      const token = data.token || data.data?.token;
+      const user = data.user || data.data?.user;
+      
+      if (token) {
+        setAuth(token, params.role as 'client' | 'worker', user);
+      }
+      
       Alert.alert('Success', `Profile completed! Welcome to ApnaUstad as a ${params.role}.`);
-      router.replace('/');
+      router.replace('/(tabs)' as any);
     },
     onError: (error: any) => {
       Alert.alert('Registration Error', error.message);

@@ -4,12 +4,16 @@ import { AuthProvider } from "../context/AuthContext";
 
 const queryClient = new QueryClient();
 
+function RootLayoutNav() {
+  return <Stack screenOptions={{ headerShown: false }} />;
+}
+
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <RootLayoutNav />
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }

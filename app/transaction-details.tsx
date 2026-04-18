@@ -1,185 +1,226 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Platform } from 'react-native';
 import { Colors, Typography, Spacing, Shadows } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import Animated, { 
-  FadeInDown, 
+import Animated, {
+  FadeInDown,
   FadeInUp,
-  useAnimatedStyle, 
-  useSharedValue, 
-  withRepeat, 
-  withTiming, 
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
   withSequence,
   interpolate,
-  Extrapolate
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Share2, ShieldCheck, Zap, Download, Info, Copy, CheckCircle2 } from 'lucide-react-native';
+import { ChevronLeft, Share2, ShieldCheck, Zap, Download, Info, Copy, CheckCircle2, MapPin, Phone, MessageCircle } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import api from '../services/api';
+import { socketService } from '../services/socketService';
+import { useAuth } from '../context/AuthContext';
+import { AnimatedButton } from '../components/AnimatedButton';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function TransactionDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams();
-  
-  const sealRotation = useSharedValue(0);
-  const statusPulse = useSharedValue(1);
+  const { id, amount: initialAmount } = useLocalSearchParams<{ id: string; amount?: string }>();
+  const { role } = useAuth();
 
-  React.useEffect(() => {
-    sealRotation.value = withRepeat(withTiming(360, { duration: 20000 }), -1, false);
-    statusPulse.value = withRepeat(
-      withSequence(
-        withTiming(1.2, { duration: 1000 }),
-        withTiming(1, { duration: 1000 })
-      ),
-      -1,
-      true
+  const [booking, setBooking] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    fetchBookingDetails();
+
+    const unsubscribe = socketService.on('booking:status', (data) => {
+      if (data.bookingId === id) {
+        setBooking((prev: any) => ({ ...prev, status: data.status }));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [id]);
+
+  const fetchBookingDetails = async () => {
+    try {
+      const response = await api.get(`/bookings/${id}`);
+      setBooking(response.data.data);
+    } catch (error) {
+      console.error('Error fetching booking:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateStatus = async (newStatus: string) => {
+    setIsUpdating(true);
+    try {
+      await api.patch(`/bookings/${id}/status`, { status: newStatus });
+      fetchBookingDetails();
+    } catch (error) {
+      console.error('Error updating status:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const navigateToChat = () => {
+    const partner = role === 'worker' ? booking?.customer : booking?.worker;
+    router.push({
+      pathname: '/chat',
+      params: {
+        bookingId: id,
+        recipientName: partner?.fullName || 'Partner',
+        recipientId: partner?._id
+      }
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.loading}>
+          <ActivityIndicator color={Colors.cyan} size="large" />
+        </View>
+      </BackgroundWrapper>
     );
-  }, []);
+  }
 
-  const sealAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${sealRotation.value}deg` }]
-  }));
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: statusPulse.value }],
-    opacity: interpolate(statusPulse.value, [1, 1.2], [1, 0.6])
-  }));
-
-  const amount = params.amount || '4,500';
-  const title = params.title || 'Deep Cleaning Service';
-  const date = params.date || 'Oct 24, 2024 • 02:30 PM';
-  const isIncome = !amount.toString().includes('-');
+  const amount = booking?.finalPrice || initialAmount || 'PENDING';
+  const status = booking?.status || 'accepted';
+  const isWorker = role === 'worker';
+  const partner = isWorker ? booking?.customer : booking?.worker;
 
   return (
     <BackgroundWrapper>
       <View style={styles.container}>
-        {/* Header */}
-        <ScrollView 
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ChevronLeft color="#fff" size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>MISSION PARAMETERS</Text>
+          <TouchableOpacity style={styles.backButton}>
+            <Share2 color="#fff" size={20} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
+          contentContainerStyle={styles.scrollContent}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <ChevronLeft color="#fff" size={28} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Transaction Vault</Text>
-            <TouchableOpacity>
-              <Share2 color="#fff" size={22} />
-            </TouchableOpacity>
-          </View>
-          <Animated.View entering={FadeInUp.delay(200).springify().damping(15)}>
-            {/* Holographic Receipt Ticket */}
-            <View style={styles.ticketContainer}>
-              <GlassCard intensity={40} style={styles.mainTicket}>
-                {/* Notches */}
-                <View style={styles.notchLeft} />
-                <View style={styles.notchRight} />
+          {/* Status Badge */}
+          <Animated.View entering={FadeInUp} style={styles.statusRow}>
+            <GlassCard intensity={20} style={[styles.statusBadge, { borderColor: status === 'completed' ? Colors.success : Colors.cyan }]}>
+              <View style={[styles.statusDot, { backgroundColor: status === 'completed' ? Colors.success : Colors.cyan }]} />
+              <Text style={[styles.statusText, { color: status === 'completed' ? Colors.success : Colors.cyan }]}>
+                {status.toUpperCase().replace('_', ' ')}
+              </Text>
+            </GlassCard>
+          </Animated.View>
 
-                {/* Status Section */}
-                <View style={styles.statusBox}>
-                  <View style={styles.pulseContainer}>
-                    <Animated.View style={[styles.statusPulse, pulseStyle]} />
-                    <View style={[styles.statusDot, { backgroundColor: isIncome ? Colors.success : Colors.cyan }]} />
-                  </View>
-                  <Text style={[styles.statusText, { color: isIncome ? Colors.success : Colors.cyan }]}>
-                    SETTLED & VERIFIED
-                  </Text>
+          {/* Amount Card */}
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.amountCard}>
+            <Text style={styles.amountLabel}>ALLOCATED BUDGET</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.currency}>PKR</Text>
+              <Text style={[styles.amountValue, Typography.threeD]}>{amount}</Text>
+            </View>
+            <Text style={styles.dateText}>
+              {booking?.scheduledDate ? new Date(booking.scheduledDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'PROTOCOL ACTIVE'}
+            </Text>
+          </Animated.View>
+
+          {/* Profile Section */}
+          <Animated.View entering={FadeInUp.delay(200)}>
+            <GlassCard intensity={25} style={styles.profileCard}>
+              <View style={styles.profileHeader}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarInitial}>{partner?.fullName?.[0] || 'U'}</Text>
                 </View>
-
-                {/* Amount Section */}
-                <View style={styles.amountSection}>
-                  <Text style={styles.amountLabel}>NET SETTLEMENT</Text>
-                  <View style={styles.amountRow}>
-                    <Text style={[styles.currency, Typography.threeD]}>PKR</Text>
-                    <Text style={[styles.amount, Typography.threeD]}>{amount.toString().replace('-', '')}</Text>
-                    <Text style={styles.decimals}>.00</Text>
-                  </View>
-                  <Text style={styles.dateText}>{date}</Text>
+                <View style={styles.profileMeta}>
+                  <Text style={styles.roleLabel}>{isWorker ? 'CLIENT' : 'ASSIGNED USTAD'}</Text>
+                  <Text style={styles.profileName}>{partner?.fullName || 'IDENTIFYING...'}</Text>
                 </View>
-
-                {/* Dashed Divider */}
-                <View style={styles.dividerWrapper}>
-                   <View style={styles.dashedLine} />
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.05)' }]} onPress={() => Linking.openURL(`tel:${partner?.phone}`)}>
+                    <Phone size={18} color={Colors.cyan} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.iconBtn, { backgroundColor: Colors.cyan }]} onPress={navigateToChat}>
+                    <MessageCircle size={18} color="#000" />
+                  </TouchableOpacity>
                 </View>
+              </View>
+            </GlassCard>
+          </Animated.View>
 
-                {/* Breakdown List */}
-                <View style={styles.breakdownSection}>
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Service Base Fare</Text>
-                    <Text style={styles.breakdownValue}>Rs. 4,200.00</Text>
-                  </View>
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Quantum Platform Fee</Text>
-                    <Text style={styles.breakdownValue}>Rs. 250.00</Text>
-                  </View>
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Energy Tax (VAT)</Text>
-                    <Text style={styles.breakdownValue}>Rs. 50.00</Text>
-                  </View>
-                  <View style={[styles.breakdownRow, styles.totalRow]}>
-                    <Text style={styles.totalLabel}>TOTAL FLOW</Text>
-                    <Text style={styles.totalValue}>Rs. {amount.toString().replace('-', '')}.00</Text>
-                  </View>
-                </View>
+          {/* Details Section */}
+          <Animated.View entering={FadeInUp.delay(300)} style={styles.detailsList}>
+            <View style={styles.detailItem}>
+              <View style={styles.detailIcon}>
+                <Zap size={18} color={Colors.cyan} />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>MISSION CATEGORY</Text>
+                <Text style={styles.detailValue}>{booking?.category || 'General Service'}</Text>
+              </View>
+            </View>
 
-                {/* Payment Origin */}
-                <GlassCard intensity={15} style={styles.originCard}>
-                  <View style={styles.originIcon}>
-                     <Zap size={18} color={Colors.primary} fill={Colors.primary} />
-                  </View>
-                  <View style={styles.originInfo}>
-                    <Text style={styles.originLabel}>SETTLEMENT ORIGIN</Text>
-                    <Text style={styles.originValue}>{title}</Text>
-                  </View>
-                  <CheckCircle2 size={20} color={Colors.success} />
-                </GlassCard>
-
-                {/* Security Seal */}
-                <View style={styles.sealContainer}>
-                  <Animated.View style={[styles.sealWrapper, sealAnimatedStyle]}>
-                    <ShieldCheck size={40} color="rgba(255,255,255,0.15)" strokeWidth={1} />
-                  </Animated.View>
-                  <View style={styles.securityInfo}>
-                    <Text style={styles.securityText}>ENCRYPTED BY APNAUSTAD</Text>
-                    <Text style={styles.hashText}>Hash: 0x82f...a12c</Text>
-                  </View>
-                </View>
-              </GlassCard>
+            <View style={styles.detailItem}>
+              <View style={styles.detailIcon}>
+                <MapPin size={18} color={Colors.cyan} />
+              </View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>SERVICE LOCATION</Text>
+                <Text style={styles.detailValue}>{booking?.jobPost?.address || 'Standard Orbit'}</Text>
+              </View>
             </View>
           </Animated.View>
 
-          {/* Action Buttons */}
-          <Animated.View entering={FadeInDown.delay(600)} style={styles.actionSection}>
-             <TouchableOpacity style={styles.mainAction}>
-                <LinearGradient
-                  colors={[Colors.primary, Colors.purple]}
-                  start={{x: 0, y: 0}}
-                  end={{x: 1, y: 0}}
-                  style={styles.actionGradient}
-                >
-                  <Download size={20} color="#fff" style={{ marginRight: 10 }} />
-                  <Text style={styles.actionText}>EXPORT AS DIGITAL ASSET</Text>
-                </LinearGradient>
-             </TouchableOpacity>
-
-             <View style={styles.secondaryActions}>
-                <TouchableOpacity style={styles.subAction}>
-                   <Copy size={20} color="rgba(255,255,255,0.6)" />
-                   <Text style={styles.subActionText}>Copy ID</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.subAction}>
-                   <Info size={20} color="rgba(255,255,255,0.6)" />
-                   <Text style={styles.subActionText}>Report</Text>
-                </TouchableOpacity>
-             </View>
+          {/* Description Section */}
+          <Animated.View entering={FadeInUp.delay(400)}>
+            <GlassCard intensity={15} style={styles.descCard}>
+              <Text style={styles.descLabel}>MISSION BRIEF</Text>
+              <Text style={styles.descText}>{booking?.jobPost?.description || 'No mission notes provided.'}</Text>
+            </GlassCard>
           </Animated.View>
+
+          {/* Operational Controls */}
+          {isWorker && status !== 'completed' && (
+            <Animated.View entering={FadeInUp.delay(500)} style={styles.operationalSection}>
+              <View style={styles.opHeader}>
+                <ShieldCheck size={14} color={Colors.textDim} />
+                <Text style={styles.opLabel}>OPERATIONAL CONTROLS</Text>
+              </View>
+              {status === 'accepted' && (
+                <AnimatedButton
+                  title="INITIALIZE MISSION"
+                  variant="cyan"
+                  onPress={() => updateStatus('ongoing')}
+                  isLoading={isUpdating}
+                />
+              )}
+              {status === 'ongoing' && (
+                <AnimatedButton
+                  title="FINALIZE DEPLOYMENT"
+                  variant="success"
+                  onPress={() => updateStatus('completed')}
+                  isLoading={isUpdating}
+                />
+              )}
+            </Animated.View>
+          )}
+
+          {!isWorker && status === 'ongoing' && (
+            <View style={styles.clientActivity}>
+              <ActivityIndicator size="small" color={Colors.cyan} />
+              <Text style={styles.activityText}>USTAD IS CURRENTLY ON-SITE PERFORMING THE MISSION</Text>
+            </View>
+          )}
         </ScrollView>
       </View>
     </BackgroundWrapper>
@@ -190,111 +231,75 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  headerTitle: {
-    fontSize: 17,
-    color: '#fff',
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  iconBtn: {
+  backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '900',
+    letterSpacing: 2,
   },
   scrollContent: {
-    paddingHorizontal: Spacing.l,
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  ticketContainer: {
-    width: '100%',
-    position: 'relative',
-    marginTop: 20,
+  statusRow: {
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 20,
   },
-  mainTicket: {
-    borderRadius: 30,
-    padding: 24,
-    paddingTop: 40,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  notchLeft: {
-    position: 'absolute',
-    left: -15,
-    top: '55%',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#000', // Matches background wrapper somewhat
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    zIndex: 10,
-  },
-  notchRight: {
-    position: 'absolute',
-    right: -15,
-    top: '55%',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#000',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    zIndex: 10,
-  },
-  statusBox: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 30,
-  },
-  pulseContainer: {
-    width: 12,
-    height: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusPulse: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.success,
-    position: 'absolute',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
   },
   statusText: {
     fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
-  amountSection: {
+  amountCard: {
     alignItems: 'center',
     marginBottom: 40,
+    paddingVertical: 10,
   },
   amountLabel: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '800',
+    color: Colors.textDim,
+    fontWeight: '900',
     letterSpacing: 2,
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  amountRow: {
+  priceContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
@@ -302,159 +307,153 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'rgba(255,255,255,0.4)',
     fontWeight: '900',
-    marginRight: 6,
+    marginRight: 8,
   },
-  amount: {
+  amountValue: {
     fontSize: 48,
     color: '#fff',
     fontWeight: '900',
-    letterSpacing: -1,
-  },
-  decimals: {
-    fontSize: 24,
-    color: 'rgba(255,255,255,0.3)',
-    fontWeight: '900',
   },
   dateText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    fontWeight: '600',
-    marginTop: 10,
-  },
-  dividerWrapper: {
-    height: 1,
-    width: '100%',
-    marginVertical: 40,
-  },
-  dashedLine: {
-    height: 1,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderStyle: 'dashed',
-  },
-  breakdownSection: {
-    gap: 16,
-    marginBottom: 40,
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  breakdownLabel: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '600',
-  },
-  breakdownValue: {
-    fontSize: 13,
-    color: '#fff',
-    fontWeight: '700',
-  },
-  totalRow: {
-    marginTop: 10,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '900',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.3)',
+    fontWeight: '800',
     letterSpacing: 1,
+    marginTop: 5,
+    textTransform: 'uppercase',
   },
-  totalValue: {
-    fontSize: 18,
-    color: Colors.cyan,
-    fontWeight: '900',
+  profileCard: {
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 25,
   },
-  originCard: {
+  profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 40,
   },
-  originIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(30,144,255,0.15)',
+  avatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  originInfo: {
+  avatarInitial: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  profileMeta: {
     flex: 1,
     marginLeft: 15,
   },
-  originLabel: {
+  roleLabel: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '800',
+    color: Colors.textDim,
+    fontWeight: '900',
     letterSpacing: 1,
     marginBottom: 2,
   },
-  originValue: {
+  profileName: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '800',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailsList: {
+    gap: 20,
+    marginBottom: 25,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0, 245, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 255, 0.1)',
+  },
+  detailContent: {
+    marginLeft: 15,
+  },
+  detailLabel: {
+    fontSize: 9,
+    color: Colors.textDim,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  detailValue: {
     fontSize: 14,
     color: '#fff',
     fontWeight: '700',
   },
-  sealContainer: {
+  descCard: {
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 30,
+  },
+  descLabel: {
+    fontSize: 10,
+    color: Colors.cyan,
+    fontWeight: '900',
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+  descText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  operationalSection: {
+    gap: 15,
+  },
+  opHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 5,
   },
-  sealWrapper: {
-    marginBottom: 15,
-  },
-  securityInfo: {
-    alignItems: 'center',
-  },
-  securityText: {
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.3)',
+  opLabel: {
+    fontSize: 10,
+    color: Colors.textDim,
     fontWeight: '900',
     letterSpacing: 1.5,
   },
-  hashText: {
-    fontSize: 8,
-    color: 'rgba(255,255,255,0.2)',
-    fontFamily: 'Courier',
-    marginTop: 4,
-  },
-  actionSection: {
-    marginTop: 30,
-    gap: 20,
-  },
-  mainAction: {
-    width: '100%',
-  },
-  actionGradient: {
-    height: 56,
-    borderRadius: 20,
+  clientActivity: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.glow,
+    gap: 12,
+    backgroundColor: 'rgba(0, 245, 255, 0.03)',
+    padding: 20,
+    borderRadius: 20,
   },
-  actionText: {
-    color: '#fff',
-    fontSize: 14,
+  activityText: {
+    color: Colors.cyan,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 40,
-    marginBottom: 20,
-  },
-  subAction: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  subActionText: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
+    flex: 1,
   }
 });
