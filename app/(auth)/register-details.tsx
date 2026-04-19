@@ -34,13 +34,14 @@ import { useAuth } from '../../context/AuthContext';
 import { Colors, Typography, BorderRadius, Shadows } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
-
+import { useToast } from '../../hooks';
 
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 
 export default function RegisterDetailsScreen() {
   const router = useRouter();
+  const { success, error: showError } = useToast();
   const params = useLocalSearchParams<{
     fullName: string;
     email: string;
@@ -167,12 +168,11 @@ export default function RegisterDetailsScreen() {
       if (token) {
         setAuth(token, params.role as 'client' | 'worker', user);
       }
-      
-      Alert.alert('Success', `Profile completed! Welcome to ApnaUstad as a ${params.role}.`);
+      success('Welcome!', `Profile completed! Welcome to ApnaUstad as a ${params.role}.`);
       router.replace('/(tabs)' as any);
     },
     onError: (error: any) => {
-      Alert.alert('Registration Error', error.message);
+      showError('Registration Error', error.message);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   });
@@ -180,14 +180,14 @@ export default function RegisterDetailsScreen() {
   const handleCompleteProfile = async () => {
     // Basic Validation
     if (!address || !city || !password) {
-      Alert.alert('Missing Fields', 'Please fill in your address, city, and password.');
+      showError('Missing Fields', 'Please fill in your address, city, and password.');
       return;
     }
 
     // Worker Validation
     if (params.role === 'worker') {
       if (!cnicNumber || !category || !cnicFront || !cnicBack || !hourlyRate || !experience) {
-        Alert.alert('Missing Fields', 'All identity and professional fields are required.');
+        showError('Missing Fields', 'All identity and professional fields are required.');
         return;
       }
     }

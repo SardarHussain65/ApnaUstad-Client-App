@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import {
   Zap,
   Droplets,
@@ -10,73 +10,61 @@ import {
   ShieldCheck,
   Star,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  AlertCircle,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useCategories, useMyBookings } from '../../hooks';
 import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../../constants/Theme';
+import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
+import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CosmicCircle } from './CosmicCircle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
-import api from '../../services/api';
 
 const { width } = Dimensions.get('window');
-
-const CATEGORY_MAP: Record<string, any> = {
-  'Electrical': Zap,
-  'Electrician': Zap,
-  'Plumbing': Droplets,
-  'Plumber': Droplets,
-  'AC Repair': Wind,
-  'Carpentry': Hammer,
-  'Carpenter': Hammer,
-  'Painting': Paintbrush,
-  'Painter': Paintbrush,
-  'Mechanic': Wrench,
-};
 
 const DEFAULT_GRADIENT = ['#6366f1', '#a855f7'] as [string, string, ...string[]];
 
 export function ClientHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [showAllServices, setShowAllServices] = React.useState(false);
 
-  const [categories, setCategories] = React.useState<any[]>([]);
-  const [workers, setWorkers] = React.useState<any[]>([]);
-  const [stats, setStats] = React.useState({ jobs: 0, rating: 0 });
-  const [isLoading, setIsLoading] = React.useState(true);
+  // React Query hooks
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useCategories();
+  const { data: bookings = [], isLoading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useMyBookings();
 
-  React.useEffect(() => {
-    fetchData();
-  }, []);
+  const isLoading = categoriesLoading || bookingsLoading;
 
-  const fetchData = async () => {
-    try {
-      const [catRes, workerRes, bookingRes] = await Promise.all([
-        api.get('/users/categories'),
-        api.get('/workers'),
-        api.get('/bookings')
-      ]);
+  // Filter categories based on search query
+  const filteredCategories = React.useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    
+    const query = searchQuery.toLowerCase();
+    return categories.filter(cat => 
+      cat.name.toLowerCase().includes(query)
+    );
+  }, [categories, searchQuery]);
 
-      setCategories(catRes.data.data);
-      // Filter for some "elite" workers for the home screen
-      setWorkers(workerRes.data.data.slice(0, 5));
-      
-      const allBookings = bookingRes.data.data || [];
-      const completed = allBookings.filter((b: any) => b.status === 'completed');
-      setStats({
-        jobs: allBookings.length,
-        rating: 4.8 // Mock rating since User model doesn't have it yet
-      });
-    } catch (error) {
-      console.error('Error fetching home data:', error);
-    } finally {
-      setIsLoading(false);
+  // Display limited or all categories
+  const displayedCategories = React.useMemo(() => {
+    if (searchQuery.trim() || showAllServices) {
+      return filteredCategories;
     }
-  };
+    return filteredCategories.slice(0, 9); // Show only first 9 (3 rows x 3 columns)
+  }, [filteredCategories, showAllServices, searchQuery]);
+
+  // Compute stats from bookings
+  const stats = React.useMemo(() => ({
+    jobs: bookings.length,
+    rating: 4.8 // Mock rating since User model doesn't have it yet
+  }), [bookings]);
 
   return (
     <BackgroundWrapper>
@@ -86,16 +74,57 @@ export function ClientHome() {
       >
         <HomeHeader />
 
+        {/* Error States */}
+        {categoriesError && (
+          <View style={styles.errorContainer}>
+            <View style={styles.errorContent}>
+              <AlertCircle size={20} color="#FF6B6B" />
+              <Text style={styles.errorText}>Failed to load services</Text>
+            </View>
+          </View>
+        )}
+
+        {bookingsError && (
+          <View style={[styles.errorContainer, styles.errorWithAction]}>
+            <View style={styles.errorContent}>
+              <AlertCircle size={20} color="#FF6B6B" />
+              <View style={styles.errorTextWrap}>
+                <Text style={styles.errorText}>Failed to load bookings</Text>
+                <Text style={styles.errorSubtext}>Check your connection and try again</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.retryBtn}
+              onPress={() => refetchBookings()}
+            >
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
 
         {/* Categories Grid - Optimized */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, Typography.threeD]}>Meta-Services</Text>
-            <TouchableOpacity><Text style={styles.viewAll}>VIEW ALL</Text></TouchableOpacity>
+            {!searchQuery && categories.length > 9 && (
+              <TouchableOpacity onPress={() => setShowAllServices(!showAllServices)}>
+                <Text style={styles.viewAll}>{showAllServices ? 'SHOW LESS' : 'VIEW ALL'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
+          
+          {/* Search Bar */}
+          <SearchBar 
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search services..."
+            variant="section"
+          />
+
           <View style={styles.categoriesGrid}>
-            {categories.map((cat, index) => {
-              const Icon = CATEGORY_MAP[cat.name] || Sparkles;
+            {displayedCategories.map((cat, index) => {
+              const Icon = getIconForCategory(cat);
               const gradient = cat.color ? [cat.color, cat.color + '40'] as [string, string, ...string[]] : DEFAULT_GRADIENT;
               
               return (
@@ -111,53 +140,58 @@ export function ClientHome() {
                       params: { 
                         id: cat._id, 
                         title: cat.name, 
-                        color: cat.color || '#fff'
+                        color: cat.color || '#fff',
+                        description: cat.description
                       }
                     })}
                     gradient={gradient}
                   >
                     <View style={styles.categoryIconBox}>
-                      <Icon size={20} color="#fff" strokeWidth={2.5} />
+                      <Icon size={22} color="#fff" strokeWidth={2} />
                     </View>
-                    <Text style={styles.categoryTitle}>{cat.name}</Text>
+                    <Text style={styles.categoryTitle} numberOfLines={2}>{cat.name}</Text>
                   </GlassCard>
                 </Animated.View>
               );
             })}
-            {categories.length === 0 && !isLoading && (
-               <Text style={styles.emptyText}>No categories found</Text>
+            {displayedCategories.length === 0 && !isLoading && (
+               <Text style={styles.emptyText}>{searchQuery ? 'No services found' : 'No categories found'}</Text>
             )}
           </View>
         </View>
 
-        {/* Compact Cosmic Dashboard Header */}
+        {/* Cosmic Insights Dashboard */}
         <Animated.View entering={FadeInDown.delay(200).duration(1000)} style={styles.dashboardSection}>
           <GlassCard intensity={50} glowColor={Colors.cyan} style={styles.dashboardCard}>
-            <View style={styles.dashboardHeader}>
-              <View>
-                <Text style={[styles.dashboardTitle, Typography.threeD]}>COSMIC INSIGHTS</Text>
-                <Text style={styles.dashboardSub}>YOUR TRUST DIMENSION</Text>
+            {/* Header with title and button */}
+            <View style={styles.dashboardTop}>
+              <View style={styles.dashboardTitleBox}>
+                <Text style={[styles.dashboardTitle, Typography.threeD]}>COSMIC</Text>
+                <Text style={[styles.dashboardTitle, Typography.threeD]}>INSIGHTS</Text>
+                <Text style={styles.dashboardSub}>Trust Dimension</Text>
               </View>
               <TouchableOpacity style={styles.expandBtn}>
-                <Text style={styles.expandText}>EXPAND GALAXY</Text>
+                <Text style={styles.expandText}>Expand</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Content - Circle and Stats */}
             <View style={styles.dashboardContent}>
               <CosmicCircle
                 value={0.871}
                 label="87.1%"
                 subLabel="TRUST SCORE"
-                size={160}
+                size={170}
               />
+              
               <View style={styles.insightStats}>
                 <View style={styles.statChip}>
                   <Text style={styles.statVal}>{stats.jobs}</Text>
-                  <Text style={styles.statLab}>ORBITS</Text>
+                  <Text style={styles.statLab}>Orbits</Text>
                 </View>
-                <View style={styles.statDivider} />
                 <View style={styles.statChip}>
                   <Text style={styles.statVal}>{stats.rating}</Text>
-                  <Text style={styles.statLab}>STARS</Text>
+                  <Text style={styles.statLab}>Stars</Text>
                 </View>
               </View>
             </View>
@@ -169,49 +203,11 @@ export function ClientHome() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, Typography.threeD, { marginBottom: 20, paddingHorizontal: Spacing.l }]}>Elite Talents</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {workers.map((worker, i) => (
-              <Animated.View
-                key={worker._id}
-                entering={FadeInRight.delay(800 + i * 200)}
-                style={styles.talentCardWrap}
-              >
-                <GlassCard
-                  style={styles.talentCard}
-                  hasGlow
-                  onPress={() => router.push({
-                    pathname: '/worker-details',
-                    params: { id: worker._id }
-                  })}
-                  glowColor={i % 2 === 0 ? Colors.primary : Colors.secondary}
-                  gradient={i % 2 === 0 ? ['#051937', '#004d7a'] as [string, string, ...string[]] : ['#2d0e3e', '#4b0082'] as [string, string, ...string[]]}
-                >
-                  <View style={styles.talentHeader}>
-                    <View>
-                      <Text style={[styles.talentName, Typography.threeD]}>{worker.fullName}</Text>
-                      <Text style={styles.talentRole}>{worker.category}</Text>
-                    </View>
-                    <View style={styles.ratingBadge}>
-                      <Star size={12} fill="#FFD700" color="#FFD700" />
-                      <Text style={styles.ratingText}>{worker.rating?.toFixed(1) || '5.0'}/5</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.talentFooter}>
-                    <Text style={[styles.talentPrice, Typography.threeD]}>Rs. {worker.hourlyRate}<Text style={styles.priceUnit}>/hr</Text></Text>
-                    <View style={styles.eliteBadge}>
-                      <ShieldCheck size={14} color={Colors.primary} />
-                      <Text style={styles.eliteText}>{worker.isVerified ? 'Elite' : 'Ustad'}</Text>
-                    </View>
-                  </View>
-                </GlassCard>
-                <View style={{ height: 60 }} />
-              </Animated.View>
-            ))}
-            {workers.length === 0 && !isLoading && (
-              <Text style={[styles.emptyText, { marginLeft: 20 }]}>No elite USTADS detected in your quadrant.</Text>
-            )}
+            {/* Placeholder message - waiting for public workers endpoint */}
+            <Text style={[styles.emptyText, { marginLeft: 20, marginTop: 20 }]}>
+              Awaiting public workers endpoint...
+            </Text>
           </ScrollView>
-
         </View>
 
       </ScrollView>
@@ -225,76 +221,93 @@ const styles = StyleSheet.create({
   },
   dashboardSection: {
     paddingHorizontal: Spacing.l,
-    marginTop: Spacing.m,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.m,
   },
   dashboardCard: {
-    padding: 20,
-    borderRadius: 30,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 28,
   },
-  dashboardHeader: {
+  dashboardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 18,
+    gap: 12,
+  },
+  dashboardTitleBox: {
+    flex: 1,
   },
   dashboardTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '900',
     color: '#fff',
-    letterSpacing: 2,
+    letterSpacing: 1,
+    lineHeight: 24,
   },
   dashboardSub: {
-    fontSize: 10,
+    fontSize: 11,
     color: Colors.cyan,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginTop: 2,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 6,
+    textTransform: 'capitalize',
   },
   expandBtn: {
     backgroundColor: 'rgba(0, 245, 255, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.2)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 245, 255, 0.3)',
+    flexShrink: 1,
+    minWidth: 90,
+    alignItems: 'center',
   },
   expandText: {
     color: Colors.cyan,
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'capitalize',
   },
   dashboardContent: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 24,
   },
   insightStats: {
-    flex: 1,
-    marginLeft: 20,
-    gap: 15,
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    width: '100%',
   },
   statChip: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: 12,
-    borderRadius: 15,
+    flex: 1,
+    backgroundColor: 'rgba(0, 245, 255, 0.08)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  statDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    width: '50%',
+    borderColor: 'rgba(0, 245, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statVal: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#fff',
+    color: Colors.cyan,
+    letterSpacing: 0.5,
   },
   statLab: {
-    fontSize: 9,
-    color: Colors.textDim,
-    fontWeight: '800',
-    letterSpacing: 1,
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginTop: 6,
+    textTransform: 'capitalize',
   },
   section: {
     marginVertical: Spacing.xl, // Reduced from xxl
@@ -328,22 +341,25 @@ const styles = StyleSheet.create({
     width: (width - (Spacing.l * 2) - 20) / 3,
   },
   categoryItem: {
-    height: 100, // Reduced from 110
+    height: 120,
+    paddingVertical: Spacing.m,
+    paddingHorizontal: Spacing.s,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
   },
   categoryIconBox: {
-    width: 40, // Reduced from 48
-    height: 40, // Reduced from 48
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 12,
     ...Shadows.depth,
   },
   categoryTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
@@ -389,6 +405,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
   },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginVertical: Spacing.l,
+  },
   talentFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -419,5 +442,52 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
-  }
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: Spacing.l,
+    marginVertical: Spacing.m,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B6B',
+  },
+  errorWithAction: {
+    justifyContent: 'space-between',
+  },
+  errorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  errorTextWrap: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  errorText: {
+    color: '#FF6B6B',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  errorSubtext: {
+    color: '#FF6B6B',
+    fontSize: 12,
+    fontWeight: '400',
+    opacity: 0.8,
+    marginTop: 4,
+  },
+  retryBtn: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });

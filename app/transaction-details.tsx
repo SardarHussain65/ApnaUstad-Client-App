@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Share2, ShieldCheck, Zap, Download, Info, Copy, CheckCircle2, MapPin, Phone, MessageCircle } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import api from '../services/api';
+import { useBookingDetails, useUpdateBookingStatusMutation } from '../hooks';
 import { socketService } from '../services/socketService';
 import { useAuth } from '../context/AuthContext';
 import { AnimatedButton } from '../components/AnimatedButton';
@@ -30,44 +30,19 @@ export default function TransactionDetailsScreen() {
   const { id, amount: initialAmount } = useLocalSearchParams<{ id: string; amount?: string }>();
   const { role } = useAuth();
 
-  const [booking, setBooking] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
+  // React Query hooks
+  const { data: booking, isLoading, refetch: refetchBooking } = useBookingDetails(id);
+  const { mutate: updateStatus, isPending: isUpdating } = useUpdateBookingStatusMutation();
 
   useEffect(() => {
-    fetchBookingDetails();
-
-    const unsubscribe = socketService.on('booking:status', (data) => {
-      if (data.bookingId === id) {
-        setBooking((prev: any) => ({ ...prev, status: data.status }));
-      }
+    // Listen for real-time status updates
+    const unsubscribe = socketService.on('booking:status', () => {
+      // Refetch booking details when status changes
+      refetchBooking();
     });
 
     return () => unsubscribe();
-  }, [id]);
-
-  const fetchBookingDetails = async () => {
-    try {
-      const response = await api.get(`/bookings/${id}`);
-      setBooking(response.data.data);
-    } catch (error) {
-      console.error('Error fetching booking:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updateStatus = async (newStatus: string) => {
-    setIsUpdating(true);
-    try {
-      await api.patch(`/bookings/${id}/status`, { status: newStatus });
-      fetchBookingDetails();
-    } catch (error) {
-      console.error('Error updating status:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  }, [refetchBooking]);
 
   const navigateToChat = () => {
     const partner = role === 'worker' ? booking?.customer : booking?.worker;
@@ -200,7 +175,7 @@ export default function TransactionDetailsScreen() {
                 <AnimatedButton
                   title="INITIALIZE MISSION"
                   variant="cyan"
-                  onPress={() => updateStatus('ongoing')}
+                  onPress={() => updateStatus({ bookingId: id as string, status: 'ongoing' })}
                   isLoading={isUpdating}
                 />
               )}
@@ -208,7 +183,7 @@ export default function TransactionDetailsScreen() {
                 <AnimatedButton
                   title="FINALIZE DEPLOYMENT"
                   variant="success"
-                  onPress={() => updateStatus('completed')}
+                  onPress={() => updateStatus({ bookingId: id as string, status: 'completed' })}
                   isLoading={isUpdating}
                 />
               )}

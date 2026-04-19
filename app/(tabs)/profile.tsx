@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Platform, ActivityIndicator } from 'react-native';
 import {
   User,
   Settings,
@@ -31,7 +31,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { GlassCard } from '../../components/home/GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
-import api from '../../services/api';
+import { useBookings, useWorker } from '../../hooks';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 
 const { width, height } = Dimensions.get('window');
@@ -41,51 +41,21 @@ export default function ProfileTab() {
   const router = useRouter();
   const scrollY = useSharedValue(0);
 
-  const [stats, setStats] = React.useState({ jobs: 0, rating: 0 });
-  const [workerProfile, setWorkerProfile] = React.useState<any>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // React Query hooks
+  const { data: bookings = [], isLoading: bookingsLoading } = useBookings();
+  const { data: workerProfile, isLoading: workerLoading } = useWorker(
+    role === 'worker' ? user?._id : undefined
+  );
 
-  React.useEffect(() => {
-    fetchProfileData();
-  }, [user?._id]);
+  const isLoading = bookingsLoading || workerLoading;
 
-  const fetchProfileData = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch bookings
-      const bookingsResponse = await api.get('/bookings');
-      const allBookings = bookingsResponse.data.data || [];
-      
-      // Fetch worker profile if user is worker
-      if (role === 'worker' && user?._id) {
-        try {
-          const workerResponse = await api.get(`/workers/${user._id}`);
-          const workerData = workerResponse.data.data;
-          setWorkerProfile(workerData);
-          setStats({
-            jobs: allBookings.length,
-            rating: workerData?.rating || 0
-          });
-        } catch (error) {
-          console.error('Error fetching worker profile:', error);
-          setStats({
-            jobs: allBookings.length,
-            rating: (user as any)?.rating || 0
-          });
-        }
-      } else {
-        setStats({
-          jobs: allBookings.length,
-          rating: (user as any)?.rating || 0
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching profile data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Compute stats from fetched data
+  const stats = React.useMemo(() => ({
+    jobs: bookings.length,
+    rating: role === 'worker' 
+      ? (workerProfile?.rating || (user as any)?.rating || 0)
+      : ((user as any)?.rating || 0)
+  }), [bookings, workerProfile, role, user]);
 
   const handleLogout = async () => {
     await logout();

@@ -1,14 +1,21 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, Platform } from 'react-native';
-import { Bell, MapPin, Search } from 'lucide-react-native';
+import { Bell, MapPin } from 'lucide-react-native';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useUserLocation } from '../../hooks';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export function HomeHeader() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+  const { location } = useUserLocation();
   const accentColor = role === 'worker' ? Colors.orange : Colors.primary;
+  
+  // Format location display
+  const locationDisplay = location 
+    ? `${location.address || location.city || 'Your Location'}`
+    : 'Loading location...';
 
   return (
     <View style={styles.container}>
@@ -44,17 +51,8 @@ export function HomeHeader() {
 
       <View style={styles.locationContainer}>
          <MapPin size={14} color={accentColor} />
-         <Text style={styles.locationText}>Planet Earth • Lahore</Text>
+         <Text style={styles.locationText} numberOfLines={1}>{locationDisplay}</Text>
       </View>
-
-      {role === 'client' && (
-        <TouchableOpacity style={styles.searchBar} activeOpacity={0.9}>
-          <BlurView intensity={10} tint="light" style={styles.searchInner}>
-             <Search size={20} color={Colors.textMuted} strokeWidth={1.5} />
-             <Text style={styles.searchText}>Search Cosmic Talents...</Text>
-          </BlurView>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -162,25 +160,5 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     ...Shadows.glow,
-  },
-  searchBar: {
-    borderRadius: 20,
-    height: 58,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  searchInner: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.m,
-  },
-  searchText: {
-    ...Typography.body,
-    fontSize: 15,
-    color: Colors.textMuted,
-    marginLeft: Spacing.m,
-    fontWeight: '600',
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Platform, Image, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,12 +19,15 @@ import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../constants
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { AnimatedButton } from '../components/AnimatedButton';
-import api from '../services/api';
+import { useCreateJobMutation, useToast, useConfirmModal } from '../hooks';
+import { ConfirmModal } from '../components/ui';
 
 type Urgency = 'instant' | 'scheduled';
 
 export default function JobCreationScreen() {
   const router = useRouter();
+  const { success, error: showError } = useToast();
+  const { visible: confirmVisible, showConfirm, closeConfirm, isLoading: isConfirming, setLoading: setConfirmLoading } = useConfirmModal();
   const { title, color, initialDescription, targetWorkerId, targetWorkerName } = useLocalSearchParams<{ 
     title: string; 
     color: string; 
@@ -37,7 +40,9 @@ export default function JobCreationScreen() {
   const [description, setDescription] = useState(initialDescription || '');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [address, setAddress] = useState('123 Cyber St, Neo Lahore'); // Placeholder for now
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // React Query mutation
+  const { mutate: createJob, isPending: isSubmitting } = useCreateJobMutation();
 
   const pickImage = async () => {
     // Permission check
@@ -61,37 +66,51 @@ export default function JobCreationScreen() {
   };
 
   const handlePostJob = async () => {
-    if (!description.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        category: title,
-        description,
-        urgency,
-        longitude: 74.3587, // Mock লাহোর coordinates
-        latitude: 31.5204,
-        address,
-        targetWorkerId: targetWorkerId || undefined,
-        scheduledDate: urgency === 'scheduled' ? new Date().toISOString() : undefined,
-        scheduledTime: urgency === 'scheduled' ? "10:00" : undefined,
-      };
-
-      const response = await api.post('/jobs', payload);
-      
-      if (urgency === 'instant') {
-        router.push({
-          pathname: '/finding-worker',
-          params: { jobId: response.data.data._id }
-        });
-      } else {
-        router.push('/(tabs)/bookings');
-      }
-    } catch (error) {
-      console.error('Error posting job:', error);
-    } finally {
-      setIsSubmitting(false);
+    if (!description.trim()) {
+      showError('Missing Details', 'Please describe the job');
+      return;
     }
+
+    // Show confirmation modal
+    showConfirm(
+      'Confirm Deployment',
+      `You're about to ${urgency === 'instant' ? 'instantly dispatch' : 'broadcast'} this mission. Are you ready?`,
+      handleConfirmSubmit,
+      closeConfirm,
+      'Deploy Now',
+      'Review Again'
+    );
+  };
+
+  const handleConfirmSubmit = async () => {
+    const payload = {
+      title: targetWorkerName || title,
+      description,
+      category: title,
+      location: address,
+    };
+
+    setConfirmLoading(true);
+    createJob(payload, {
+      onSuccess: (response) => {
+        setConfirmLoading(false);
+        closeConfirm();
+        success('Success!', `Job ${urgency === 'instant' ? 'posted instantly' : 'broadcast to market'}`);
+        
+        if (urgency === 'instant') {
+          router.push({
+            pathname: '/finding-worker',
+            params: { jobId: response._id }
+          });
+        } else {
+          router.push('/(tabs)/bookings');
+        }
+      },
+      onError: (error) => {
+        setConfirmLoading(false);
+        showError('Deployment Failed', error.message || 'Failed to post job. Please try again.');
+      }
+    });
   };
 
   return (
@@ -196,6 +215,18 @@ export default function JobCreationScreen() {
              />
           </View>
         </ScrollView>
+
+        <ConfirmModal
+          visible={confirmVisible}
+          onConfirm={handleConfirmSubmit}
+          onCancel={closeConfirm}
+          title="Confirm Deployment"
+          message={`You're about to ${urgency === 'instant' ? 'instantly dispatch' : 'broadcast'} this mission. Are you ready?`}
+          confirmText="Deploy Now"
+          cancelText="Review Again"
+          isLoading={isConfirming}
+          confirmColor={urgency === 'instant' ? Colors.cyan : Colors.worker}
+        />
       </SafeAreaView>
     </BackgroundWrapper>
   );

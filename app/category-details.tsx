@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { Colors, Typography, Spacing, Shadows } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
@@ -21,8 +21,8 @@ import { ChevronLeft, Zap, Star, ShieldCheck, Clock, MapPin, Search, Filter, Spa
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import api from '../services/api';
-import { ActivityIndicator } from 'react-native';
+import { useWorkersByCategory, useToast } from '../hooks';
+import { SkeletonCard } from '../components/ui';
 
 const { width } = Dimensions.get('window');
 
@@ -39,28 +39,19 @@ export default function CategoryDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const scrollY = useSharedValue(0);
+  const { error: showError } = useToast();
 
-  const [workers, setWorkers] = React.useState<any[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // React Query hook - fetch workers by category
+  const { data: workers = [], isLoading, error } = useWorkersByCategory(
+    params.title as string
+  );
 
+  // Show error toast if fetching failed
   React.useEffect(() => {
-    fetchWorkers();
-  }, [params.title]);
-
-  const fetchWorkers = async () => {
-    try {
-      const response = await api.get('/workers');
-      // Filter by category name
-      const filtered = response.data.data.filter((w: any) => 
-        w.category.toLowerCase().includes((params.title as string)?.toLowerCase() || '')
-      );
-      setWorkers(filtered);
-    } catch (error) {
-      console.error('Error fetching workers for category:', error);
-    } finally {
-      setIsLoading(false);
+    if (error) {
+      showError('Failed to load', 'Could not fetch workers for this category');
     }
-  };
+  }, [error, showError]);
 
   // Dynamic Theme Base Color
   const themeColor = (params.color as string) || Colors.cyan;
@@ -124,6 +115,9 @@ export default function CategoryDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(400)} style={styles.heroText}>
               <Text style={[styles.categoryTitle, Typography.threeD]}>{params.title || 'Energy Flow'}</Text>
               <Text style={styles.categorySub}>ACTIVE MISSION DIMENSION</Text>
+              {params.description && (
+                <Text style={styles.categoryDescription}>{params.description}</Text>
+              )}
             </Animated.View>
 
             {/* Analytics Dashboard */}
@@ -193,7 +187,11 @@ export default function CategoryDetailsScreen() {
             </View>
             
             {isLoading ? (
-               <ActivityIndicator color={themeColor} style={{ marginTop: 20 }} />
+              <View style={{ gap: Spacing.m }}>
+                {Array(3).fill(0).map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </View>
             ) : (
               <>
                 {workers.map((pro, idx) => (
@@ -228,7 +226,9 @@ export default function CategoryDetailsScreen() {
                   </Animated.View>
                 ))}
                 {workers.length === 0 && (
-                  <Text style={styles.emptyText}>No specialists detected in this sector yet.</Text>
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No specialists detected in this sector yet.</Text>
+                  </View>
                 )}
               </>
             )}
@@ -342,27 +342,42 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginTop: 8,
   },
+  categoryDescription: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontWeight: '500',
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
   analyticsSection: {
     marginTop: 30,
     width: '100%',
+    paddingHorizontal: Spacing.l,
   },
   analyticsCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
-    paddingHorizontal: 15,
+    justifyContent: 'space-around',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
     borderRadius: 24,
   },
   anaItem: {
     flex: 1,
+    flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 80,
   },
   anaVal: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
-    marginTop: 5,
+    marginTop: 0,
+    letterSpacing: 0.5,
   },
   anaLab: {
     color: Colors.textDim,
@@ -373,8 +388,8 @@ const styles = StyleSheet.create({
   },
   anaDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    height: 35,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   section: {
     marginBottom: 40,
@@ -531,5 +546,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  emptyContainer: {
+    paddingHorizontal: Spacing.l,
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginVertical: Spacing.l,
   }
 });

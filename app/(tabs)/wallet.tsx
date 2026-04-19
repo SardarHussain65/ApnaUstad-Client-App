@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -7,16 +7,13 @@ import Animated, { FadeInDown, FadeInRight, LinearTransition, Layout } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowUpRight, ArrowDownRight, Wallet, History, CreditCard, ChevronRight, Download } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { CosmicCircle } from '../../components/home/CosmicCircle';
-import { ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useBookings } from '../../hooks';
 
 const FILTERS = ['All', 'Income', 'Expense'] as const;
 type FilterType = typeof FILTERS[number];
-
-// Data will be fetched from API
 
 export default function WalletTab() {
   const insets = useSafeAreaInsets();
@@ -24,45 +21,28 @@ export default function WalletTab() {
   const { role, user } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [balance, setBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  // React Query hook
+  const { data: bookings = [], isLoading } = useBookings();
 
-  React.useEffect(() => {
-    fetchFinancialData();
-  }, []);
+  // Compute financial data from bookings
+  const financialData = React.useMemo(() => {
+    const completed = bookings.filter((b: any) => b.status === 'completed');
+    const balance = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || b.totalAmount || (b.jobPost?.budget || 0)), 0);
+    
+    const transactions = completed.map((b: any) => ({
+      id: b._id,
+      title: b.category || b.jobPost?.category || 'Mission Secured',
+      date: new Date(b.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      amount: b.finalPrice || b.totalAmount || b.jobPost?.budget || 0,
+      type: 'Income' as const,
+      icon: ArrowUpRight
+    }));
 
-  const fetchFinancialData = async () => {
-    try {
-      const response = await api.get('/bookings');
-      const allBookings = response.data.data || [];
-      
-      // Filter for completed missions to calculate balance
-      const completed = allBookings.filter((b: any) => b.status === 'completed');
-      
-      // Calculate balance: sum of finalPrice (fallback to job budget)
-      const total = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || b.jobPost?.budget || 0), 0);
-      setBalance(total);
+    return { balance, transactions };
+  }, [bookings]);
 
-      // Map bookings to transactions
-      const mappedTransactions = completed.map((b: any) => ({
-        id: b._id,
-        title: b.jobPost?.category || 'Mission Secured',
-        date: new Date(b.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        amount: b.finalPrice || b.jobPost?.budget || 0,
-        type: 'Income',
-        icon: ArrowUpRight
-      }));
-
-      setTransactions(mappedTransactions);
-    } catch (error) {
-      console.error('Error fetching financial data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredTransactions = transactions.filter(t => {
+  // Filter transactions based on active filter
+  const filteredTransactions = financialData.transactions.filter(t => {
     if (activeFilter === 'All') return true;
     return t.type === activeFilter;
   });
@@ -84,7 +64,7 @@ export default function WalletTab() {
             <View style={styles.balanceContent}>
               <View style={styles.balanceTextGroup}>
                 <Text style={styles.balanceLabel}>TOTAL EARNINGS</Text>
-                <Text style={[styles.balanceAmount, Typography.threeD]}>Rs. {balance.toLocaleString()}</Text>
+                <Text style={[styles.balanceAmount, Typography.threeD]}>Rs. {financialData.balance.toLocaleString()}</Text>
                 <Text style={styles.balanceSubtext}>Based on completed missions</Text>
               </View>
               {/* Replacing generic icon with a mini glowing orb effect */}

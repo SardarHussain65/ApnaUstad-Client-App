@@ -20,19 +20,11 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
-import api from '../services/api';
+import { useMessages, useSendMessageMutation, type Message } from '../hooks';
 import Animated, { FadeIn, FadeInRight, FadeInLeft } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
-
-interface Message {
-  _id: string;
-  sender: string;
-  senderModel: 'User' | 'Worker';
-  content: string;
-  createdAt: string;
-}
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -44,43 +36,32 @@ export default function ChatScreen() {
     recipientId: string;
   }>();
 
-  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
   const flatListRef = useRef<FlatList>(null);
 
-  useEffect(() => {
-    fetchChatHistory();
+  // React Query hooks
+  const { data: messages = [], isLoading, refetch: refetchMessages } = useMessages(bookingId);
+  const { mutate: sendMessage, isPending: isSending } = useSendMessageMutation();
 
+  // Combine local and fetched messages
+  const allMessages: Message[] = [...localMessages, ...messages];
+
+  useEffect(() => {
+    // Listen for real-time messages
     const unsubscribe = socketService.on('chat:receive', (newMessage: Message) => {
       if (newMessage.sender !== user?._id) {
-        setMessages(prev => [newMessage, ...prev]);
+        setLocalMessages(prev => [newMessage, ...prev]);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     });
 
     return () => unsubscribe();
-  }, [bookingId]);
-
-  const fetchChatHistory = async () => {
-    try {
-      const response = await api.get(`/messages/${bookingId}`);
-      if (response.data.success) {
-        // Reverse for FlatList inverted
-        setMessages(response.data.data.reverse());
-      }
-    } catch (error) {
-      console.error('Error fetching chat history:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [bookingId, user?._id]);
 
   const handleSendMessage = () => {
     if (!inputText.trim() || isSending) return;
 
-    setIsSending(true);
     const content = inputText.trim();
 
     // Optimistic UI update
@@ -93,17 +74,27 @@ export default function ChatScreen() {
       createdAt: new Date().toISOString(),
     };
 
-    setMessages(prev => [optimisticMsg, ...prev]);
+    setLocalMessages(prev => [optimisticMsg, ...prev]);
     setInputText('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Emit via socket
-    socketService.emit('chat:send', {
-      bookingId,
-      content
-    });
-
-    setIsSending(false);
+    // Send message via mutation
+    sendMessage(
+      { bookingId: bookingId as string, message: content },
+      {
+        onSuccess: () => {
+          // Emit via socket for real-time update
+          socketService.emit('chat:send', {
+            bookingId,
+            content
+          });
+        },
+        onError: () => {
+          // Remove optimistic message on error
+          setLocalMessages(prev => prev.filter(m => m._id !== tempId));
+        }
+      }
+    );
   };
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
@@ -168,16 +159,16 @@ export default function ChatScreen() {
 
         {/* Messages */}
         <View style={styles.chatArea}>
-          {isLoading ? (
+          {isLoading && localMessages.length === 0 ? (
             <View style={styles.center}>
               <ActivityIndicator color={Colors.cyan} />
             </View>
           ) : (
             <FlatList
               ref={flatListRef}
-              data={messages}
+              data={allMessages}
               renderItem={renderMessage}
-              keyExtractor={item => item._id}
+              keyExtractor={(item, index) => `${item._id}-${index}`}
               inverted
               contentContainerStyle={styles.messageList}
               showsVerticalScrollIndicator={false}

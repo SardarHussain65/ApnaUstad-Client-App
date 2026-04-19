@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import api from '../../services/api';
+import { useMyBookings } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
 
@@ -20,47 +20,28 @@ export default function BookingsTab() {
   const router = useRouter();
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('Active');
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // React Query hook for bookings - use useMyBookings to fetch user's own bookings
+  const { data: bookings = [], isLoading, refetch: refetchBookings, isRefetching } = useMyBookings();
 
   useEffect(() => {
-    fetchBookings();
-
-    // Listen for new bookings
-    const unsubNew = socketService.on('booking:new', (newBooking) => {
-      setBookings(prev => [newBooking, ...prev]);
+    // Listen for real-time socket updates
+    const unsubNew = socketService.on('booking:new', () => {
+      // Refetch bookings when a new one is created
+      refetchBookings();
     });
 
     // Listen for status updates
-    const unsubStatus = socketService.on('booking:status', (data) => {
-      setBookings(prev => prev.map(b => 
-        b._id === data.bookingId ? { ...b, status: data.status } : b
-      ));
+    const unsubStatus = socketService.on('booking:status', () => {
+      // Refetch bookings when status changes
+      refetchBookings();
     });
 
     return () => {
       unsubNew();
       unsubStatus();
     };
-  }, []);
-
-  const fetchBookings = async () => {
-    try {
-      const response = await api.get('/bookings');
-      setBookings(response.data.data);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  const onRefresh = () => {
-    setIsRefreshing(true);
-    fetchBookings();
-  };
+  }, [refetchBookings]);
 
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -138,7 +119,11 @@ export default function BookingsTab() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             refreshControl={
-              <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.cyan} />
+              <RefreshControl 
+                refreshing={isRefetching} 
+                onRefresh={refetchBookings} 
+                tintColor={Colors.cyan} 
+              />
             }
           >
             {filteredBookings.map((item, index) => {

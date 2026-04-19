@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView, FlatList, ActivityIndicator } from 'react-native';
 import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
@@ -17,11 +17,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Star, ShieldCheck, MapPin, Share2, Award, Zap, Clock, MessageSquare, Phone } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import api from '../services/api';
-import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator } from 'react-native';
+import { useWorker } from '../hooks';
 
 const { width } = Dimensions.get('window');
 const PROFILE_ORB_SIZE = width * 0.45;
@@ -39,28 +37,17 @@ export default function WorkerDetailsScreen() {
   const scrollY = useSharedValue(0);
   const orbRotation = useSharedValue(0);
 
-  const [worker, setWorker] = React.useState<any>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // React Query hook
+  const { data: worker, isLoading, error } = useWorker(params.id as string);
 
   React.useEffect(() => {
-    fetchWorker();
+    // Animate the orbit
     orbRotation.value = withRepeat(
       withTiming(360, { duration: 15000 }),
       -1,
       false
     );
-  }, [params.id]);
-
-  const fetchWorker = async () => {
-    try {
-      const response = await api.get(`/workers/${params.id}`);
-      setWorker(response.data.data);
-    } catch (error) {
-      console.error('Error fetching worker details:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, []);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
