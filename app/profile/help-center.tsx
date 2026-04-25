@@ -13,7 +13,7 @@ export default function HelpCenterScreen() {
 
   return (
     <BackgroundWrapper>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -23,7 +23,7 @@ export default function HelpCenterScreen() {
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
           <Text style={[styles.screenTitle, Typography.threeD]}>Mission Control</Text>
           <Text style={styles.screenSubtitle}>Search our database for guidance or contact the commanders.</Text>
-          
+
           <GlassCard style={styles.searchCard} intensity={20} padding={Spacing.m}>
             <View style={styles.searchWrapper}>
               <Search size={20} color={Colors.primary} />
@@ -41,28 +41,28 @@ export default function HelpCenterScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Guidance Sectors</Text>
           <View style={styles.grid}>
-            <HelpCategory 
-              icon={BookOpen} 
-              label="Getting Started" 
-              delay={300} 
+            <HelpCategory
+              icon={BookOpen}
+              label="Getting Started"
+              delay={300}
               color={Colors.primary}
             />
-            <HelpCategory 
-              icon={Zap} 
-              label="Payments" 
-              delay={400} 
+            <HelpCategory
+              icon={Zap}
+              label="Payments"
+              delay={400}
               color={Colors.orange}
             />
-            <HelpCategory 
-              icon={Settings} 
-              label="Security" 
-              delay={500} 
+            <HelpCategory
+              icon={Settings}
+              label="Security"
+              delay={500}
               color={Colors.secondary}
             />
-            <HelpCategory 
-              icon={HelpCircle} 
-              label="System FAQ" 
-              delay={600} 
+            <HelpCategory
+              icon={HelpCircle}
+              label="System FAQ"
+              delay={600}
               color={Colors.cyan}
             />
           </View>
@@ -70,17 +70,17 @@ export default function HelpCenterScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Direct Communication</Text>
-          <SupportChannel 
-            icon={MessageCircle} 
-            title="Aether Chat" 
-            subtitle="Response time: Instant" 
-            delay={700} 
+          <SupportChannel
+            icon={MessageCircle}
+            title="Aether Chat"
+            subtitle="Response time: Instant"
+            delay={700}
           />
-          <SupportChannel 
-            icon={Mail} 
-            title="Galactic Dispatch" 
-            subtitle="Response time: < 4 hours" 
-            delay={800} 
+          <SupportChannel
+            icon={Mail}
+            title="Galactic Dispatch"
+            subtitle="Response time: < 4 hours"
+            delay={800}
           />
         </View>
 

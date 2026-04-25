@@ -66,7 +66,7 @@ export default function TransactionDetailsScreen() {
     );
   }
 
-  const amount = booking?.finalPrice || initialAmount || 'PENDING';
+  const amount = booking?.totalAmount || initialAmount || 'PENDING';
   const status = booking?.status || 'accepted';
   const isWorker = role === 'worker';
   const partner = isWorker ? booking?.customer : booking?.worker;
@@ -151,7 +151,7 @@ export default function TransactionDetailsScreen() {
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>SERVICE LOCATION</Text>
-                <Text style={styles.detailValue}>{booking?.jobPost?.address || 'Standard Orbit'}</Text>
+                <Text style={styles.detailValue}>{booking?.address || 'Standard Orbit'}</Text>
               </View>
             </View>
           </Animated.View>
@@ -160,7 +160,7 @@ export default function TransactionDetailsScreen() {
           <Animated.View entering={FadeInUp.delay(400)}>
             <GlassCard intensity={15} style={styles.descCard}>
               <Text style={styles.descLabel}>MISSION BRIEF</Text>
-              <Text style={styles.descText}>{booking?.jobPost?.description || 'No mission notes provided.'}</Text>
+              <Text style={styles.descText}>{booking?.description || 'No mission notes provided.'}</Text>
             </GlassCard>
           </Animated.View>
 

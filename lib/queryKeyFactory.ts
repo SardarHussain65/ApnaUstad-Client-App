@@ -32,8 +32,9 @@ export const queryKeys = {
   jobs: {
     all: ['jobs'] as const,
     list: () => [...queryKeys.jobs.all, 'list'] as const,
+    myPosts: () => [...queryKeys.jobs.all, 'my-posts'] as const,
     detail: (id: string) => [...queryKeys.jobs.all, 'detail', id] as const,
-    nearby: () => [...queryKeys.jobs.all, 'nearby'] as const,
+    nearby: (lng?: number, lat?: number) => [...queryKeys.jobs.all, 'nearby', { lng, lat }] as const,
   },
 
   // Bids

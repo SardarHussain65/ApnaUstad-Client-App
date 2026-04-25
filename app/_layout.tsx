@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { QueryClient, QueryClientProvider, DefaultOptions } from "@tanstack/react-query";
 import { AuthProvider } from "../context/AuthContext";
+import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
 
 // React Query default configuration
@@ -27,8 +28,10 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <RootLayoutNav />
-        <BeautifulToastConfig />
+        <IncomingJobProvider>
+          <RootLayoutNav />
+          <BeautifulToastConfig />
+        </IncomingJobProvider>
       </QueryClientProvider>
     </AuthProvider>
   );

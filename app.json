@@ -11,7 +11,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.apnaustad.app",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow ApnaUstad to access your photos to provide visual evidence for missions.",
+        "NSCameraUsageDescription": "Allow ApnaUstad to access your camera to capture mission evidence.",
+        "NSMicrophoneUsageDescription": "Allow ApnaUstad to access your microphone for recording mission videos."
+      }
     },
     "android": {
       "package": "com.apnaustad.app",
@@ -45,7 +50,14 @@
       ],
       "@react-native-google-signin/google-signin",
       "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      "@react-native-firebase/auth",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ApnaUstad to access your photos to provide visual evidence for missions.",
+          "cameraPermission": "Allow ApnaUstad to access your camera to capture mission evidence."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -3,10 +3,14 @@ export {
   useCategories,
   useWorker,
   useWorkersByCategory,
+  useAllWorkers,
   useBookings,
   useMyBookings,
   useWorkerBookings,
   useBookingDetails,
+  useMyJobPosts,
+  type Worker,
+  type JobPost,
 } from './queries/useData';
 
 export {

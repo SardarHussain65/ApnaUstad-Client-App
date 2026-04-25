@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  ArrowLeft, 
-  Banknote, 
-  MessageSquare, 
-  ShieldCheck, 
+import {
+  ArrowLeft,
+  Banknote,
+  MessageSquare,
+  ShieldCheck,
   Zap,
   Calendar,
   Clock
@@ -21,7 +21,7 @@ import api from '../services/api';
 export default function BidSubmissionScreen() {
   const router = useRouter();
   const { jobId, title, urgency } = useLocalSearchParams<{ jobId: string; title: string; urgency: string }>();
-  
+
   const [proposedPrice, setProposedPrice] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,8 +95,8 @@ export default function BidSubmissionScreen() {
           <Animated.View entering={FadeInDown.duration(800)}>
             <GlassCard style={styles.jobInfoCard} gradient={urgency === 'instant' ? [Colors.cyan, '#000'] as any : [Colors.worker, '#000'] as any}>
               <View style={styles.typeRow}>
-                 {urgency === 'instant' ? <Zap size={16} color="#fff" /> : <Calendar size={16} color="#fff" />}
-                 <Text style={styles.typeText}>{urgency?.toUpperCase()} MISSION</Text>
+                {urgency === 'instant' ? <Zap size={16} color="#fff" /> : <Calendar size={16} color="#fff" />}
+                <Text style={styles.typeText}>{urgency?.toUpperCase()} MISSION</Text>
               </View>
               <Text style={[styles.jobTitle, Typography.threeD]}>{title}</Text>
               <Text style={styles.jobDesc}>Respond to this requirement with your elite proposal.</Text>
@@ -106,67 +106,67 @@ export default function BidSubmissionScreen() {
           {urgency === 'scheduled' && (
             <View style={styles.form}>
               <View style={styles.section}>
-                 <Text style={styles.label}>PROPOSED COMPENSATION (RS.)</Text>
-                 <GlassCard style={styles.inputCard}>
-                    <View style={styles.inputRow}>
-                       <Banknote size={20} color={Colors.cyan} />
-                       <TextInput 
-                          style={styles.textInput}
-                          placeholder="e.g. 1500"
-                          placeholderTextColor={Colors.textMuted}
-                          keyboardType="numeric"
-                          value={proposedPrice}
-                          onChangeText={setProposedPrice}
-                       />
-                    </View>
-                 </GlassCard>
+                <Text style={styles.label}>PROPOSED COMPENSATION (RS.)</Text>
+                <GlassCard style={styles.inputCard}>
+                  <View style={styles.inputRow}>
+                    <Banknote size={20} color={Colors.cyan} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. 1500"
+                      placeholderTextColor={Colors.textMuted}
+                      keyboardType="numeric"
+                      value={proposedPrice}
+                      onChangeText={setProposedPrice}
+                    />
+                  </View>
+                </GlassCard>
               </View>
 
               <View style={styles.section}>
-                 <Text style={styles.label}>SPECIFICATIONS / PITCH</Text>
-                 <GlassCard style={styles.inputCard}>
-                    <View style={styles.inputRowTop}>
-                       <MessageSquare size={20} color={Colors.cyan} style={{ marginTop: 12 }} />
-                       <TextInput 
-                          style={[styles.textInput, { minHeight: 100 }]}
-                          placeholder="Why are you the best specialist for this mission?"
-                          placeholderTextColor={Colors.textMuted}
-                          multiline
-                          value={message}
-                          onChangeText={setMessage}
-                       />
-                    </View>
-                 </GlassCard>
+                <Text style={styles.label}>SPECIFICATIONS / PITCH</Text>
+                <GlassCard style={styles.inputCard}>
+                  <View style={styles.inputRowTop}>
+                    <MessageSquare size={20} color={Colors.cyan} style={{ marginTop: 12 }} />
+                    <TextInput
+                      style={[styles.textInput, { minHeight: 100 }]}
+                      placeholder="Why are you the best specialist for this mission?"
+                      placeholderTextColor={Colors.textMuted}
+                      multiline
+                      value={message}
+                      onChangeText={setMessage}
+                    />
+                  </View>
+                </GlassCard>
               </View>
             </View>
           )}
 
           {urgency === 'instant' && (
-             <View style={styles.instantInfo}>
-                <Text style={styles.instantText}>This is an immediate deployment request. Accepting this mission requires immediate dispatch to the client's location.</Text>
-                <View style={styles.statsGrid}>
-                   <View style={styles.statItem}>
-                      <Clock size={16} color={Colors.cyan} />
-                      <Text style={styles.statText}>ETA {'<'} 20 MIN</Text>
-                   </View>
-                   <View style={styles.statDivider} />
-                   <View style={styles.statItem}>
-                      <ShieldCheck size={16} color={Colors.cyan} />
-                      <Text style={styles.statText}>VERIFIED ZONE</Text>
-                   </View>
+            <View style={styles.instantInfo}>
+              <Text style={styles.instantText}>This is an immediate deployment request. Accepting this mission requires immediate dispatch to the client's location.</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Clock size={16} color={Colors.cyan} />
+                  <Text style={styles.statText}>ETA {'<'} 20 MIN</Text>
                 </View>
-             </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <ShieldCheck size={16} color={Colors.cyan} />
+                  <Text style={styles.statText}>VERIFIED ZONE</Text>
+                </View>
+              </View>
+            </View>
           )}
 
           <View style={styles.footer}>
-             <AnimatedButton 
-                title={urgency === 'instant' ? "CONFIRM READINESS" : "SUBMIT PROPOSAL"} 
-                variant={urgency === 'instant' ? 'cyan' : 'orange'}
-                onPress={handleSubmitBid}
-                isLoading={isSubmitting}
-                style={styles.submitBtn}
-             />
-             <Text style={styles.disclaimer}>By submitting, you agree to the ApnaUstad Protocol standards.</Text>
+            <AnimatedButton
+              title={urgency === 'instant' ? "CONFIRM READINESS" : "SUBMIT PROPOSAL"}
+              variant={urgency === 'instant' ? 'cyan' : 'orange'}
+              onPress={handleSubmitBid}
+              isLoading={isSubmitting}
+              style={styles.submitBtn}
+            />
+            <Text style={styles.disclaimer}>By submitting, you agree to the ApnaUstad Protocol standards.</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -292,9 +292,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   statText: {
-     color: Colors.cyan,
-     fontSize: 11,
-     fontWeight: '900',
+    color: Colors.cyan,
+    fontSize: 11,
+    fontWeight: '900',
   },
   statDivider: {
     width: 1,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/Theme';
 import { BlurView } from 'expo-blur';
@@ -11,11 +11,11 @@ interface SearchBarProps {
   variant?: 'header' | 'section';
 }
 
-export function SearchBar({ 
-  value, 
-  onChangeText, 
-  placeholder = 'Search services...', 
-  variant = 'section' 
+export function SearchBar({
+  value,
+  onChangeText,
+  placeholder = 'Search services...',
+  variant = 'section'
 }: SearchBarProps) {
   if (variant === 'header') {
     // Header version - compact
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.l,
-    paddingVertical: Spacing.m,
+    paddingVertical: Platform.OS === 'ios' ? Spacing.m : 0,
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.2)',
     borderRadius: BorderRadius.lg,
@@ -106,8 +106,6 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     marginHorizontal: Spacing.m,
-    color: Colors.text,
-    fontSize: 16,
     fontWeight: '600',
     ...Typography.body,
   },

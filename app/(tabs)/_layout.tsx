@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
+import { Alert } from 'react-native';
 import { Colors } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { CustomTabBar } from '../../components/navigation/TabBar';
 import { socketService } from '../../services/socketService';
-import { Alert } from 'react-native';
 
 export default function TabLayout() {
   const { role, user } = useAuth();
@@ -13,22 +13,7 @@ export default function TabLayout() {
   useEffect(() => {
     if (!role) return;
 
-    // Global Worker Handlers
-    const unsubNewJob = socketService.on('job:new', (data) => {
-      // Only show overlay if worker is looking for work
-      if (role === 'worker') {
-        router.push({
-          pathname: '/incoming-request',
-          params: { 
-            jobId: data._id, 
-            title: data.category, 
-            description: data.description, 
-            urgency: data.urgency,
-            address: data.address
-          }
-        });
-      }
-    });
+    // job:new is handled globally by IncomingJobProvider — no duplicate listener here.
 
     const unsubBidWon = socketService.on('bid:won', (data) => {
       if (role === 'worker') {
@@ -52,7 +37,6 @@ export default function TabLayout() {
     });
 
     return () => {
-      unsubNewJob();
       unsubBidWon();
       unsubJobAssigned();
     };

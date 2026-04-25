@@ -31,8 +31,8 @@ export default function IncomingRequestScreen() {
         });
       }
     } catch (error) {
-       console.error('Error accepting request:', error);
-       router.back();
+      console.error('Error accepting request:', error);
+      router.back();
     }
   };
 
@@ -42,49 +42,49 @@ export default function IncomingRequestScreen() {
         <Animated.View entering={SlideInUp.duration(1000)} style={styles.modalContent}>
           <GlassCard style={styles.card} hasGlow glowColor={Colors.cyan}>
             <View style={styles.badgeRow}>
-               <View style={styles.urgentBadge}>
-                  <Zap size={14} color="#fff" />
-                  <Text style={styles.urgentText}>NEW MISSION DETECTED</Text>
-               </View>
-               <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-                  <X color={Colors.textMuted} size={20} />
-               </TouchableOpacity>
+              <View style={styles.urgentBadge}>
+                <Zap size={14} color="#fff" />
+                <Text style={styles.urgentText}>NEW MISSION DETECTED</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+                <X color={Colors.textMuted} size={20} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.mainInfo}>
-               <Text style={[styles.jobTitle, Typography.threeD]}>{title}</Text>
-               <Text style={styles.jobDesc} numberOfLines={3}>{description}</Text>
-               
-               <View style={styles.locationBox}>
-                  <MapPin size={16} color={Colors.cyan} />
-                  <Text style={styles.locationText} numberOfLines={1}>{address || 'Nearby Location'}</Text>
-               </View>
+              <Text style={[styles.jobTitle, Typography.threeD]}>{title}</Text>
+              <Text style={styles.jobDesc} numberOfLines={3}>{description}</Text>
+
+              <View style={styles.locationBox}>
+                <MapPin size={16} color={Colors.cyan} />
+                <Text style={styles.locationText} numberOfLines={1}>{address || 'Nearby Location'}</Text>
+              </View>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.statsRow}>
-               <View style={styles.stat}>
-                  <Clock size={16} color={Colors.textDim} />
-                  <Text style={styles.statVal}>{urgency === 'instant' ? 'IMMEDIATE' : 'SCHEDULED'}</Text>
-               </View>
-               <View style={styles.statDivider} />
-               <View style={styles.stat}>
-                  <ShieldCheck size={16} color={Colors.textDim} />
-                  <Text style={styles.statVal}>VERIFIED</Text>
-               </View>
+              <View style={styles.stat}>
+                <Clock size={16} color={Colors.textDim} />
+                <Text style={styles.statVal}>{urgency === 'instant' ? 'IMMEDIATE' : 'SCHEDULED'}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.stat}>
+                <ShieldCheck size={16} color={Colors.textDim} />
+                <Text style={styles.statVal}>VERIFIED</Text>
+              </View>
             </View>
 
             <View style={styles.footer}>
-               <AnimatedButton 
-                 title={urgency === 'instant' ? "ACCEPT & DISPATCH" : "SUBMIT PROPOSAL"} 
-                 variant={urgency === 'instant' ? 'cyan' : 'orange'}
-                 onPress={handleAccept}
-                 style={styles.actionBtn}
-               />
-               <TouchableOpacity style={styles.ignoreBtn} onPress={() => router.back()}>
-                  <Text style={styles.ignoreText}>IGNORE MISSION</Text>
-               </TouchableOpacity>
+              <AnimatedButton
+                title={urgency === 'instant' ? "ACCEPT & DISPATCH" : "SUBMIT PROPOSAL"}
+                variant={urgency === 'instant' ? 'cyan' : 'orange'}
+                onPress={handleAccept}
+                style={styles.actionBtn}
+              />
+              <TouchableOpacity style={styles.ignoreBtn} onPress={() => router.back()}>
+                <Text style={styles.ignoreText}>IGNORE MISSION</Text>
+              </TouchableOpacity>
             </View>
           </GlassCard>
         </Animated.View>

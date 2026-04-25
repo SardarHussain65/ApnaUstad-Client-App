@@ -17,7 +17,7 @@ export default function NotificationsScreen() {
 
   return (
     <BackgroundWrapper>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -40,48 +40,48 @@ export default function NotificationsScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Primary Channels</Text>
-          <NotificationToggle 
-            icon={Smartphone} 
-            label="Push Notifications" 
-            value={pushEnabled} 
-            onValueChange={setPushEnabled} 
-            delay={300} 
+          <NotificationToggle
+            icon={Smartphone}
+            label="Push Notifications"
+            value={pushEnabled}
+            onValueChange={setPushEnabled}
+            delay={300}
             color={Colors.primary}
           />
-          <NotificationToggle 
-            icon={Mail} 
-            label="Email Alerts" 
-            value={emailEnabled} 
-            onValueChange={setEmailEnabled} 
-            delay={400} 
+          <NotificationToggle
+            icon={Mail}
+            label="Email Alerts"
+            value={emailEnabled}
+            onValueChange={setEmailEnabled}
+            delay={400}
             color={Colors.secondary}
           />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Transactional Signal</Text>
-          <NotificationToggle 
-            icon={Briefcase} 
-            label="New Job Invitations" 
-            value={jobAlerts} 
-            onValueChange={setJobAlerts} 
-            delay={500} 
+          <NotificationToggle
+            icon={Briefcase}
+            label="New Job Invitations"
+            value={jobAlerts}
+            onValueChange={setJobAlerts}
+            delay={500}
             color="#FF9500"
           />
-          <NotificationToggle 
-            icon={MessageSquare} 
-            label="Direct Messages" 
-            value={messages} 
-            onValueChange={setMessages} 
-            delay={600} 
+          <NotificationToggle
+            icon={MessageSquare}
+            label="Direct Messages"
+            value={messages}
+            onValueChange={setMessages}
+            delay={600}
             color="#32D74B"
           />
-          <NotificationToggle 
-            icon={Zap} 
-            label="Cosmic Promotions" 
-            value={promos} 
-            onValueChange={setPromos} 
-            delay={700} 
+          <NotificationToggle
+            icon={Zap}
+            label="Cosmic Promotions"
+            value={promos}
+            onValueChange={setPromos}
+            delay={700}
             color="#FF3B30"
           />
         </View>

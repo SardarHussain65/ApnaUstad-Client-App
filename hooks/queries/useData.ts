@@ -14,7 +14,7 @@ interface Category {
   isActive?: boolean;
 }
 
-interface Worker {
+export interface Worker {
   _id: string;
   fullName: string;
   email: string;
@@ -23,24 +23,67 @@ interface Worker {
   hourlyRate: number;
   rating?: number;
   isVerified?: boolean;
+  isActive?: boolean;
   profileImage?: string;
   totalBookings?: number;
   experience?: number;
   isAvailable?: boolean;
   bio?: string;
   totalJobs?: number;
+  totalEarnings?: number;
+  totalReviews?: number;
+  skills?: string[];
+  city?: string;
+  address?: string;
 }
 
-interface Booking {
+export interface BookingPerson {
   _id: string;
-  jobId: string;
-  workerId: string;
-  clientId: string;
-  status: 'pending' | 'accepted' | 'in-progress' | 'completed' | 'cancelled';
+  fullName: string;
+  profileImage?: string;
+  address?: string;
+}
+
+export interface Booking {
+  _id: string;
+  customer: BookingPerson;
+  worker: BookingPerson;
+  category: string;
+  description: string;
+  status: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
+  bookingType: 'instant' | 'scheduled';
+  scheduledDate: string;
+  scheduledTime: string;
+  estimatedHours: number;
+  hourlyRate: number;
+  subtotal: number;
+  platformFee: number;
+  totalAmount: number;
+  workerEarning: number;
+  address: string;
+  paymentStatus: 'unpaid' | 'paid';
+  paymentMethod: 'card' | 'cash';
+  isReviewed: boolean;
+  cancelReason?: string;
+  cancelledBy?: 'customer' | 'worker' | 'admin';
   createdAt: string;
   updatedAt: string;
-  totalAmount?: number;
-  workerDetails?: Worker;
+}
+
+export interface JobPost {
+  _id: string;
+  customer: string;
+  category: string;
+  description: string;
+  urgency: 'instant' | 'scheduled';
+  scheduledDate?: string;
+  scheduledTime?: string;
+  address: string;
+  status: 'open' | 'assigned' | 'closed' | 'cancelled' | 'reviewing';
+  imageUrl?: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Fetch Functions
@@ -50,15 +93,23 @@ const fetchCategories = async (): Promise<Category[]> => {
 };
 
 const fetchWorker = async (id: string): Promise<Worker> => {
-  const response = await api.get(`/workers/${id}`);
+  const response = await api.get(`/users/workers/${id}`);
   return response.data.data;
 };
 
+const fetchAllWorkers = async (category?: string, search?: string): Promise<Worker[]> => {
+  const response = await api.get('/users/workers', {
+    params: { category, search },
+  });
+  return response.data.data?.data || [];
+};
+
 const fetchWorkersByCategory = async (category: string, limit?: number): Promise<Worker[]> => {
-  const response = await api.get('/workers', {
+  const response = await api.get('/users/workers', {
     params: { category, limit },
   });
-  return response.data.data || [];
+  // The new API wraps the array in data.data
+  return response.data.data?.data || [];
 };
 
 const fetchBookings = async (): Promise<Booking[]> => {
@@ -73,6 +124,11 @@ const fetchMyBookings = async (): Promise<Booking[]> => {
 
 const fetchWorkerBookings = async (): Promise<Booking[]> => {
   const response = await api.get('/bookings/worker-bookings');
+  return response.data.data || [];
+};
+
+const fetchMyJobPosts = async (): Promise<JobPost[]> => {
+  const response = await api.get('/jobs/my-posts');
   return response.data.data || [];
 };
 
@@ -114,6 +170,16 @@ export function useWorkersByCategory(category: string | undefined, options?: Omi
   });
 }
 
+export function useAllWorkers(category?: string, search?: string, options?: Omit<UseQueryOptions<Worker[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<Worker[]>({
+    queryKey: [...queryKeys.workers.all, 'all', category, search],
+    queryFn: () => fetchAllWorkers(category, search),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    ...options,
+  });
+}
+
 export function useBookings(options?: Omit<UseQueryOptions<Booking[]>, 'queryKey' | 'queryFn'>) {
   return useQuery<Booking[]>({
     queryKey: queryKeys.bookings.list(),
@@ -138,6 +204,16 @@ export function useWorkerBookings(options?: Omit<UseQueryOptions<Booking[]>, 'qu
   return useQuery<Booking[]>({
     queryKey: queryKeys.bookings.byWorker(),
     queryFn: fetchWorkerBookings,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useMyJobPosts(options?: Omit<UseQueryOptions<JobPost[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<JobPost[]>({
+    queryKey: queryKeys.jobs.myPosts(),
+    queryFn: fetchMyJobPosts,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     ...options,

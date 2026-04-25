@@ -43,8 +43,11 @@ const fetchMessages = async (bookingId: string): Promise<Message[]> => {
   return response.data.data || [];
 };
 
-const fetchNearbyJobs = async (): Promise<Job[]> => {
-  const response = await api.get('/jobs/nearby');
+const fetchNearbyJobs = async (longitude?: number, latitude?: number): Promise<Job[]> => {
+  // Use provided coordinates or default to a central location
+  const lng = longitude || 74.3587;
+  const lat = latitude || 31.5204;
+  const response = await api.get(`/jobs/nearby?longitude=${lng}&latitude=${lat}`);
   return response.data.data || [];
 };
 
@@ -71,10 +74,10 @@ export function useMessages(bookingId: string | undefined, options?: Omit<UseQue
   });
 }
 
-export function useNearbyJobs(options?: Omit<UseQueryOptions<Job[]>, 'queryKey' | 'queryFn'>) {
+export function useNearbyJobs(longitude?: number, latitude?: number, options?: Omit<UseQueryOptions<Job[]>, 'queryKey' | 'queryFn'>) {
   return useQuery<Job[]>({
-    queryKey: queryKeys.jobs.nearby(),
-    queryFn: fetchNearbyJobs,
+    queryKey: queryKeys.jobs.nearby(longitude, latitude),
+    queryFn: () => fetchNearbyJobs(longitude, latitude),
     staleTime: 1000 * 60 * 2, // 2 minutes
     gcTime: 1000 * 60 * 10,
     ...options,

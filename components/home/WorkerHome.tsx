@@ -15,6 +15,8 @@ import {
 } from 'lucide-react-native';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../context/AuthContext';
+import { useIncomingJob } from '../../context/IncomingJobContext';
 import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { HomeHeader } from './HomeHeader';
 import { GlassCard } from './GlassCard';
@@ -23,36 +25,57 @@ import { CosmicCircle } from './CosmicCircle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
 import api from '../../services/api';
-import { socketService } from '../../services/socketService';
 
 export function WorkerHome() {
   const router = useRouter();
-  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const { token, user } = useAuth();
+  const { isOnline, setIsOnline } = useIncomingJob();
   const [jobs, setJobs] = useState<any[]>([]);
   const [stats, setStats] = useState({ revenue: 0, rating: 0, missions: 0 });
   const [isLoading, setIsLoading] = useState(true);
+
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    fetchNearbyJobs();
-    fetchStats();
+    if (token) {
+      fetchNearbyJobs();
+      fetchStats();
+      syncStatus(isOnline);
+    }
+  }, [token, isOnline]);
 
-    // Listen for new jobs in real-time
-    const unsubscribe = socketService.on('job:new', (newJob) => {
-      setJobs(current => [newJob, ...current]);
-    });
+  const syncStatus = async (online: boolean) => {
+    try {
+      if (!user?._id) return;
 
-    return () => unsubscribe();
-  }, []);
+      // Update location and availability in backend
+      // Using hardcoded coordinates to match fetchNearbyJobs for testing
+      await api.patch(`/workers/${user._id}`, {
+        isAvailable: online,
+        longitude: 74.3587,
+        latitude: 31.5204
+      });
+
+      console.log(`✅ Status Synced: ${online ? 'ONLINE' : 'OFFLINE'} at Lahore coordinates`);
+    } catch (error) {
+      console.error('❌ Error syncing status:', error);
+    }
+  };
+
 
   const fetchStats = async () => {
     try {
-      const response = await api.get('/bookings');
+      const response = await api.get('/bookings/worker-bookings');
+      // The backend returns { success: true, data: bookings[], pagination: { ... } }
       const allBookings = response.data.data || [];
       const completed = allBookings.filter((b: any) => b.status === 'completed');
-      
-      const totalRevenue = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || 0), 0);
-      
+
+      const totalRevenue = completed.reduce((sum: number, b: any) => {
+        // Use finalPrice or totalAmount or workerEarning depending on business logic
+        // In the model, it's totalAmount or workerEarning
+        return sum + (b.workerEarning || 0);
+      }, 0);
+
       setStats({
         revenue: totalRevenue,
         missions: allBookings.length,
@@ -65,9 +88,11 @@ export function WorkerHome() {
 
   const fetchNearbyJobs = async () => {
     try {
-      // Mock coordinates for now
+      // Mock coordinates for now - in production use real GPS
       const response = await api.get('/jobs/nearby?longitude=74.3587&latitude=31.5204');
-      setJobs(response.data.data);
+      if (response.data.success) {
+        setJobs(response.data.data);
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
@@ -144,7 +169,7 @@ export function WorkerHome() {
           </View>
 
           {isLoading ? (
-             <ActivityIndicator color={Colors.cyan} style={{ marginTop: 20 }} />
+            <ActivityIndicator color={Colors.cyan} style={{ marginTop: 20 }} />
           ) : (
             <View style={styles.agendaList}>
               {jobs.map((job, index) => (
@@ -185,7 +210,7 @@ export function WorkerHome() {
                       </View>
 
                       <View style={styles.actionArea}>
-                         <ChevronRight size={20} color="#fff" />
+                        <ChevronRight size={20} color="#fff" />
                       </View>
                     </View>
                   </GlassCard>
@@ -203,6 +228,7 @@ export function WorkerHome() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
     </BackgroundWrapper>
   );
 }

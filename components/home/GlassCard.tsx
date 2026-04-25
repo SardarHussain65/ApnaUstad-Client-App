@@ -18,6 +18,7 @@ interface GlassCardProps {
   hasGlow?: boolean;
   gradient?: [string, string, ...string[]];
   padding?: number; // Added padding prop
+  contentStyle?: StyleProp<ViewStyle>; // Added contentStyle prop
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -30,7 +31,8 @@ export function GlassCard({
   glowColor = Colors.cyan,
   hasGlow = false,
   gradient,
-  padding = Spacing.l // Default to standard padding
+  padding = Spacing.l, // Default to standard padding
+  contentStyle
 }: GlassCardProps) {
   const scale = useSharedValue(1);
 
@@ -88,7 +90,7 @@ export function GlassCard({
           <View style={styles.highlight} />
         </View>
       )}
-      <View style={[styles.content, { padding: padding }]}>
+      <View style={[styles.content, { padding: padding }, contentStyle]}>
         {children}
       </View>
     </Animated.View>
@@ -118,6 +120,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   content: {
+    flex: 1,
     zIndex: 1,
   },
   highlight: {

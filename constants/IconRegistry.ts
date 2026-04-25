@@ -129,7 +129,7 @@ export function getIconForCategory(category: any): any {
  */
 export function isCategoryIconMapped(category: any): boolean {
   if (!category) return false;
-  
+
   const icon = getIconForCategory(category);
   return icon !== Sparkles;
 }

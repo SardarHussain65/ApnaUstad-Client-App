@@ -9,3 +9,6 @@ export { BeautifulModal, ConfirmModal, AlertModal } from './BeautifulModal';
 
 // Bottom Sheet
 export { BeautifulBottomSheet, BeautifulBottomMenu } from './BeautifulBottomSheet';
+
+// Worker Details
+export { WorkerDetailsModal } from './WorkerDetailsModal';

@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView
 import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import Animated, { 
-  FadeInDown, 
-  FadeInUp, 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withRepeat, 
-  withTiming, 
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
   withSequence,
   interpolate,
   useAnimatedScrollHandler,
@@ -85,7 +85,7 @@ export default function WorkerDetailsScreen() {
         >
           {/* Profile Section */}
           {isLoading ? (
-             <ActivityIndicator color={Colors.cyan} style={{ marginTop: 50 }} />
+            <ActivityIndicator color={Colors.cyan} style={{ marginTop: 50 }} />
           ) : (
             <View style={styles.profileHero}>
               <View style={styles.orbContainer}>
@@ -98,9 +98,9 @@ export default function WorkerDetailsScreen() {
                   />
                 </Animated.View>
                 <View style={styles.avatarWrapper}>
-                  <Image 
-                    source={{ uri: worker?.profileImage || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' }} 
-                    style={styles.avatar} 
+                  <Image
+                    source={{ uri: worker?.profileImage || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' }}
+                    style={styles.avatar}
                   />
                 </View>
                 {worker?.isVerified && (
@@ -113,7 +113,7 @@ export default function WorkerDetailsScreen() {
               <Animated.View entering={FadeInUp.delay(400)} style={styles.nameHeader}>
                 <Text style={[styles.workerName, Typography.threeD]}>{worker?.fullName || 'Cosmic Ustad'}</Text>
                 <Text style={styles.workerRole}>{worker?.category?.toUpperCase() || 'DIMENSIONAL SPECIALIST'}</Text>
-                
+
                 <View style={styles.ratingRow}>
                   <Star size={16} color="#FFD700" fill="#FFD700" />
                   <Text style={styles.ratingVal}>{worker?.rating?.toFixed(1) || '5.0'}</Text>
@@ -161,52 +161,52 @@ export default function WorkerDetailsScreen() {
             </View>
           )}
 
-            {/* Portfolio Section */}
-            <Animated.View entering={FadeInUp.delay(900)} style={styles.sectionBlock}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, Typography.threeD]}>Mission Portfolio</Text>
-                <TouchableOpacity><Text style={styles.viewMore}>VIEW ALL</Text></TouchableOpacity>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
-                {PORTFOLIO.map((item, idx) => (
-                  <View key={item.id} style={styles.portfolioItemWrap}>
-                    <Image source={{ uri: item.url }} style={styles.portfolioImg} />
-                  </View>
-                ))}
-              </ScrollView>
-            </Animated.View>
+          {/* Portfolio Section */}
+          <Animated.View entering={FadeInUp.delay(900)} style={styles.sectionBlock}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, Typography.threeD]}>Mission Portfolio</Text>
+              <TouchableOpacity><Text style={styles.viewMore}>VIEW ALL</Text></TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
+              {PORTFOLIO.map((item, idx) => (
+                <View key={item.id} style={styles.portfolioItemWrap}>
+                  <Image source={{ uri: item.url }} style={styles.portfolioImg} />
+                </View>
+              ))}
+            </ScrollView>
+          </Animated.View>
         </Animated.ScrollView>
 
         {/* Action Footer */}
         <Animated.View entering={FadeInDown.delay(1000).duration(800)} style={styles.footer}>
           <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
           <View style={styles.footerContent}>
-             <TouchableOpacity style={styles.msgBtn}>
-                <MessageSquare color="#fff" size={24} />
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.callBtn}>
-                <Phone color="#fff" size={24} />
-             </TouchableOpacity>
-             <TouchableOpacity 
-               style={styles.bookBtn}
-               onPress={() => router.push({
-                 pathname: '/job-creation',
-                 params: { 
-                   title: worker?.category, 
-                   targetWorkerId: worker?._id,
-                   targetWorkerName: worker?.fullName
-                 }
-               })}
-             >
-                <LinearGradient
-                  colors={[Colors.primary, Colors.purple]}
-                  start={{x: 0, y: 0}}
-                  end={{x: 1, y: 0}}
-                  style={styles.bookGradient}
-                >
-                  <Text style={styles.bookText}>INITIATE MISSION</Text>
-                </LinearGradient>
-             </TouchableOpacity>
+            <TouchableOpacity style={styles.msgBtn}>
+              <MessageSquare color="#fff" size={24} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.callBtn}>
+              <Phone color="#fff" size={24} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bookBtn}
+              onPress={() => router.push({
+                pathname: '/job-creation',
+                params: {
+                  title: worker?.category,
+                  targetWorkerId: worker?._id,
+                  targetWorkerName: worker?.fullName
+                }
+              })}
+            >
+              <LinearGradient
+                colors={[Colors.primary, Colors.purple]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.bookGradient}
+              >
+                <Text style={styles.bookText}>INITIATE MISSION</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>

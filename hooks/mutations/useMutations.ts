@@ -4,12 +4,16 @@ import { queryKeys } from '../../lib/queryKeyFactory';
 
 // Types
 interface JobCreationPayload {
-  title: string;
-  description: string;
   category: string;
-  budget?: number;
-  location?: string;
-  image?: string;
+  description: string;
+  urgency: 'instant' | 'scheduled';
+  address: string;
+  longitude: number;
+  latitude: number;
+  imageUrl?: string;
+  targetWorkerId?: string;
+  scheduledDate?: Date;
+  scheduledTime?: string;
 }
 
 interface JobResponse {

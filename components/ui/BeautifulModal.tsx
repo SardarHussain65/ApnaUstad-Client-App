@@ -7,6 +7,8 @@ import {
   Modal,
   ModalProps,
   Dimensions,
+  Text,
+  Platform,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -17,9 +19,10 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Colors, Spacing } from '../../constants/Theme';
-import { X } from 'lucide-react-native';
+import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
+import { X, CheckCircle2, AlertTriangle, Info, HelpCircle } from 'lucide-react-native';
 import { GlassCard } from '../home/GlassCard';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface BeautifulModalProps extends Omit<ModalProps, 'visible' | 'transparent' | 'animationType'> {
   visible: boolean;
@@ -109,38 +112,47 @@ export function BeautifulModal({
             animatedStyle,
           ]}
         >
+          {/* Floating Glow Behind Modal */}
+          <View style={[styles.modalGlow, { backgroundColor: glowColor + '20' }]} />
+
           <GlassCard
-            intensity={90}
+            intensity={Platform.OS === 'ios' ? 95 : 100}
             glowColor={glowColor}
             style={[styles.modalContent, contentStyle]}
+            padding={0}
           >
-            {/* Header */}
-            {title && (
-              <View style={styles.modalHeader}>
-                <Animated.Text
-                  entering={FadeIn.delay(100).duration(300)}
-                  style={styles.modalTitle}
-                >
-                  {title}
-                </Animated.Text>
-                {showCloseButton && (
-                  <TouchableOpacity
-                    onPress={onClose}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <X size={24} color={Colors.textDim} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
+            {/* Top Accent Gradient Bar */}
+            <LinearGradient
+              colors={[glowColor, 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.topAccentBar}
+            />
 
-            {/* Content */}
-            <Animated.View
-              entering={FadeIn.delay(200).duration(300)}
-              style={styles.modalBody}
-            >
-              {children}
-            </Animated.View>
+            {/* Content Wrap with Padding */}
+            <View style={styles.contentInner}>
+              {/* Header */}
+              {title && (
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, Typography.threeD]}>
+                    {title.toUpperCase()}
+                  </Text>
+                  {showCloseButton && (
+                    <TouchableOpacity
+                      onPress={onClose}
+                      style={styles.closeBtn}
+                    >
+                      <X size={20} color="rgba(255,255,255,0.5)" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* Body */}
+              <View style={styles.modalBody}>
+                {children}
+              </View>
+            </View>
           </GlassCard>
         </Animated.View>
       </Animated.View>
@@ -176,36 +188,46 @@ export function ConfirmModal({
       visible={visible}
       onClose={onCancel}
       title={title}
-      height={280}
+      height={380}
       glowColor={confirmColor}
     >
       <View style={styles.confirmContent}>
-        <Animated.Text
-          entering={FadeIn.delay(100).duration(300)}
-          style={styles.confirmMessage}
-        >
+        <View style={styles.floatingIconBadge}>
+           <View style={[styles.iconBadgeInner, { borderColor: confirmColor + '40' }]}>
+             <HelpCircle color={confirmColor} size={32} />
+           </View>
+        </View>
+
+        <Text style={styles.confirmMessage}>
           {message}
-        </Animated.Text>
+        </Text>
 
         <View style={styles.confirmButtons}>
           <TouchableOpacity
+            activeOpacity={0.8}
             style={[styles.confirmBtn, styles.cancelBtn]}
             onPress={onCancel}
             disabled={isLoading}
           >
-            <Animated.Text style={styles.cancelBtnText}>
-              {cancelText}
-            </Animated.Text>
+            <Text style={styles.cancelBtnText}>
+              {cancelText.toUpperCase()}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.confirmBtn, { backgroundColor: confirmColor + '30', borderColor: confirmColor }]}
+            activeOpacity={0.8}
+            style={[styles.confirmBtn, { backgroundColor: confirmColor, borderColor: confirmColor }]}
             onPress={onConfirm}
             disabled={isLoading}
           >
-            <Animated.Text style={[styles.confirmBtnText, { color: confirmColor }]}>
-              {isLoading ? 'Loading...' : confirmText}
-            </Animated.Text>
+            <LinearGradient
+               colors={[confirmColor, confirmColor]}
+               style={styles.solidBtnGradient}
+            >
+              <Text style={styles.solidBtnText}>
+                {isLoading ? '...' : confirmText.toUpperCase()}
+              </Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </View>
@@ -248,27 +270,38 @@ export function AlertModal({
       visible={visible}
       onClose={onDismiss}
       title={title}
-      height={320}
+      height={420}
       glowColor={getColor()}
     >
       <View style={styles.alertContent}>
-        <Animated.Text
-          entering={FadeIn.delay(100).duration(300)}
-          style={styles.alertMessage}
-        >
+        <View style={styles.floatingIconBadge}>
+           <View style={[styles.iconBadgeInner, { borderColor: getColor() + '40' }]}>
+             {type === 'success' && <CheckCircle2 color={getColor()} size={32} />}
+             {type === 'error' && <AlertTriangle color={getColor()} size={32} />}
+             {(type === 'info' || type === 'warning') && <Info color={getColor()} size={32} />}
+           </View>
+        </View>
+
+        <Text style={styles.alertMessage}>
           {message}
-        </Animated.Text>
+        </Text>
 
         <TouchableOpacity
+          activeOpacity={0.8}
           style={[
             styles.alertBtn,
-            { backgroundColor: getColor() + '30', borderColor: getColor() },
+            { backgroundColor: getColor(), borderColor: getColor() },
           ]}
           onPress={onDismiss}
         >
-          <Animated.Text style={[styles.alertBtnText, { color: getColor() }]}>
-            {buttonText}
-          </Animated.Text>
+           <LinearGradient
+               colors={[getColor(), getColor()]}
+               style={styles.solidBtnGradient}
+            >
+              <Text style={styles.solidBtnText}>
+                {buttonText.toUpperCase()}
+              </Text>
+            </LinearGradient>
         </TouchableOpacity>
       </View>
     </BeautifulModal>
@@ -278,7 +311,7 @@ export function AlertModal({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -286,90 +319,154 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   modalContainer: {
-    width: '85%',
-    borderRadius: 24,
-    overflow: 'hidden',
+    width: '88%',
+    borderRadius: 32,
     zIndex: 1000,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.5,
+    shadowRadius: 40,
+    elevation: 30,
+  },
+  modalGlow: {
+    position: 'absolute',
+    top: -50,
+    left: -50,
+    right: -50,
+    bottom: -50,
+    borderRadius: 100,
+    opacity: 0.5,
   },
   modalContent: {
     flex: 1,
-    padding: Spacing.l,
-    justifyContent: 'space-between',
+    borderRadius: 32,
+    backgroundColor: 'rgba(15, 15, 30, 0.95)',
+  },
+  topAccentBar: {
+    height: 4,
+    width: '100%',
+    position: 'absolute',
+    top: 0,
+  },
+  contentInner: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 30,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.m,
-    paddingBottom: Spacing.m,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    borderBottomWidth: 1,
+    marginBottom: 24,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '900',
     color: '#fff',
     flex: 1,
+    letterSpacing: 3,
+    textAlign: 'center',
+  },
+  closeBtn: {
+    position: 'absolute',
+    right: 0,
+    top: -4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalBody: {
     flex: 1,
+    justifyContent: 'center',
   },
   confirmContent: {
     flex: 1,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingIconBadge: {
+    marginTop: -10,
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBadgeInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.depth,
   },
   confirmMessage: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    lineHeight: 22,
-    marginBottom: Spacing.m,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 26,
+    textAlign: 'center',
+    marginBottom: 30,
+    fontWeight: '600',
+    paddingHorizontal: 10,
   },
   confirmButtons: {
     flexDirection: 'row',
-    gap: Spacing.m,
-    marginTop: Spacing.m,
+    gap: 12,
+    width: '100%',
   },
   confirmBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    height: 56,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  solidBtnGradient: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  solidBtnText: {
+    color: '#000',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   cancelBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  confirmBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textDim,
+    fontSize: 12,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 1.5,
   },
   alertContent: {
     flex: 1,
-    justifyContent: 'space-between',
-  },
-  alertMessage: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    lineHeight: 22,
-    marginBottom: Spacing.m,
-  },
-  alertBtn: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.m,
   },
-  alertBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+  alertMessage: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    lineHeight: 26,
+    textAlign: 'center',
+    marginBottom: 30,
+    fontWeight: '600',
+    paddingHorizontal: 10,
+  },
+  alertBtn: {
+    width: '100%',
+    height: 58,
+    borderRadius: 22,
+    overflow: 'hidden',
   },
 });

@@ -52,7 +52,7 @@ export default function ProfileTab() {
   // Compute stats from fetched data
   const stats = React.useMemo(() => ({
     jobs: bookings.length,
-    rating: role === 'worker' 
+    rating: role === 'worker'
       ? (workerProfile?.rating || (user as any)?.rating || 0)
       : ((user as any)?.rating || 0)
   }), [bookings, workerProfile, role, user]);
@@ -212,11 +212,11 @@ export default function ProfileTab() {
 
           <View style={styles.menuSection}>
             <Text style={[styles.sectionTitle, Typography.threeD]}>Support</Text>
-            <MenuItem 
-              icon={HelpCircle} 
-              label="Help Center" 
-              delay={900} 
-              gradient={['#64D2FF20', '#64D2FF05']} 
+            <MenuItem
+              icon={HelpCircle}
+              label="Help Center"
+              delay={900}
+              gradient={['#64D2FF20', '#64D2FF05']}
               onPress={() => router.push('/profile/help-center')}
             />
             <MenuItem icon={Star} label="Rate ApnaUstad" delay={1000} gradient={['#FFD60A20', '#FFD60A05']} />

@@ -1,5 +1,4 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors, Typography, Spacing, Shadows } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
@@ -14,9 +13,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, MapPin, Clock, Calendar, Shield, Zap, X, MoreHorizontal, MessageSquare } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useJobDetails } from '../hooks';
+import { useAuth } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 const HEADER_HEIGHT = 100;
@@ -25,6 +26,9 @@ const TICKET_TOP_OFFSET = 120; // Replaces dynamic image height
 export default function JobDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { role } = useAuth();
+  const { data: job, isLoading } = useJobDetails(id);
   const scrollY = useSharedValue(0);
 
   const scrollHandler = useAnimatedScrollHandler({
@@ -43,15 +47,27 @@ export default function JobDetailsScreen() {
     return { opacity };
   });
 
+  if (isLoading || !job) {
+    return (
+      <BackgroundWrapper>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.cyan} />
+        </View>
+      </BackgroundWrapper>
+    );
+  }
+
+  const isInstant = job.urgency === 'instant';
+
   return (
     <BackgroundWrapper>
       <View style={styles.container}>
-        
+
         {/* Floating Blur Header overlay */}
         <Animated.View style={[styles.solidHeader, { height: HEADER_HEIGHT + insets.top, paddingTop: insets.top + 10 }, headerAnimatedStyle]}>
           <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
           <View style={styles.solidHeaderContent}>
-            <Text style={[styles.solidHeaderTitle, Typography.threeD]}>Deep Cleaning</Text>
+            <Text style={[styles.solidHeaderTitle, Typography.threeD]}>{job.category}</Text>
           </View>
         </Animated.View>
 
@@ -71,104 +87,142 @@ export default function JobDetailsScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: TICKET_TOP_OFFSET, paddingBottom: 160 }}
         >
-        <Animated.View entering={FadeInUp.delay(300).duration(800)} style={styles.sheetContainer}>
-          <GlassCard intensity={40} style={styles.mainSheet}>
-            <View style={styles.handleBar} />
+          <Animated.View entering={FadeInUp.delay(300).duration(800)} style={styles.sheetContainer}>
+            <GlassCard intensity={40} style={styles.mainSheet}>
+              <View style={styles.handleBar} />
 
-            {/* Mission Critical Titles */}
-            <View style={styles.titleSection}>
-              <View style={styles.badgeContainer}>
-                <View style={[styles.pulseDot, { backgroundColor: Colors.cyan }]} />
-                <Text style={styles.badgeText}>VERIFIED MISSION</Text>
+              {/* Mission Critical Titles */}
+              <View style={styles.titleSection}>
+                <View style={styles.badgeContainer}>
+                  <View style={[styles.pulseDot, { backgroundColor: isInstant ? Colors.error : Colors.cyan }]} />
+                  <Text style={[styles.badgeText, { color: isInstant ? Colors.error : Colors.cyan }]}>
+                    {isInstant ? 'URGENT PROTOCOL' : 'VERIFIED MISSION'}
+                  </Text>
+                </View>
+                <Text style={[styles.jobTitle, Typography.threeD]}>{job.category}</Text>
+                <Text style={styles.jobPrice}>STATUS: <Text style={{ color: Colors.cyan }}>{job.status.toUpperCase()}</Text></Text>
               </View>
-              <Text style={[styles.jobTitle, Typography.threeD]}>Deep Home Cleaning</Text>
-              <Text style={styles.jobPrice}>Rs. 4,500 <Text style={styles.jobPriceDec}>.00</Text></Text>
-            </View>
 
-            {/* Quick Details Cards */}
-            <View style={styles.quickDetailsGrid}>
-              <GlassCard intensity={20} style={styles.quickDetailBox}>
-                <Clock size={20} color={Colors.cyan} />
-                <View style={styles.qdTextGroup}>
-                  <Text style={styles.qdLabel}>TIME</Text>
-                  <Text style={styles.qdValue}>02:30 PM</Text>
-                </View>
-              </GlassCard>
-              <GlassCard intensity={20} style={styles.quickDetailBox}>
-                <Calendar size={20} color={Colors.orange} />
-                <View style={styles.qdTextGroup}>
-                  <Text style={styles.qdLabel}>DATE</Text>
-                  <Text style={styles.qdValue}>Oct 24, 2024</Text>
-                </View>
-              </GlassCard>
-            </View>
-
-            {/* Location Section */}
-            <View style={styles.sectionBlock}>
-              <Text style={[styles.sectionTitle, Typography.threeD]}>Sector Location</Text>
-              <GlassCard intensity={15} style={styles.locationCard}>
-                <View style={styles.locationIconWrapper}>
-                  <MapPin color={Colors.primary} size={22} />
-                </View>
-                <View style={styles.locationTextGroup}>
-                  <Text style={styles.locationPrimary}>Sector 4, Phase 2</Text>
-                  <Text style={styles.locationSecondary}>124 Cosmic Avenue, Alpha Block</Text>
-                </View>
-              </GlassCard>
-            </View>
-
-            {/* Client Profile Snippet */}
-            <View style={styles.sectionBlock}>
-              <Text style={[styles.sectionTitle, Typography.threeD]}>Target Client</Text>
-              <GlassCard intensity={15} style={styles.clientCard}>
-                <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop' }}
-                  style={styles.clientAvatar}
-                />
-                <View style={styles.clientInfo}>
-                  <Text style={styles.clientName}>Sarah Jenkins</Text>
-                  <View style={styles.clientSub}>
-                    <Shield size={12} color={Colors.success} />
-                    <Text style={styles.clientTrusted}>Identity Verified</Text>
+              {/* Quick Details Cards */}
+              <View style={styles.quickDetailsGrid}>
+                <GlassCard intensity={20} style={styles.quickDetailBox}>
+                  <Clock size={20} color={Colors.cyan} />
+                  <View style={styles.qdTextGroup}>
+                    <Text style={styles.qdLabel}>TIME</Text>
+                    <Text style={styles.qdValue}>{job.scheduledTime || 'ASAP'}</Text>
                   </View>
-                </View>
-                <TouchableOpacity style={styles.messageBtn}>
-                  <MessageSquare size={18} color="#fff" />
-                </TouchableOpacity>
-              </GlassCard>
-            </View>
+                </GlassCard>
+                <GlassCard intensity={20} style={styles.quickDetailBox}>
+                  <Calendar size={20} color={Colors.orange} />
+                  <View style={styles.qdTextGroup}>
+                    <Text style={styles.qdLabel}>DATE</Text>
+                    <Text style={styles.qdValue}>
+                      {job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today'}
+                    </Text>
+                  </View>
+                </GlassCard>
+              </View>
 
-            {/* Description Fragment */}
-            <View style={styles.sectionBlock}>
-              <Text style={[styles.sectionTitle, Typography.threeD]}>Mission Briefing</Text>
-              <Text style={styles.descriptionText}>
-                Complete deep cleaning required for a 3-bedroom orbital apartment. Please bring specific anti-gravity dusters. High priority on the main living area. Standard protocols apply.
-              </Text>
-            </View>
-          </GlassCard>
-        </Animated.View>
-      </Animated.ScrollView>
+              {/* Location Section */}
+              <View style={styles.sectionBlock}>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>Sector Location</Text>
+                <GlassCard intensity={15} style={styles.locationCard}>
+                  <View style={styles.locationIconWrapper}>
+                    <MapPin color={Colors.primary} size={22} />
+                  </View>
+                  <View style={styles.locationTextGroup}>
+                    <Text style={styles.locationPrimary}>{job.address.split(',')[0]}</Text>
+                    <Text style={styles.locationSecondary}>{job.address}</Text>
+                  </View>
+                </GlassCard>
+              </View>
 
-      {/* Action Footer */}
-      <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footerDock}>
-        <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFillObject, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }]} />
-        <View style={styles.footerContent}>
-          <TouchableOpacity style={styles.cancelBtn}>
-            <Text style={styles.cancelText}>Decline</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.acceptBtn}>
-            <LinearGradient
-              colors={['#1E90FF', '#FF1493']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.acceptGradient}
-            >
-              <Zap size={20} color="#fff" fill="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.acceptText}>Accept Mission</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+              {/* Client Profile Snippet */}
+              <View style={styles.sectionBlock}>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>Target Client</Text>
+                <GlassCard intensity={15} style={styles.clientCard}>
+                  <Image
+                    source={{ uri: (job.customer as any)?.profileImage || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop' }}
+                    style={styles.clientAvatar}
+                  />
+                  <View style={styles.clientInfo}>
+                    <Text style={styles.clientName}>{(job.customer as any)?.fullName || 'Anonymous User'}</Text>
+                    <View style={styles.clientSub}>
+                      <Shield size={12} color={Colors.success} />
+                      <Text style={styles.clientTrusted}>Identity Verified</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.messageBtn}>
+                    <MessageSquare size={18} color="#fff" />
+                  </TouchableOpacity>
+                </GlassCard>
+              </View>
+
+              {/* Description Fragment */}
+              <View style={styles.sectionBlock}>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>Mission Briefing</Text>
+                <Text style={styles.descriptionText}>
+                  {job.description}
+                </Text>
+              </View>
+            </GlassCard>
+          </Animated.View>
+        </Animated.ScrollView>
+
+        {/* Action Footer for Workers */}
+        {role === 'worker' && job.status === 'open' && (
+          <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footerDock}>
+            <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFillObject, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }]} />
+            <View style={styles.footerContent}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => router.back()}>
+                <Text style={styles.cancelText}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.acceptBtn}
+                onPress={() => {
+                  if (isInstant) {
+                    router.push({ pathname: '/finding-worker', params: { jobId: job._id, mode: 'accept' } });
+                  } else {
+                    router.push({ pathname: '/bid-submission', params: { jobId: job._id } });
+                  }
+                }}
+              >
+                <LinearGradient
+                  colors={['#1E90FF', '#FF1493']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.acceptGradient}
+                >
+                  <Zap size={20} color="#fff" fill="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.acceptText}>{isInstant ? 'Accept Mission' : 'Submit Intel (Bid)'}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Action Footer for Customers (View Bids) */}
+        {role === 'user' && (job.status === 'open' || job.status === 'reviewing') && (
+          <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footerDock}>
+            <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFillObject, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }]} />
+            <View style={styles.footerContent}>
+              <TouchableOpacity 
+                style={[styles.acceptBtn]}
+                onPress={() => router.push({ pathname: '/bids-list', params: { jobId: job._id } })}
+              >
+                <LinearGradient
+                  colors={[Colors.primary, Colors.cyan]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.acceptGradient}
+                >
+                  <MoreHorizontal size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.acceptText}>VIEW MARKET PROPOSALS (BIDS)</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
       </View>
     </BackgroundWrapper>
   );

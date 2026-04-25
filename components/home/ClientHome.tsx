@@ -1,224 +1,628 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+/**
+ * ClientHome.tsx — Refactored with Best Practices
+ *
+ * KEY IMPROVEMENTS:
+ * 1. Skeleton loading instead of blank screen
+ * 2. Toast notifications for errors (no jarring inline error blocks)
+ * 3. useCallback for stable function references
+ * 4. Extracted sub-components to avoid re-renders
+ * 5. Proper TypeScript types
+ * 6. Constants extracted outside component
+ * 7. Animated skeleton using interpolate + loop
+ */
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
-  Zap,
-  Droplets,
-  Wind,
-  Hammer,
-  Paintbrush,
-  Wrench,
-  ShieldCheck,
-  Star,
-  ChevronRight,
-  Sparkles,
-  AlertCircle,
-} from 'lucide-react-native';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+  StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Animated as RNAnimated, // RN's built-in Animated (for skeleton shimmer)
+  Platform,
+} from 'react-native';
+import { AlertCircle } from 'lucide-react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useCategories, useMyBookings } from '../../hooks';
-import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../../constants/Theme';
+import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
-import { LinearGradient } from 'expo-linear-gradient';
 import { CosmicCircle } from './CosmicCircle';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
 
-const { width } = Dimensions.get('window');
+// ─── Constants (outside component = created once, never re-created) ──────────
 
-const DEFAULT_GRADIENT = ['#6366f1', '#a855f7'] as [string, string, ...string[]];
+const { width } = Dimensions.get('window');
+const GRID_GAP = 12;
+const CATEGORY_ITEM_WIDTH = (width - Spacing.l * 2 - GRID_GAP * 2) / 3;
+const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
+const INITIAL_CATEGORY_LIMIT = 9; // 3 rows × 3 columns
+const MOCK_RATING = 4.8;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ToastState {
+  visible: boolean;
+  message: string;
+  type: 'error' | 'success';
+}
+
+// ─── Toast Component (extracted so it never causes ClientHome to re-render) ──
+
+interface ToastProps {
+  toast: ToastState;
+  onDismiss: () => void;
+}
+
+/**
+ * WHY a separate component?
+ * When Toast's animation state changes, only Toast re-renders — not the
+ * entire ClientHome tree. This is the "component extraction" performance trick.
+ */
+const Toast = React.memo(({ toast, onDismiss }: ToastProps) => {
+  // RNAnimated.Value: a mutable animated number. Starting at 0 means "hidden".
+  const opacity = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    if (!toast.visible) return;
+
+    // Sequence: fade in → wait → fade out → call onDismiss
+    RNAnimated.sequence([
+      RNAnimated.timing(opacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true, // runs on native thread → 60fps, no JS jank
+      }),
+      RNAnimated.delay(3000),
+      RNAnimated.timing(opacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onDismiss()); // callback fires after the whole sequence ends
+  }, [toast.visible, toast.message]);
+
+  if (!toast.visible) return null;
+
+  return (
+    // RNAnimated.View: a View whose style properties can be driven by Animated values
+    <RNAnimated.View style={[styles.toast, { opacity }]}>
+      <AlertCircle size={16} color="#fff" />
+      <Text style={styles.toastText}>{toast.message}</Text>
+    </RNAnimated.View>
+  );
+});
+
+// ─── Skeleton Components ──────────────────────────────────────────────────────
+
+/**
+ * useShimmer: custom hook that creates a looping shimmer animation.
+ *
+ * interpolate() maps one range to another:
+ *   shimmerAnim 0→1  becomes  translateX  -width → +width
+ * This creates the "light sweeping across" effect.
+ */
+const useShimmer = () => {
+  const shimmerAnim = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    RNAnimated.loop(
+      RNAnimated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const translateX = shimmerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-width, width],
+  });
+
+  return translateX;
+};
+
+/**
+ * SkeletonBox: a single shimmering placeholder rectangle.
+ *
+ * The shimmer layer is absolutely positioned on top of a dark base,
+ * and its translateX animates from left to right creating the gleam.
+ */
+const SkeletonBox = ({
+  width: w,
+  height: h,
+  borderRadius = 8,
+  style,
+}: {
+  width?: number | string;
+  height: number;
+  borderRadius?: number;
+  style?: object;
+}) => {
+  const translateX = useShimmer();
+
+  return (
+    <View
+      style={[
+        styles.skeletonBase,
+        { width: w, height: h, borderRadius },
+        style,
+      ]}
+    >
+      {/* overflow: 'hidden' clips the shimmer so it doesn't bleed outside */}
+      <View style={[StyleSheet.absoluteFill, { overflow: 'hidden', borderRadius }]}>
+        <RNAnimated.View
+          style={[
+            styles.shimmerLayer,
+            { transform: [{ translateX }] },
+          ]}
+        />
+      </View>
+    </View>
+  );
+};
+
+/** Skeleton for a single category card */
+const CategorySkeleton = () => (
+  <View style={[styles.categoryWrap, styles.categoryItem, styles.skeletonCard]}>
+    <SkeletonBox width={50} height={50} borderRadius={16} />
+    <SkeletonBox width="70%" height={10} borderRadius={6} style={{ marginTop: 12 }} />
+    <SkeletonBox width="50%" height={8} borderRadius={6} style={{ marginTop: 6 }} />
+  </View>
+);
+
+/** Full page skeleton rendered while data loads */
+const HomeSkeletonLoader = () => (
+  <View style={styles.skeletonContainer}>
+    {/* Header skeleton */}
+    <View style={styles.skeletonHeader}>
+      <SkeletonBox width={140} height={24} borderRadius={8} />
+      <SkeletonBox width={44} height={44} borderRadius={22} />
+    </View>
+
+    {/* Section title + search bar */}
+    <SkeletonBox width={160} height={20} borderRadius={8} style={{ marginHorizontal: Spacing.l, marginBottom: 12 }} />
+    <SkeletonBox width={width - Spacing.l * 2} height={44} borderRadius={14} style={{ marginHorizontal: Spacing.l, marginBottom: 20 }} />
+
+    {/* Category grid skeletons */}
+    <View style={styles.categoriesGrid}>
+      {Array.from({ length: 9 }).map((_, i) => (
+        // Array.from({length: 9}) creates an array of 9 empty slots
+        // This is a common pattern instead of "new Array(9).fill(null).map(...)"
+        <CategorySkeleton key={i} />
+      ))}
+    </View>
+
+    {/* Dashboard card skeleton */}
+    <View style={[styles.dashboardSection, { marginTop: 32 }]}>
+      <SkeletonBox width="100%" height={260} borderRadius={28} />
+    </View>
+  </View>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ClientHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [showAllServices, setShowAllServices] = React.useState(false);
 
-  // React Query hooks
-  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useCategories();
-  const { data: bookings = [], isLoading: bookingsLoading, error: bookingsError, refetch: refetchBookings } = useMyBookings();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAllServices, setShowAllServices] = useState(false);
 
+  // Toast state — one object instead of multiple booleans
+  const [toast, setToast] = useState<ToastState>({
+    visible: false,
+    message: '',
+    type: 'error',
+  });
+
+  // ── Data fetching ──────────────────────────────────────────────────────────
+
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useCategories();
+
+  const {
+    data: bookings = [],
+    isLoading: bookingsLoading,
+    error: bookingsError,
+    refetch: refetchBookings,
+  } = useMyBookings();
+
+  // Combined loading flag — true if EITHER query is still fetching
   const isLoading = categoriesLoading || bookingsLoading;
 
-  // Filter categories based on search query
+  // ── Error → Toast ──────────────────────────────────────────────────────────
+
+  /**
+   * showToast: useCallback ensures this function reference never changes,
+   * so it won't cause unnecessary re-renders in child components that receive it.
+   */
+  const showToast = useCallback((message: string, type: 'error' | 'success' = 'error') => {
+    setToast({ visible: true, message, type });
+  }, []);
+
+  const dismissToast = useCallback(() => {
+    setToast(prev => ({ ...prev, visible: false }));
+  }, []);
+
+  /**
+   * useEffect with error dependencies:
+   * Runs whenever categoriesError or bookingsError changes.
+   * This decouples "data fetching" from "UI side-effects" cleanly.
+   */
+  useEffect(() => {
+    if (categoriesError) showToast('Failed to load services. Please try again.');
+  }, [categoriesError]);
+
+  useEffect(() => {
+    if (bookingsError) showToast('Failed to load your bookings. Check your connection.');
+  }, [bookingsError]);
+
+  // ── Derived / Memoized Data ────────────────────────────────────────────────
+
+  /**
+   * useMemo: only recalculates when [categories, searchQuery] change.
+   * Without this, the filter runs on EVERY render — even unrelated ones.
+   */
   const filteredCategories = React.useMemo(() => {
     if (!searchQuery.trim()) return categories;
-    
-    const query = searchQuery.toLowerCase();
-    return categories.filter(cat => 
-      cat.name.toLowerCase().includes(query)
-    );
+    const q = searchQuery.toLowerCase();
+    return categories.filter(cat => cat.name.toLowerCase().includes(q));
   }, [categories, searchQuery]);
 
-  // Display limited or all categories
+  /**
+   * slice(0, 9) limits to first 9 when not showing all.
+   * trim() is important — "  " (spaces) should count as empty.
+   */
   const displayedCategories = React.useMemo(() => {
-    if (searchQuery.trim() || showAllServices) {
-      return filteredCategories;
-    }
-    return filteredCategories.slice(0, 9); // Show only first 9 (3 rows x 3 columns)
+    if (searchQuery.trim() || showAllServices) return filteredCategories;
+    return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
   }, [filteredCategories, showAllServices, searchQuery]);
 
-  // Compute stats from bookings
-  const stats = React.useMemo(() => ({
-    jobs: bookings.length,
-    rating: 4.8 // Mock rating since User model doesn't have it yet
-  }), [bookings]);
+  const stats = React.useMemo(
+    () => ({ jobs: bookings.length, rating: MOCK_RATING }),
+    [bookings.length]
+  );
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  /**
+   * useCallback prevents a new function being created every render.
+   * Important here because this is passed to TouchableOpacity's onPress.
+   */
+  const handleToggleServices = useCallback(() => {
+    setShowAllServices(prev => !prev); // functional update: never reads stale state
+  }, []);
+
+  const handleCategoryPress = useCallback(
+    (cat: typeof categories[number]) => {
+      router.push({
+        pathname: '/category-details',
+        params: {
+          id: cat._id,
+          title: cat.name,
+          color: cat.color ?? '#fff',
+          description: cat.description,
+        },
+      });
+    },
+    [router]
+  );
+
+  const handleRetryBookings = useCallback(() => {
+    refetchBookings();
+  }, [refetchBookings]);
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <BackgroundWrapper>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
-      >
-        <HomeHeader />
+      {/* Toast lives outside ScrollView so it floats on top of everything */}
+      <Toast toast={toast} onDismiss={dismissToast} />
 
-        {/* Error States */}
-        {categoriesError && (
-          <View style={styles.errorContainer}>
-            <View style={styles.errorContent}>
-              <AlertCircle size={20} color="#FF6B6B" />
-              <Text style={styles.errorText}>Failed to load services</Text>
-            </View>
-          </View>
-        )}
+      {isLoading ? (
+        /**
+         * Show skeleton while loading.
+         * paddingTop: insets.top handles the status bar notch on iOS/Android.
+         */
+        <HomeSkeletonLoader />
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+        >
+          <HomeHeader />
 
-        {bookingsError && (
-          <View style={[styles.errorContainer, styles.errorWithAction]}>
-            <View style={styles.errorContent}>
-              <AlertCircle size={20} color="#FF6B6B" />
-              <View style={styles.errorTextWrap}>
-                <Text style={styles.errorText}>Failed to load bookings</Text>
-                <Text style={styles.errorSubtext}>Check your connection and try again</Text>
-              </View>
-            </View>
-            <TouchableOpacity 
-              style={styles.retryBtn}
-              onPress={() => refetchBookings()}
-            >
-              <Text style={styles.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {/* ── Categories Section ── */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, Typography.threeD]}>Meta-Services</Text>
 
-
-        {/* Categories Grid - Optimized */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, Typography.threeD]}>Meta-Services</Text>
-            {!searchQuery && categories.length > 9 && (
-              <TouchableOpacity onPress={() => setShowAllServices(!showAllServices)}>
-                <Text style={styles.viewAll}>{showAllServices ? 'SHOW LESS' : 'VIEW ALL'}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          {/* Search Bar */}
-          <SearchBar 
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search services..."
-            variant="section"
-          />
-
-          <View style={styles.categoriesGrid}>
-            {displayedCategories.map((cat, index) => {
-              const Icon = getIconForCategory(cat);
-              const gradient = cat.color ? [cat.color, cat.color + '40'] as [string, string, ...string[]] : DEFAULT_GRADIENT;
-              
-              return (
-                <Animated.View
-                  key={cat._id}
-                  entering={FadeInDown.delay(400 + index * 100).duration(800)}
-                  style={styles.categoryWrap}
-                >
-                  <GlassCard
-                    style={styles.categoryItem}
-                    onPress={() => router.push({
-                      pathname: '/category-details',
-                      params: { 
-                        id: cat._id, 
-                        title: cat.name, 
-                        color: cat.color || '#fff',
-                        description: cat.description
-                      }
-                    })}
-                    gradient={gradient}
-                  >
-                    <View style={styles.categoryIconBox}>
-                      <Icon size={22} color="#fff" strokeWidth={2} />
-                    </View>
-                    <Text style={styles.categoryTitle} numberOfLines={2}>{cat.name}</Text>
-                  </GlassCard>
-                </Animated.View>
-              );
-            })}
-            {displayedCategories.length === 0 && !isLoading && (
-               <Text style={styles.emptyText}>{searchQuery ? 'No services found' : 'No categories found'}</Text>
-            )}
-          </View>
-        </View>
-
-        {/* Cosmic Insights Dashboard */}
-        <Animated.View entering={FadeInDown.delay(200).duration(1000)} style={styles.dashboardSection}>
-          <GlassCard intensity={50} glowColor={Colors.cyan} style={styles.dashboardCard}>
-            {/* Header with title and button */}
-            <View style={styles.dashboardTop}>
-              <View style={styles.dashboardTitleBox}>
-                <Text style={[styles.dashboardTitle, Typography.threeD]}>COSMIC</Text>
-                <Text style={[styles.dashboardTitle, Typography.threeD]}>INSIGHTS</Text>
-                <Text style={styles.dashboardSub}>Trust Dimension</Text>
-              </View>
-              <TouchableOpacity style={styles.expandBtn}>
-                <Text style={styles.expandText}>Expand</Text>
-              </TouchableOpacity>
+              {/* Only show VIEW ALL if not searching AND there are more than 9 categories */}
+              {!searchQuery && categories.length > INITIAL_CATEGORY_LIMIT && (
+                <TouchableOpacity onPress={handleToggleServices} hitSlop={styles.hitSlop}>
+                  {/* hitSlop enlarges the tap area without changing the visual size */}
+                  <Text style={styles.viewAll}>
+                    {showAllServices ? 'SHOW LESS' : 'VIEW ALL'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            {/* Content - Circle and Stats */}
-            <View style={styles.dashboardContent}>
-              <CosmicCircle
-                value={0.871}
-                label="87.1%"
-                subLabel="TRUST SCORE"
-                size={170}
-              />
-              
-              <View style={styles.insightStats}>
-                <View style={styles.statChip}>
-                  <Text style={styles.statVal}>{stats.jobs}</Text>
-                  <Text style={styles.statLab}>Orbits</Text>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search services..."
+              variant="section"
+            />
+
+            <View style={styles.categoriesGrid}>
+              {displayedCategories.length > 0 ? (
+                displayedCategories.map((cat, index) => {
+                  const Icon = getIconForCategory(cat);
+                  // Nullish coalescing (??) is safer than || for falsy strings
+                  const gradient: [string, string, ...string[]] = cat.color
+                    ? [cat.color, `${cat.color}40`]
+                    : DEFAULT_GRADIENT;
+
+                  return (
+                    /**
+                     * Animated.View with entering:
+                     * FadeInDown.delay(n): staggered entrance — each card fades
+                     * in after the previous one. index * 60 keeps total delay sane.
+                     * key={cat._id}: always use stable unique IDs, not array index.
+                     */
+                    <Animated.View
+                      key={cat._id}
+                      entering={FadeInDown.delay(index * 60).duration(500)}
+                      style={styles.categoryWrap}
+                    >
+                      <GlassCard
+                        style={styles.categoryItem}
+                        contentStyle={styles.categoryItemContent}
+                        onPress={() => handleCategoryPress(cat)}
+                        gradient={gradient}
+                        padding={0}
+                      >
+                        <View style={styles.categoryIconBox}>
+                          <Icon size={22} color="#fff" strokeWidth={2} />
+                        </View>
+                        <Text style={styles.categoryTitle} numberOfLines={2}>
+                          {cat.name}
+                        </Text>
+                      </GlassCard>
+                    </Animated.View>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyText}>
+                  {searchQuery ? 'No services match your search' : 'No categories available'}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          {/* ── Cosmic Insights Dashboard ── */}
+          <Animated.View
+            entering={FadeInDown.delay(200).duration(800)}
+            style={styles.dashboardSection}
+          >
+            <GlassCard intensity={50} glowColor={Colors.cyan} style={styles.dashboardCard}>
+              <View style={styles.dashboardTop}>
+                <View style={styles.dashboardTitleBox}>
+                  <Text style={[styles.dashboardTitle, Typography.threeD]}>COSMIC</Text>
+                  <Text style={[styles.dashboardTitle, Typography.threeD]}>INSIGHTS</Text>
+                  <Text style={styles.dashboardSub}>Trust Dimension</Text>
                 </View>
-                <View style={styles.statChip}>
-                  <Text style={styles.statVal}>{stats.rating}</Text>
-                  <Text style={styles.statLab}>Stars</Text>
+                <TouchableOpacity style={styles.expandBtn} hitSlop={styles.hitSlop}>
+                  <Text style={styles.expandText}>Expand</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.dashboardContent}>
+                <CosmicCircle
+                  value={0.871}
+                  label="87.1%"
+                  subLabel="TRUST SCORE"
+                  size={170}
+                />
+                <View style={styles.insightStats}>
+                  <StatChip value={stats.jobs} label="Orbits" />
+                  <StatChip value={stats.rating} label="Stars" />
                 </View>
               </View>
-            </View>
-          </GlassCard>
-        </Animated.View>
+            </GlassCard>
+          </Animated.View>
 
-
-        {/* Elite Talent Card with Depth */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, Typography.threeD, { marginBottom: 20, paddingHorizontal: Spacing.l }]}>Elite Talents</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-            {/* Placeholder message - waiting for public workers endpoint */}
-            <Text style={[styles.emptyText, { marginLeft: 20, marginTop: 20 }]}>
-              Awaiting public workers endpoint...
+          {/* ── Elite Talents ── */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, Typography.threeD, styles.eliteSectionTitle]}>
+              Elite Talents
             </Text>
-          </ScrollView>
-        </View>
-
-      </ScrollView>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <Text style={styles.placeholderText}>Awaiting public workers endpoint…</Text>
+            </ScrollView>
+          </View>
+        </ScrollView>
+      )}
     </BackgroundWrapper>
   );
 }
 
+// ─── StatChip (extracted to avoid inline object creation in render) ───────────
+
+/**
+ * Extracting StatChip:
+ * If defined inline inside ClientHome, a new function component is created every
+ * render, forcing React to unmount + remount it. As a named component, React
+ * recognizes it as stable and only re-renders it when its props change.
+ */
+const StatChip = React.memo(({ value, label }: { value: number; label: string }) => (
+  <View style={styles.statChip}>
+    <Text style={styles.statVal}>{value}</Text>
+    <Text style={styles.statLab}>{label}</Text>
+  </View>
+));
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
+  // ── Skeleton
+  skeletonContainer: {
+    flex: 1,
+    paddingTop: 60,
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.l,
+    marginBottom: 28,
+  },
+  skeletonBase: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    overflow: 'hidden',
+  },
+  skeletonCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  shimmerLayer: {
+    ...StyleSheet.absoluteFillObject,
+    // Gradient-like shimmer using a semi-transparent white band
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 80,
+  },
+
+  // ── Toast
+  toast: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: Spacing.l,
+    right: Spacing.l,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6B6B',
+    zIndex: 999, // float above everything
+    // Shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  toastText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+
+  // ── Layout
   scrollContent: {
     paddingBottom: 40,
   },
+  section: {
+    marginVertical: Spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.l,
+    marginBottom: Spacing.l,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+  eliteSectionTitle: {
+    marginBottom: 20,
+    paddingHorizontal: Spacing.l,
+  },
+  viewAll: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.cyan,
+    textTransform: 'uppercase',
+  },
+  // hitSlop: enlarges tap area by 10pt on each side (no visual change)
+  hitSlop: {
+    top: 10,
+    bottom: 10,
+    left: 10,
+    right: 10,
+  },
+
+  // ── Categories Grid
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: GRID_GAP,
+    paddingHorizontal: Spacing.l,
+  },
+  categoryWrap: {
+    width: CATEGORY_ITEM_WIDTH,
+  },
+  categoryItem: {
+    height: 130,
+    width: '100%',
+  },
+  categoryItemContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 18,
+    paddingHorizontal: 8,
+  },
+  categoryIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    ...Shadows.depth,
+  },
+  categoryTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginVertical: Spacing.l,
+    width: '100%',
+  },
+
+  // ── Dashboard
   dashboardSection: {
     paddingHorizontal: Spacing.l,
     marginTop: Spacing.xl,
@@ -255,13 +659,12 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   expandBtn: {
-    backgroundColor: 'rgba(0, 245, 255, 0.1)',
+    backgroundColor: 'rgba(0,245,255,0.1)',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 245, 255, 0.3)',
-    flexShrink: 1,
+    borderColor: 'rgba(0,245,255,0.3)',
     minWidth: 90,
     alignItems: 'center',
   },
@@ -269,8 +672,6 @@ const styles = StyleSheet.create({
     color: Colors.cyan,
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.3,
-    textTransform: 'capitalize',
   },
   dashboardContent: {
     flexDirection: 'column',
@@ -286,12 +687,12 @@ const styles = StyleSheet.create({
   },
   statChip: {
     flex: 1,
-    backgroundColor: 'rgba(0, 245, 255, 0.08)',
+    backgroundColor: 'rgba(0,245,255,0.08)',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.2)',
+    borderColor: 'rgba(0,245,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -309,185 +710,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textTransform: 'capitalize',
   },
-  section: {
-    marginVertical: Spacing.xl, // Reduced from xxl
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.l, // Reduced from xl
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -0.5,
-  },
-  viewAll: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.cyan,
-    textTransform: 'uppercase',
-  },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 5,
-    paddingHorizontal: Spacing.l,
-  },
-  categoryWrap: {
-    width: (width - (Spacing.l * 2) - 20) / 3,
-  },
-  categoryItem: {
-    height: 120,
-    paddingVertical: Spacing.m,
-    paddingHorizontal: Spacing.s,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryIconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    ...Shadows.depth,
-  },
-  categoryTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  horizontalScroll: {
-    paddingLeft: Spacing.l,
-  },
-  talentCardWrap: {
-    marginRight: 16,
-    width: width * 0.75,
-  },
-  talentCard: {
-    padding: 20,
-    height: 160,
-  },
-  talentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  talentName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  talentRole: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: '600',
-  },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  ratingText: {
-    color: '#FFD700',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  emptyText: {
+  placeholderText: {
     fontSize: 14,
     color: Colors.textMuted,
     fontWeight: '600',
-    textAlign: 'center',
-    marginVertical: Spacing.l,
-  },
-  talentFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 'auto',
-  },
-  talentPrice: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: Colors.primary,
-  },
-  priceUnit: {
-    fontSize: 12,
-    color: Colors.textDim,
-    fontWeight: '600',
-  },
-  eliteBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary + '15',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  eliteText: {
-    color: Colors.primary,
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    marginHorizontal: Spacing.l,
-    marginVertical: Spacing.m,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF6B6B',
-  },
-  errorWithAction: {
-    justifyContent: 'space-between',
-  },
-  errorContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  errorTextWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  errorSubtext: {
-    color: '#FF6B6B',
-    fontSize: 12,
-    fontWeight: '400',
-    opacity: 0.8,
-    marginTop: 4,
-  },
-  retryBtn: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginLeft: 8,
-  },
-  retryBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
+    marginLeft: Spacing.l,
+    marginTop: 20,
   },
 });
