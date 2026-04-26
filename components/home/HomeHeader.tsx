@@ -11,9 +11,9 @@ export function HomeHeader() {
   const { role, user } = useAuth();
   const { location } = useUserLocation();
   const accentColor = role === 'worker' ? Colors.orange : Colors.primary;
-  
+
   // Format location display
-  const locationDisplay = location 
+  const locationDisplay = location
     ? `${location.address || location.city || 'Your Location'}`
     : 'Loading location...';
 
@@ -29,15 +29,15 @@ export function HomeHeader() {
               end={{ x: 1, y: 1 }}
               style={styles.avatarGlow}
             />
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop' }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: user?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'Guest')}&background=random` }}
+              style={styles.avatar}
             />
             <View style={[styles.activeIndicator, { backgroundColor: Colors.success }]} />
           </TouchableOpacity>
           <View style={styles.welcomeText}>
-            <Text style={styles.greetingLabel}>Cosmic Access</Text>
-            <Text style={styles.greetingHeader}>Ahmed Malik</Text>
+            <Text style={styles.greetingLabel}>{role === 'worker' ? 'Worker Access' : 'Client Access'}</Text>
+            <Text style={styles.greetingHeader}>{user?.fullName || 'Welcome Back'}</Text>
           </View>
         </View>
 
@@ -50,8 +50,8 @@ export function HomeHeader() {
       </View>
 
       <View style={styles.locationContainer}>
-         <MapPin size={14} color={accentColor} />
-         <Text style={styles.locationText} numberOfLines={1}>{locationDisplay}</Text>
+        <MapPin size={14} color={accentColor} />
+        <Text style={styles.locationText} numberOfLines={1}>{locationDisplay}</Text>
       </View>
     </View>
   );

@@ -35,6 +35,7 @@ import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
 import { CosmicCircle } from './CosmicCircle';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── Constants (outside component = created once, never re-created) ──────────
 
@@ -289,10 +290,25 @@ export function ClientHome() {
     return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
   }, [filteredCategories, showAllServices, searchQuery]);
 
-  const stats = React.useMemo(
-    () => ({ jobs: bookings.length, rating: MOCK_RATING }),
-    [bookings.length]
-  );
+  const { user } = useAuth();
+
+  const stats = React.useMemo(() => {
+    const completed = bookings.filter(b => b.status === 'completed');
+    const totalJobs = bookings.length;
+    
+    // Calculate trust score based on completed jobs, or default to 87.1%
+    let trustScoreValue = 0.871;
+    if (totalJobs > 0) {
+      trustScoreValue = Math.max(0.5, completed.length / totalJobs);
+    }
+
+    return { 
+      jobs: totalJobs, 
+      rating: (user as any)?.rating || MOCK_RATING,
+      trustScore: trustScoreValue,
+      trustScoreLabel: `${(trustScoreValue * 100).toFixed(1)}%`
+    };
+  }, [bookings, user]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -431,8 +447,8 @@ export function ClientHome() {
 
               <View style={styles.dashboardContent}>
                 <CosmicCircle
-                  value={0.871}
-                  label="87.1%"
+                  value={stats.trustScore}
+                  label={stats.trustScoreLabel}
                   subLabel="TRUST SCORE"
                   size={170}
                 />
@@ -450,7 +466,7 @@ export function ClientHome() {
               Elite Talents
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <Text style={styles.placeholderText}>Awaiting public workers endpoint…</Text>
+              <Text style={styles.placeholderText}>No elite talents available currently.</Text>
             </ScrollView>
           </View>
         </ScrollView>

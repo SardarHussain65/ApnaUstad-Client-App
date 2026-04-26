@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
 
@@ -29,8 +30,9 @@ interface AuthContextType {
   role: UserRole;
   user: UserProfile | WorkerProfile | null;
   token: string | null;
+  refreshToken: string | null;
   isLoading: boolean;
-  setAuth: (token: string, role: UserRole, user: any) => Promise<void>;
+  setAuth: (token: string, refreshToken: string, role: UserRole, user: any) => Promise<void>;
   setRole: (role: UserRole) => void;
   updateUser: (user: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -42,14 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRoleState] = useState<UserRole>(null);
   const [user, setUserState] = useState<UserProfile | WorkerProfile | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
+  const [refreshToken, setRefreshTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadAuth = async () => {
       try {
-        const [savedRole, savedToken, savedUser] = await Promise.all([
+        const [savedRole, savedToken, savedRefreshToken, savedUser] = await Promise.all([
           AsyncStorage.getItem('user_role'),
           AsyncStorage.getItem('user_token'),
+          AsyncStorage.getItem('refresh_token'),
           AsyncStorage.getItem('user_data')
         ]);
 
@@ -58,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTokenState(savedToken);
           socketService.connect(savedToken);
         }
+        if (savedRefreshToken) setRefreshTokenState(savedRefreshToken);
         if (savedUser) setUserState(JSON.parse(savedUser));
       } catch (error) {
         console.error('Error loading auth state:', error);
@@ -69,9 +74,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadAuth();
   }, []);
 
-  const setAuth = async (token: string, role: UserRole, user: any) => {
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('auth:logout', () => {
+      logout();
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  const setAuth = async (token: string, refreshToken: string, role: UserRole, user: any) => {
     try {
       setTokenState(token);
+      setRefreshTokenState(refreshToken);
       setRoleState(role);
       setUserState(user);
 
@@ -79,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await Promise.all([
         AsyncStorage.setItem('user_token', token),
+        AsyncStorage.setItem('refresh_token', refreshToken),
         AsyncStorage.setItem('user_role', role || ''),
         user ? AsyncStorage.setItem('user_data', JSON.stringify(user)) : Promise.resolve()
       ]);
@@ -99,11 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       setTokenState(null);
+      setRefreshTokenState(null);
       setRoleState(null);
       setUserState(null);
       socketService.disconnect();
       await Promise.all([
         AsyncStorage.removeItem('user_token'),
+        AsyncStorage.removeItem('refresh_token'),
         AsyncStorage.removeItem('user_role'),
         AsyncStorage.removeItem('user_data')
       ]);
@@ -113,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, user, token, isLoading, setAuth, setRole: setRoleState, updateUser, logout }}>
+    <AuthContext.Provider value={{ role, user, token, refreshToken, isLoading, setAuth, setRole: setRoleState, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

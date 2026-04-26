@@ -11,6 +11,8 @@ interface JobCreationPayload {
   longitude: number;
   latitude: number;
   imageUrl?: string;
+  imageUrls?: string[];
+  amount?: number;
   targetWorkerId?: string;
   scheduledDate?: Date;
   scheduledTime?: string;
@@ -95,6 +97,15 @@ const registerUser = async (payload: RegisterPayload & { role: 'client' | 'worke
 const sendMessage = async (payload: SendMessagePayload): Promise<any> => {
   const { bookingId, message } = payload;
   const response = await api.post(`/messages/${bookingId}`, { message });
+  return response.data.data;
+};
+
+const uploadJobImages = async (formData: FormData): Promise<{ imageUrls: string[] }> => {
+  const response = await api.post('/jobs/upload-images', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data.data;
 };
 
@@ -183,6 +194,13 @@ export function useSendMessageMutation(options?: Omit<UseMutationOptions<any, Er
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.messages.byBooking(variables.bookingId) });
     },
+    ...options,
+  });
+}
+
+export function useUploadJobImagesMutation(options?: Omit<UseMutationOptions<{ imageUrls: string[] }, Error, FormData>, 'mutationFn'>) {
+  return useMutation<{ imageUrls: string[] }, Error, FormData>({
+    mutationFn: uploadJobImages,
     ...options,
   });
 }

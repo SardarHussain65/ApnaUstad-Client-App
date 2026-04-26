@@ -2,7 +2,7 @@ export const Colors = {
   background: '#050510', // Deep Cosmic Navy
   card: '#0F0F1A',       // Subtle Navy card
   cardSelected: '#1A1A2E',
-  
+
   text: '#FFFFFF',
   textMuted: '#8E8E93',
   textDim: '#5B5B5E',
@@ -12,7 +12,7 @@ export const Colors = {
   worker: '#FF8C00',     // Vibrant Orange
   success: '#34C759',
   error: '#FF3B30',
-  
+
   // Accents
   cyan: '#00F5FF',
   orange: '#FF8C00',
@@ -20,15 +20,17 @@ export const Colors = {
   pink: '#FF1493',
   purple: '#BF5AF2',
   deepBlue: '#121225',
-  
+
+  yellow: '#FFD700',
+
   border: '#1C1C2E',
   inputBackground: '#0F0F1A',
-  
+
   // Modern Surface Variants
   surface: '#0A0A1F',
   surfaceLight: '#1C1C2E',
   surfaceHighlight: '#2C2C4E',
-  
+
   // Gradients
   cyanGradient: ['#00F5FF', '#007AFF'],
   orangeGradient: ['#FF8C00', '#FF5E00'],

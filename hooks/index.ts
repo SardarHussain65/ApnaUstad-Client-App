@@ -30,6 +30,7 @@ export {
   useUpdateBookingStatusMutation,
   useRegisterMutation,
   useSendMessageMutation,
+  useUploadJobImagesMutation,
 } from './mutations/useMutations';
 
 // UI Hooks

@@ -163,10 +163,13 @@ export default function RegisterDetailsScreen() {
       
       // 🛠️ FIX: Initialize session after registration
       const token = data.token || data.data?.token;
+      const refreshToken = data.refreshToken || data.data?.refreshToken;
       const user = data.user || data.data?.user;
       
-      if (token) {
-        setAuth(token, params.role as 'client' | 'worker', user);
+      if (token && refreshToken) {
+        setAuth(token, refreshToken, params.role as 'client' | 'worker', user);
+      } else if (token) {
+        setAuth(token, '', params.role as 'client' | 'worker', user);
       }
       success('Welcome!', `Profile completed! Welcome to ApnaUstad as a ${params.role}.`);
       router.replace('/(tabs)' as any);

@@ -74,11 +74,15 @@ export default function LoginScreen() {
     onSuccess: async (data) => {
       // Workers return 'worker' key, clients return 'user' key
       const token = data.token || data.data?.token;
+      const refreshToken = data.refreshToken || data.data?.refreshToken;
       const user = data.user || data.data?.user || data.data?.worker;
       const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
       
-      if (token && user) {
-        await setAuth(token, finalRole, user);
+      if (token && refreshToken && user) {
+        await setAuth(token, refreshToken, finalRole, user);
+      } else if (token && user) {
+        // Fallback if refreshToken is missing for some reason
+        await setAuth(token, '', finalRole, user);
       } else {
         await setRole(finalRole);
       }

@@ -29,7 +29,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (role !== 'worker' || !token) return;
 
-    const unsubscribe = socketService.on('job:new', (newJob: any) => {
+    const unsubscribeNewJob = socketService.on('job:new', (newJob: any) => {
       console.log('📩 [IncomingJobContext] Real-time Job Received:', newJob);
 
       if (isOnline) {
@@ -41,7 +41,45 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       }
     });
 
-    return () => unsubscribe();
+    const unsubscribeWon = socketService.on('bid:won', (data: any) => {
+      console.log('🏆 [IncomingJobContext] Mission Secured:', data);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'MISSION SECURED! 🚀',
+        text2: 'The client has hired you. Tap to view mission details.',
+        visibilityTime: 5000,
+        onPress: () => {
+          router.push({
+            pathname: '/transaction-details',
+            params: { id: data.booking._id }
+          });
+        }
+      });
+
+      // Optional: Auto redirect after delay
+      setTimeout(() => {
+        router.push({
+          pathname: '/transaction-details',
+          params: { id: data.booking._id }
+        });
+      }, 2000);
+    });
+
+    const unsubscribeLost = socketService.on('bid:lost', (data: any) => {
+      console.log('📉 [IncomingJobContext] Mission Lost:', data);
+      Toast.show({
+        type: 'info',
+        text1: 'MISSION TERMINATED',
+        text2: 'The client has selected another specialist.',
+      });
+    });
+
+    return () => {
+      unsubscribeNewJob();
+      unsubscribeWon();
+      unsubscribeLost();
+    };
   }, [role, token, isOnline]);
 
   const handleAcceptJob = useCallback(async () => {
@@ -56,7 +94,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           Toast.show({
             type: 'success',
             text1: 'MISSION ACCEPTED',
-            text2: 'Protocol initialized. Proceed to coordinates.',
+            text2: 'Protocol initialized. Waiting for client confirmation...',
           });
           setShowModal(false);
           setIncomingJob(null);

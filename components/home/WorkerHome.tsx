@@ -31,7 +31,7 @@ export function WorkerHome() {
   const { token, user } = useAuth();
   const { isOnline, setIsOnline } = useIncomingJob();
   const [jobs, setJobs] = useState<any[]>([]);
-  const [stats, setStats] = useState({ revenue: 0, rating: 0, missions: 0 });
+  const [stats, setStats] = useState({ revenue: 0, rating: 0, missions: 0, successRate: 1 });
   const [isLoading, setIsLoading] = useState(true);
 
   const insets = useSafeAreaInsets();
@@ -76,11 +76,14 @@ export function WorkerHome() {
         return sum + (b.workerEarning || 0);
       }, 0);
 
+      const successRate = allBookings.length > 0 ? (completed.length / allBookings.length) : 1;
+
       setStats({
-        revenue: totalRevenue,
-        missions: allBookings.length,
-        rating: 4.9 // Default for now
-      });
+        revenue: (user as any)?.totalEarnings || totalRevenue,
+        missions: (user as any)?.totalJobs || allBookings.length,
+        rating: (user as any)?.rating || 0,
+        successRate: successRate,
+      } as any);
     } catch (error) {
       console.error('Error fetching worker stats:', error);
     }
@@ -133,7 +136,7 @@ export function WorkerHome() {
 
             <View style={styles.dashboardContent}>
               <CosmicCircle
-                value={0.72}
+                value={stats.successRate || 1}
                 label={`Rs. ${stats.revenue.toLocaleString()}`}
                 subLabel="TOTAL REVENUE"
                 size={160}
@@ -141,7 +144,7 @@ export function WorkerHome() {
               <View style={styles.miniStatsContainer}>
                 <View style={[styles.miniStatRow, { backgroundColor: 'rgba(255, 20, 147, 0.1)' }]}>
                   <Activity size={18} color={Colors.cyan} />
-                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>100% <Text style={styles.miniStatLab}>SUCCESS</Text></Text>
+                  <Text style={[styles.miniStatVal, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{Math.round((stats.successRate || 1) * 100)}% <Text style={styles.miniStatLab}>SUCCESS</Text></Text>
                 </View>
                 <View style={[styles.miniStatRow, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
                   <Star size={18} color="#ffd700" />

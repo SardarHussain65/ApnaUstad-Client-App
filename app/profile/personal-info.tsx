@@ -8,13 +8,16 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
+import { useAuth } from '../../context/AuthContext';
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
-  const [name, setName] = useState('Ahmed Malik');
-  const [email, setEmail] = useState('ahmed.malik@cosmic.io');
-  const [phone, setPhone] = useState('+92 300 1234567');
-  const [address, setAddress] = useState('Global Trade Center, Phase 7, Rawalpindi');
+  const { user } = useAuth();
+  
+  const [name, setName] = useState((user as any)?.fullName || '');
+  const [email, setEmail] = useState((user as any)?.email || '');
+  const [phone, setPhone] = useState((user as any)?.phone || '');
+  const [address, setAddress] = useState((user as any)?.address || '');
 
   const handleSave = () => {
     // Implement save logic here

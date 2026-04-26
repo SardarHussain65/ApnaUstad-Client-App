@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { CustomTabBar } from '../../components/navigation/TabBar';
@@ -17,7 +17,11 @@ export default function TabLayout() {
 
     const unsubBidWon = socketService.on('bid:won', (data) => {
       if (role === 'worker') {
-        Alert.alert('🎉 MISSION SECURED', `Your bid for ${data.jobPost?.category} was accepted!`);
+        Toast.show({
+          type: 'success',
+          text1: 'MISSION SECURED! 🚀',
+          text2: `Your bid for ${data.jobPost?.category} was accepted!`,
+        });
         router.push({
           pathname: '/transaction-details',
           params: { id: data.booking?._id }
@@ -28,7 +32,11 @@ export default function TabLayout() {
     // Global Client Handlers
     const unsubJobAssigned = socketService.on('job:assigned', (data) => {
       if (role === 'client') {
-        Alert.alert('🚀 USTAD SECURED', `${data.jobPost?.category} mission has been accepted by an elite specialist.`);
+        Toast.show({
+          type: 'success',
+          text1: 'USTAD SECURED! 🚀',
+          text2: `${data.jobPost?.category} mission has been accepted.`,
+        });
         router.push({
           pathname: '/transaction-details',
           params: { id: data.booking?._id }
