@@ -5,6 +5,8 @@ import { useAuth } from './AuthContext';
 import { IncomingJobModal } from '../components/home/IncomingJobModal';
 import api from '../services/api';
 import Toast from 'react-native-toast-message';
+import { PaymentReceivedModal } from '../components/home/PaymentReceivedModal';
+import * as Haptics from 'expo-haptics';
 
 interface IncomingJobContextType {
   /** True while worker is marked online (controlled from WorkerHome toggle) */
@@ -20,26 +22,31 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
   const [isOnline, setIsOnline] = useState(true);
 
+  const [isAccepting, setIsAccepting] = useState(false);
+  
   // Modal state
   const [incomingJob, setIncomingJob] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
-  const [isAccepting, setIsAccepting] = useState(false);
+  
+  // Payment notification state
+  const [paidBooking, setPaidBooking] = useState<any>(null);
+  const [showPaidModal, setShowPaidModal] = useState(false);
 
-  // Only subscribe when the logged-in user is a worker with a valid token
+  // Only subscribe when the logged-in user is authenticated
   useEffect(() => {
-    if (role !== 'worker' || !token) return;
+    if (!token) return;
 
-    const unsubscribeNewJob = socketService.on('job:new', (newJob: any) => {
-      console.log('📩 [IncomingJobContext] Real-time Job Received:', newJob);
-
-      if (isOnline) {
-        console.log('✨ [IncomingJobContext] Showing Incoming Job Modal globally');
-        setIncomingJob(newJob);
-        setShowModal(true);
-      } else {
-        console.log('⏳ [IncomingJobContext] Worker is Offline, skipping modal');
-      }
-    });
+    // --- WORKER ONLY: New Job Notifications ---
+    let unsubscribeNewJob = () => {};
+    if (role === 'worker') {
+      unsubscribeNewJob = socketService.on('job:new', (newJob: any) => {
+        console.log('📩 [IncomingJobContext] Real-time Job Received:', newJob);
+        if (isOnline) {
+          setIncomingJob(newJob);
+          setShowModal(true);
+        }
+      });
+    }
 
     const unsubscribeWon = socketService.on('bid:won', (data: any) => {
       console.log('🏆 [IncomingJobContext] Mission Secured:', data);
@@ -75,10 +82,73 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       });
     });
 
+    // --- GENERIC: Booking Status Updates ---
+    const unsubscribeAccepted = socketService.on('booking:accepted', (data: any) => {
+      Toast.show({
+        type: 'success',
+        text1: 'PROTOCOL ACTIVE 🛡️',
+        text2: role === 'worker' 
+          ? `You have accepted the mission for ${data?.category || 'a new job'}.`
+          : `Specialist has accepted your request for ${data?.category || 'the job'}.`,
+      });
+    });
+
+    const unsubscribeOngoing = socketService.on('booking:ongoing', (data: any) => {
+      Toast.show({
+        type: 'info',
+        text1: 'ENGAGEMENT STARTED ⚡',
+        text2: role === 'worker'
+          ? `You have initialized the mission: ${data?.category || 'Task'}.`
+          : `The Ustad is now on-site performing: ${data?.category || 'Task'}`,
+      });
+    });
+
+    const unsubscribeCompleted = socketService.on('booking:completed', (data: any) => {
+      Toast.show({
+        type: 'success',
+        text1: 'OBJECTIVE SECURED 🏁',
+        text2: role === 'worker'
+          ? `You have successfully completed the mission: ${data?.category || 'Task'}.`
+          : `Mission accomplished! Your Ustad has finished: ${data?.category || 'Task'}`,
+      });
+    });
+
+    const unsubscribeCancelled = socketService.on('booking:cancelled', (data: any) => {
+      Toast.show({
+        type: 'error',
+        text1: 'PROTOCOL SHUTDOWN ⚠️',
+        text2: `Mission aborted: ${data?.category || 'the job'} has been cancelled.`,
+      });
+    });
+
+    const unsubscribePaid = socketService.on('booking:paid', (data: any) => {
+      console.log('💰 [IncomingJobContext] Payment Received Event:', data);
+      console.log('👤 Current User Role:', role);
+      
+      if (role === 'worker') {
+        console.log('✅ Showing Payment Modal for Worker');
+        setPaidBooking(data);
+        setShowPaidModal(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        console.log('ℹ️ Showing Payment Toast for Client');
+        Toast.show({
+          type: 'success',
+          text1: 'PAYMENT VERIFIED ✅',
+          text2: `Your settlement for ${data.category || 'the job'} has been confirmed.`,
+        });
+      }
+    });
+
     return () => {
       unsubscribeNewJob();
       unsubscribeWon();
       unsubscribeLost();
+      unsubscribeAccepted();
+      unsubscribeOngoing();
+      unsubscribeCompleted();
+      unsubscribeCancelled();
+      unsubscribePaid();
     };
   }, [role, token, isOnline]);
 
@@ -139,6 +209,12 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         onAccept={handleAcceptJob}
         onReject={handleRejectJob}
         isLoading={isAccepting}
+      />
+
+      <PaymentReceivedModal
+        visible={showPaidModal}
+        booking={paidBooking}
+        onClose={() => setShowPaidModal(false)}
       />
     </IncomingJobContext.Provider>
   );

@@ -21,6 +21,7 @@ import {
   Dimensions,
   Animated as RNAnimated, // RN's built-in Animated (for skeleton shimmer)
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -39,11 +40,10 @@ import { useAuth } from '../../context/AuthContext';
 
 // ─── Constants (outside component = created once, never re-created) ──────────
 
-const { width } = Dimensions.get('window');
+// Remove static width constant and move to component with useWindowDimensions
 const GRID_GAP = 12;
-const CATEGORY_ITEM_WIDTH = (width - Spacing.l * 2 - GRID_GAP * 2) / 3;
 const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
-const INITIAL_CATEGORY_LIMIT = 9; // 3 rows × 3 columns
+const INITIAL_CATEGORY_LIMIT = 9; // 3 rows × 3 columns (default)
 const MOCK_RATING = 4.8;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -110,6 +110,7 @@ const Toast = React.memo(({ toast, onDismiss }: ToastProps) => {
  * This creates the "light sweeping across" effect.
  */
 const useShimmer = () => {
+  const { width } = useWindowDimensions();
   const shimmerAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
@@ -180,39 +181,50 @@ const CategorySkeleton = () => (
 );
 
 /** Full page skeleton rendered while data loads */
-const HomeSkeletonLoader = () => (
-  <View style={styles.skeletonContainer}>
-    {/* Header skeleton */}
-    <View style={styles.skeletonHeader}>
-      <SkeletonBox width={140} height={24} borderRadius={8} />
-      <SkeletonBox width={44} height={44} borderRadius={22} />
-    </View>
+const HomeSkeletonLoader = () => {
+  const { width } = useWindowDimensions();
+  const numColumns = width > 500 ? 4 : (width > 340 ? 3 : 2);
+  const itemWidth = (width - Spacing.l * 2 - GRID_GAP * (numColumns - 1)) / numColumns;
 
-    {/* Section title + search bar */}
-    <SkeletonBox width={160} height={20} borderRadius={8} style={{ marginHorizontal: Spacing.l, marginBottom: 12 }} />
-    <SkeletonBox width={width - Spacing.l * 2} height={44} borderRadius={14} style={{ marginHorizontal: Spacing.l, marginBottom: 20 }} />
+  return (
+    <View style={styles.skeletonContainer}>
+      {/* Header skeleton */}
+      <View style={styles.skeletonHeader}>
+        <SkeletonBox width={140} height={24} borderRadius={8} />
+        <SkeletonBox width={44} height={44} borderRadius={22} />
+      </View>
 
-    {/* Category grid skeletons */}
-    <View style={styles.categoriesGrid}>
-      {Array.from({ length: 9 }).map((_, i) => (
-        // Array.from({length: 9}) creates an array of 9 empty slots
-        // This is a common pattern instead of "new Array(9).fill(null).map(...)"
-        <CategorySkeleton key={i} />
-      ))}
-    </View>
+      {/* Section title + search bar */}
+      <SkeletonBox width={160} height={20} borderRadius={8} style={{ marginHorizontal: Spacing.l, marginBottom: 12 }} />
+      <SkeletonBox width={width - Spacing.l * 2} height={44} borderRadius={14} style={{ marginHorizontal: Spacing.l, marginBottom: 20 }} />
 
-    {/* Dashboard card skeleton */}
-    <View style={[styles.dashboardSection, { marginTop: 32 }]}>
-      <SkeletonBox width="100%" height={260} borderRadius={28} />
+      {/* Category grid skeletons */}
+      <View style={styles.categoriesGrid}>
+        {Array.from({ length: numColumns * 3 }).map((_, i) => (
+          <View key={i} style={{ width: itemWidth }}>
+             <CategorySkeleton />
+          </View>
+        ))}
+      </View>
+
+      {/* Dashboard card skeleton */}
+      <View style={[styles.dashboardSection, { marginTop: 32 }]}>
+        <SkeletonBox width="100%" height={260} borderRadius={28} />
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ClientHome() {
+  const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  // Dynamic Grid Settings
+  const numColumns = windowWidth > 500 ? 4 : (windowWidth > 340 ? 3 : 2);
+  const itemWidth = (windowWidth - Spacing.l * 2 - GRID_GAP * (numColumns - 1)) / numColumns - 0.5; // -0.5 for subpixel safety
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllServices, setShowAllServices] = useState(false);
@@ -401,7 +413,7 @@ export function ClientHome() {
                     <Animated.View
                       key={cat._id}
                       entering={FadeInDown.delay(index * 60).duration(500)}
-                      style={styles.categoryWrap}
+                      style={[styles.categoryWrap, { width: itemWidth }]}
                     >
                       <GlassCard
                         style={styles.categoryItem}
@@ -599,7 +611,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.l,
   },
   categoryWrap: {
-    width: CATEGORY_ITEM_WIDTH,
+    // Width is now handled dynamically in the component
   },
   categoryItem: {
     height: 130,

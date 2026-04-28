@@ -40,7 +40,7 @@ interface AcceptBidPayload {
 
 interface UpdateBookingStatusPayload {
   bookingId: string;
-  status: 'pending' | 'accepted' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
 }
 
 interface RegisterPayload {
@@ -57,6 +57,11 @@ interface RegisterPayload {
 interface SendMessagePayload {
   bookingId: string;
   message: string;
+}
+
+interface PayBookingPayload {
+  bookingId: string;
+  paymentMethod: 'card' | 'cash' | 'easypaisa';
 }
 
 // Mutation Functions
@@ -85,6 +90,11 @@ const acceptInstantJob = async (jobId: string): Promise<any> => {
 const updateBookingStatus = async (payload: UpdateBookingStatusPayload): Promise<any> => {
   const { bookingId, status } = payload;
   const response = await api.patch(`/bookings/${bookingId}/status`, { status });
+  return response.data.data;
+};
+const payBooking = async (payload: PayBookingPayload): Promise<any> => {
+  const { bookingId, ...paymentData } = payload;
+  const response = await api.post(`/bookings/${bookingId}/pay`, paymentData);
   return response.data.data;
 };
 
@@ -169,6 +179,21 @@ export function useUpdateBookingStatusMutation(options?: Omit<UseMutationOptions
 
   return useMutation<any, Error, UpdateBookingStatusPayload>({
     mutationFn: updateBookingStatus,
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
+    },
+    ...options,
+  });
+}
+
+export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Error, PayBookingPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, PayBookingPayload>({
+    mutationFn: payBooking,
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });

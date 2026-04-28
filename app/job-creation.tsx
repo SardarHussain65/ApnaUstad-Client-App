@@ -521,7 +521,7 @@ export default function JobCreationScreen() {
           onCancel={closeConfirm}
           title="Confirm Deployment"
           message={`You're about to ${isInstant ? 'instantly dispatch' : 'broadcast'} this mission. Are you ready?`}
-          confirmText="Deploy Now"
+          confirmText="Deploy NowW"
           cancelText="Review Again"
           isLoading={isConfirming}
           confirmColor={isInstant ? PALETTE.cyan : PALETTE.orange}

@@ -21,17 +21,19 @@ const queryConfig: DefaultOptions = {
 const queryClient = new QueryClient({ defaultOptions: queryConfig });
 
 function RootLayoutNav() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <IncomingJobProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+      <BeautifulToastConfig />
+    </IncomingJobProvider>
+  );
 }
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <IncomingJobProvider>
-          <RootLayoutNav />
-          <BeautifulToastConfig />
-        </IncomingJobProvider>
+        <RootLayoutNav />
       </QueryClientProvider>
     </AuthProvider>
   );

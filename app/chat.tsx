@@ -44,8 +44,17 @@ export default function ChatScreen() {
   const { data: messages = [], isLoading, refetch: refetchMessages } = useMessages(bookingId);
   const { mutate: sendMessage, isPending: isSending } = useSendMessageMutation();
 
-  // Combine local and fetched messages
-  const allMessages: Message[] = [...localMessages, ...messages];
+  // Combine and deduplicate messages (prefer local for instant feedback, then official from server)
+  const allMessages = React.useMemo(() => {
+    const combined = [...localMessages, ...messages];
+    const unique = new Map();
+    combined.forEach(m => {
+      if (!unique.has(m._id)) {
+        unique.set(m._id, m);
+      }
+    });
+    return Array.from(unique.values());
+  }, [localMessages, messages]);
 
   useEffect(() => {
     // Listen for real-time messages
@@ -82,12 +91,9 @@ export default function ChatScreen() {
     sendMessage(
       { bookingId: bookingId as string, message: content },
       {
-        onSuccess: () => {
-          // Emit via socket for real-time update
-          socketService.emit('chat:send', {
-            bookingId,
-            content
-          });
+        onSuccess: (data) => {
+          // Replace optimistic message with real one to prevent duplication
+          setLocalMessages(prev => prev.map(m => m._id === tempId ? data : m));
         },
         onError: () => {
           // Remove optimistic message on error
@@ -182,7 +188,7 @@ export default function ChatScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
-            <GlassCard intensity={25} style={styles.inputGlass} padding={0}>
+            <GlassCard intensity={60} style={styles.inputGlass} padding={0}>
               <View style={styles.inputInner}>
                 <TextInput
                   style={styles.textInput}
@@ -363,6 +369,8 @@ const styles = StyleSheet.create({
   },
   inputGlass: {
     borderRadius: 28,
+    minHeight: 56,
+    justifyContent: 'center',
   },
   inputInner: {
     flexDirection: 'row',
@@ -375,6 +383,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 15,
     maxHeight: 100,
+    minHeight: 44,
   },
   sendBtn: {
     width: 44,

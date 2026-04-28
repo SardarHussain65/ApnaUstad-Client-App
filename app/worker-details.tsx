@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity, ScrollView, FlatList, ActivityIndicator } from 'react-native';
 import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
@@ -20,6 +20,7 @@ import { ChevronLeft, Star, ShieldCheck, MapPin, Share2, Award, Zap, Clock, Mess
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { useWorker } from '../hooks';
+import api from '../services/api';
 
 const { width } = Dimensions.get('window');
 const PROFILE_ORB_SIZE = width * 0.45;
@@ -36,9 +37,26 @@ export default function WorkerDetailsScreen() {
   const params = useLocalSearchParams();
   const scrollY = useSharedValue(0);
   const orbRotation = useSharedValue(0);
+  const [isAccepting, setIsAccepting] = useState(false);
 
   // React Query hook
   const { data: worker, isLoading, error } = useWorker(params.id as string);
+
+  const handleAcceptProposal = async () => {
+    if (!params.bidId) return;
+    setIsAccepting(true);
+    try {
+      const response = await api.post(`/jobs/bids/${params.bidId}/accept`);
+      router.replace({
+        pathname: '/transaction-details',
+        params: { id: response.data.data._id }
+      });
+    } catch (error) {
+      console.error('Error accepting bid:', error);
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   React.useEffect(() => {
     // Animate the orbit
@@ -188,23 +206,33 @@ export default function WorkerDetailsScreen() {
               <Phone color="#fff" size={24} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.bookBtn}
-              onPress={() => router.push({
-                pathname: '/job-creation',
-                params: {
-                  title: worker?.category,
-                  targetWorkerId: worker?._id,
-                  targetWorkerName: worker?.fullName
+              style={[styles.bookBtn, params.bidId && { marginLeft: 0, flex: 2 }]}
+              onPress={() => {
+                if (params.bidId) {
+                  handleAcceptProposal();
+                } else {
+                  router.push({
+                    pathname: '/job-creation',
+                    params: {
+                      title: worker?.category,
+                      targetWorkerId: worker?._id,
+                      targetWorkerName: worker?.fullName
+                    }
+                  });
                 }
-              })}
+              }}
             >
               <LinearGradient
-                colors={[Colors.primary, Colors.purple]}
+                colors={params.bidId ? [Colors.cyan, Colors.primary] : [Colors.primary, Colors.purple]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.bookGradient}
               >
-                <Text style={styles.bookText}>INITIATE MISSION</Text>
+                {isAccepting ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.bookText}>{params.bidId ? 'ACCEPT PROPOSAL' : 'INITIATE MISSION'}</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>

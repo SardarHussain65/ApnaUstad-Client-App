@@ -131,7 +131,7 @@ export function BeautifulToastConfig() {
       config={toastConfig}
       visibilityTime={3000}
       autoHide={true}
-      topOffset={0}
+      topOffset={60}
       bottomOffset={40}
     />
   );
@@ -139,12 +139,12 @@ export function BeautifulToastConfig() {
 
 const styles = StyleSheet.create({
   toastContainer: {
-    marginHorizontal: Spacing.l,
-    marginTop: Spacing.m,
-    paddingHorizontal: Spacing.m,
-    paddingVertical: Spacing.m,
+    width: '90%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 16,
     overflow: 'hidden',
+    alignSelf: 'center',
   },
   successGlow: {
     borderColor: `${Colors.success}20`,
@@ -178,7 +178,8 @@ const styles = StyleSheet.create({
   },
   toastMessage: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: '#CCCCCC',
     fontWeight: '500',
+    lineHeight: 16,
   },
 });

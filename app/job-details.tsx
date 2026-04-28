@@ -12,7 +12,7 @@ import Animated, {
   Extrapolate
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, MapPin, Clock, Calendar, Shield, Zap, X, MoreHorizontal, MessageSquare } from 'lucide-react-native';
+import { ChevronLeft, MapPin, Clock, Calendar, Shield, Zap, X, MoreHorizontal, MessageSquare, Banknote, Image as ImageIcon, ExternalLink, Info } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -100,8 +100,44 @@ export default function JobDetailsScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.jobTitle, Typography.threeD]}>{job.category}</Text>
-                <Text style={styles.jobPrice}>STATUS: <Text style={{ color: Colors.cyan }}>{job.status.toUpperCase()}</Text></Text>
+                <View style={styles.statusBudgetRow}>
+                  <Text style={styles.jobStatus}>STATUS: <Text style={{ color: Colors.cyan }}>{job.status.toUpperCase()}</Text></Text>
+                  {job.amount > 0 && (
+                    <View style={styles.budgetBadge}>
+                      <Banknote size={14} color={Colors.success} />
+                      <Text style={styles.budgetValue}>PKR {job.amount}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
+
+              {/* Visual Evidence Carousel */}
+              {job.imageUrls && job.imageUrls.length > 0 && (
+                <View style={styles.sectionBlock}>
+                  <View style={styles.sectionHeader}>
+                    <ImageIcon size={14} color={Colors.cyan} />
+                    <Text style={styles.sectionTitleSmall}>VISUAL EVIDENCE</Text>
+                  </View>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    contentContainerStyle={styles.imageCarousel}
+                  >
+                    {job.imageUrls.map((url, index) => (
+                      <TouchableOpacity 
+                        key={index} 
+                        activeOpacity={0.9}
+                        style={styles.carouselImageWrap}
+                      >
+                        <Image source={{ uri: url }} style={styles.carouselImage} />
+                        <View style={styles.imageIndex}>
+                          <Text style={styles.imageIndexText}>{index + 1}/{job.imageUrls.length}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
               {/* Quick Details Cards */}
               <View style={styles.quickDetailsGrid}>
@@ -342,9 +378,75 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.orange,
   },
-  jobPriceDec: {
-    fontSize: 16,
-    color: 'rgba(255,140,0,0.6)',
+  statusBudgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  jobStatus: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1,
+  },
+  budgetBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 230, 118, 0.3)',
+    gap: 6,
+  },
+  budgetValue: {
+    color: Colors.success,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  imageCarousel: {
+    gap: 12,
+    paddingVertical: 10,
+  },
+  carouselImageWrap: {
+    width: 200,
+    height: 120,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  carouselImage: {
+    width: '100%',
+    height: '100%',
+  },
+  imageIndex: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  imageIndexText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  sectionTitleSmall: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: Colors.textDim,
+    letterSpacing: 1.5,
   },
   quickDetailsGrid: {
     flexDirection: 'row',

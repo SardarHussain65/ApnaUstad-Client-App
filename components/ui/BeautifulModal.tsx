@@ -34,6 +34,7 @@ interface BeautifulModalProps extends Omit<ModalProps, 'visible' | 'transparent'
   glowColor?: string;
   containerStyle?: ViewStyle;
   contentStyle?: ViewStyle;
+  icon?: React.ReactNode;
 }
 
 export function BeautifulModal({
@@ -46,12 +47,12 @@ export function BeautifulModal({
   glowColor = Colors.cyan,
   containerStyle,
   contentStyle,
+  icon,
   ...modalProps
 }: BeautifulModalProps) {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
 
-  // Convert percentage string to pixel value
   const numericHeight = useMemo(() => {
     if (typeof height === 'number') return height;
     if (typeof height === 'string' && height.endsWith('%')) {
@@ -62,47 +63,27 @@ export function BeautifulModal({
 
   useEffect(() => {
     if (visible) {
-      scale.value = withSpring(1, {
-        damping: 10,
-        mass: 1,
-        stiffness: 100,
-        overshootClamping: false,
-      });
-      opacity.value = withSpring(1, {
-        damping: 12,
-        mass: 1,
-        stiffness: 100,
-      });
+      scale.value = withSpring(1, { damping: 10, mass: 1, stiffness: 100 });
+      opacity.value = withSpring(1, { damping: 12, mass: 1, stiffness: 100 });
     } else {
       scale.value = withSpring(0.8);
       opacity.value = withSpring(0);
     }
   }, [visible, scale, opacity]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      opacity: opacity.value,
-    };
-  });
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      {...modalProps}
-    >
+    <Modal visible={visible} transparent animationType="none" {...modalProps}>
       <Animated.View
         entering={FadeIn.duration(300)}
         exiting={FadeOut.duration(200)}
-        style={[styles.backdrop]}
+        style={styles.backdrop}
       >
-        <TouchableOpacity
-          style={styles.backdropTouchable}
-          activeOpacity={1}
-          onPress={onClose}
-        />
+        <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={onClose} />
 
         <Animated.View
           style={[
@@ -112,16 +93,15 @@ export function BeautifulModal({
             animatedStyle,
           ]}
         >
-          {/* Floating Glow Behind Modal */}
           <View style={[styles.modalGlow, { backgroundColor: glowColor + '20' }]} />
 
           <GlassCard
             intensity={Platform.OS === 'ios' ? 95 : 100}
             glowColor={glowColor}
-            style={[styles.modalContent, contentStyle]}
+            style={[styles.modalContent, contentStyle, { overflow: 'visible' }]}
+            contentStyle={{ flex: 1 }}
             padding={0}
           >
-            {/* Top Accent Gradient Bar */}
             <LinearGradient
               colors={[glowColor, 'transparent']}
               start={{ x: 0, y: 0 }}
@@ -129,26 +109,26 @@ export function BeautifulModal({
               style={styles.topAccentBar}
             />
 
-            {/* Content Wrap with Padding */}
+            {icon && (
+              <View style={styles.floatingIconBadge}>
+                 <View style={[styles.iconBadgeInner, { borderColor: glowColor + '40' }]}>
+                   {icon}
+                 </View>
+              </View>
+            )}
+
             <View style={styles.contentInner}>
-              {/* Header */}
               {title && (
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, Typography.threeD]}>
-                    {title.toUpperCase()}
-                  </Text>
+                  <Text style={styles.modalTitle}>{title.toUpperCase()}</Text>
                   {showCloseButton && (
-                    <TouchableOpacity
-                      onPress={onClose}
-                      style={styles.closeBtn}
-                    >
-                      <X size={20} color="rgba(255,255,255,0.5)" />
+                    <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                      <X size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                   )}
                 </View>
               )}
 
-              {/* Body */}
               <View style={styles.modalBody}>
                 {children}
               </View>
@@ -190,40 +170,26 @@ export function ConfirmModal({
       title={title}
       height={380}
       glowColor={confirmColor}
+      icon={<HelpCircle color={confirmColor} size={32} />}
     >
-      <View style={styles.confirmContent}>
-        <View style={styles.floatingIconBadge}>
-           <View style={[styles.iconBadgeInner, { borderColor: confirmColor + '40' }]}>
-             <HelpCircle color={confirmColor} size={32} />
-           </View>
-        </View>
-
-        <Text style={styles.confirmMessage}>
-          {message}
-        </Text>
+      <View style={styles.modalBodyContent}>
+        <Text style={styles.modalMessage}>{message}</Text>
 
         <View style={styles.confirmButtons}>
           <TouchableOpacity
-            activeOpacity={0.8}
             style={[styles.confirmBtn, styles.cancelBtn]}
             onPress={onCancel}
             disabled={isLoading}
           >
-            <Text style={styles.cancelBtnText}>
-              {cancelText.toUpperCase()}
-            </Text>
+            <Text style={styles.cancelBtnText}>{cancelText.toUpperCase()}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            activeOpacity={0.8}
             style={[styles.confirmBtn, { backgroundColor: confirmColor, borderColor: confirmColor }]}
             onPress={onConfirm}
             disabled={isLoading}
           >
-            <LinearGradient
-               colors={[confirmColor, confirmColor]}
-               style={styles.solidBtnGradient}
-            >
+            <LinearGradient colors={[confirmColor, confirmColor]} style={styles.solidBtnGradient}>
               <Text style={styles.solidBtnText}>
                 {isLoading ? '...' : confirmText.toUpperCase()}
               </Text>
@@ -254,14 +220,18 @@ export function AlertModal({
 }: AlertModalProps) {
   const getColor = () => {
     switch (type) {
-      case 'success':
-        return Colors.success;
-      case 'error':
-        return Colors.error;
-      case 'warning':
-        return '#FFA500';
-      default:
-        return Colors.cyan;
+      case 'success': return Colors.success;
+      case 'error': return Colors.error;
+      case 'warning': return '#FFA500';
+      default: return Colors.cyan;
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success': return <CheckCircle2 color={getColor()} size={32} />;
+      case 'error': return <AlertTriangle color={getColor()} size={32} />;
+      default: return <Info color={getColor()} size={32} />;
     }
   };
 
@@ -272,35 +242,16 @@ export function AlertModal({
       title={title}
       height={420}
       glowColor={getColor()}
+      icon={getIcon()}
     >
-      <View style={styles.alertContent}>
-        <View style={styles.floatingIconBadge}>
-           <View style={[styles.iconBadgeInner, { borderColor: getColor() + '40' }]}>
-             {type === 'success' && <CheckCircle2 color={getColor()} size={32} />}
-             {type === 'error' && <AlertTriangle color={getColor()} size={32} />}
-             {(type === 'info' || type === 'warning') && <Info color={getColor()} size={32} />}
-           </View>
-        </View>
-
-        <Text style={styles.alertMessage}>
-          {message}
-        </Text>
-
+      <View style={styles.modalBodyContent}>
+        <Text style={styles.modalMessage}>{message}</Text>
         <TouchableOpacity
-          activeOpacity={0.8}
-          style={[
-            styles.alertBtn,
-            { backgroundColor: getColor(), borderColor: getColor() },
-          ]}
+          style={[styles.alertBtn, { backgroundColor: getColor(), borderColor: getColor() }]}
           onPress={onDismiss}
         >
-           <LinearGradient
-               colors={[getColor(), getColor()]}
-               style={styles.solidBtnGradient}
-            >
-              <Text style={styles.solidBtnText}>
-                {buttonText.toUpperCase()}
-              </Text>
+           <LinearGradient colors={[getColor(), getColor()]} style={styles.solidBtnGradient}>
+              <Text style={styles.solidBtnText}>{buttonText.toUpperCase()}</Text>
             </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -315,9 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backdropTouchable: {
-    ...StyleSheet.absoluteFillObject,
-  },
+  backdropTouchable: { ...StyleSheet.absoluteFillObject },
   modalContainer: {
     width: '88%',
     borderRadius: 32,
@@ -332,12 +281,8 @@ const styles = StyleSheet.create({
   },
   modalGlow: {
     position: 'absolute',
-    top: -50,
-    left: -50,
-    right: -50,
-    bottom: -50,
-    borderRadius: 100,
-    opacity: 0.5,
+    top: -50, left: -50, right: -50, bottom: -50,
+    borderRadius: 100, opacity: 0.5,
   },
   modalContent: {
     flex: 1,
@@ -345,128 +290,55 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15, 15, 30, 0.95)',
   },
   topAccentBar: {
-    height: 4,
-    width: '100%',
-    position: 'absolute',
-    top: 0,
+    height: 4, width: '100%', position: 'absolute', top: 0, zIndex: 2,
   },
   contentInner: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 30,
+    flex: 1, padding: 24, paddingTop: 55,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    marginBottom: 20, zIndex: 10, height: 30,
   },
   modalTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#fff',
-    flex: 1,
-    letterSpacing: 3,
-    textAlign: 'center',
+    fontSize: 14, fontWeight: '900', color: '#FFFFFF',
+    letterSpacing: 2, textAlign: 'center',
   },
   closeBtn: {
-    position: 'absolute',
-    right: 0,
-    top: -4,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    position: 'absolute', right: -10, top: -5,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center', zIndex: 20,
   },
   modalBody: {
-    flex: 1,
-    justifyContent: 'center',
+    flex: 1, justifyContent: 'center',
   },
-  confirmContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  modalBodyContent: {
+    alignItems: 'center', width: '100%',
   },
   floatingIconBadge: {
-    marginTop: -10,
-    marginBottom: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', top: -45, alignSelf: 'center', zIndex: 100,
   },
   iconBadgeInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.depth,
+    width: 90, height: 90, borderRadius: 45,
+    backgroundColor: '#0F0F1A', borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5, shadowRadius: 15, elevation: 20,
   },
-  confirmMessage: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 26,
-    textAlign: 'center',
-    marginBottom: 30,
-    fontWeight: '600',
+  modalMessage: {
+    fontSize: 16, color: '#FFFFFF', lineHeight: 24,
+    textAlign: 'center', marginBottom: 40, fontWeight: '600',
     paddingHorizontal: 10,
   },
-  confirmButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  confirmBtn: {
-    flex: 1,
-    height: 56,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  solidBtnGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  solidBtnText: {
-    color: '#000',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
+  confirmButtons: { flexDirection: 'row', gap: 12, width: '100%' },
+  confirmBtn: { flex: 1, height: 56, borderRadius: 20, overflow: 'hidden' },
+  solidBtnGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  solidBtnText: { color: '#000', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
   cancelBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  cancelBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 1.5,
-  },
-  alertContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alertMessage: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    lineHeight: 26,
-    textAlign: 'center',
-    marginBottom: 30,
-    fontWeight: '600',
-    paddingHorizontal: 10,
-  },
-  alertBtn: {
-    width: '100%',
-    height: 58,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
+  cancelBtnText: { fontSize: 12, fontWeight: '900', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5 },
+  alertBtn: { width: '100%', height: 58, borderRadius: 22, overflow: 'hidden' },
 });

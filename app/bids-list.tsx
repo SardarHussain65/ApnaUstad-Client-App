@@ -103,13 +103,33 @@ export default function BidsListScreen() {
                            <Text style={styles.badgeText}>AVAILABLE</Text>
                         </View>
                      </View>
-                     <AnimatedButton 
-                        title="DEPLOY USTAD" 
-                        variant="cyan"
-                        onPress={() => handleAcceptBid(bid._id)}
-                        isLoading={isAccepting === bid._id}
-                        style={styles.acceptBtn}
-                     />
+                     <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
+                        <TouchableOpacity 
+                          style={{
+                            paddingHorizontal: 16,
+                            paddingVertical: 10,
+                            borderRadius: 12,
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                          onPress={() => router.push({
+                            pathname: '/worker-details',
+                            params: { id: bid.worker?._id, jobId, bidId: bid._id }
+                          })}
+                        >
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 }}>REVIEW</Text>
+                        </TouchableOpacity>
+                        <AnimatedButton 
+                          title="DEPLOY" 
+                          variant="cyan"
+                          onPress={() => handleAcceptBid(bid._id)}
+                          isLoading={isAccepting === bid._id}
+                          style={{ flex: 1, height: 44 }}
+                        />
+                     </View>
                   </View>
                 </GlassCard>
               </Animated.View>
@@ -256,9 +276,24 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.textDim,
   },
+  reviewBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  reviewText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
   acceptBtn: {
-    minWidth: 120,
-    height: 40,
+    flex: 1,
+    marginLeft: 10,
+    height: 44,
   },
   empty: {
     alignItems: 'center',

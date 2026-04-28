@@ -32,7 +32,7 @@ class SocketService {
       'bid:won', 'bid:lost', 'booking:new', 
       'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
-      'booking:cancelled', 'chat:receive'
+      'booking:cancelled', 'booking:paid', 'chat:receive'
     ];
 
     events.forEach(event => {

@@ -28,6 +28,7 @@ export {
   useAcceptBidMutation,
   useAcceptInstantJobMutation,
   useUpdateBookingStatusMutation,
+  usePayBookingMutation,
   useRegisterMutation,
   useSendMessageMutation,
   useUploadJobImagesMutation,

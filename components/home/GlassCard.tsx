@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   content: {
-    flex: 1,
     zIndex: 1,
+    flexShrink: 1, // Ensure it doesn't push out
   },
   highlight: {
     position: 'absolute',
