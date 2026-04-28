@@ -68,9 +68,15 @@ api.interceptors.response.use(
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         const role = await AsyncStorage.getItem('user_role');
         
-        if (!refreshToken) {
-           console.log('No refresh token found in storage, cannot refresh');
+        if (!refreshToken || refreshToken.trim() === '') {
+           console.log('No refresh token found in storage, cannot refresh', { 
+             hasToken: !!refreshToken, 
+             role,
+             originalError: error.message 
+           });
            isRefreshing = false;
+           await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+           DeviceEventEmitter.emit('auth:logout');
            return Promise.reject(error);
         }
 
@@ -84,9 +90,11 @@ api.interceptors.response.use(
           refreshToken,
         });
 
+        console.log('Refresh response:', response.data);
+
         if (response.status === 200) {
           console.log('Token refreshed successfully!');
-          const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
+          const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data || response.data;
 
           // Save new tokens
           await AsyncStorage.setItem('user_token', newAccessToken);

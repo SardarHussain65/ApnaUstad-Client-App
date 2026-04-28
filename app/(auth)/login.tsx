@@ -72,20 +72,24 @@ export default function LoginScreen() {
       return response.json();
     },
     onSuccess: async (data) => {
-      // Workers return 'worker' key, clients return 'user' key
-      const token = data.token || data.data?.token;
-      const refreshToken = data.refreshToken || data.data?.refreshToken;
-      const user = data.user || data.data?.user || data.data?.worker;
+      // Backend response structure: { success, message, data: { user/worker, token, refreshToken } }
+      const responseData = data.data || data;
+      const token = responseData.token;
+      const refreshToken = responseData.refreshToken;
+      const user = responseData.user || responseData.worker;
       const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
       
-      if (token && refreshToken && user) {
-        await setAuth(token, refreshToken, finalRole, user);
-      } else if (token && user) {
-        // Fallback if refreshToken is missing for some reason
-        await setAuth(token, '', finalRole, user);
-      } else {
-        await setRole(finalRole);
+      if (!token || !refreshToken || !user) {
+        console.error('Invalid login response - missing required fields:', { 
+          hasToken: !!token, 
+          hasRefreshToken: !!refreshToken, 
+          hasUser: !!user 
+        });
+        Alert.alert('Login Error', 'Invalid server response. Please try again.');
+        return;
       }
+      
+      await setAuth(token, refreshToken, finalRole, user);
 
       Alert.alert('Success', 'Logged in successfully!');
       router.replace('/(tabs)' as any);

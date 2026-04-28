@@ -84,6 +84,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setAuth = async (token: string, refreshToken: string, role: UserRole, user: any) => {
     try {
+      // Validate tokens before saving
+      if (!token || typeof token !== 'string') {
+        throw new Error('Invalid access token');
+      }
+      if (!refreshToken || typeof refreshToken !== 'string') {
+        throw new Error('Invalid refresh token');
+      }
+
       setTokenState(token);
       setRefreshTokenState(refreshToken);
       setRoleState(role);
@@ -91,14 +99,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       socketService.connect(token);
 
-      await Promise.all([
+      const storageOps = [
         AsyncStorage.setItem('user_token', token),
         AsyncStorage.setItem('refresh_token', refreshToken),
-        AsyncStorage.setItem('user_role', role || ''),
-        user ? AsyncStorage.setItem('user_data', JSON.stringify(user)) : Promise.resolve()
-      ]);
+        AsyncStorage.setItem('user_role', role || '')
+      ];
+
+      if (user) {
+        storageOps.push(AsyncStorage.setItem('user_data', JSON.stringify(user)));
+      }
+
+      await Promise.all(storageOps);
+      console.log('Auth state saved successfully');
     } catch (error) {
       console.error('Error saving auth state:', error);
+      // Reset state if save failed
+      setTokenState(null);
+      setRefreshTokenState(null);
+      throw error;
     }
   };
 
