@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider, DefaultOptions } from "@tanstack/reac
 import { AuthProvider } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
+import { usePushNotifications } from '../hooks/usePushNotifications';
+
 
 // React Query default configuration
 const queryConfig: DefaultOptions = {
@@ -21,6 +23,10 @@ const queryConfig: DefaultOptions = {
 const queryClient = new QueryClient({ defaultOptions: queryConfig });
 
 function RootLayoutNav() {
+
+  usePushNotifications();
+
+
   return (
     <IncomingJobProvider>
       <Stack screenOptions={{ headerShown: false }} />

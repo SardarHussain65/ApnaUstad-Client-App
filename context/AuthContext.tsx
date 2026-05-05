@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
+import api from '../services/api';
+import { getPushToken } from '../services/notificationService';
+import { BASE_URL } from '../constants/Config';
 
 export type UserRole = 'client' | 'worker' | null;
 
@@ -47,6 +50,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [refreshToken, setRefreshTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Guard flag to prevent logout() from being called recursively.
+  // The Axios 401 interceptor emits 'auth:logout', which would re-trigger logout()
+  // while it is still running — causing an infinite API call loop.
+  const isLoggingOutRef = useRef(false);
+
+  // Keep a ref to the current token so logout() can read it synchronously
+  // without going through AsyncStorage (which may already be cleared).
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+
   useEffect(() => {
     const loadAuth = async () => {
       try {
@@ -76,6 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener('auth:logout', () => {
+      // If logout() is already running, the interceptor's emit must not restart it.
+      if (isLoggingOutRef.current) return;
       logout();
     });
 
@@ -92,13 +109,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid refresh token');
       }
 
-      setTokenState(token);
-      setRefreshTokenState(refreshToken);
-      setRoleState(role);
-      setUserState(user);
-
-      socketService.connect(token);
-
+      // ⚠️  IMPORTANT: Write to AsyncStorage FIRST before updating React state.
+      // The usePushNotifications hook's effect fires synchronously when state changes.
+      // Its API call uses an interceptor that reads the token from AsyncStorage.
+      // If we update state before the write completes, the interceptor picks up the
+      // OLD token → backend decodes old JWT → push token gets saved under the wrong userId.
       const storageOps = [
         AsyncStorage.setItem('user_token', token),
         AsyncStorage.setItem('refresh_token', refreshToken),
@@ -110,6 +125,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       await Promise.all(storageOps);
+
+      // Now it is safe to update React state — AsyncStorage already has the new token.
+      setTokenState(token);
+      setRefreshTokenState(refreshToken);
+      setRoleState(role);
+      setUserState(user);
+
+      socketService.connect(token);
       console.log('Auth state saved successfully');
     } catch (error) {
       console.error('Error saving auth state:', error);
@@ -130,7 +153,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // Prevent concurrent / recursive logout calls.
+    // Without this guard the Axios 401 interceptor (triggered by the remove-token
+    // request below) emits 'auth:logout' and calls logout() again endlessly.
+    if (isLoggingOutRef.current) return;
+    isLoggingOutRef.current = true;
+
     try {
+      // Deactivate this device's push token BEFORE clearing local state.
+      // Use native fetch (not the Axios instance) so the 401 interceptor cannot
+      // intercept this call and re-trigger the logout cycle.
+      const currentToken = tokenRef.current;
+      if (currentToken) {
+        try {
+          const pushToken = await getPushToken();
+          if (pushToken) {
+            await fetch(`${BASE_URL}/api/v1/notifications/remove-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${currentToken}`,
+              },
+              body: JSON.stringify({ pushToken }),
+            });
+          }
+        } catch (tokenErr) {
+          // Non-fatal: even if this fails the local session is still cleared
+          console.warn('Could not deactivate push token on logout:', tokenErr);
+        }
+      }
+
       setTokenState(null);
       setRefreshTokenState(null);
       setRoleState(null);
@@ -144,6 +196,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ]);
     } catch (error) {
       console.error('Error during logout:', error);
+    } finally {
+      isLoggingOutRef.current = false;
     }
   };
 
@@ -161,3 +215,4 @@ export function useAuth() {
   }
   return context;
 }
+
