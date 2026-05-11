@@ -358,6 +358,54 @@ export default function TransactionDetailsScreen() {
                   </LinearGradient>
                 </TouchableOpacity>
               )}
+              
+              {(status === 'accepted' || status === 'ongoing') && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  style={[styles.ctaBtn, { marginTop: 12 }]}
+                  onPress={() => router.push({ 
+                    pathname: '/job-tracking', 
+                    params: { 
+                      bookingId: id,
+                      customerId: typeof booking?.customer === 'object' ? booking.customer._id : booking?.customer,
+                      workerId: partner?._id,
+                      latitude: typeof booking?.location === 'object' && booking.location.coordinates ? booking.location.coordinates[1] : 0,
+                      longitude: typeof booking?.location === 'object' && booking.location.coordinates ? booking.location.coordinates[0] : 0,
+                    } 
+                  })}
+                >
+                  <LinearGradient colors={[P.cyan, P.cyanDim]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaGradient}>
+                    <MapPin size={16} color="#000" strokeWidth={2.5} />
+                    <Text style={styles.ctaText}>VIEW ROUTE & SEND GPS</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+          )}
+
+          {/* ── Client Active Notice & Tracking ── */}
+          {!isWorker && (status === 'ongoing' || status === 'accepted') && (
+            <Animated.View entering={FadeInDown.delay(420).duration(500)} style={styles.section}>
+              <SectionLabel icon={MapPin} label="LIVE TRACKING" />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => router.push({ 
+                  pathname: '/job-tracking', 
+                  params: { 
+                    bookingId: id,
+                    customerId: typeof booking?.customer === 'object' ? booking.customer._id : booking?.customer,
+                    workerId: partner?._id,
+                    latitude: typeof booking?.location === 'object' && booking.location.coordinates ? booking.location.coordinates[1] : 0,
+                    longitude: typeof booking?.location === 'object' && booking.location.coordinates ? booking.location.coordinates[0] : 0,
+                  } 
+                })}
+                style={styles.ctaBtn}
+              >
+                <LinearGradient colors={[P.cyan, P.cyanDim]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaGradient}>
+                  <MapPin size={16} color="#000" strokeWidth={2.5} />
+                  <Text style={styles.ctaText}>TRACK Ustad Location</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </Animated.View>
           )}
 

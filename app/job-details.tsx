@@ -259,6 +259,42 @@ export default function JobDetailsScreen() {
             </View>
           </Animated.View>
         )}
+
+        {/* Action Footer for Tracking (Active Jobs) */}
+        {(job.status === 'assigned' || job.status === 'in-progress' || job.status === 'ongoing') && (
+          <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footerDock}>
+            <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFillObject, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }]} />
+            <View style={styles.footerContent}>
+              <TouchableOpacity 
+                style={[styles.acceptBtn]}
+                onPress={() => router.push({ 
+                  pathname: '/job-tracking', 
+                  params: { 
+                    bookingId: job._id,
+                    customerId: job.customer?._id || job.customer,
+                    workerId: job.worker?._id || job.worker,
+                    // If your real object has lat/long inside address or location, we grab it.
+                    // Assuming location: { coordinates: [lng, lat] }
+                    latitude: typeof job.location === 'object' && job.location.coordinates ? job.location.coordinates[1] : 0,
+                    longitude: typeof job.location === 'object' && job.location.coordinates ? job.location.coordinates[0] : 0,
+                  } 
+                })}
+              >
+                <LinearGradient
+                  colors={[Colors.cyan, Colors.primary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.acceptGradient}
+                >
+                  <MapPin size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.acceptText}>
+                    {role === 'worker' ? 'VIEW ROUTE & SEND GPS' : 'TRACK WORKER POSITION'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
       </View>
     </BackgroundWrapper>
   );

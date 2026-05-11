@@ -63,11 +63,15 @@
           "photosPermission": "Allow ApnaUstad to access your photos to provide visual evidence for missions.",
           "cameraPermission": "Allow ApnaUstad to access your camera to capture mission evidence."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "maptilerApiKey": "o3cm0oM4Yn3L4Nyf1ydh"
     }
   }
 }
