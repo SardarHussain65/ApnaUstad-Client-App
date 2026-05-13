@@ -44,10 +44,11 @@ const fetchMessages = async (bookingId: string): Promise<Message[]> => {
 };
 
 const fetchNearbyJobs = async (longitude?: number, latitude?: number): Promise<Job[]> => {
-  // Use provided coordinates or default to a central location
-  const lng = longitude || 74.3587;
-  const lat = latitude || 31.5204;
-  const response = await api.get(`/jobs/nearby?longitude=${lng}&latitude=${lat}`);
+  const response = await api.get('/jobs/nearby', {
+    params: longitude !== undefined && latitude !== undefined
+      ? { longitude, latitude }
+      : undefined,
+  });
   return response.data.data || [];
 };
 

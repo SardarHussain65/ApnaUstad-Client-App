@@ -64,6 +64,17 @@ interface PayBookingPayload {
   paymentMethod: 'card' | 'cash' | 'easypaisa';
 }
 
+interface CreateReviewPayload {
+  booking: string;
+  worker: string;
+  rating: number;
+  comment?: string;
+}
+
+interface MarkNotificationReadPayload {
+  notificationId: string;
+}
+
 // Mutation Functions
 const createJob = async (payload: JobCreationPayload): Promise<JobResponse> => {
   const response = await api.post('/jobs', payload);
@@ -96,6 +107,16 @@ const payBooking = async (payload: PayBookingPayload): Promise<any> => {
   const { bookingId, ...paymentData } = payload;
   const response = await api.post(`/bookings/${bookingId}/pay`, paymentData);
   return response.data.data;
+};
+
+const createReview = async (payload: CreateReviewPayload): Promise<any> => {
+  const response = await api.post('/reviews', payload);
+  return response.data.data;
+};
+
+const markNotificationRead = async (payload: MarkNotificationReadPayload): Promise<any> => {
+  const response = await api.post('/notifications/mark-read', payload);
+  return response.data;
 };
 
 const registerUser = async (payload: RegisterPayload & { role: 'client' | 'worker' }): Promise<any> => {
@@ -201,6 +222,37 @@ export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Err
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
     ...options,
+  });
+}
+
+export function useCreateReviewMutation(options?: Omit<UseMutationOptions<any, Error, CreateReviewPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, CreateReviewPayload>({
+    mutationFn: createReview,
+    ...options,
+    onSuccess: (data, variables, context, mutation) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.booking) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workers.detail(variables.worker) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workers.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviews.byWorker(variables.worker) });
+      options?.onSuccess?.(data, variables, context, mutation);
+    },
+  });
+}
+
+export function useMarkNotificationReadMutation(options?: Omit<UseMutationOptions<any, Error, MarkNotificationReadPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, MarkNotificationReadPayload>({
+    mutationFn: markNotificationRead,
+    ...options,
+    onSuccess: (data, variables, context, mutation) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list() });
+      options?.onSuccess?.(data, variables, context, mutation);
+    },
   });
 }
 

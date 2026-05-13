@@ -8,9 +8,14 @@ export {
   useMyBookings,
   useWorkerBookings,
   useBookingDetails,
+  useWorkerReviews,
+  useNotifications,
   useMyJobPosts,
   type Worker,
   type JobPost,
+  type Review,
+  type AppNotification,
+  type NotificationsResponse,
 } from './queries/useData';
 
 export {
@@ -29,6 +34,8 @@ export {
   useAcceptInstantJobMutation,
   useUpdateBookingStatusMutation,
   usePayBookingMutation,
+  useCreateReviewMutation,
+  useMarkNotificationReadMutation,
   useRegisterMutation,
   useSendMessageMutation,
   useUploadJobImagesMutation,

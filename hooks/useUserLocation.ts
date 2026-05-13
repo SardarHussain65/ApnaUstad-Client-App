@@ -22,74 +22,65 @@ export function useUserLocation() {
         setIsLoading(true);
         setError(null);
 
-        // First, try to use address from user profile
-        if (user?.address) {
-          setLocation({
-            address: user.address,
-            city: extractCityFromAddress(user.address),
-            country: 'Pakistan', // Default, could be extracted from address
-            latitude: user.location?.coordinates[1],
-            longitude: user.location?.coordinates[0],
-          });
-          return;
-        }
+        const fallbackLocation = async () => {
+          if (user?.location?.coordinates) {
+            const [longitude, latitude] = user.location.coordinates;
+            const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
 
-        // If no address, try to get current location
-        if (user?.location?.coordinates) {
-          const [longitude, latitude] = user.location.coordinates;
-          
-          // Try to reverse geocode to get address
-          const reverseGeocode = await Location.reverseGeocodeAsync({
-            latitude,
-            longitude,
-          });
+            if (reverseGeocode && reverseGeocode.length > 0) {
+              const geo = reverseGeocode[0];
+              return {
+                city: geo.city || extractCityFromAddress(user.address || '') || 'Unknown',
+                country: geo.country || 'Pakistan',
+                address: formatAddress(geo) || user.address,
+                latitude,
+                longitude,
+              };
+            }
 
-          if (reverseGeocode && reverseGeocode.length > 0) {
-            const geo = reverseGeocode[0];
-            setLocation({
-              city: geo.city || 'Unknown',
-              country: geo.country || 'Pakistan',
-              address: geo.name || `${geo.city}, ${geo.country}`,
-              latitude,
-              longitude,
-            });
-          } else {
-            setLocation({
-              city: 'Unknown',
+            return {
+              city: extractCityFromAddress(user.address || '') || 'Unknown',
               country: 'Pakistan',
+              address: user.address,
               latitude,
               longitude,
-            });
+            };
           }
-          return;
-        }
 
-        // Last resort: request device location
+          if (user?.address) {
+            return {
+              address: user.address,
+              city: extractCityFromAddress(user.address),
+              country: 'Pakistan',
+            };
+          }
+
+          return {
+            city: 'Your Location',
+            country: 'Pakistan',
+          };
+        };
+
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setError('Location permission denied');
-          setLocation({
-            city: 'Your Location',
-            country: 'Pakistan',
-          });
+          setLocation(await fallbackLocation());
           return;
         }
 
-        const currentLocation = await Location.getCurrentPositionAsync({});
+        const currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         const { latitude, longitude } = currentLocation.coords;
 
-        // Reverse geocode
-        const reverseGeocode = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
+        const reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
 
         if (reverseGeocode && reverseGeocode.length > 0) {
           const geo = reverseGeocode[0];
           setLocation({
             city: geo.city || 'Unknown',
             country: geo.country || 'Pakistan',
-            address: geo.name || `${geo.city}, ${geo.country}`,
+            address: formatAddress(geo) || `${geo.city || 'Current Location'}, ${geo.country || 'Pakistan'}`,
             latitude,
             longitude,
           });
@@ -104,10 +95,20 @@ export function useUserLocation() {
       } catch (err) {
         console.error('Error getting user location:', err);
         setError(err instanceof Error ? err.message : 'Failed to get location');
-        setLocation({
-          city: 'Your Location',
-          country: 'Pakistan',
-        });
+        if (user?.address) {
+          setLocation({
+            city: extractCityFromAddress(user.address),
+            country: 'Pakistan',
+            address: user.address,
+            latitude: user.location?.coordinates?.[1],
+            longitude: user.location?.coordinates?.[0],
+          });
+        } else {
+          setLocation({
+            city: 'Your Location',
+            country: 'Pakistan',
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -124,4 +125,13 @@ function extractCityFromAddress(address: string): string {
   // If address contains a comma, take the part after the last comma
   const parts = address.split(',').map(p => p.trim());
   return parts[parts.length - 1] || address;
+}
+
+function formatAddress(geo: Location.LocationGeocodedAddress): string {
+  return [
+    geo.name,
+    geo.street,
+    geo.district,
+    geo.city,
+  ].filter(Boolean).join(', ');
 }

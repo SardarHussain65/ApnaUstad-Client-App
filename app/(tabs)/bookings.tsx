@@ -5,7 +5,7 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap, Star } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
@@ -177,6 +177,7 @@ export default function BookingsTab() {
               const scheduledTime = isBooking ? booking.scheduledTime : job.scheduledTime;
               const address = isBooking ? booking.address : job.address;
               const status = item.status;
+              const canReview = !isWorker && isBooking && status === 'completed' && !booking?.isReviewed;
 
               let counterPartyName = 'Searching...';
               if (isBooking) {
@@ -260,6 +261,29 @@ export default function BookingsTab() {
                       <Text style={styles.actionBtnText}>ACCESS INTEL</Text>
                       <ChevronRight size={16} color={Colors.cyan} />
                     </TouchableOpacity>
+
+                    {canReview && (
+                      <TouchableOpacity
+                        style={styles.reviewBtn}
+                        activeOpacity={0.85}
+                        onPress={() => {
+                          router.push({
+                            pathname: '/review',
+                            params: { bookingId: item._id }
+                          });
+                        }}
+                      >
+                        <LinearGradient
+                          colors={['#FFD700', '#FFB300']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.reviewGradient}
+                        >
+                          <Star size={15} color="#000" fill="#000" />
+                          <Text style={styles.reviewBtnText}>RATE USTAD</Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    )}
 
                   </GlassCard>
                 </Animated.View>
@@ -407,6 +431,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13,
     textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  reviewBtn: {
+    marginTop: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  reviewGradient: {
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  reviewBtnText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: '900',
     letterSpacing: 1,
   },
   emptyContainer: {

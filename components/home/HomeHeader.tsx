@@ -1,16 +1,28 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import { Bell, MapPin } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
+import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
-import { useUserLocation } from '../../hooks';
+import { useNotifications, useUserLocation } from '../../hooks';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { socketService } from '../../services/socketService';
 
 export function HomeHeader() {
+  const router = useRouter();
   const { role, user } = useAuth();
   const { location } = useUserLocation();
+  const { data: notificationsData, refetch: refetchNotifications } = useNotifications({ enabled: !!user?._id });
   const accentColor = role === 'worker' ? Colors.orange : Colors.primary;
+  const unreadCount = notificationsData?.unreadCount || 0;
+
+  useEffect(() => {
+    const unsubscribe = socketService.on('notification:new', () => {
+      refetchNotifications();
+    });
+    return () => unsubscribe();
+  }, [refetchNotifications]);
 
   // Format location display
   const locationDisplay = location
@@ -41,10 +53,14 @@ export function HomeHeader() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.notificationBtn} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.notificationBtn} activeOpacity={0.7} onPress={() => router.push('/notifications' as any)}>
           <BlurView intensity={20} tint="light" style={styles.iconBlur}>
             <Bell size={22} color={Colors.text} strokeWidth={1.5} />
-            <View style={[styles.badge, { backgroundColor: accentColor }]} />
+            {unreadCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: accentColor }]}>
+                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
           </BlurView>
         </TouchableOpacity>
       </View>
@@ -154,11 +170,19 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 9,
+    right: 8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
     ...Shadows.glow,
+  },
+  badgeText: {
+    color: '#000',
+    fontSize: 9,
+    fontWeight: '900',
   },
 });

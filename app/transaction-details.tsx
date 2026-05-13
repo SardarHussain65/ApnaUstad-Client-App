@@ -15,6 +15,7 @@ import {
   ChevronLeft, Share2, ShieldCheck, Zap,
   MapPin, Phone, MessageCircle, Calendar,
   Image as ImageIcon, CheckCircle2, Clock,
+  Star,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +42,7 @@ const P = {
   error: '#FF4C6A',
   errorMuted: 'rgba(255,76,106,0.12)',
   orange: '#FF6B00',
+  gold: '#FFD700',
   white: '#FFFFFF',
   text1: '#E8EAED',
   text2: '#7A8394',
@@ -253,8 +255,7 @@ export default function TransactionDetailsScreen() {
               <View style={styles.avatarWrap}>
                 <LinearGradient
                   colors={[P.cyanGlow, 'transparent']}
-                  style={StyleSheet.absoluteFill}
-                  borderRadius={20}
+                  style={[StyleSheet.absoluteFill, { borderRadius: 20 }]}
                 />
                 <Text style={styles.avatarInitial}>{partner?.fullName?.[0]?.toUpperCase() || 'U'}</Text>
               </View>
@@ -445,6 +446,38 @@ export default function TransactionDetailsScreen() {
             </Animated.View>
           )}
 
+          {/* ── Client Review ── */}
+          {!isWorker && status === 'completed' && (
+            <Animated.View entering={FadeInDown.delay(460).duration(500)} style={styles.section}>
+              <SectionLabel icon={Star} label="MISSION REVIEW" color={booking?.isReviewed ? P.success : P.gold} />
+              {booking?.isReviewed ? (
+                <View style={[styles.activeNotice, { backgroundColor: P.successMuted, borderColor: P.success + '25' }]}>
+                  <CheckCircle2 size={18} color={P.success} />
+                  <Text style={[styles.activeNoticeText, { color: P.success }]}>Your feedback has been recorded for this mission.</Text>
+                </View>
+              ) : (
+                <View style={styles.reviewPromptCard}>
+                  <View style={styles.reviewPromptIcon}>
+                    <Star size={22} color={P.gold} fill={P.gold} />
+                  </View>
+                  <View style={styles.reviewPromptCopy}>
+                    <Text style={styles.reviewPromptTitle}>Rate {partner?.fullName || 'your Ustad'}</Text>
+                    <Text style={styles.reviewPromptText}>Share a quick review to help future customers and keep service quality visible.</Text>
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => router.push({ pathname: '/review', params: { bookingId: id } })}
+                    style={styles.reviewMiniBtn}
+                  >
+                    <LinearGradient colors={[P.gold, '#FFB300']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.reviewMiniGradient}>
+                      <Text style={styles.reviewMiniText}>RATE NOW</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Animated.View>
+          )}
+
           <View style={{ height: 50 }} />
         </ScrollView>
       </View>
@@ -615,4 +648,30 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   activeNoticeText: { flex: 1, fontSize: 12, color: P.cyan, fontWeight: '700', lineHeight: 18 },
+  reviewPromptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: P.raised,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: P.gold + '28',
+    padding: 16,
+  },
+  reviewPromptIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,215,0,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.28)',
+  },
+  reviewPromptCopy: { flex: 1 },
+  reviewPromptTitle: { color: P.text1, fontSize: 14, fontWeight: '900', marginBottom: 3 },
+  reviewPromptText: { color: P.text2, fontSize: 11, fontWeight: '600', lineHeight: 16 },
+  reviewMiniBtn: { borderRadius: 13, overflow: 'hidden' },
+  reviewMiniGradient: { height: 40, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
+  reviewMiniText: { color: '#000', fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
 });

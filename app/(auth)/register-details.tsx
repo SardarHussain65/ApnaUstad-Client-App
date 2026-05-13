@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -57,6 +58,8 @@ export default function RegisterDetailsScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [password, setPassword] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -82,7 +85,42 @@ export default function RegisterDetailsScreen() {
     if (params.role === 'worker') {
       fetchCategories();
     }
+    captureCurrentLocation();
   }, []);
+
+  const captureCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
+      const nextLatitude = currentLocation.coords.latitude;
+      const nextLongitude = currentLocation.coords.longitude;
+      setLatitude(nextLatitude);
+      setLongitude(nextLongitude);
+
+      const results = await Location.reverseGeocodeAsync({
+        latitude: nextLatitude,
+        longitude: nextLongitude,
+      });
+
+      if (results.length > 0) {
+        const geo = results[0];
+        if (!city && geo.city) setCity(geo.city);
+        if (!address) {
+          const detectedAddress = [geo.name, geo.street, geo.district, geo.city]
+            .filter(Boolean)
+            .join(', ');
+          if (detectedAddress) setAddress(detectedAddress);
+        }
+      }
+    } catch (error) {
+      console.warn('Could not capture registration location:', error);
+    }
+  };
 
   const fetchCategories = async () => {
     setIsFetchingCategories(true);
@@ -200,6 +238,10 @@ export default function RegisterDetailsScreen() {
         showError('Missing Fields', 'All identity and professional fields are required.');
         return;
       }
+      if (latitude === null || longitude === null) {
+        showError('Location Required', 'Please allow location access so nearby jobs can reach you.');
+        return;
+      }
     }
 
     try {
@@ -246,8 +288,7 @@ export default function RegisterDetailsScreen() {
         address,
         city,
         profileImage: profileImageUrl,
-        latitude: 31.5204, 
-        longitude: 74.3587,
+        ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
         fcmToken: '',
       };
 

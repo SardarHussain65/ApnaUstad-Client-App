@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
+import * as Location from 'expo-location';
 import {
   TrendingUp,
   Clock,
@@ -26,6 +27,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
 import api from '../../services/api';
 
+type WorkerCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
 export function WorkerHome() {
   const router = useRouter();
   const { token, user } = useAuth();
@@ -33,30 +39,72 @@ export function WorkerHome() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [stats, setStats] = useState({ revenue: 0, rating: 0, missions: 0, successRate: 1 });
   const [isLoading, setIsLoading] = useState(true);
+  const [workerCoordinates, setWorkerCoordinates] = useState<WorkerCoordinates | null>(null);
 
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (token) {
-      fetchNearbyJobs();
-      fetchStats();
-      syncStatus(isOnline);
+      refreshWorkerHome();
     }
-  }, [token, isOnline]);
+  }, [token, isOnline, user?._id]);
 
-  const syncStatus = async (online: boolean) => {
+  const getSavedCoordinates = (): WorkerCoordinates | null => {
+    const coordinates = (user as any)?.location?.coordinates;
+    const longitude = Number(coordinates?.[0]);
+    const latitude = Number(coordinates?.[1]);
+
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      return { latitude, longitude };
+    }
+
+    return null;
+  };
+
+  const resolveWorkerLocation = async (): Promise<WorkerCoordinates | null> => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        return {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+        };
+      }
+    } catch (error) {
+      console.warn('Could not read device location, using saved worker location:', error);
+    }
+
+    return getSavedCoordinates();
+  };
+
+  const refreshWorkerHome = async () => {
+    const coordinates = await resolveWorkerLocation();
+    setWorkerCoordinates(coordinates);
+    await syncStatus(isOnline, coordinates);
+    await fetchNearbyJobs(coordinates);
+    fetchStats();
+  };
+
+  const syncStatus = async (online: boolean, coordinates?: WorkerCoordinates | null) => {
     try {
       if (!user?._id) return;
 
-      // Update location and availability in backend
-      // Using hardcoded coordinates to match fetchNearbyJobs for testing
-      await api.patch(`/workers/${user._id}`, {
+      const payload: any = {
         isAvailable: online,
-        longitude: 74.3587,
-        latitude: 31.5204
-      });
+      };
 
-      console.log(`✅ Status Synced: ${online ? 'ONLINE' : 'OFFLINE'} at Lahore coordinates`);
+      if (coordinates) {
+        payload.longitude = coordinates.longitude;
+        payload.latitude = coordinates.latitude;
+      }
+
+      await api.patch(`/workers/${user._id}`, payload);
+
+      console.log(`✅ Status Synced: ${online ? 'ONLINE' : 'OFFLINE'}`, coordinates || 'without GPS update');
     } catch (error) {
       console.error('❌ Error syncing status:', error);
     }
@@ -89,10 +137,19 @@ export function WorkerHome() {
     }
   };
 
-  const fetchNearbyJobs = async () => {
+  const fetchNearbyJobs = async (coordinates?: WorkerCoordinates | null) => {
+    setIsLoading(true);
     try {
-      // Mock coordinates for now - in production use real GPS
-      const response = await api.get('/jobs/nearby?longitude=74.3587&latitude=31.5204');
+      const activeCoordinates = coordinates || workerCoordinates;
+      const response = await api.get('/jobs/nearby', {
+        params: activeCoordinates
+          ? {
+            longitude: activeCoordinates.longitude,
+            latitude: activeCoordinates.latitude,
+          }
+          : undefined,
+      });
+
       if (response.data.success) {
         setJobs(response.data.data);
       }
@@ -166,7 +223,7 @@ export function WorkerHome() {
               <Briefcase color={Colors.cyan} size={24} />
               <Text style={[styles.sectionTitle, Typography.threeD]}>Open Missions</Text>
             </View>
-            <TouchableOpacity onPress={fetchNearbyJobs}>
+            <TouchableOpacity onPress={refreshWorkerHome}>
               <Text style={styles.seeAll}>REFRESH</Text>
             </TouchableOpacity>
           </View>

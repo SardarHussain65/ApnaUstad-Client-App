@@ -43,6 +43,18 @@ export const queryKeys = {
     byJob: (jobId: string) => [...queryKeys.bids.all, 'job', jobId] as const,
   },
 
+  // Reviews
+  reviews: {
+    all: ['reviews'] as const,
+    byWorker: (workerId: string) => [...queryKeys.reviews.all, 'worker', workerId] as const,
+  },
+
+  // Notifications
+  notifications: {
+    all: ['notifications'] as const,
+    list: () => [...queryKeys.notifications.all, 'list'] as const,
+  },
+
   // Messages/Chat
   messages: {
     all: ['messages'] as const,

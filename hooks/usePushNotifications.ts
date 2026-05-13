@@ -44,6 +44,16 @@ const savePushTokenWithRetry = async (
       return { success: true, data: response.data };
     } catch (error: any) {
       lastError = error;
+
+      // ❌ Do NOT retry on 401 — the Axios interceptor already attempted a
+      // token refresh. If we still got a 401 here, the session is truly dead
+      // and the user will be logged out. Retrying will only produce more 401s.
+      const status = error?.response?.status;
+      if (status === 401) {
+        console.warn('⚠️ Push token save failed with 401 (session expired). Not retrying.');
+        return { success: false, error: lastError };
+      }
+
       console.warn(
         `⚠️ Attempt ${attempt}/${maxRetries} to save token failed:`,
         error.message
@@ -205,13 +215,17 @@ const handleNotificationTap = async (
 };
 
 export const usePushNotifications = () => {
-  const { user, token, role } = useAuth();
+  const { user, token, role, isLoading } = useAuth();
   const router = useRouter();
   const subscriptionsRef = useRef<any[]>([]);
   const lastSavedTokenRef = useRef<string | null>(null);
   const [notificationSetupComplete, setNotificationSetupComplete] = useState(false);
 
   useEffect(() => {
+    // Wait for AuthContext to finish reading from AsyncStorage before proceeding.
+    // Without this guard, the hook fires while token/refreshToken are still being
+    // loaded, causing the save-token API call to race against auth restoration.
+    if (isLoading) return;
     if (!user || !token) {
       // Cleanup when user logs out
       if (notificationSetupComplete) {
@@ -321,7 +335,10 @@ export const usePushNotifications = () => {
       cleanupListeners(subscriptionsRef.current);
       subscriptionsRef.current = [];
     };
-  }, [user, token, router]);
+  // Depend only on the user ID (not the full user/token objects).
+  // This prevents the entire notification setup from re-running every time
+  // the access token is silently refreshed in the background.
+  }, [user?._id, isLoading, router]);
 
   return {
     notificationSetupComplete,

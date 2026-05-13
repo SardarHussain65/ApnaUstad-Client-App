@@ -1,6 +1,5 @@
 import { io, Socket } from 'socket.io-client';
 import { BASE_URL } from '../constants/Config';
-import { UserRole } from '../context/AuthContext';
 
 class SocketService {
   private socket: Socket | null = null;
@@ -33,7 +32,7 @@ class SocketService {
       'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
       'booking:cancelled', 'booking:paid', 'chat:receive',
-      'worker:location'
+      'worker:location', 'notification:new'
     ];
 
     events.forEach(event => {

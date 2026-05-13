@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Star, ShieldCheck, MapPin, Share2, Award, Zap, Clock, MessageSquare, Phone } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BlurView } from 'expo-blur';
-import { useWorker } from '../hooks';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useWorker, useWorkerReviews } from '../hooks';
 import api from '../services/api';
 
 const { width } = Dimensions.get('window');
@@ -41,6 +42,7 @@ export default function WorkerDetailsScreen() {
 
   // React Query hook
   const { data: worker, isLoading, error } = useWorker(params.id as string);
+  const { data: reviews = [], isLoading: isLoadingReviews } = useWorkerReviews(params.id as string);
 
   const handleAcceptProposal = async () => {
     if (!params.bidId) return;
@@ -176,6 +178,40 @@ export default function WorkerDetailsScreen() {
                   </Text>
                 </GlassCard>
               </Animated.View>
+
+              <Animated.View entering={FadeInUp.delay(850)} style={styles.sectionBlock}>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, Typography.threeD]}>Customer Reviews</Text>
+                  <Text style={styles.reviewTotal}>{worker?.totalReviews || reviews.length || 0} TOTAL</Text>
+                </View>
+                <GlassCard intensity={15} style={styles.reviewsCard}>
+                  {isLoadingReviews ? (
+                    <ActivityIndicator color={Colors.cyan} />
+                  ) : reviews.length > 0 ? (
+                    reviews.slice(0, 3).map((review) => (
+                      <View key={review._id} style={styles.reviewItem}>
+                        <View style={styles.reviewHeader}>
+                          <View style={styles.reviewAvatar}>
+                            <Text style={styles.reviewAvatarText}>{review.customer?.fullName?.[0]?.toUpperCase() || 'C'}</Text>
+                          </View>
+                          <View style={styles.reviewMeta}>
+                            <Text style={styles.reviewName}>{review.customer?.fullName || 'Customer'}</Text>
+                            <Text style={styles.reviewDate}>{formatReviewDate(review.createdAt)}</Text>
+                          </View>
+                          <View style={styles.reviewStars}>
+                            {Array.from({ length: 5 }).map((_, index) => (
+                              <Star key={index} size={12} color="#FFD700" fill={index < review.rating ? '#FFD700' : 'transparent'} />
+                            ))}
+                          </View>
+                        </View>
+                        {!!review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.emptyReviews}>No customer reviews yet.</Text>
+                  )}
+                </GlassCard>
+              </Animated.View>
             </View>
           )}
 
@@ -240,6 +276,13 @@ export default function WorkerDetailsScreen() {
       </View>
     </BackgroundWrapper>
   );
+}
+
+function formatReviewDate(value?: string) {
+  if (!value) return 'Recent';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Recent';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 const styles = StyleSheet.create({
@@ -419,6 +462,75 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  reviewTotal: {
+    color: Colors.textDim,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 15,
+  },
+  reviewsCard: {
+    borderRadius: 20,
+    padding: 16,
+  },
+  reviewItem: {
+    paddingBottom: 16,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  reviewAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,215,0,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.28)',
+    marginRight: 10,
+  },
+  reviewAvatarText: {
+    color: '#FFD700',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  reviewMeta: {
+    flex: 1,
+  },
+  reviewName: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  reviewDate: {
+    color: Colors.textDim,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 1,
+  },
+  reviewComment: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  emptyReviews: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
   portfolioScroll: {
     marginLeft: -Spacing.l,
