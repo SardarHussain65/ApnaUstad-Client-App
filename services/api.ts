@@ -110,12 +110,12 @@ api.interceptors.response.use(
         } else {
           console.log(`Refresh failed with status: ${response.status}`);
         }
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
         isRefreshing = false;
 
         // Refresh failed, logout user
-        console.error('Token refresh failed:', refreshError);
+        console.log('Token refresh failed:', refreshError?.message);
         await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
         
         // Dispatch logout event for AuthContext to react

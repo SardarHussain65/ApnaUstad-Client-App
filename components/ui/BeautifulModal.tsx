@@ -93,7 +93,7 @@ export function BeautifulModal({
             animatedStyle,
           ]}
         >
-          <View style={[styles.modalGlow, { backgroundColor: glowColor + '20' }]} />
+          <View style={[styles.modalGlow, { backgroundColor: glowColor.length === 7 ? glowColor + '20' : glowColor }]} />
 
           <GlassCard
             intensity={Platform.OS === 'ios' ? 95 : 100}
@@ -111,7 +111,7 @@ export function BeautifulModal({
 
             {icon && (
               <View style={styles.floatingIconBadge}>
-                 <View style={[styles.iconBadgeInner, { borderColor: glowColor + '40' }]}>
+                 <View style={[styles.iconBadgeInner, { borderColor: glowColor.length === 7 ? glowColor + '40' : glowColor }]}>
                    {icon}
                  </View>
               </View>

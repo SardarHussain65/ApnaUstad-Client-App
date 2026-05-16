@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "android:build": "npx expo run:android",
     "ios:build": "npx expo run:ios",
+    "postinstall": "node scripts/patch-react-native-types.js",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -61,7 +62,7 @@
     "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
+    "@types/react": "^19.2.14",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"

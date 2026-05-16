@@ -41,6 +41,11 @@ interface AcceptBidPayload {
 interface UpdateBookingStatusPayload {
   bookingId: string;
   status: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
+  cancelReason?: string;
+}
+
+interface WithdrawBidPayload {
+  bidId: string;
 }
 
 interface RegisterPayload {
@@ -99,10 +104,16 @@ const acceptInstantJob = async (jobId: string): Promise<any> => {
 };
 
 const updateBookingStatus = async (payload: UpdateBookingStatusPayload): Promise<any> => {
-  const { bookingId, status } = payload;
-  const response = await api.patch(`/bookings/${bookingId}/status`, { status });
+  const { bookingId, status, cancelReason } = payload;
+  const response = await api.patch(`/bookings/${bookingId}/status`, { status, cancelReason });
   return response.data.data;
 };
+
+const withdrawBid = async (payload: WithdrawBidPayload): Promise<any> => {
+  const response = await api.delete(`/jobs/bids/${payload.bidId}`);
+  return response.data.data;
+};
+
 const payBooking = async (payload: PayBookingPayload): Promise<any> => {
   const { bookingId, ...paymentData } = payload;
   const response = await api.post(`/bookings/${bookingId}/pay`, paymentData);
@@ -162,6 +173,7 @@ export function useSubmitBidMutation(options?: Omit<UseMutationOptions<any, Erro
     onSuccess: (data, variables) => {
       // Invalidate bids for this job
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byJob(variables.jobId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
     },
     ...options,
   });
@@ -174,8 +186,10 @@ export function useAcceptBidMutation(options?: Omit<UseMutationOptions<any, Erro
     mutationFn: acceptBid,
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byJob(variables.jobId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
     },
     ...options,
   });
@@ -188,6 +202,7 @@ export function useAcceptInstantJobMutation(options?: Omit<UseMutationOptions<an
     mutationFn: acceptInstantJob,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
     },
@@ -204,9 +219,25 @@ export function useUpdateBookingStatusMutation(options?: Omit<UseMutationOptions
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
     ...options,
+  });
+}
+
+export function useWithdrawBidMutation(options?: Omit<UseMutationOptions<any, Error, WithdrawBidPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, WithdrawBidPayload>({
+    mutationFn: withdrawBid,
+    ...options,
+    onSuccess: (data, variables, context, mutation) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      options?.onSuccess?.(data, variables, context, mutation);
+    },
   });
 }
 

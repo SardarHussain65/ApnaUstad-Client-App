@@ -98,8 +98,8 @@ const handleNotificationTap = async (
         case 'worker_accepted':
           if (bookingId) {
             router.push({
-              pathname: '/job-details',
-              params: { bookingId },
+              pathname: '/transaction-details',
+              params: { id: bookingId },
             });
           }
           break;
@@ -107,8 +107,8 @@ const handleNotificationTap = async (
         case 'worker_started':
           if (bookingId) {
             router.push({
-              pathname: '/job-details',
-              params: { bookingId },
+              pathname: '/transaction-details',
+              params: { id: bookingId },
             });
           }
           break;
@@ -116,8 +116,8 @@ const handleNotificationTap = async (
         case 'worker_completed':
           if (bookingId) {
             router.push({
-              pathname: '/job-details',
-              params: { bookingId, showReview: true },
+              pathname: '/transaction-details',
+              params: { id: bookingId, showReview: true },
             });
           }
           break;
@@ -138,8 +138,8 @@ const handleNotificationTap = async (
         case 'new_review':
           if (bookingId) {
             router.push({
-              pathname: '/job-details',
-              params: { bookingId, scrollToReviews: true },
+              pathname: '/transaction-details',
+              params: { id: bookingId, scrollToReviews: true },
             });
           }
           break;

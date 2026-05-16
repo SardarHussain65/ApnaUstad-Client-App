@@ -41,6 +41,7 @@ export const queryKeys = {
   bids: {
     all: ['bids'] as const,
     byJob: (jobId: string) => [...queryKeys.bids.all, 'job', jobId] as const,
+    byWorker: () => [...queryKeys.bids.all, 'worker'] as const,
   },
 
   // Reviews

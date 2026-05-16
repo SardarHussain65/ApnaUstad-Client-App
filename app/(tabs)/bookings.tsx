@@ -50,11 +50,13 @@ export default function BookingsTab() {
     const unsubNew = socketService.on('booking:new', () => handleRefresh());
     const unsubStatus = socketService.on('booking:status', () => handleRefresh());
     const unsubJob = socketService.on('job:new', () => handleRefresh());
+    const unsubBid = socketService.on('bid:new', () => handleRefresh());
 
     return () => {
       unsubNew();
       unsubStatus();
       unsubJob();
+      unsubBid();
     };
   }, []);
 
@@ -219,7 +221,9 @@ export default function BookingsTab() {
 
                     <Text style={styles.itemProvider}>
                       {isBooking ? (isWorker ? 'Client: ' : 'Ustad: ') : 'Mission Protocol: '}
-                      {isBooking ? (counterPartyName || 'Searching...') : 'OPEN BROADCAST'}
+                      {isBooking 
+                        ? (counterPartyName || 'Searching...') 
+                        : (job.bidCount > 0 ? `${job.bidCount} BIDS RECEIVED` : 'OPEN BROADCAST')}
                     </Text>
 
                     <View style={styles.detailsRow}>

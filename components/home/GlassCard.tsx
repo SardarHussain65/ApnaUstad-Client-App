@@ -55,8 +55,8 @@ export function GlassCard({
         Shadows.card,
         Shadows.bevel, // Added 3D Bevel
         hasGlow && { 
-          borderColor: glowColor + '60',
-          shadowColor: glowColor,
+          borderColor: glowColor.length === 7 ? glowColor + '60' : glowColor,
+          shadowColor: glowColor.length === 9 ? glowColor.substring(0, 7) : glowColor,
           shadowOpacity: 0.4,
           shadowRadius: 20,
           elevation: 15

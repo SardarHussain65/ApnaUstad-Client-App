@@ -9,9 +9,18 @@ import { PaymentReceivedModal } from '../components/home/PaymentReceivedModal';
 import * as Haptics from 'expo-haptics';
 
 interface IncomingJobContextType {
-  /** True while worker is marked online (controlled from WorkerHome toggle) */
+  isInstantOnline: boolean;
+  setIsInstantOnline: (val: boolean) => void;
+  isScheduledOnline: boolean;
+  setIsScheduledOnline: (val: boolean) => void;
+  /** Legacy support or computed master state */
   isOnline: boolean;
-  setIsOnline: (val: boolean) => void;
+  /** Jobs that arrived via socket but were dismissed from the modal without accepting */
+  dismissedJobs: any[];
+  /** Remove a single job from the dismissed list */
+  clearDismissedJob: (jobId: string) => void;
+  /** Accept a dismissed job directly from the home screen card */
+  acceptDismissedJob: (job: any) => void;
 }
 
 const IncomingJobContext = createContext<IncomingJobContextType | undefined>(undefined);
@@ -20,14 +29,21 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   const { role, user, token } = useAuth();
   const router = useRouter();
 
-  const [isOnline, setIsOnline] = useState(true);
+  const [isInstantOnline, setIsInstantOnline] = useState(true);
+  const [isScheduledOnline, setIsScheduledOnline] = useState(true);
 
-  const [isAccepting, setIsAccepting] = useState(false);
-  
-  // Modal state
-  const [incomingJob, setIncomingJob] = useState<any>(null);
+  const [acceptingJobId, setAcceptingJobId] = useState<string | null>(null);
+
+  // Modal state - Managed as a queue
+  const [incomingJobsQueue, setIncomingJobsQueue] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  
+
+  // Keep a ref so callbacks can always read the current queue without stale closures
+  const incomingJobsQueueRef = React.useRef<any[]>([]);
+
+  // Jobs closed from modal without accepting — still shown as cards on home screen
+  const [dismissedJobs, setDismissedJobs] = useState<any[]>([]);
+
   // Payment notification state
   const [paidBooking, setPaidBooking] = useState<any>(null);
   const [showPaidModal, setShowPaidModal] = useState(false);
@@ -37,12 +53,24 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     if (!token) return;
 
     // --- WORKER ONLY: New Job Notifications ---
-    let unsubscribeNewJob = () => {};
+    let unsubscribeNewJob = () => { };
     if (role === 'worker') {
       unsubscribeNewJob = socketService.on('job:new', (newJob: any) => {
         console.log('📩 [IncomingJobContext] Real-time Job Received:', newJob);
-        if (isOnline) {
-          setIncomingJob(newJob);
+
+        // Filter by preference
+        const isEnabled = newJob.urgency === 'instant' ? isInstantOnline : isScheduledOnline;
+
+        if (isEnabled) {
+          setIncomingJobsQueue(prevQueue => {
+            // Avoid adding duplicates
+            if (prevQueue.some(job => job._id === newJob._id)) {
+              return prevQueue;
+            }
+            const next = [...prevQueue, newJob];
+            incomingJobsQueueRef.current = next;
+            return next;
+          });
           setShowModal(true);
         }
       });
@@ -50,7 +78,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
     const unsubscribeWon = socketService.on('bid:won', (data: any) => {
       console.log('🏆 [IncomingJobContext] Mission Secured:', data);
-      
+
       Toast.show({
         type: 'success',
         text1: 'MISSION SECURED! 🚀',
@@ -58,7 +86,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         visibilityTime: 5000,
         onPress: () => {
           router.push({
-            pathname: '/transaction-details',
+            pathname: '/transaction-details' as any,
             params: { id: data.booking._id }
           });
         }
@@ -67,7 +95,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       // Optional: Auto redirect after delay
       setTimeout(() => {
         router.push({
-          pathname: '/transaction-details',
+          pathname: '/transaction-details' as any,
           params: { id: data.booking._id }
         });
       }, 2000);
@@ -87,7 +115,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       Toast.show({
         type: 'success',
         text1: 'PROTOCOL ACTIVE 🛡️',
-        text2: role === 'worker' 
+        text2: role === 'worker'
           ? `You have accepted the mission for ${data?.category || 'a new job'}.`
           : `Specialist has accepted your request for ${data?.category || 'the job'}.`,
       });
@@ -123,15 +151,12 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
     const unsubscribePaid = socketService.on('booking:paid', (data: any) => {
       console.log('💰 [IncomingJobContext] Payment Received Event:', data);
-      console.log('👤 Current User Role:', role);
-      
+
       if (role === 'worker') {
-        console.log('✅ Showing Payment Modal for Worker');
         setPaidBooking(data);
         setShowPaidModal(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        console.log('ℹ️ Showing Payment Toast for Client');
         Toast.show({
           type: 'success',
           text1: 'PAYMENT VERIFIED ✅',
@@ -150,15 +175,44 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       unsubscribeCancelled();
       unsubscribePaid();
     };
-  }, [role, token, isOnline]);
+  }, [role, token, isInstantOnline, isScheduledOnline]);
 
-  const handleAcceptJob = useCallback(async () => {
-    if (!incomingJob) return;
+  const addToDismissed = useCallback((jobs: any[]) => {
+    if (jobs.length === 0) return;
+    setDismissedJobs(prev => {
+      const existingIds = new Set(prev.map(j => j._id));
+      const newJobs = jobs.filter(j => !existingIds.has(j._id));
+      if (newJobs.length === 0) return prev;
+      return [...newJobs, ...prev]; // newest first
+    });
+  }, []);
 
-    if (incomingJob.urgency === 'instant') {
+  const removeJobFromQueue = useCallback((jobId: string) => {
+    setIncomingJobsQueue(prevQueue => {
+      const rejected = prevQueue.find(j => j._id === jobId);
+      const nextQueue = prevQueue.filter(j => j._id !== jobId);
+      incomingJobsQueueRef.current = nextQueue;
+      // Add the rejected job to dismissed so it still appears on the home screen
+      if (rejected) {
+        setDismissedJobs(prev => {
+          if (prev.some(j => j._id === jobId)) return prev;
+          return [rejected, ...prev];
+        });
+      }
+      if (nextQueue.length === 0) {
+        setShowModal(false);
+      }
+      return nextQueue;
+    });
+  }, []);
+
+  const handleAcceptJob = useCallback(async (job: any) => {
+    if (!job) return;
+
+    if (job.urgency === 'instant') {
       try {
-        setIsAccepting(true);
-        const response = await api.post(`/jobs/${incomingJob._id}/accept-instant`);
+        setAcceptingJobId(job._id);
+        const response = await api.post(`/jobs/${job._id}/accept-instant`);
 
         if (response.data.success) {
           Toast.show({
@@ -166,8 +220,73 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
             text1: 'MISSION ACCEPTED',
             text2: 'Protocol initialized. Waiting for client confirmation...',
           });
+          // Close modal cleanly - remaining jobs (not the accepted one) go to dismissed
+          const remaining = incomingJobsQueueRef.current.filter(j => j._id !== job._id);
+          addToDismissed(remaining);
+          incomingJobsQueueRef.current = [];
+          setIncomingJobsQueue([]);
           setShowModal(false);
-          setIncomingJob(null);
+        }
+      } catch (error: any) {
+        Toast.show({
+          type: 'error',
+          text1: 'LINK FAILURE',
+          text2: error.response?.data?.message || 'Could not establish connection.',
+        });
+        removeJobFromQueue(job._id);
+      } finally {
+        setAcceptingJobId(null);
+      }
+    } else {
+      // For scheduled jobs, navigate to bid submission; remaining jobs go to dismissed
+      const remaining = incomingJobsQueueRef.current.filter(j => j._id !== job._id);
+      addToDismissed(remaining);
+      incomingJobsQueueRef.current = [];
+      setIncomingJobsQueue([]);
+      setShowModal(false);
+      router.push({
+        pathname: '/bid-submission' as any,
+        params: {
+          jobId: job._id,
+          title: job.category,
+          urgency: job.urgency,
+        },
+      });
+    }
+  }, [router, removeJobFromQueue, addToDismissed]);
+
+  const handleRejectJob = useCallback((jobId: string) => {
+    // removeJobFromQueue now also adds the rejected job to dismissed
+    removeJobFromQueue(jobId);
+  }, [removeJobFromQueue]);
+
+  const handleCloseModal = useCallback(() => {
+    // Read current queue from ref (no stale closure) and move all to dismissed
+    const currentQueue = incomingJobsQueueRef.current;
+    addToDismissed(currentQueue);
+    incomingJobsQueueRef.current = [];
+    setIncomingJobsQueue([]);
+    setShowModal(false);
+  }, [addToDismissed]);
+
+  const clearDismissedJob = useCallback((jobId: string) => {
+    setDismissedJobs(prev => prev.filter(j => j._id !== jobId));
+  }, []);
+
+  const acceptDismissedJob = useCallback(async (job: any) => {
+    if (!job) return;
+    clearDismissedJob(job._id);
+
+    if (job.urgency === 'instant') {
+      try {
+        setAcceptingJobId(job._id);
+        const response = await api.post(`/jobs/${job._id}/accept-instant`);
+        if (response.data.success) {
+          Toast.show({
+            type: 'success',
+            text1: 'MISSION ACCEPTED',
+            text2: 'Protocol initialized. Waiting for client confirmation...',
+          });
         }
       } catch (error: any) {
         Toast.show({
@@ -176,39 +295,40 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           text2: error.response?.data?.message || 'Could not establish connection.',
         });
       } finally {
-        setIsAccepting(false);
+        setAcceptingJobId(null);
       }
     } else {
-      // Scheduled job → navigate to bidding screen
-      setShowModal(false);
       router.push({
-        pathname: '/bid-submission',
+        pathname: '/bid-submission' as any,
         params: {
-          jobId: incomingJob._id,
-          title: incomingJob.category,
-          urgency: incomingJob.urgency,
+          jobId: job._id,
+          title: job.category,
+          urgency: job.urgency,
         },
       });
-      setIncomingJob(null);
     }
-  }, [incomingJob, router]);
-
-  const handleRejectJob = useCallback(() => {
-    setShowModal(false);
-    setIncomingJob(null);
-  }, []);
+  }, [router, clearDismissedJob]);
 
   return (
-    <IncomingJobContext.Provider value={{ isOnline, setIsOnline }}>
+    <IncomingJobContext.Provider value={{
+      isInstantOnline,
+      setIsInstantOnline,
+      isScheduledOnline,
+      setIsScheduledOnline,
+      isOnline: isInstantOnline || isScheduledOnline,
+      dismissedJobs,
+      clearDismissedJob,
+      acceptDismissedJob,
+    }}>
       {children}
 
-      {/* Global modal — floats above any active screen */}
       <IncomingJobModal
-        visible={showModal}
-        job={incomingJob ? { ...incomingJob, hourlyRate: (user as any)?.hourlyRate } : null}
+        visible={showModal && incomingJobsQueue.length > 0}
+        jobs={incomingJobsQueue.map(job => ({ ...job, hourlyRate: (user as any)?.hourlyRate }))}
         onAccept={handleAcceptJob}
         onReject={handleRejectJob}
-        isLoading={isAccepting}
+        onClose={handleCloseModal}
+        acceptingJobId={acceptingJobId}
       />
 
       <PaymentReceivedModal

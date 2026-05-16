@@ -8,6 +8,7 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -36,6 +37,8 @@ import {
   Clock,
   Radio,
   Wifi,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -45,10 +48,11 @@ const CARD_WIDTH = width * 0.92;
 
 interface IncomingJobModalProps {
   visible: boolean;
-  job: any;
-  onAccept: () => void;
-  onReject: () => void;
-  isLoading?: boolean;
+  jobs: any[];
+  onAccept: (job: any) => void;
+  onReject: (jobId: string) => void;
+  onClose: () => void;
+  acceptingJobId?: string | null;
 }
 
 // Corner bracket component for HUD aesthetic
@@ -80,7 +84,110 @@ function HexCell({ x, y, opacity }: { x: number; y: number; opacity: number }) {
   );
 }
 
-export function IncomingJobModal({ visible, job, onAccept, onReject, isLoading = false }: IncomingJobModalProps) {
+export function IncomingJobModal({ visible, jobs, onAccept, onReject, onClose, acceptingJobId }: IncomingJobModalProps) {
+  const arrowBounce = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible && jobs.length > 1) {
+      arrowBounce.value = withRepeat(
+        withSequence(
+          withTiming(0, { duration: 0 }),
+          withTiming(1, { duration: 700, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 700, easing: Easing.in(Easing.quad) })
+        ),
+        -1,
+        false
+      );
+    } else {
+      arrowBounce.value = 0;
+    }
+  }, [visible, jobs.length]);
+
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateX: interpolate(arrowBounce.value, [0, 1], [0, 10]),
+      },
+    ],
+    opacity: interpolate(arrowBounce.value, [0, 1], [0.35, 1]),
+  }));
+
+  if (!jobs || jobs.length === 0) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      {/* Full screen backdrop */}
+      <View style={styles.backdrop}>
+        {/* Radial vignette overlay */}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+          style={[styles.container, { height: '100%' }]}
+        >
+          {/* Global Close Button */}
+          <TouchableOpacity 
+            style={styles.closeModalBtn} 
+            onPress={onClose}
+            activeOpacity={0.7}
+          >
+            <X size={22} color="#00F0FF" strokeWidth={2.5} />
+          </TouchableOpacity>
+
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContainer}
+            decelerationRate="fast"
+          >
+            {jobs.map((job, index) => (
+              <View key={job._id} style={{ width: width, alignItems: 'center', justifyContent: 'center' }}>
+                <JobCard
+                  job={job}
+                  onAccept={() => onAccept(job)}
+                  onReject={() => onReject(job._id)}
+                  isLoading={acceptingJobId === job._id}
+                  totalJobs={jobs.length}
+                  currentIndex={index + 1}
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+          {jobs.length > 1 && (
+            <Animated.View entering={FadeIn.delay(250).duration(400)} style={[styles.jobArrowHint, arrowStyle]}>
+              <ChevronLeft size={24} color="#00F0FF" strokeWidth={2.5} />
+              <Text style={styles.jobArrowText}>SWIPE</Text>
+              <ChevronRight size={24} color="#00F0FF" strokeWidth={2.5} />
+            </Animated.View>
+          )}
+
+          {/* ── ALERT STRIP BELOW SCROLL ── */}
+          <Animated.View
+            entering={FadeIn.delay(400).duration(600)}
+            style={styles.alertStrip}
+          >
+            <View style={styles.alertInner}>
+              <ShieldAlert size={13} color="#FF3B3B" />
+              <Text style={styles.alertText}>
+                {jobs.length > 1 ? `MULTIPLE SIGNALS DETECTED: ${jobs.length} (SWIPE ↔)` : 'NEURAL LINK EXPIRES IN 30S'}
+              </Text>
+              {/* Blinking dot */}
+              <View style={styles.alertBlink} />
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function JobCard({ job, onAccept, onReject, isLoading, totalJobs, currentIndex }: any) {
   // Animation values
   const scanY = useSharedValue(-200);
   const glowPulse = useSharedValue(0);
@@ -91,59 +198,59 @@ export function IncomingJobModal({ visible, job, onAccept, onReject, isLoading =
   const borderFlow = useSharedValue(0);
 
   useEffect(() => {
-    if (visible) {
-      // Scanning line that sweeps vertically
-      scanY.value = withRepeat(
-        withTiming(700, { duration: 2800, easing: Easing.linear }),
-        -1,
-        false
-      );
-      scanY.value = -200;
+    // Scanning line that sweeps vertically
+    scanY.value = withRepeat(
+      withTiming(700, { duration: 2800, easing: Easing.linear }),
+      -1,
+      false
+    );
+    scanY.value = -200;
 
-      // Outer glow breathing
-      glowPulse.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1400 }),
-          withTiming(0.3, { duration: 1400 })
-        ),
-        -1,
-        true
-      );
+    // Outer glow breathing
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400 }),
+        withTiming(0.3, { duration: 1400 })
+      ),
+      -1,
+      true
+    );
 
-      // Icon ring pulse
-      ringScale.value = withRepeat(
-        withSequence(
-          withTiming(1.08, { duration: 900, easing: Easing.out(Easing.quad) }),
-          withTiming(1, { duration: 900, easing: Easing.in(Easing.quad) })
-        ),
-        -1,
-        true
-      );
+    // Icon ring pulse
+    ringScale.value = withRepeat(
+      withSequence(
+        withTiming(1.08, { duration: 900, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 900, easing: Easing.in(Easing.quad) })
+      ),
+      -1,
+      true
+    );
 
-      // Data flicker effect
-      dataFlicker.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 2000 }),
-          withTiming(0.6, { duration: 60 }),
-          withTiming(1, { duration: 60 }),
-          withTiming(0.8, { duration: 80 }),
-          withTiming(1, { duration: 1800 }),
-        ),
-        -1,
-        false
-      );
+    // Data flicker effect
+    dataFlicker.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2000 }),
+        withTiming(0.6, { duration: 60 }),
+        withTiming(1, { duration: 60 }),
+        withTiming(0.8, { duration: 80 }),
+        withTiming(1, { duration: 1800 }),
+      ),
+      -1,
+      false
+    );
 
-      // Border flow animation
-      borderFlow.value = withRepeat(
-        withTiming(1, { duration: 3000, easing: Easing.linear }),
-        -1,
-        false
-      );
-    } else {
+    // Border flow animation
+    borderFlow.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.linear }),
+      -1,
+      false
+    );
+
+    return () => {
       scanY.value = -200;
       glowPulse.value = 0;
-    }
-  }, [visible]);
+    };
+  }, []);
 
   const scanStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: scanY.value }],
@@ -166,8 +273,6 @@ export function IncomingJobModal({ visible, job, onAccept, onReject, isLoading =
     opacity: dataFlicker.value,
   }));
 
-  if (!job) return null;
-
   const isInstant = job.urgency === 'instant';
   const accentColor = isInstant ? '#00F0FF' : '#FF6B00';
   const accentSecondary = isInstant ? '#0066FF' : '#FF2D55';
@@ -188,30 +293,16 @@ export function IncomingJobModal({ visible, job, onAccept, onReject, isLoading =
   ];
 
   return (
-    <Modal visible={visible} transparent animationType="none">
-      {/* Full screen backdrop */}
-      <View style={styles.backdrop}>
-        {/* Radial vignette overlay */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
-          style={StyleSheet.absoluteFillObject}
-        />
+    <View style={styles.cardWrapper}>
+      {/* Outer glow ring behind card */}
+      <Animated.View style={[styles.outerGlow, glowStyle, { shadowColor: accentColor }]} />
 
-        {/* Main content container */}
-        <Animated.View
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(200)}
-          style={styles.container}
-        >
-          {/* Outer glow ring behind card */}
-          <Animated.View style={[styles.outerGlow, glowStyle, { shadowColor: accentColor }]} />
-
-          {/* ─── MAIN CARD ─── */}
-          <Animated.View
-            entering={SlideInDown.duration(500).springify().damping(18)}
-            style={styles.card}
-          >
-            {/* Card base layer - dark background */}
+      {/* ─── MAIN CARD ─── */}
+      <Animated.View
+        entering={SlideInDown.duration(500).springify().damping(18)}
+        style={styles.card}
+      >
+        {/* Card base layer - dark background */}
             <LinearGradient
               colors={['#08091A', '#0C0E24', '#080916']}
               style={styles.cardGradient}
@@ -241,122 +332,135 @@ export function IncomingJobModal({ visible, job, onAccept, onReject, isLoading =
                     <Text style={styles.topBarLabel}>INTERCEPT ACTIVE</Text>
                   </View>
 
-                  {/* Right: Countdown */}
-                  <View style={styles.timerBox}>
-                    <Clock size={10} color="#000" />
-                    <Text style={styles.timerText}>00:29</Text>
+                  {/* Right: Countdown & Queue */}
+                  <View style={styles.topBarRight}>
+                    {totalJobs > 1 && (
+                      <View style={styles.queueBadge}>
+                        <Text style={styles.queueText}>{currentIndex} OF {totalJobs} JOBS</Text>
+                      </View>
+                    )}
+                    <View style={styles.timerBox}>
+                      <Clock size={10} color="#000" />
+                      <Text style={styles.timerText}>00:29</Text>
+                    </View>
                   </View>
                 </LinearGradient>
               </View>
 
-              {/* ── HERO SECTION ── */}
-              <View style={styles.heroSection}>
-                {/* Signal rings behind icon */}
-                <View style={styles.iconWrapper}>
-                  {/* Outer pulsing rings */}
-                  <Animated.View style={[styles.ring, styles.ring3, { borderColor: accentColor + '10' }, ringStyle]} />
-                  <Animated.View style={[styles.ring, styles.ring2, { borderColor: accentColor + '20' }]} />
-                  <Animated.View style={[styles.ring, styles.ring1, { borderColor: accentColor + '40' }]} />
+              <ScrollView 
+                style={styles.scrollArea} 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* ── HERO SECTION ── */}
+                <View style={styles.heroSection}>
+                  {/* Signal rings behind icon */}
+                  <View style={styles.iconWrapper}>
+                    {/* Outer pulsing rings */}
+                    <Animated.View style={[styles.ring, styles.ring3, { borderColor: accentColor + '10' }, ringStyle]} />
+                    <Animated.View style={[styles.ring, styles.ring2, { borderColor: accentColor + '20' }]} />
+                    <Animated.View style={[styles.ring, styles.ring1, { borderColor: accentColor + '40' }]} />
 
-                  {/* Icon circle */}
-                  <LinearGradient
-                    colors={[accentColor + '20', accentColor + '08']}
-                    style={styles.iconCircle}
-                  >
-                    <View style={[styles.iconInner, { borderColor: accentColor + '60' }]}>
-                      {isInstant
-                        ? <Zap size={34} color={accentColor} fill={accentColor} />
-                        : <Briefcase size={34} color={accentColor} />
-                      }
-                    </View>
-                  </LinearGradient>
+                    {/* Icon circle */}
+                    <LinearGradient
+                      colors={[accentColor + '20', accentColor + '08']}
+                      style={styles.iconCircle}
+                    >
+                      <View style={[styles.iconInner, { borderColor: accentColor + '60' }]}>
+                        {isInstant
+                          ? <Zap size={34} color={accentColor} fill={accentColor} />
+                          : <Briefcase size={34} color={accentColor} />
+                        }
+                      </View>
+                    </LinearGradient>
+                  </View>
+
+                  {/* Category title */}
+                  <Text style={styles.categoryTitle} numberOfLines={1}>
+                    {job.category?.toUpperCase() || 'ELECTRICIAN'}
+                  </Text>
+
+                  {/* Type badge */}
+                  <View style={[styles.typeBadge, { borderColor: accentColor + '50' }]}>
+                    <LinearGradient
+                      colors={[accentColor + '12', accentColor + '06']}
+                      style={styles.typeBadgeGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <View style={[styles.badgeDot, { backgroundColor: accentColor }]} />
+                      <Text style={[styles.typeBadgeText, { color: accentColor }]}>
+                        {isInstant ? 'INSTANT RESPONSE' : 'SCHEDULED MISSION'}
+                      </Text>
+                    </LinearGradient>
+                  </View>
                 </View>
 
-                {/* Category title */}
-                <Text style={styles.categoryTitle} numberOfLines={1}>
-                  {job.category?.toUpperCase() || 'ELECTRICIAN'}
-                </Text>
-
-                {/* Type badge */}
-                <View style={[styles.typeBadge, { borderColor: accentColor + '50' }]}>
+                {/* ── DIAGONAL SLASH DIVIDER ── */}
+                <View style={styles.slashDivider}>
                   <LinearGradient
-                    colors={[accentColor + '12', accentColor + '06']}
-                    style={styles.typeBadgeGradient}
+                    colors={['transparent', accentColor + '60', accentColor, accentColor + '60', 'transparent']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                  >
-                    <View style={[styles.badgeDot, { backgroundColor: accentColor }]} />
-                    <Text style={[styles.typeBadgeText, { color: accentColor }]}>
-                      {isInstant ? 'INSTANT RESPONSE' : 'SCHEDULED MISSION'}
-                    </Text>
-                  </LinearGradient>
-                </View>
-              </View>
-
-              {/* ── DIAGONAL SLASH DIVIDER ── */}
-              <View style={styles.slashDivider}>
-                <LinearGradient
-                  colors={['transparent', accentColor + '60', accentColor, accentColor + '60', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.slashLine}
-                />
-              </View>
-
-              {/* ── MISSION BRIEF ── */}
-              <Animated.View style={[styles.briefCard, flickerStyle]}>
-                <View style={[styles.briefHeader, { borderLeftColor: accentColor }]}>
-                  <Radio size={11} color={accentColor} />
-                  <Text style={[styles.briefHeaderText, { color: accentColor }]}>MISSION BRIEF</Text>
-                  <View style={[styles.briefLiveDot, { backgroundColor: accentColor }]} />
-                </View>
-                <Text style={styles.briefText} numberOfLines={3}>
-                  {job.description || "Inbound request for professional services. Secure the mission immediately."}
-                </Text>
-              </Animated.View>
-
-              {/* ── DATA PANELS ── */}
-              <View style={styles.dataPanels}>
-                {/* Earning panel */}
-                <View style={[styles.dataPanel, { borderColor: accentColor + '30' }]}>
-                  <LinearGradient
-                    colors={[accentColor + '10', 'transparent']}
-                    style={styles.dataPanelGrad}
-                  >
-                    <CircleDollarSign size={16} color={accentColor} />
-                    <Text style={[styles.dataPanelValue, { color: '#FFFFFF' }]}>
-                      {isInstant ? `Rs. ${job.hourlyRate || '500'}` : 'OPEN BID'}
-                    </Text>
-                    <Text style={[styles.dataPanelLabel, { color: accentColor + 'AA' }]}>
-                      {isInstant ? 'EST. EARNING' : 'COMPETITIVE'}
-                    </Text>
-                  </LinearGradient>
+                    style={styles.slashLine}
+                  />
                 </View>
 
-                {/* Divider */}
-                <View style={[styles.panelDivider, { backgroundColor: accentColor + '30' }]} />
+                {/* ── MISSION BRIEF ── */}
+                <Animated.View style={[styles.briefCard, flickerStyle]}>
+                  <View style={[styles.briefHeader, { borderLeftColor: accentColor }]}>
+                    <Radio size={11} color={accentColor} />
+                    <Text style={[styles.briefHeaderText, { color: accentColor }]}>MISSION BRIEF</Text>
+                    <View style={[styles.briefLiveDot, { backgroundColor: accentColor }]} />
+                  </View>
+                  <Text style={styles.briefText} numberOfLines={3}>
+                    {job.description || "Inbound request for professional services. Secure the mission immediately."}
+                  </Text>
+                </Animated.View>
 
-                {/* Distance panel */}
-                <View style={[styles.dataPanel, { borderColor: accentColor + '30' }]}>
-                  <LinearGradient
-                    colors={[accentColor + '10', 'transparent']}
-                    style={styles.dataPanelGrad}
-                  >
-                    <Navigation size={16} color={accentColor} />
-                    <Text style={[styles.dataPanelValue, { color: '#FFFFFF' }]}>1.4 KM</Text>
-                    <Text style={[styles.dataPanelLabel, { color: accentColor + 'AA' }]}>DISTANCE</Text>
-                  </LinearGradient>
+                {/* ── DATA PANELS ── */}
+                <View style={styles.dataPanels}>
+                  {/* Earning panel */}
+                  <View style={[styles.dataPanel, { borderColor: accentColor + '30' }]}>
+                    <LinearGradient
+                      colors={[accentColor + '10', 'transparent']}
+                      style={styles.dataPanelGrad}
+                    >
+                      <CircleDollarSign size={16} color={accentColor} />
+                      <Text style={[styles.dataPanelValue, { color: '#FFFFFF' }]}>
+                        {isInstant ? `Rs. ${job.hourlyRate || '500'}` : 'OPEN BID'}
+                      </Text>
+                      <Text style={[styles.dataPanelLabel, { color: accentColor + 'AA' }]}>
+                        {isInstant ? 'EST. EARNING' : 'COMPETITIVE'}
+                      </Text>
+                    </LinearGradient>
+                  </View>
+
+                  {/* Divider */}
+                  <View style={[styles.panelDivider, { backgroundColor: accentColor + '30' }]} />
+
+                  {/* Distance panel */}
+                  <View style={[styles.dataPanel, { borderColor: accentColor + '30' }]}>
+                    <LinearGradient
+                      colors={[accentColor + '10', 'transparent']}
+                      style={styles.dataPanelGrad}
+                    >
+                      <Navigation size={16} color={accentColor} />
+                      <Text style={[styles.dataPanelValue, { color: '#FFFFFF' }]}>1.4 KM</Text>
+                      <Text style={[styles.dataPanelLabel, { color: accentColor + 'AA' }]}>DISTANCE</Text>
+                    </LinearGradient>
+                  </View>
                 </View>
-              </View>
 
-              {/* ── LOCATION ROW ── */}
-              <View style={[styles.locationRow, { borderColor: accentColor + '20' }]}>
-                <MapPin size={13} color={accentColor + 'AA'} />
-                <Text style={styles.locationText} numberOfLines={1}>
-                  {job.address || "Sector 7G, Neo Lahore"}
-                </Text>
-                <View style={[styles.locationPing, { backgroundColor: accentColor }]} />
-              </View>
+                {/* ── LOCATION ROW ── */}
+                <View style={[styles.locationRow, { borderColor: accentColor + '20' }]}>
+                  <MapPin size={13} color={accentColor + 'AA'} />
+                  <Text style={styles.locationText} numberOfLines={1}>
+                    {job.address || "Sector 7G, Neo Lahore"}
+                  </Text>
+                  <View style={[styles.locationPing, { backgroundColor: accentColor }]} />
+                </View>
+              </ScrollView>
 
               {/* ── CORNER BRACKETS ── */}
               <CornerBracket position="tl" color={accentColor} />
@@ -416,23 +520,7 @@ export function IncomingJobModal({ visible, job, onAccept, onReject, isLoading =
 
             </LinearGradient>
           </Animated.View>
-
-          {/* ── ALERT STRIP BELOW CARD ── */}
-          <Animated.View
-            entering={FadeIn.delay(400).duration(600)}
-            style={styles.alertStrip}
-          >
-            <View style={styles.alertInner}>
-              <ShieldAlert size={13} color="#FF3B3B" />
-              <Text style={styles.alertText}>NEURAL LINK EXPIRES IN 30S</Text>
-              {/* Blinking dot */}
-              <View style={styles.alertBlink} />
-            </View>
-          </Animated.View>
-
-        </Animated.View>
-      </View>
-    </Modal>
+    </View>
   );
 }
 
@@ -445,6 +533,35 @@ const styles = StyleSheet.create({
   },
 
   container: {
+    width: '100%',
+  },
+  
+  closeModalBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 30,
+    right: 20,
+    zIndex: 100,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 255, 0.4)',
+    shadowColor: '#00F0FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  
+  scrollContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  cardWrapper: {
     alignItems: 'center',
     width: '100%',
     paddingHorizontal: 16,
@@ -466,7 +583,8 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: 28,
     overflow: 'hidden',
-    height: height * 0.75,
+    height: Platform.OS === 'ios' ? height * 0.78 : height * 0.85,
+    maxHeight: 700,
     // Drop shadow
     shadowColor: '#00F0FF',
     shadowOffset: { width: 0, height: 8 },
@@ -478,10 +596,16 @@ const styles = StyleSheet.create({
   cardGradient: {
     flex: 1,
     borderRadius: 28,
-    height: height * 0.75, // Explicit height based on devic
     borderWidth: 0.5,
     borderColor: 'rgba(0, 240, 255, 0.2)',
     overflow: 'hidden',
+  },
+
+  scrollArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
 
   // Hex grid
@@ -562,6 +686,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#000',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  queueBadge: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: '#00F0FF',
+  },
+  queueText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#00F0FF',
+    letterSpacing: 1,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
 
@@ -852,13 +996,45 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
 
+  jobArrowHint: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 170 : 150, // Moved up to avoid overlap
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 240, 255, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 240, 255, 0.4)',
+    shadowColor: '#00F0FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+    zIndex: 99,
+  },
+  jobArrowText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#00F0FF',
+    letterSpacing: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+
   // ─── ALERT STRIP ───
   alertStrip: {
-    marginTop: 20,
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 40 : 20,
+    alignSelf: 'center',
     borderWidth: 0.5,
     borderColor: 'rgba(255,59,59,0.3)',
     borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: '#0F0404', // Ensure it's opaque when placed absolute
   },
   alertInner: {
     flexDirection: 'row',

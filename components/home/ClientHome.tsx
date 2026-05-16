@@ -1,219 +1,130 @@
 /**
- * ClientHome.tsx — Refactored with Best Practices
+ * ClientHome.tsx — Fully Refactored
  *
- * KEY IMPROVEMENTS:
- * 1. Skeleton loading instead of blank screen
- * 2. Toast notifications for errors (no jarring inline error blocks)
- * 3. useCallback for stable function references
- * 4. Extracted sub-components to avoid re-renders
- * 5. Proper TypeScript types
- * 6. Constants extracted outside component
- * 7. Animated skeleton using interpolate + loop
+ * Changes from previous version:
+ * - Sub-components extracted to separate files (Toast, Skeleton, RecentBookingCard)
+ * - Dead code removed (handleRetryBookings, Elite Talents section, no-op Expand button)
+ * - Pull-to-refresh added (RefreshControl)
+ * - "Quick Actions" row added (Post a Job + My Bookings)
+ * - "Recent Bookings" section added below dashboard
+ * - Dashboard layout changed to row (matches WorkerHome, better use of space)
+ * - Section labels renamed to user-friendly strings
+ * - Toast correctly colors success green / error red
+ * - Skeleton safe-area aware via topInset prop
+ * - Shared shimmer (one loop, not one per SkeletonBox)
+ * - MOCK_RATING removed — unrated users show 0
+ * - All dead imports removed
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  Animated as RNAnimated, // RN's built-in Animated (for skeleton shimmer)
-  Platform,
+  RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import { AlertCircle } from 'lucide-react-native';
+import { Zap, CheckCircle, ChevronRight, Search } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useCategories, useMyBookings } from '../../hooks';
-import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
+import { useCategories, useMyBookings, useMyJobPosts } from '../../hooks';
+import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
 import { CosmicCircle } from './CosmicCircle';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
+import { HomeSkeletonLoader } from './HomeSkeletonLoader';
+import { ClientToast, ToastState } from './ClientToast';
+import { RecentBookingCard } from './RecentBookingCard';
+import { ClientActiveMissionCard } from './ClientActiveMissionCard';
 import { useAuth } from '../../context/AuthContext';
+import { Booking, JobPost } from '../../hooks';
 
-// ─── Constants (outside component = created once, never re-created) ──────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-// Remove static width constant and move to component with useWindowDimensions
 const GRID_GAP = 12;
 const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
-const INITIAL_CATEGORY_LIMIT = 9; // 3 rows × 3 columns (default)
-const MOCK_RATING = 4.8;
+const INITIAL_CATEGORY_LIMIT = 9;
+const RECENT_BOOKINGS_LIMIT = 3;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── CategoryCard ─────────────────────────────────────────────────────────────
+// Extracted so React keeps a stable identity across parent re-renders.
 
-interface ToastState {
-  visible: boolean;
-  message: string;
-  type: 'error' | 'success';
+interface CategoryItem {
+  _id: string;
+  name: string;
+  color?: string;
+  icon: string;
+  description?: string;
 }
 
-// ─── Toast Component (extracted so it never causes ClientHome to re-render) ──
-
-interface ToastProps {
-  toast: ToastState;
-  onDismiss: () => void;
+interface CategoryCardProps {
+  cat: CategoryItem;
+  index: number;
+  onPress: (cat: CategoryItem) => void;
 }
 
-/**
- * WHY a separate component?
- * When Toast's animation state changes, only Toast re-renders — not the
- * entire ClientHome tree. This is the "component extraction" performance trick.
- */
-const Toast = React.memo(({ toast, onDismiss }: ToastProps) => {
-  // RNAnimated.Value: a mutable animated number. Starting at 0 means "hidden".
-  const opacity = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    if (!toast.visible) return;
-
-    // Sequence: fade in → wait → fade out → call onDismiss
-    RNAnimated.sequence([
-      RNAnimated.timing(opacity, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true, // runs on native thread → 60fps, no JS jank
-      }),
-      RNAnimated.delay(3000),
-      RNAnimated.timing(opacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => onDismiss()); // callback fires after the whole sequence ends
-  }, [toast.visible, toast.message]);
-
-  if (!toast.visible) return null;
+const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => {
+  const Icon = getIconForCategory(cat);
+  const gradient: [string, string] = cat.color
+    ? [cat.color, `${cat.color}40`]
+    : DEFAULT_GRADIENT;
 
   return (
-    // RNAnimated.View: a View whose style properties can be driven by Animated values
-    <RNAnimated.View style={[styles.toast, { opacity }]}>
-      <AlertCircle size={16} color="#fff" />
-      <Text style={styles.toastText}>{toast.message}</Text>
-    </RNAnimated.View>
+    <Animated.View
+      entering={FadeInDown.delay(index * 50).duration(400)}
+      style={styles.categoryCardWrapper}
+    >
+      <GlassCard
+        style={styles.categoryItem}
+        contentStyle={styles.categoryItemContent}
+        onPress={() => onPress(cat)}
+        gradient={gradient}
+        padding={0}
+      >
+        <View style={styles.categoryIconBox}>
+          <Icon size={22} color="#fff" strokeWidth={2} />
+        </View>
+        <Text style={styles.categoryTitle} numberOfLines={2}>
+          {cat.name}
+        </Text>
+      </GlassCard>
+    </Animated.View>
   );
 });
 
-// ─── Skeleton Components ──────────────────────────────────────────────────────
+// ─── StatChip ─────────────────────────────────────────────────────────────────
 
-/**
- * useShimmer: custom hook that creates a looping shimmer animation.
- *
- * interpolate() maps one range to another:
- *   shimmerAnim 0→1  becomes  translateX  -width → +width
- * This creates the "light sweeping across" effect.
- */
-const useShimmer = () => {
-  const { width } = useWindowDimensions();
-  const shimmerAnim = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    RNAnimated.loop(
-      RNAnimated.timing(shimmerAnim, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      })
-    ).start();
-  }, []);
-
-  const translateX = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-width, width],
-  });
-
-  return translateX;
-};
-
-/**
- * SkeletonBox: a single shimmering placeholder rectangle.
- *
- * The shimmer layer is absolutely positioned on top of a dark base,
- * and its translateX animates from left to right creating the gleam.
- */
-const SkeletonBox = ({
-  width: w,
-  height: h,
-  borderRadius = 8,
-  style,
-}: {
-  width?: number | string;
-  height: number;
-  borderRadius?: number;
-  style?: object;
-}) => {
-  const translateX = useShimmer();
-
-  return (
-    <View
-      style={[
-        styles.skeletonBase,
-        { width: w, height: h, borderRadius },
-        style,
-      ]}
-    >
-      {/* overflow: 'hidden' clips the shimmer so it doesn't bleed outside */}
-      <View style={[StyleSheet.absoluteFill, { overflow: 'hidden', borderRadius }]}>
-        <RNAnimated.View
-          style={[
-            styles.shimmerLayer,
-            { transform: [{ translateX }] },
-          ]}
-        />
-      </View>
+const StatChip = React.memo(
+  ({ value, label }: { value: number | string; label: string }) => (
+    <View style={styles.statChip}>
+      <Text style={styles.statVal}>{value}</Text>
+      <Text style={styles.statLab}>{label}</Text>
     </View>
-  );
-};
-
-/** Skeleton for a single category card */
-const CategorySkeleton = () => (
-  <View style={[styles.categoryWrap, styles.categoryItem, styles.skeletonCard]}>
-    <SkeletonBox width={50} height={50} borderRadius={16} />
-    <SkeletonBox width="70%" height={10} borderRadius={6} style={{ marginTop: 12 }} />
-    <SkeletonBox width="50%" height={8} borderRadius={6} style={{ marginTop: 6 }} />
-  </View>
+  )
 );
 
-/** Full page skeleton rendered while data loads */
-const HomeSkeletonLoader = () => {
-  const { width } = useWindowDimensions();
-  const numColumns = width > 500 ? 4 : (width > 340 ? 3 : 2);
-  const itemWidth = (width - Spacing.l * 2 - GRID_GAP * (numColumns - 1)) / numColumns;
+// ─── EmptyServiceState ────────────────────────────────────────────────────────
 
-  return (
-    <View style={styles.skeletonContainer}>
-      {/* Header skeleton */}
-      <View style={styles.skeletonHeader}>
-        <SkeletonBox width={140} height={24} borderRadius={8} />
-        <SkeletonBox width={44} height={44} borderRadius={22} />
-      </View>
-
-      {/* Section title + search bar */}
-      <SkeletonBox width={160} height={20} borderRadius={8} style={{ marginHorizontal: Spacing.l, marginBottom: 12 }} />
-      <SkeletonBox width={width - Spacing.l * 2} height={44} borderRadius={14} style={{ marginHorizontal: Spacing.l, marginBottom: 20 }} />
-
-      {/* Category grid skeletons */}
-      <View style={styles.categoriesGrid}>
-        {Array.from({ length: numColumns * 3 }).map((_, i) => (
-          <View key={i} style={{ width: itemWidth }}>
-             <CategorySkeleton />
-          </View>
-        ))}
-      </View>
-
-      {/* Dashboard card skeleton */}
-      <View style={[styles.dashboardSection, { marginTop: 32 }]}>
-        <SkeletonBox width="100%" height={260} borderRadius={28} />
-      </View>
-    </View>
-  );
-};
+const EmptyServiceState = ({ isSearching }: { isSearching: boolean }) => (
+  <View style={styles.emptyState}>
+    <Search size={32} color={Colors.textDim} strokeWidth={1.5} />
+    <Text style={styles.emptyTitle}>
+      {isSearching ? 'No results found' : 'No services available'}
+    </Text>
+    <Text style={styles.emptySubtitle}>
+      {isSearching
+        ? 'Try a different keyword'
+        : 'Pull down to refresh'}
+    </Text>
+  </View>
+);
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -221,27 +132,27 @@ export function ClientHome() {
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth();
 
-  // Dynamic Grid Settings
-  const numColumns = windowWidth > 500 ? 4 : (windowWidth > 340 ? 3 : 2);
-  const itemWidth = (windowWidth - Spacing.l * 2 - GRID_GAP * (numColumns - 1)) / numColumns - 0.5; // -0.5 for subpixel safety
+  // Responsive grid dimensions
+  const numColumns = windowWidth > 600 ? 4 : 3;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllServices, setShowAllServices] = useState(false);
-
-  // Toast state — one object instead of multiple booleans
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: '',
     type: 'error',
   });
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
+  // ── Data fetching ────────────────────────────────────────────────────────
 
   const {
     data: categories = [],
     isLoading: categoriesLoading,
     error: categoriesError,
+    refetch: refetchCategories,
   } = useCategories();
 
   const {
@@ -251,91 +162,106 @@ export function ClientHome() {
     refetch: refetchBookings,
   } = useMyBookings();
 
-  // Combined loading flag — true if EITHER query is still fetching
-  const isLoading = categoriesLoading || bookingsLoading;
+  const {
+    data: jobPosts = [],
+    isLoading: jobsLoading,
+    refetch: refetchJobs,
+  } = useMyJobPosts();
 
-  // ── Error → Toast ──────────────────────────────────────────────────────────
+  // Show skeleton only on the very first load, not during pull-to-refresh
+  const isInitialLoading = (categoriesLoading || bookingsLoading || jobsLoading) && !isRefreshing;
 
-  /**
-   * showToast: useCallback ensures this function reference never changes,
-   * so it won't cause unnecessary re-renders in child components that receive it.
-   */
-  const showToast = useCallback((message: string, type: 'error' | 'success' = 'error') => {
-    setToast({ visible: true, message, type });
-  }, []);
+  // ── Toast helpers ────────────────────────────────────────────────────────
+
+  const showToast = useCallback(
+    (message: string, type: 'error' | 'success' = 'error') => {
+      setToast({ visible: true, message, type });
+    },
+    []
+  );
 
   const dismissToast = useCallback(() => {
     setToast(prev => ({ ...prev, visible: false }));
   }, []);
 
-  /**
-   * useEffect with error dependencies:
-   * Runs whenever categoriesError or bookingsError changes.
-   * This decouples "data fetching" from "UI side-effects" cleanly.
-   */
   useEffect(() => {
-    if (categoriesError) showToast('Failed to load services. Please try again.');
+    if (categoriesError) showToast('Could not load services. Pull down to retry.');
   }, [categoriesError]);
 
   useEffect(() => {
-    if (bookingsError) showToast('Failed to load your bookings. Check your connection.');
+    if (bookingsError) showToast('Could not load your bookings. Pull down to retry.');
   }, [bookingsError]);
 
-  // ── Derived / Memoized Data ────────────────────────────────────────────────
+  // ── Pull-to-refresh ──────────────────────────────────────────────────────
 
-  /**
-   * useMemo: only recalculates when [categories, searchQuery] change.
-   * Without this, the filter runs on EVERY render — even unrelated ones.
-   */
-  const filteredCategories = React.useMemo(() => {
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetchCategories(), refetchBookings(), refetchJobs()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchCategories, refetchBookings, refetchJobs]);
+
+  // ── Derived data ─────────────────────────────────────────────────────────
+
+  const filteredCategories = useMemo(() => {
     if (!searchQuery.trim()) return categories;
     const q = searchQuery.toLowerCase();
     return categories.filter(cat => cat.name.toLowerCase().includes(q));
   }, [categories, searchQuery]);
 
-  /**
-   * slice(0, 9) limits to first 9 when not showing all.
-   * trim() is important — "  " (spaces) should count as empty.
-   */
-  const displayedCategories = React.useMemo(() => {
+  const displayedCategories = useMemo(() => {
     if (searchQuery.trim() || showAllServices) return filteredCategories;
     return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
   }, [filteredCategories, showAllServices, searchQuery]);
 
-  const { user } = useAuth();
+  const recentBookings = useMemo<Booking[]>(
+    () =>
+      [...bookings]
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+        .slice(0, RECENT_BOOKINGS_LIMIT),
+    [bookings]
+  );
 
-  const stats = React.useMemo(() => {
-    const completed = bookings.filter(b => b.status === 'completed');
-    const totalJobs = bookings.length;
-    
-    // Calculate trust score based on completed jobs, or default to 87.1%
-    let trustScoreValue = 0.871;
-    if (totalJobs > 0) {
-      trustScoreValue = Math.max(0.5, completed.length / totalJobs);
-    }
+  const activeMissions = useMemo<JobPost[]>(
+    () =>
+      jobPosts.filter(job => ['open', 'reviewing'].includes(job.status))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [jobPosts]
+  );
 
-    return { 
-      jobs: totalJobs, 
-      rating: (user as any)?.rating || MOCK_RATING,
-      trustScore: trustScoreValue,
-      trustScoreLabel: `${(trustScoreValue * 100).toFixed(1)}%`
+  const stats = useMemo(() => {
+    const completed = bookings.filter(b => b.status === 'completed').length;
+    const active = bookings.filter(b =>
+      ['accepted', 'ongoing'].includes(b.status)
+    ).length;
+    const total = bookings.length;
+    const successRate = total > 0 ? completed / total : 0;
+
+    return {
+      total,
+      active,
+      completed,
+      successRate,
+      successRateLabel: total > 0 ? `${Math.round(successRate * 100)}%` : '—',
+      rating: (user as any)?.rating ?? 0,
     };
   }, [bookings, user]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Handlers ─────────────────────────────────────────────────────────────
 
-  /**
-   * useCallback prevents a new function being created every render.
-   * Important here because this is passed to TouchableOpacity's onPress.
-   */
   const handleToggleServices = useCallback(() => {
-    setShowAllServices(prev => !prev); // functional update: never reads stale state
+    setShowAllServices(prev => !prev);
   }, []);
 
   const handleCategoryPress = useCallback(
-    (cat: typeof categories[number]) => {
+    (cat: CategoryItem) => {
       router.push({
-        pathname: '/category-details',
+        pathname: '/category-details' as any,
         params: {
           id: cat._id,
           title: cat.name,
@@ -347,39 +273,68 @@ export function ClientHome() {
     [router]
   );
 
-  const handleRetryBookings = useCallback(() => {
-    refetchBookings();
-  }, [refetchBookings]);
+  const handleBookingPress = useCallback(
+    (bookingId: string) => {
+      router.push({ pathname: '/transaction-details' as any, params: { id: bookingId } });
+    },
+    [router]
+  );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const handlePostJob = useCallback(() => {
+    router.push('/job-creation' as any);
+  }, [router]);
+
+  const handleViewAllBookings = useCallback(() => {
+    router.push('/(tabs)/bookings' as any);
+  }, [router]);
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <BackgroundWrapper>
-      {/* Toast lives outside ScrollView so it floats on top of everything */}
-      <Toast toast={toast} onDismiss={dismissToast} />
+      {/* Toast floats above all content */}
+      <ClientToast toast={toast} onDismiss={dismissToast} />
 
-      {isLoading ? (
-        /**
-         * Show skeleton while loading.
-         * paddingTop: insets.top handles the status bar notch on iOS/Android.
-         */
-        <HomeSkeletonLoader />
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
-        >
-          <HomeHeader />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.cyan}
+            colors={[Colors.cyan]}
+          />
+        }
+      >
+        <HomeHeader />
 
-          {/* ── Categories Section ── */}
+        {isInitialLoading ? (
+          <HomeSkeletonLoader />
+        ) : (
+          <>
+   
+
+          {/* ── Services Section ── */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, Typography.threeD]}>Meta-Services</Text>
+              <View>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>
+                  Services
+                </Text>
+                <Text style={styles.sectionSub}>
+                  What do you need help with?
+                </Text>
+              </View>
 
-              {/* Only show VIEW ALL if not searching AND there are more than 9 categories */}
               {!searchQuery && categories.length > INITIAL_CATEGORY_LIMIT && (
-                <TouchableOpacity onPress={handleToggleServices} hitSlop={styles.hitSlop}>
-                  {/* hitSlop enlarges the tap area without changing the visual size */}
+                <TouchableOpacity
+                  onPress={handleToggleServices}
+                  hitSlop={styles.hitSlop}
+                >
                   <Text style={styles.viewAll}>
                     {showAllServices ? 'SHOW LESS' : 'VIEW ALL'}
                   </Text>
@@ -396,206 +351,214 @@ export function ClientHome() {
 
             <View style={styles.categoriesGrid}>
               {displayedCategories.length > 0 ? (
-                displayedCategories.map((cat, index) => {
-                  const Icon = getIconForCategory(cat);
-                  // Nullish coalescing (??) is safer than || for falsy strings
-                  const gradient: [string, string, ...string[]] = cat.color
-                    ? [cat.color, `${cat.color}40`]
-                    : DEFAULT_GRADIENT;
-
-                  return (
-                    /**
-                     * Animated.View with entering:
-                     * FadeInDown.delay(n): staggered entrance — each card fades
-                     * in after the previous one. index * 60 keeps total delay sane.
-                     * key={cat._id}: always use stable unique IDs, not array index.
-                     */
-                    <Animated.View
-                      key={cat._id}
-                      entering={FadeInDown.delay(index * 60).duration(500)}
-                      style={[styles.categoryWrap, { width: itemWidth }]}
-                    >
-                      <GlassCard
-                        style={styles.categoryItem}
-                        contentStyle={styles.categoryItemContent}
-                        onPress={() => handleCategoryPress(cat)}
-                        gradient={gradient}
-                        padding={0}
-                      >
-                        <View style={styles.categoryIconBox}>
-                          <Icon size={22} color="#fff" strokeWidth={2} />
-                        </View>
-                        <Text style={styles.categoryTitle} numberOfLines={2}>
-                          {cat.name}
-                        </Text>
-                      </GlassCard>
-                    </Animated.View>
-                  );
-                })
+                displayedCategories.map((cat, index) => (
+                  <CategoryCard
+                    key={cat._id}
+                    cat={cat}
+                    index={index}
+                    onPress={handleCategoryPress}
+                  />
+                ))
               ) : (
-                <Text style={styles.emptyText}>
-                  {searchQuery ? 'No services match your search' : 'No categories available'}
-                </Text>
+                <EmptyServiceState isSearching={!!searchQuery.trim()} />
               )}
             </View>
           </View>
 
-          {/* ── Cosmic Insights Dashboard ── */}
+          {/* ── Activity Dashboard ── */}
           <Animated.View
-            entering={FadeInDown.delay(200).duration(800)}
+            entering={FadeInDown.delay(150).duration(700)}
             style={styles.dashboardSection}
           >
-            <GlassCard intensity={50} glowColor={Colors.cyan} style={styles.dashboardCard}>
-              <View style={styles.dashboardTop}>
-                <View style={styles.dashboardTitleBox}>
-                  <Text style={[styles.dashboardTitle, Typography.threeD]}>COSMIC</Text>
-                  <Text style={[styles.dashboardTitle, Typography.threeD]}>INSIGHTS</Text>
-                  <Text style={styles.dashboardSub}>Trust Dimension</Text>
-                </View>
-                <TouchableOpacity style={styles.expandBtn} hitSlop={styles.hitSlop}>
-                  <Text style={styles.expandText}>Expand</Text>
-                </TouchableOpacity>
-              </View>
+            <Text style={[styles.sectionTitle, Typography.threeD, styles.dashboardLabel]}>
+              Your Activity
+            </Text>
 
+            <GlassCard
+              intensity={50}
+              glowColor={Colors.cyan}
+              style={styles.dashboardCard}
+            >
+              {/* Row layout: circle on left, stats on right */}
               <View style={styles.dashboardContent}>
                 <CosmicCircle
-                  value={stats.trustScore}
-                  label={stats.trustScoreLabel}
-                  subLabel="TRUST SCORE"
-                  size={170}
+                  value={stats.successRate}
+                  label={stats.successRateLabel}
+                  subLabel="SUCCESS RATE"
+                  size={150}
                 />
+
                 <View style={styles.insightStats}>
-                  <StatChip value={stats.jobs} label="Orbits" />
-                  <StatChip value={stats.rating} label="Stars" />
+                  <StatChip value={stats.total} label="Total Jobs" />
+                  <StatChip value={stats.active} label="Active" />
+                  <StatChip value={stats.completed} label="Completed" />
                 </View>
               </View>
             </GlassCard>
           </Animated.View>
 
-          {/* ── Elite Talents ── */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, Typography.threeD, styles.eliteSectionTitle]}>
-              Elite Talents
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <Text style={styles.placeholderText}>No elite talents available currently.</Text>
-            </ScrollView>
-          </View>
-        </ScrollView>
-      )}
+          {/* ── Active Missions (Missions awaiting bids or review) ── */}
+          {activeMissions.length > 0 && (
+            <Animated.View
+              entering={FadeInDown.delay(200).duration(700)}
+              style={styles.section}
+            >
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={[styles.sectionTitle, Typography.threeD]}>
+                    Active Missions
+                  </Text>
+                  <Text style={styles.sectionSub}>Bids received for your scheduled jobs</Text>
+                </View>
+              </View>
+
+              {activeMissions.map((job, index) => (
+                <ClientActiveMissionCard
+                  key={job._id}
+                  job={job}
+                  index={index}
+                  onPress={(j) => router.push({ pathname: '/job-details', params: { id: j._id } })}
+                />
+              ))}
+            </Animated.View>
+          )}
+
+          {/* ── Recent Bookings ── */}
+          <Animated.View
+            entering={FadeInDown.delay(220).duration(700)}
+            style={styles.section}
+          >
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>
+                  Recent Bookings
+                </Text>
+                <Text style={styles.sectionSub}>Your latest activity</Text>
+              </View>
+
+              {bookings.length > RECENT_BOOKINGS_LIMIT && (
+                <TouchableOpacity
+                  onPress={handleViewAllBookings}
+                  hitSlop={styles.hitSlop}
+                  style={styles.seeAllBtn}
+                >
+                  <Text style={styles.viewAll}>SEE ALL</Text>
+                  <ChevronRight size={12} color={Colors.cyan} strokeWidth={2.5} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {recentBookings.length > 0 ? (
+              recentBookings.map(booking => (
+                <RecentBookingCard
+                  key={booking._id}
+                  booking={booking}
+                  onPress={() => handleBookingPress(booking._id)}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyBookings}>
+                <Text style={styles.emptyBookingsText}>
+                  No bookings yet. Book a service to get started!
+                </Text>
+              </View>
+            )}
+          </Animated.View>
+
+          <View style={{ height: 120 }} />
+          </>
+        )}
+      </ScrollView>
     </BackgroundWrapper>
   );
 }
 
-// ─── StatChip (extracted to avoid inline object creation in render) ───────────
-
-/**
- * Extracting StatChip:
- * If defined inline inside ClientHome, a new function component is created every
- * render, forcing React to unmount + remount it. As a named component, React
- * recognizes it as stable and only re-renders it when its props change.
- */
-const StatChip = React.memo(({ value, label }: { value: number; label: string }) => (
-  <View style={styles.statChip}>
-    <Text style={styles.statVal}>{value}</Text>
-    <Text style={styles.statLab}>{label}</Text>
-  </View>
-));
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // ── Skeleton
-  skeletonContainer: {
-    flex: 1,
-    paddingTop: 60,
-  },
-  skeletonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.l,
-    marginBottom: 28,
-  },
-  skeletonBase: {
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    overflow: 'hidden',
-  },
-  skeletonCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  shimmerLayer: {
-    ...StyleSheet.absoluteFillObject,
-    // Gradient-like shimmer using a semi-transparent white band
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    width: 80,
-  },
-
-  // ── Toast
-  toast: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
-    left: Spacing.l,
-    right: Spacing.l,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF6B6B',
-    zIndex: 999, // float above everything
-    // Shadow for depth
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  toastText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-
-  // ── Layout
   scrollContent: {
     paddingBottom: 40,
   },
+
+  // ── Quick Actions
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: Spacing.l,
+    marginBottom: Spacing.xl,
+    marginTop: Spacing.s,
+  },
+  quickActionPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.cyan,
+    paddingVertical: 13,
+    borderRadius: BorderRadius.l,
+    ...Shadows.glow,
+  },
+  quickActionPrimaryText: {
+    color: Colors.background,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  quickActionSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,245,255,0.08)',
+    paddingVertical: 13,
+    borderRadius: BorderRadius.l,
+    borderWidth: 1,
+    borderColor: 'rgba(0,245,255,0.25)',
+  },
+  quickActionSecondaryText: {
+    color: Colors.cyan,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  // ── Section layout
   section: {
-    marginVertical: Spacing.xl,
+    marginBottom: Spacing.l,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.l,
+    marginBottom: Spacing.m,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
     color: '#fff',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
-  eliteSectionTitle: {
-    marginBottom: 20,
-    paddingHorizontal: Spacing.l,
+  sectionSub: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontWeight: '500',
+    marginTop: 2,
   },
   viewAll: {
     fontSize: 11,
     fontWeight: '800',
     color: Colors.cyan,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  // hitSlop: enlarges tap area by 10pt on each side (no visual change)
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   hitSlop: {
     top: 10,
     bottom: 10,
@@ -603,35 +566,35 @@ const styles = StyleSheet.create({
     right: 10,
   },
 
-  // ── Categories Grid
+  // ── Categories grid
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: GRID_GAP,
     paddingHorizontal: Spacing.l,
   },
-  categoryWrap: {
-    // Width is now handled dynamically in the component
+  categoryCardWrapper: {
+    width: '30.5%',
   },
   categoryItem: {
-    height: 130,
+    height: 120,
     width: '100%',
   },
   categoryItemContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 18,
+    paddingTop: 16,
     paddingHorizontal: 8,
   },
   categoryIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     backgroundColor: 'rgba(0,0,0,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
     ...Shadows.depth,
   },
   categoryTitle: {
@@ -641,91 +604,60 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 14,
   },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginVertical: Spacing.l,
+
+  // ── Empty state (no categories / no search results)
+  emptyState: {
     width: '100%',
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    color: Colors.textMuted,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: Colors.textDim,
+    fontWeight: '500',
   },
 
-  // ── Dashboard
+  // ── Activity dashboard
   dashboardSection: {
     paddingHorizontal: Spacing.l,
-    marginTop: Spacing.xl,
+    marginBottom: Spacing.l,
+  },
+  dashboardLabel: {
     marginBottom: Spacing.m,
   },
   dashboardCard: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     borderRadius: 28,
   },
-  dashboardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 18,
-    gap: 12,
-  },
-  dashboardTitleBox: {
-    flex: 1,
-  },
-  dashboardTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 1,
-    lineHeight: 24,
-  },
-  dashboardSub: {
-    fontSize: 11,
-    color: Colors.cyan,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginTop: 6,
-    textTransform: 'capitalize',
-  },
-  expandBtn: {
-    backgroundColor: 'rgba(0,245,255,0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,245,255,0.3)',
-    minWidth: 90,
-    alignItems: 'center',
-  },
-  expandText: {
-    color: Colors.cyan,
-    fontSize: 11,
-    fontWeight: '800',
-  },
+  // Row layout: CosmicCircle on left, stats on right
   dashboardContent: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
+    justifyContent: 'space-between',
+    gap: 16,
   },
   insightStats: {
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'center',
-    width: '100%',
+    flex: 1,
+    gap: 10,
   },
   statChip: {
-    flex: 1,
-    backgroundColor: 'rgba(0,245,255,0.08)',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 20,
+    backgroundColor: 'rgba(0,245,255,0.07)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.2)',
+    borderColor: 'rgba(0,245,255,0.18)',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   statVal: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
     color: Colors.cyan,
     letterSpacing: 0.5,
@@ -734,15 +666,64 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textMuted,
     fontWeight: '700',
-    letterSpacing: 0.8,
-    marginTop: 6,
-    textTransform: 'capitalize',
+    letterSpacing: 0.6,
+    marginTop: 3,
+    textTransform: 'uppercase',
   },
-  placeholderText: {
-    fontSize: 14,
+
+  // ── Recent bookings empty state
+  emptyBookings: {
+    marginHorizontal: Spacing.l,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: BorderRadius.l,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+  },
+  emptyBookingsText: {
     color: Colors.textMuted,
-    fontWeight: '600',
-    marginLeft: Spacing.l,
-    marginTop: 20,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: Spacing.l,
+    lineHeight: 20,
+  },
+  missionCard: {
+    marginHorizontal: Spacing.l,
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  missionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  missionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  missionDesc: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  bidCountBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  bidCountText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
 });

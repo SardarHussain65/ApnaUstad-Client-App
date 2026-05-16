@@ -19,11 +19,8 @@ export default function IncomingRequestScreen() {
   const handleAccept = async () => {
     try {
       if (urgency === 'instant') {
-        const response = await api.post(`/jobs/${jobId}/accept-instant`);
-        router.replace({
-          pathname: '/transaction-details',
-          params: { id: response.data.data._id }
-        });
+        await api.post(`/jobs/${jobId}/accept-instant`);
+        router.replace('/(tabs)' as any);
       } else {
         router.replace({
           pathname: '/bid-submission',

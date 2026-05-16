@@ -43,6 +43,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { addAlpha } from '../utils/colorUtils';
 import { useCreateJobMutation, useUploadJobImagesMutation, useToast, useConfirmModal } from '../hooks';
 import { ConfirmModal, AlertModal } from '../components/ui';
 
@@ -83,11 +84,11 @@ interface SectionLabelProps {
 }
 const SectionLabel = ({ icon: Icon, label, color = P.cyan }: SectionLabelProps) => (
   <View style={sectionStyles.row}>
-    <View style={[sectionStyles.iconWrap, { backgroundColor: color + '18' }]}>
+    <View style={[sectionStyles.iconWrap, { backgroundColor: addAlpha(color, '18') }]}>
       <Icon size={11} color={color} strokeWidth={2.5} />
     </View>
     <Text style={[sectionStyles.label, { color }]}>{label}</Text>
-    <View style={[sectionStyles.line, { backgroundColor: color + '22' }]} />
+    <View style={[sectionStyles.line, { backgroundColor: addAlpha(color, '22') }]} />
   </View>
 );
 
@@ -109,7 +110,7 @@ interface GlassInputProps {
 const GlassInput = ({ children, style, glowColor }: GlassInputProps) => (
   <View style={[
     glassStyles.card,
-    glowColor ? { borderColor: glowColor + '30', shadowColor: glowColor, shadowOpacity: 0.15, shadowRadius: 12 } : {},
+    glowColor ? { borderColor: addAlpha(glowColor, '30'), shadowColor: glowColor, shadowOpacity: 0.15, shadowRadius: 12 } : {},
     style,
   ]}>
     {children}
@@ -133,7 +134,7 @@ interface StatBadgeProps {
   color: string;
 }
 const StatBadge = ({ label, value, color }: StatBadgeProps) => (
-  <View style={[badgeStyles.wrap, { borderColor: color + '25', backgroundColor: color + '0C' }]}>
+  <View style={[badgeStyles.wrap, { borderColor: addAlpha(color, '25'), backgroundColor: addAlpha(color, '0C') }]}>
     <Text style={[badgeStyles.value, { color }]}>{value}</Text>
     <Text style={badgeStyles.label}>{label}</Text>
   </View>
@@ -437,9 +438,9 @@ export default function JobCreationScreen() {
         >
 
           {/* ── Mission Header Card ── */}
-          <Animated.View entering={FadeInDown.delay(150).duration(600)} style={[styles.missionCard, { borderColor: accentColor + '20' }]}>
+          <Animated.View entering={FadeInDown.delay(150).duration(600)} style={[styles.missionCard, { borderColor: addAlpha(accentColor, '20') }]}>
             <LinearGradient
-              colors={[accentColor + '15', P.surface + 'AA']}
+              colors={[addAlpha(accentColor, '15'), addAlpha(P.surface, 'AA')]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1.2, y: 1.2 }}
               style={styles.missionCardGradient}
@@ -450,9 +451,9 @@ export default function JobCreationScreen() {
 
               <View style={styles.missionCardInner}>
                 {/* Icon orb */}
-                <View style={[styles.orbWrap, { borderColor: accentColor + '50' }]}>
+                <View style={[styles.orbWrap, { borderColor: addAlpha(accentColor, '50') }]}>
                   <LinearGradient
-                    colors={[accentColor + '25', accentColor + '05']}
+                    colors={[addAlpha(accentColor, '25'), addAlpha(accentColor, '05')]}
                     style={StyleSheet.absoluteFill}
                   />
                   {targetWorkerName

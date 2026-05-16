@@ -16,6 +16,8 @@ export {
   type Review,
   type AppNotification,
   type NotificationsResponse,
+  type Booking,
+  type BookingPerson,
 } from './queries/useData';
 
 export {
@@ -23,7 +25,10 @@ export {
   useNearbyJobs,
   useJobDetails,
   useBidsByJob,
+  useWorkerBids,
   type Message,
+  type Job,
+  type Bid,
 } from './queries/useMessagesAndJobs';
 
 // Mutation Hooks - Data Changes
@@ -32,6 +37,7 @@ export {
   useSubmitBidMutation,
   useAcceptBidMutation,
   useAcceptInstantJobMutation,
+  useWithdrawBidMutation,
   useUpdateBookingStatusMutation,
   usePayBookingMutation,
   useCreateReviewMutation,

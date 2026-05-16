@@ -127,9 +127,14 @@ export default function FindingWorkerScreen() {
       setStatus('SENSORS TRIPPED! SPECIALIST DETECTED...');
     });
 
+    const unsubscribeWithdrawn = socketService.on('bid:withdrawn', (payload: any) => {
+      setApplicants(prev => prev.filter(app => app._id !== payload?.bidId));
+    });
+
     return () => {
       unsubscribeAssigned();
       unsubscribeBids();
+      unsubscribeWithdrawn();
     };
   }, []);
 

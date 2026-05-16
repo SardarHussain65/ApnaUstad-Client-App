@@ -13,28 +13,61 @@ export interface Message {
   createdAt: string;
 }
 
-interface Job {
+export interface Job {
   _id: string;
-  title: string;
   description: string;
   category: string;
-  status: 'open' | 'in-progress' | 'completed' | 'cancelled';
-  clientId: string;
+  urgency?: 'instant' | 'scheduled';
+  status: 'open' | 'assigned' | 'closed' | 'cancelled' | 'reviewing' | 'in-progress' | 'ongoing' | 'completed';
+  customer?: string | {
+    _id: string;
+    fullName?: string;
+    profileImage?: string;
+    phone?: string;
+  };
+  worker?: string | {
+    _id: string;
+    fullName?: string;
+    profileImage?: string;
+    phone?: string;
+  };
+  clientId?: string;
+  address?: string;
+  amount?: number;
   budget?: number;
-  location?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+  location?: string | {
+    type: 'Point';
+    coordinates: number[];
+  };
+  expiresAt?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-interface Bid {
+export interface Bid {
   _id: string;
-  jobId: string;
-  workerId: string;
-  amount: number;
-  description: string;
+  jobPost?: Job | string;
+  worker?: string | {
+    _id: string;
+    fullName?: string;
+    profileImage?: string;
+    averageRating?: number;
+    hourlyRate?: number;
+  };
+  jobId?: string;
+  workerId?: string;
+  amount?: number;
+  description?: string;
+  message?: string;
+  proposedPrice?: number;
   estimatedDays?: number;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: string;
+  updatedAt?: string;
 }
 
 // Fetch Functions
@@ -59,6 +92,13 @@ const fetchJobDetails = async (id: string): Promise<Job> => {
 
 const fetchBidsByJob = async (jobId: string): Promise<Bid[]> => {
   const response = await api.get(`/jobs/${jobId}/bids`);
+  return response.data.data || [];
+};
+
+const fetchWorkerBids = async (): Promise<Bid[]> => {
+  const response = await api.get('/jobs/my-bids', {
+    params: { status: 'pending', limit: 20 },
+  });
   return response.data.data || [];
 };
 
@@ -102,6 +142,16 @@ export function useBidsByJob(jobId: string | undefined, options?: Omit<UseQueryO
     queryFn: () => fetchBidsByJob(jobId!),
     enabled: !!jobId,
     staleTime: 1000 * 60 * 2, // 2 minutes - bids are somewhat time-sensitive
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useWorkerBids(options?: Omit<UseQueryOptions<Bid[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<Bid[]>({
+    queryKey: queryKeys.bids.byWorker(),
+    queryFn: fetchWorkerBids,
+    staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
     ...options,
   });

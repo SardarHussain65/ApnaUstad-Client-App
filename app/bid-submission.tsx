@@ -57,7 +57,7 @@ export default function BidSubmissionScreen() {
         message,
         proposedPrice: parseInt(proposedPrice),
       });
-      router.replace('/(tabs)/bookings');
+      router.replace('/(tabs)' as any);
     } catch (error) {
       console.error('Error submitting bid:', error);
     } finally {
@@ -68,11 +68,8 @@ export default function BidSubmissionScreen() {
   const handleAcceptInstant = async () => {
     setIsSubmitting(true);
     try {
-      const response = await api.post(`/jobs/${jobId}/accept-instant`);
-      router.replace({
-        pathname: '/transaction-details',
-        params: { id: response.data.data._id }
-      });
+      await api.post(`/jobs/${jobId}/accept-instant`);
+      router.replace('/(tabs)' as any);
     } catch (error) {
       console.error('Error accepting instant job:', error);
     } finally {
@@ -143,7 +140,7 @@ export default function BidSubmissionScreen() {
 
           {urgency === 'instant' && (
             <View style={styles.instantInfo}>
-              <Text style={styles.instantText}>This is an immediate deployment request. Accepting this mission requires immediate dispatch to the client's location.</Text>
+              <Text style={styles.instantText}>This is an immediate deployment request. Accepting this mission requires immediate dispatch to the client location.</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Clock size={16} color={Colors.cyan} />
