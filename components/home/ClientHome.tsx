@@ -43,6 +43,7 @@ import { HomeSkeletonLoader } from './HomeSkeletonLoader';
 import { ClientToast, ToastState } from './ClientToast';
 import { RecentBookingCard } from './RecentBookingCard';
 import { ClientActiveMissionCard } from './ClientActiveMissionCard';
+import { ActiveBiddingBanner } from './ActiveBiddingBanner';
 import { useAuth } from '../../context/AuthContext';
 import { Booking, JobPost } from '../../hooks';
 
@@ -234,6 +235,11 @@ export function ClientHome() {
     [jobPosts]
   );
 
+  const activeInstantJob = useMemo<JobPost | undefined>(
+    () => activeMissions.find(job => job.urgency === 'instant'),
+    [activeMissions]
+  );
+
   const stats = useMemo(() => {
     const completed = bookings.filter(b => b.status === 'completed').length;
     const active = bookings.filter(b =>
@@ -287,6 +293,13 @@ export function ClientHome() {
   const handleViewAllBookings = useCallback(() => {
     router.push('/(tabs)/bookings' as any);
   }, [router]);
+
+  const handleResumeRadar = useCallback(
+    (jobId: string) => {
+      router.push({ pathname: '/finding-worker', params: { jobId } });
+    },
+    [router]
+  );
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -417,7 +430,13 @@ export function ClientHome() {
                   key={job._id}
                   job={job}
                   index={index}
-                  onPress={(j) => router.push({ pathname: '/job-details', params: { id: j._id } })}
+                  onPress={(j) => {
+                    if (j.urgency === 'instant' && ['open', 'reviewing'].includes(j.status)) {
+                      router.push({ pathname: '/finding-worker', params: { jobId: j._id } });
+                    } else {
+                      router.push({ pathname: '/job-details', params: { id: j._id } });
+                    }
+                  }}
                 />
               ))}
             </Animated.View>
@@ -465,10 +484,17 @@ export function ClientHome() {
             )}
           </Animated.View>
 
-          <View style={{ height: 120 }} />
+          <View style={{ height: activeInstantJob ? 180 : 120 }} />
           </>
         )}
       </ScrollView>
+
+      {activeInstantJob && (
+        <ActiveBiddingBanner
+          job={activeInstantJob}
+          onPress={handleResumeRadar}
+        />
+      )}
     </BackgroundWrapper>
   );
 }

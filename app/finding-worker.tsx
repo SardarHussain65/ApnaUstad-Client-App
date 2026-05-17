@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Image, Modal, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Image, Modal, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Shield, Star, MapPin, Check, Briefcase, Zap } from 'lucide-react-native';
@@ -21,7 +21,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { socketService } from '../services/socketService';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAcceptBidMutation } from '../hooks/mutations/useMutations';
+import { useAcceptBidMutation, useCancelJobMutation } from '../hooks/mutations/useMutations';
 import { useBidsByJob } from '../hooks/queries/useMessagesAndJobs';
 import Toast from 'react-native-toast-message';
 
@@ -71,6 +71,39 @@ export default function FindingWorkerScreen() {
     enabled: !!jobId,
     refetchInterval: 30000, // Reduced polling frequency to 30 seconds
   });
+
+  const { mutate: cancelJob, isPending: isCancelling } = useCancelJobMutation({
+    onSuccess: () => {
+      Toast.show({
+        type: 'success',
+        text1: 'MISSION ABORTED',
+        text2: 'The job post has been cancelled successfully.',
+      });
+      router.replace('/(tabs)/home');
+    },
+    onError: (err: any) => {
+      Toast.show({
+        type: 'error',
+        text1: 'CANCELLATION FAILED',
+        text2: err.response?.data?.message || 'Could not cancel the job.',
+      });
+    }
+  });
+
+  const handleCancelJob = () => {
+    Alert.alert(
+      "Abort Mission",
+      "Are you sure you want to cancel this mission?",
+      [
+        { text: "No, Keep Scanning", style: "cancel" },
+        { 
+          text: "Yes, Abort", 
+          style: "destructive", 
+          onPress: () => cancelJob({ jobId: jobId as string }) 
+        }
+      ]
+    );
+  };
 
   useEffect(() => {
     if (initialBids && initialBids.length > 0) {
@@ -241,11 +274,16 @@ export default function FindingWorkerScreen() {
         </View>
 
         <TouchableOpacity 
-          style={styles.cancelBtn}
-          onPress={() => router.back()}
+          style={[styles.cancelBtn, isCancelling && { opacity: 0.5 }]}
+          onPress={handleCancelJob}
+          disabled={isCancelling}
         >
-          <X color={Colors.textMuted} size={20} />
-          <Text style={styles.cancelText}>ABORT MISSION</Text>
+          {isCancelling ? (
+            <ActivityIndicator color={Colors.textMuted} size="small" />
+          ) : (
+            <X color={Colors.textMuted} size={20} />
+          )}
+          <Text style={styles.cancelText}>{isCancelling ? 'ABORTING...' : 'ABORT MISSION'}</Text>
         </TouchableOpacity>
 
         {/* Worker Details Modal */}

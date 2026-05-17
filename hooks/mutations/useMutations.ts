@@ -38,6 +38,10 @@ interface AcceptBidPayload {
   bidId: string;
 }
 
+interface CancelJobPayload {
+  jobId: string;
+}
+
 interface UpdateBookingStatusPayload {
   bookingId: string;
   status: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
@@ -95,6 +99,11 @@ const submitBid = async (payload: BidSubmissionPayload): Promise<any> => {
 const acceptBid = async (payload: AcceptBidPayload): Promise<any> => {
   const { jobId, bidId } = payload;
   const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
+  return response.data.data;
+};
+
+const cancelJob = async (payload: CancelJobPayload): Promise<any> => {
+  const response = await api.post(`/jobs/${payload.jobId}/cancel`);
   return response.data.data;
 };
 
@@ -190,6 +199,20 @@ export function useAcceptBidMutation(options?: Omit<UseMutationOptions<any, Erro
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+    },
+    ...options,
+  });
+}
+
+export function useCancelJobMutation(options?: Omit<UseMutationOptions<any, Error, CancelJobPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, CancelJobPayload>({
+    mutationFn: cancelJob,
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(variables.jobId) });
     },
     ...options,
   });

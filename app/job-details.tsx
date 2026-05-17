@@ -9,9 +9,12 @@ import {
   ScrollView,
   ActivityIndicator,
   Animated,
+  Alert
 } from 'react-native';
 import { Colors, Typography, Spacing } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { useCancelJobMutation } from '../hooks/mutations/useMutations';
+import Toast from 'react-native-toast-message';
 import AnimatedRN, {
   FadeInDown,
   FadeInUp,
@@ -165,6 +168,39 @@ export default function JobDetailsScreen() {
 
   const scrollY = useSharedValue(0);
   const isPendingBidPreview = params.mode === 'pending-bid' || !!params.pendingBidId;
+
+  const { mutate: cancelJob, isPending: isCancelling } = useCancelJobMutation({
+    onSuccess: () => {
+      Toast.show({
+        type: 'success',
+        text1: 'MISSION CANCELLED',
+        text2: 'The job post has been cancelled.',
+      });
+      router.replace('/(tabs)/home');
+    },
+    onError: (err: any) => {
+      Toast.show({
+        type: 'error',
+        text1: 'CANCELLATION FAILED',
+        text2: err.response?.data?.message || 'Could not cancel the job.',
+      });
+    }
+  });
+
+  const handleCancelJob = () => {
+    Alert.alert(
+      "Cancel Mission",
+      "Are you sure you want to cancel this mission?",
+      [
+        { text: "No, Keep It Open", style: "cancel" },
+        { 
+          text: "Yes, Cancel", 
+          style: "destructive", 
+          onPress: () => cancelJob({ jobId: (job?._id || resolvedId) as string }) 
+        }
+      ]
+    );
+  };
 
   const scrollHandler = useAnimatedScrollHandler({ onScroll: (e) => { scrollY.value = e.contentOffset.y; } });
 
@@ -386,12 +422,23 @@ export default function JobDetailsScreen() {
           </AnimatedRN.View>
         )}
 
-        {/* Client — View Bids */}
+        {/* Client — View Bids & Cancel */}
         {role === 'client' && (job.status === 'open' || job.status === 'reviewing') && (
           <AnimatedRN.View entering={FadeInDown.delay(500).duration(600)} style={[styles.dock, { paddingBottom: insets.bottom + 14 }]}>
             <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
             <View style={styles.dockBorderTop} />
             <View style={[styles.dockRow, { paddingHorizontal: 16 }]}>
+              <TouchableOpacity 
+                style={[styles.declineBtn, isCancelling && { opacity: 0.5 }]} 
+                onPress={handleCancelJob}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <ActivityIndicator color="rgba(255,255,255,0.5)" size="small" />
+                ) : (
+                  <Text style={[styles.declineBtnText, { color: NEON_RED }]}>CANCEL</Text>
+                )}
+              </TouchableOpacity>
               <ActionButton
                 onPress={() => router.push({ pathname: '/bids-list', params: { jobId: job._id } })}
                 colors={[NEON_BLUE, NEON_CYAN]}
