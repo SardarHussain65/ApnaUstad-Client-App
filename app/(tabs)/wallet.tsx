@@ -3,45 +3,53 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
-import Animated, { FadeInDown, FadeInRight, LinearTransition, Layout } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowUpRight, ArrowDownRight, Wallet, History, CreditCard, ChevronRight, Download } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ArrowUpRight, Wallet, History, Banknote, ChevronRight, Clock3 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { CosmicCircle } from '../../components/home/CosmicCircle';
 import { useRouter } from 'expo-router';
-import { useBookings } from '../../hooks';
+import { PaymentRecord, useMyPayments } from '../../hooks';
 
-const FILTERS = ['All', 'Income', 'Expense'] as const;
+const FILTERS = ['All', 'Paid', 'Pending'] as const;
 type FilterType = typeof FILTERS[number];
 
 export default function WalletTab() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   
-  // React Query hook
-  const { data: bookings = [], isLoading } = useBookings();
+  const { data, isLoading } = useMyPayments();
+  const payments = React.useMemo(() => data?.payments || [], [data?.payments]);
+  const summary = data?.summary || { paid: 0, payable: 0, pending: 0, total: 0, cancelled: 0, currency: 'PKR' };
 
-  // Compute financial data from bookings
   const financialData = React.useMemo(() => {
-    const completed = bookings.filter((b: any) => b.status === 'completed');
-    const balance = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || b.totalAmount || (b.jobPost?.budget || 0)), 0);
-    
-    const transactions = completed.map((b: any) => ({
-      id: b._id,
-      title: b.category || b.jobPost?.category || 'Mission Secured',
-      date: new Date(b.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      amount: b.finalPrice || b.totalAmount || b.jobPost?.budget || 0,
-      type: 'Income' as const,
-      icon: ArrowUpRight
-    }));
+    const isWorker = role === 'worker';
+    const transactions = payments.map((payment: PaymentRecord) => {
+      const booking = typeof payment.booking === 'object' ? payment.booking : null;
+      const amount = isWorker ? payment.workerEarning : payment.amount;
+      const statusType = payment.status === 'paid' ? 'Paid' : 'Pending';
+      return {
+        id: payment._id,
+        bookingId: booking?._id || (typeof payment.booking === 'string' ? payment.booking : payment._id),
+        title: booking?.category || 'Cash Settlement',
+        date: new Date(payment.paidAt || payment.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        amount,
+        type: statusType as 'Paid' | 'Pending',
+        status: payment.status,
+        icon: payment.status === 'paid' ? ArrowUpRight : Clock3,
+      };
+    });
 
-    return { balance, transactions };
-  }, [bookings]);
+    return {
+      balance: summary.paid,
+      payable: summary.payable,
+      pending: summary.pending,
+      transactions,
+    };
+  }, [payments, role, summary.paid, summary.payable, summary.pending]);
 
-  // Filter transactions based on active filter
   const filteredTransactions = financialData.transactions.filter(t => {
     if (activeFilter === 'All') return true;
     return t.type === activeFilter;
@@ -55,7 +63,7 @@ export default function WalletTab() {
       >
         <View style={styles.header}>
           <Text style={[styles.headerTitle, Typography.threeD]}>Wallet & Earnings</Text>
-          <Text style={styles.headerSubtitle}>Track your finances securely</Text>
+          <Text style={styles.headerSubtitle}>Cash settlements and mission history</Text>
         </View>
 
         {/* Main Balance Card */}
@@ -63,9 +71,13 @@ export default function WalletTab() {
           <GlassCard style={styles.balanceCard} intensity={40} glowColor={Colors.cyan}>
             <View style={styles.balanceContent}>
               <View style={styles.balanceTextGroup}>
-                <Text style={styles.balanceLabel}>TOTAL EARNINGS</Text>
+                <Text style={styles.balanceLabel}>{role === 'worker' ? 'TOTAL CASH EARNED' : 'TOTAL CASH PAID'}</Text>
                 <Text style={[styles.balanceAmount, Typography.threeD]}>Rs. {financialData.balance.toLocaleString()}</Text>
-                <Text style={styles.balanceSubtext}>Based on completed missions</Text>
+                <Text style={styles.balanceSubtext}>
+                  {role === 'worker'
+                    ? `${financialData.payable.toLocaleString()} PKR awaiting cash confirmation`
+                    : `${financialData.pending.toLocaleString()} PKR pending settlement`}
+                </Text>
               </View>
               {/* Replacing generic icon with a mini glowing orb effect */}
               <View style={styles.orbContainer}>
@@ -77,16 +89,16 @@ export default function WalletTab() {
             <View style={styles.actionRow}>
               <TouchableOpacity style={styles.actionButton}>
                 <View style={[styles.iconWrapper, { backgroundColor: 'rgba(30,144,255,0.2)' }]}>
-                  <Download size={20} color={Colors.cyan} />
+                  <Banknote size={20} color={Colors.cyan} />
                 </View>
-                <Text style={styles.actionText}>Withdraw</Text>
+                <Text style={styles.actionText}>Received</Text>
               </TouchableOpacity>
               
               <TouchableOpacity style={styles.actionButton}>
                 <View style={[styles.iconWrapper, { backgroundColor: 'rgba(255,20,147,0.2)' }]}>
-                  <CreditCard size={20} color="#FF1493" />
+                  <Banknote size={20} color="#FF1493" />
                 </View>
-                <Text style={styles.actionText}>Top Up</Text>
+                <Text style={styles.actionText}>Cash Only</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionButton}>
@@ -131,8 +143,8 @@ export default function WalletTab() {
             ) : (
               <>
                 {filteredTransactions.map((item, index) => {
-                  const isIncome = item.amount > 0;
-                  const accentColor = isIncome ? Colors.success : Colors.error;
+                  const isPaid = item.status === 'paid';
+                  const accentColor = isPaid ? Colors.success : Colors.worker;
                   const IconComponent = item.icon;
 
                   return (
@@ -146,7 +158,7 @@ export default function WalletTab() {
                         style={styles.transactionCard}
                         onPress={() => router.push({
                           pathname: '/transaction-details',
-                          params: { id: item.id }
+                          params: { id: item.bookingId }
                         })}
                       >
                         <View style={styles.txRow}>
@@ -161,10 +173,11 @@ export default function WalletTab() {
 
                           <View style={styles.txAmountGroup}>
                             <Text style={[styles.txAmount, { color: accentColor }]}>
-                              {isIncome ? '+' : ''}{item.amount.toLocaleString()}
+                              {role === 'worker' ? '+' : '-'}{item.amount.toLocaleString()}
                             </Text>
                             <Text style={styles.txCurrency}>PKR</Text>
                           </View>
+                          <ChevronRight size={16} color="rgba(255,255,255,0.28)" />
                         </View>
                       </GlassCard>
                     </Animated.View>

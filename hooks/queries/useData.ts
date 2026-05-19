@@ -117,6 +117,42 @@ export interface AppNotification {
   readAt?: string;
 }
 
+export interface PaymentRecord {
+  _id: string;
+  booking: Booking | string;
+  customer: BookingPerson;
+  worker: BookingPerson;
+  method: 'cash';
+  status: 'pending' | 'payable' | 'paid' | 'cancelled';
+  currency: 'PKR';
+  amount: number;
+  subtotal: number;
+  platformFee: number;
+  workerEarning: number;
+  bookingStatusSnapshot?: string;
+  receiptNumber?: string | null;
+  confirmedBy?: 'customer' | 'worker' | 'admin' | null;
+  payableAt?: string | null;
+  paidAt?: string | null;
+  cancelledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentSummary {
+  total: number;
+  paid: number;
+  payable: number;
+  pending: number;
+  cancelled: number;
+  currency: 'PKR';
+}
+
+export interface PaymentsResponse {
+  payments: PaymentRecord[];
+  summary: PaymentSummary;
+}
+
 export interface NotificationsResponse {
   notifications: AppNotification[];
   total: number;
@@ -189,6 +225,21 @@ const fetchNotifications = async (): Promise<NotificationsResponse> => {
     total: response.data.total || 0,
     unreadCount: response.data.unreadCount || 0,
     userRole: response.data.userRole,
+  };
+};
+
+const fetchMyPayments = async (): Promise<PaymentsResponse> => {
+  const response = await api.get('/payments/my-payments');
+  return {
+    payments: response.data.data?.payments || [],
+    summary: response.data.data?.summary || {
+      total: 0,
+      paid: 0,
+      payable: 0,
+      pending: 0,
+      cancelled: 0,
+      currency: 'PKR',
+    },
   };
 };
 
@@ -302,6 +353,16 @@ export function useNotifications(options?: Omit<UseQueryOptions<NotificationsRes
     queryKey: queryKeys.notifications.list(),
     queryFn: fetchNotifications,
     staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useMyPayments(options?: Omit<UseQueryOptions<PaymentsResponse>, 'queryKey' | 'queryFn'>) {
+  return useQuery<PaymentsResponse>({
+    queryKey: queryKeys.payments.myPayments(),
+    queryFn: fetchMyPayments,
+    staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
     ...options,
   });

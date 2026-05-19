@@ -56,6 +56,12 @@ export const queryKeys = {
     list: () => [...queryKeys.notifications.all, 'list'] as const,
   },
 
+  // Payments
+  payments: {
+    all: ['payments'] as const,
+    myPayments: () => [...queryKeys.payments.all, 'my-payments'] as const,
+  },
+
   // Messages/Chat
   messages: {
     all: ['messages'] as const,

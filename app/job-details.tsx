@@ -142,7 +142,7 @@ function ActionButton({
   flex = true,
 }: {
   onPress?: () => void;
-  colors: string[];
+  colors: [string, string, ...string[]];
   icon: any;
   label: string;
   flex?: boolean;
@@ -176,7 +176,7 @@ export default function JobDetailsScreen() {
         text1: 'MISSION CANCELLED',
         text2: 'The job post has been cancelled.',
       });
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)' as any);
     },
     onError: (err: any) => {
       Toast.show({

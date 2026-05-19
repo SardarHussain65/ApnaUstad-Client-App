@@ -421,7 +421,7 @@ export default function TransactionDetailsScreen() {
           {/* ── Client Settlement ── */}
           {!isWorker && status === 'completed' && booking?.paymentStatus !== 'paid' && (
             <Animated.View entering={FadeInDown.delay(420).duration(500)} style={styles.section}>
-              <SectionLabel icon={ShieldCheck} label="MISSION SETTLEMENT" />
+              <SectionLabel icon={ShieldCheck} label="CASH SETTLEMENT" />
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => router.push({ 
@@ -432,7 +432,7 @@ export default function TransactionDetailsScreen() {
               >
                 <LinearGradient colors={[P.cyan, P.cyanDim]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaGradient}>
                   <CheckCircle2 size={16} color="#000" strokeWidth={2.5} />
-                  <Text style={styles.ctaText}>PROCEED TO PAYMENT</Text>
+                  <Text style={styles.ctaText}>CONFIRM CASH PAYMENT</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
@@ -442,7 +442,7 @@ export default function TransactionDetailsScreen() {
           {!isWorker && status === 'completed' && booking?.paymentStatus === 'paid' && (
             <Animated.View entering={FadeInDown.delay(420).duration(500)} style={styles.activeNotice}>
               <CheckCircle2 size={18} color={P.success} />
-              <Text style={[styles.activeNoticeText, { color: P.success }]}>Mission Settlement Completed. Protocol Terminated.</Text>
+              <Text style={[styles.activeNoticeText, { color: P.success }]}>Cash settlement recorded. Mission payment complete.</Text>
             </Animated.View>
           )}
 

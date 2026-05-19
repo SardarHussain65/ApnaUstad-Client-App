@@ -1,87 +1,62 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { CreditCard, Plus, Wallet, History, ChevronRight, Dot } from 'lucide-react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Banknote, ChevronRight, History, ShieldCheck } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 
 export default function PaymentMethodsScreen() {
   return (
     <BackgroundWrapper>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Scrollable Header */}
-        <ProfileHeader title="Payment Methods" />
+        <ProfileHeader title="Payment Method" />
 
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
-          <GlassCard style={styles.walletCard} intensity={30} padding={Spacing.xl}>
-            <View style={styles.walletHeader}>
-              <View style={styles.walletIconBox}>
-                <Wallet size={24} color={Colors.primary} />
-              </View>
-              <Text style={styles.walletLabel}>Cosmic Wallet</Text>
+          <GlassCard style={styles.walletCard} intensity={34} padding={Spacing.xl} hasGlow glowColor={Colors.worker}>
+            <View style={styles.iconOrbit}>
+              <Banknote size={34} color={Colors.worker} />
             </View>
-            <Text style={[styles.balanceAmount, Typography.threeD]}>$4,280.50</Text>
-            <TouchableOpacity style={styles.addFundsBtn}>
-              <Text style={styles.addFundsText}>+ REFUEL BALANCE</Text>
-            </TouchableOpacity>
+            <Text style={[styles.title, Typography.threeD]}>Cash Only</Text>
+            <Text style={styles.subtitle}>
+              This version records cash settlements after the client pays the Ustad directly.
+            </Text>
+            <View style={styles.statusPill}>
+              <ShieldCheck size={14} color={Colors.success} />
+              <Text style={styles.statusText}>Ledger history enabled</Text>
+            </View>
           </GlassCard>
         </Animated.View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Digital Assets</Text>
-            <TouchableOpacity style={styles.addCardMini}>
-              <Plus size={16} color={Colors.primary} strokeWidth={3} />
-            </TouchableOpacity>
-          </View>
+        <Animated.View entering={FadeInDown.delay(320)} style={styles.section}>
+          <Text style={styles.sectionTitle}>Settlement Flow</Text>
+          <GlassCard intensity={20} padding={Spacing.m} style={styles.flowCard}>
+            <FlowRow label="1" title="Worker completes mission" />
+            <FlowRow label="2" title="Client pays cash directly" />
+            <FlowRow label="3" title="Client confirms cash paid in app" />
+            <FlowRow label="4" title="Wallet and admin ledger update" isLast />
+          </GlassCard>
+        </Animated.View>
 
-          <CosmicCard 
-            type="VISA" 
-            number="•••• 4820" 
-            expiry="12/26" 
-            color={[Colors.primary, Colors.secondary]} 
-            delay={400} 
-            isActive 
-          />
-          <CosmicCard 
-            type="MASTERCARD" 
-            number="•••• 9105" 
-            expiry="08/25" 
-            color={['#FF9500', '#FF3B30']} 
-            delay={500} 
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quantum Ledger</Text>
-          <TouchableOpacity style={styles.historyBtn}>
+        <Animated.View entering={FadeInDown.delay(440)} style={styles.section}>
+          <Text style={styles.sectionTitle}>History</Text>
+          <TouchableOpacity activeOpacity={0.85}>
             <GlassCard style={styles.historyCard} intensity={20} padding={Spacing.m}>
               <View style={styles.historyContent}>
                 <View style={styles.historyIconBox}>
                   <History size={20} color={Colors.primary} />
                 </View>
-                <Text style={styles.historyLabel}>Full Transaction History</Text>
+                <View style={styles.historyCopy}>
+                  <Text style={styles.historyLabel}>Cash Settlement History</Text>
+                  <Text style={styles.historySub}>Available from the Wallet tab</Text>
+                </View>
                 <ChevronRight size={18} color="rgba(255,255,255,0.3)" />
               </View>
             </GlassCard>
-          </TouchableOpacity>
-        </View>
-
-        <Animated.View entering={FadeInDown.delay(700)}>
-          <TouchableOpacity style={styles.addNewBtn}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
-              style={styles.addNewGradient}
-            >
-              <Plus size={20} color={Colors.primary} strokeWidth={3} />
-              <Text style={styles.addNewText}>Register New Payment Protocol</Text>
-            </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -89,44 +64,14 @@ export default function PaymentMethodsScreen() {
   );
 }
 
-interface CosmicCardProps {
-  type: string;
-  number: string;
-  expiry: string;
-  color: [string, string, ...string[]];
-  delay: number;
-  isActive?: boolean;
-}
-
-function CosmicCard({ type, number, expiry, color, delay, isActive }: CosmicCardProps) {
+function FlowRow({ label, title, isLast }: { label: string; title: string; isLast?: boolean }) {
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()}>
-      <TouchableOpacity style={styles.cardContainer}>
-        <LinearGradient
-          colors={color}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cardGradient}
-        >
-          <View style={styles.cardHeader}>
-            <CreditCard size={28} color="#fff" opacity={0.8} />
-            <Text style={styles.cardType}>{type}</Text>
-          </View>
-          <View style={styles.cardBody}>
-            <Text style={styles.cardNumber}>{number}</Text>
-          </View>
-          <View style={styles.cardFooter}>
-            <Text style={styles.cardExpiry}>{expiry}</Text>
-            {isActive && (
-              <View style={styles.activeBadge}>
-                <Text style={styles.activeText}>DEFAULT</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.cardPattern} />
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
+    <View style={[styles.flowRow, isLast && styles.flowRowLast]}>
+      <View style={styles.flowNumber}>
+        <Text style={styles.flowNumberText}>{label}</Text>
+      </View>
+      <Text style={styles.flowTitle}>{title}</Text>
+    </View>
   );
 }
 
@@ -136,190 +81,133 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerSection: {
-    marginBottom: 40,
+    marginBottom: 34,
   },
   walletCard: {
     alignItems: 'center',
     ...Shadows.glow,
   },
-  walletHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  walletIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  iconOrbit: {
+    width: 82,
+    height: 82,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,140,0,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 18,
   },
-  walletLabel: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  balanceAmount: {
-    fontSize: 42,
+  title: {
+    fontSize: 34,
     fontWeight: '900',
     color: '#fff',
-    marginBottom: 24,
+    letterSpacing: 0,
   },
-  addFundsBtn: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
+  subtitle: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  statusPill: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(52,199,89,0.12)',
     borderWidth: 1,
-    borderColor: Colors.primary + '40',
+    borderColor: 'rgba(52,199,89,0.26)',
   },
-  addFundsText: {
-    color: Colors.primary,
+  statusText: {
+    color: Colors.success,
     fontSize: 12,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 0,
   },
   section: {
-    marginBottom: 30,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 28,
   },
   sectionTitle: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.42)',
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 2,
+    letterSpacing: 0,
     marginLeft: 4,
+    marginBottom: 12,
   },
-  addCardMini: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  flowCard: {
+    borderRadius: 22,
+  },
+  flowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 14,
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  flowRowLast: {
+    borderBottomWidth: 0,
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
+  flowNumber: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  cardContainer: {
-    marginBottom: 16,
-    height: 180,
-    borderRadius: 24,
-    overflow: 'hidden',
-    ...Shadows.depth,
-  },
-  cardGradient: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'space-between',
-    position: 'relative',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  cardType: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  cardBody: {
-    marginVertical: 10,
-  },
-  cardNumber: {
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: '700',
-    letterSpacing: 4,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardExpiry: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  activeBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    backgroundColor: 'rgba(0,245,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(0,245,255,0.25)',
   },
-  activeText: {
-    color: '#fff',
-    fontSize: 10,
+  flowNumberText: {
+    color: Colors.cyan,
     fontWeight: '900',
-    letterSpacing: 1,
+    fontSize: 12,
   },
-  cardPattern: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  historyBtn: {
-    marginBottom: 8,
+  flowTitle: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   historyCard: {
-    ...Shadows.card,
+    borderRadius: 18,
   },
   historyContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
   },
   historyIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,245,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+  },
+  historyCopy: {
+    flex: 1,
   },
   historyLabel: {
-    flex: 1,
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addNewBtn: {
-    marginTop: 10,
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderStyle: 'dashed',
-  },
-  addNewGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 12,
-  },
-  addNewText: {
-    color: Colors.primary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 0.5,
+  },
+  historySub: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 3,
   },
 });

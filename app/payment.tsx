@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, 
-  ActivityIndicator, Dimensions, ScrollView
+  ActivityIndicator, ScrollView
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
+import { Colors, Spacing, Shadows } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { 
-  ChevronLeft, CreditCard, Wallet, Banknote, 
-  ShieldCheck, CheckCircle2, Lock, ArrowRight
+  ChevronLeft, Banknote, 
+  ShieldCheck, CheckCircle2, HandCoins, ArrowRight
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
@@ -17,29 +17,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { usePayBookingMutation } from '../hooks';
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get('window');
-
 const PAYMENT_METHODS = [
   {
-    id: 'card',
-    label: 'Credit / Debit Card',
-    icon: CreditCard,
-    color: '#00F5FF',
-    desc: 'Secure payment via Stripe gateway',
-  },
-  {
-    id: 'easypaisa',
-    label: 'Easypaisa / JazzCash',
-    icon: Wallet,
-    color: '#34C759',
-    desc: 'Mobile wallet instant transfer',
-  },
-  {
     id: 'cash',
-    label: 'Cash Payment',
+    label: 'Cash Paid to Ustad',
     icon: Banknote,
     color: '#FF8C00',
-    desc: 'Pay directly to the Ustad',
+    desc: 'Confirm only after handing cash to the worker.',
   }
 ];
 
@@ -47,7 +31,7 @@ export default function PaymentScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { bookingId, amount } = useLocalSearchParams<{ bookingId: string, amount: string }>();
-  const [selectedMethod, setSelectedMethod] = useState<string>('card');
+  const [selectedMethod] = useState<string>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -57,11 +41,11 @@ export default function PaymentScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsProcessing(true);
 
-    // Simulate payment gateway processing
     setTimeout(() => {
       payBooking({
         bookingId: bookingId as string,
-        paymentMethod: selectedMethod as any
+        paymentMethod: 'cash',
+        notes: 'Customer confirmed cash payment in mobile app',
       }, {
         onSuccess: () => {
           setIsProcessing(false);
@@ -69,15 +53,15 @@ export default function PaymentScreen() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           
           setTimeout(() => {
-            router.replace('/(tabs)');
-          }, 2500);
+            router.replace({ pathname: '/transaction-details', params: { id: bookingId } });
+          }, 1600);
         },
         onError: () => {
           setIsProcessing(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
       });
-    }, 2000);
+    }, 700);
   };
 
   if (isSuccess) {
@@ -93,11 +77,11 @@ export default function PaymentScreen() {
           </Animated.View>
           <Animated.View entering={FadeInUp.delay(300)}>
             <Text style={styles.successTitle}>SETTLEMENT COMPLETE</Text>
-            <Text style={styles.successSubtitle}>Your mission payment has been processed successfully.</Text>
+            <Text style={styles.successSubtitle}>Cash payment has been recorded in your mission history.</Text>
           </Animated.View>
           <View style={styles.successFooter}>
              <ShieldCheck size={14} color={Colors.success} />
-             <Text style={styles.successSecurityText}>SECURE TRANSACTION ID: #USTAD-{Math.floor(Math.random()*100000)}</Text>
+             <Text style={styles.successSecurityText}>CASH LEDGER UPDATED</Text>
           </View>
         </View>
       </BackgroundWrapper>
@@ -127,13 +111,13 @@ export default function PaymentScreen() {
               </View>
               <View style={styles.divider} />
               <View style={styles.lockRow}>
-                <Lock size={12} color="rgba(255,255,255,0.4)" />
-                <Text style={styles.lockText}>ENCRYPTED PAYMENT PROTOCOL</Text>
+                <HandCoins size={12} color="rgba(255,255,255,0.4)" />
+                <Text style={styles.lockText}>CASH COLLECTION RECORD</Text>
               </View>
             </GlassCard>
           </Animated.View>
 
-          <Text style={styles.sectionTitle}>SELECT SETTLEMENT METHOD</Text>
+          <Text style={styles.sectionTitle}>SETTLEMENT METHOD</Text>
 
           {/* Payment Methods */}
           <View style={styles.methodsGrid}>
@@ -145,10 +129,7 @@ export default function PaymentScreen() {
                 <Animated.View key={method.id} entering={FadeInDown.delay(index * 100).duration(600)}>
                   <TouchableOpacity
                     activeOpacity={0.9}
-                    onPress={() => {
-                      setSelectedMethod(method.id);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
+                    onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
                   >
                     <GlassCard
                       intensity={isSelected ? 40 : 15}
@@ -176,6 +157,9 @@ export default function PaymentScreen() {
               );
             })}
           </View>
+          <Text style={styles.cashNotice}>
+            Please hand the cash directly to the Ustad first. This button records that the cash settlement is complete.
+          </Text>
         </ScrollView>
 
         {/* Footer CTA */}
@@ -196,7 +180,7 @@ export default function PaymentScreen() {
                  <ActivityIndicator color="#000" />
                ) : (
                  <>
-                   <Text style={styles.payBtnText}>CONFIRM SETTLEMENT</Text>
+                   <Text style={styles.payBtnText}>CONFIRM CASH PAID</Text>
                    <ArrowRight size={18} color="#000" strokeWidth={2.5} />
                  </>
                )}
@@ -337,6 +321,13 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     lineHeight: 18,
     fontWeight: '500',
+  },
+  cashNotice: {
+    marginTop: 16,
+    color: 'rgba(255,255,255,0.56)',
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '600',
   },
   footer: {
     paddingHorizontal: 20,

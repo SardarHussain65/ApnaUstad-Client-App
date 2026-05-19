@@ -70,7 +70,8 @@ interface SendMessagePayload {
 
 interface PayBookingPayload {
   bookingId: string;
-  paymentMethod: 'card' | 'cash' | 'easypaisa';
+  paymentMethod?: 'cash';
+  notes?: string;
 }
 
 interface CreateReviewPayload {
@@ -243,6 +244,7 @@ export function useUpdateBookingStatusMutation(options?: Omit<UseMutationOptions
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.myPayments() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
     ...options,
@@ -273,6 +275,8 @@ export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Err
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.payments.myPayments() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
     ...options,

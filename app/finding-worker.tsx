@@ -79,7 +79,7 @@ export default function FindingWorkerScreen() {
         text1: 'MISSION ABORTED',
         text2: 'The job post has been cancelled successfully.',
       });
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)' as any);
     },
     onError: (err: any) => {
       Toast.show({
