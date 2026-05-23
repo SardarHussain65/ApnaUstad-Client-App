@@ -1,15 +1,73 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
-import { HelpCircle, Search, MessageCircle, Mail, ChevronRight, BookOpen, Settings, Zap } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { HelpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
-import { GlassCard } from '../../components/home/GlassCard';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
-import { LinearGradient } from 'expo-linear-gradient';
+import { GlassCard } from '../../components/home/GlassCard';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
+import { InputField } from '../../components/InputField';
+import { CustomButton } from '../../components/CustomButton';
+import { useAuth } from '../../context/AuthContext';
+import { useCreateSupportRequestMutation, useToast } from '../../hooks';
+import api from '../../services/api';
+import { useEffect } from 'react';
 
 export default function HelpCenterScreen() {
-  const [search, setSearch] = useState('');
+  const { user } = useAuth();
+  const { success, error: showError } = useToast();
+  const { mutateAsync: createRequest, isPending } = useCreateSupportRequestMutation();
+
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+
+  const contactText = useMemo(() => {
+    if (user?.phone) return `We will contact you on ${user.phone}.`;
+    if (user?.email) return `We will contact you on ${user.email}.`;
+    return 'We will contact you using your account details.';
+  }, [user?.email, user?.phone]);
+
+  const handleSubmit = async () => {
+    if (!subject.trim() || !message.trim()) {
+      showError('Missing details', 'Please fill in the subject and your message.');
+      return;
+    }
+
+    try {
+      await createRequest({
+        subject: subject.trim(),
+        message: message.trim(),
+        name: user?.fullName || user?.name,
+        email: user?.email,
+        userId: user?._id,
+      });
+      success('Sent', 'Your request has been sent to support.');
+      setSubject('');
+      setMessage('');
+      // refresh user's requests
+      fetchMyRequests();
+    } catch (err: any) {
+      showError('Failed to send', err?.message || 'Please try again later.');
+    }
+  };
+
+  const fetchMyRequests = async () => {
+    if (!user?._id) return;
+    setLoadingRequests(true);
+    try {
+      const resp = await api.get<any>(`/support/requests/user/${user._id}`);
+      const docs = resp?.data?.data ?? resp?.data ?? [];
+      setRequests(Array.isArray(docs) ? docs : []);
+    } catch (err) {
+      console.warn('Could not fetch support requests', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  useEffect(() => { fetchMyRequests(); }, [user?._id]);
 
   return (
     <BackgroundWrapper>
@@ -17,128 +75,72 @@ export default function HelpCenterScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Scrollable Header */}
         <ProfileHeader title="Help Center" />
 
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
-          <Text style={[styles.screenTitle, Typography.threeD]}>Mission Control</Text>
-          <Text style={styles.screenSubtitle}>Search our database for guidance or contact the commanders.</Text>
-
-          <GlassCard style={styles.searchCard} intensity={20} padding={Spacing.m}>
-            <View style={styles.searchWrapper}>
-              <Search size={20} color={Colors.primary} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search cosmic guidance..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={search}
-                onChangeText={setSearch}
-              />
+          <View style={styles.iconWrap}>
+            <View style={styles.iconGlow} />
+            <View style={styles.iconCircle}>
+              <HelpCircle size={34} color="#fff" />
             </View>
-          </GlassCard>
+          </View>
+          <Text style={[styles.screenTitle, Typography.threeD]}>Need Help?</Text>
+          <Text style={styles.screenSubtitle}>Tell us your concern and our team will get back to you.</Text>
         </Animated.View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Guidance Sectors</Text>
-          <View style={styles.grid}>
-            <HelpCategory
-              icon={BookOpen}
-              label="Getting Started"
-              delay={300}
-              color={Colors.primary}
-            />
-            <HelpCategory
-              icon={Zap}
-              label="Payments"
-              delay={400}
-              color={Colors.orange}
-            />
-            <HelpCategory
-              icon={Settings}
-              label="Security"
-              delay={500}
-              color={Colors.secondary}
-            />
-            <HelpCategory
-              icon={HelpCircle}
-              label="System FAQ"
-              delay={600}
-              color={Colors.cyan}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Direct Communication</Text>
-          <SupportChannel
-            icon={MessageCircle}
-            title="Aether Chat"
-            subtitle="Response time: Instant"
-            delay={700}
+        <Animated.View entering={FadeInDown.delay(300)} style={styles.formSection}>
+          <InputField
+            label="Subject"
+            value={subject}
+            onChangeText={setSubject}
+            placeholder="e.g. Issue with booking"
           />
-          <SupportChannel
-            icon={Mail}
-            title="Galactic Dispatch"
-            subtitle="Response time: < 4 hours"
-            delay={800}
-          />
-        </View>
 
-        <TouchableOpacity style={styles.communityBtn}>
-          <Text style={styles.communityText}>Join the Specialist Community</Text>
-        </TouchableOpacity>
+          <Text style={styles.messageLabel}>Message</Text>
+          <GlassCard style={styles.messageCard} intensity={20} padding={Spacing.m}>
+            <TextInput
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Write your message here..."
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              multiline
+              style={styles.messageInput}
+            />
+          </GlassCard>
+
+          <Text style={styles.helperText}>{contactText}</Text>
+
+          <CustomButton
+            title={isPending ? 'Sending...' : 'Send to Support'}
+            onPress={handleSubmit}
+            loading={isPending}
+            style={styles.sendButton}
+          />
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(400)} style={styles.requestsSection}>
+          <Text style={styles.sectionTitle}>My Requests</Text>
+          {loadingRequests ? <Text style={styles.helperText}>Loading…</Text> : (
+            requests.map((r) => (
+              <GlassCard key={r._id} style={{ marginVertical: 8 }} intensity={18} padding={Spacing.m}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>{r.topic || r.subject || 'General'}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>{r.message}</Text>
+                {r.replies && r.replies.length > 0 && (
+                  <View style={{ marginTop: 10 }}>
+                    {r.replies.map((rep: any, i: number) => (
+                      <View key={i} style={{ marginTop: 8 }}>
+                        <Text style={{ color: 'rgba(255,255,255,0.9)', fontWeight: '700' }}>{rep.authorName || (rep.from === 'admin' ? 'Admin' : 'You')}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.7)' }}>{rep.message}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </GlassCard>
+            ))
+          )}
+        </Animated.View>
       </ScrollView>
     </BackgroundWrapper>
-  );
-}
-
-interface HelpCategoryProps {
-  icon: any;
-  label: string;
-  delay: number;
-  color: string;
-}
-
-function HelpCategory({ icon: Icon, label, delay, color }: HelpCategoryProps) {
-  return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={styles.categoryWrapper}>
-      <TouchableOpacity>
-        <GlassCard style={styles.categoryCard} intensity={25} padding={Spacing.m}>
-          <View style={[styles.categoryIconBox, { backgroundColor: color + '20' }]}>
-            <Icon size={24} color={color} />
-          </View>
-          <Text style={styles.categoryLabel}>{label}</Text>
-        </GlassCard>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-interface SupportChannelProps {
-  icon: any;
-  title: string;
-  subtitle: string;
-  delay: number;
-}
-
-function SupportChannel({ icon: Icon, title, subtitle, delay }: SupportChannelProps) {
-  return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()}>
-      <TouchableOpacity>
-        <GlassCard style={styles.supportCard} intensity={20} padding={Spacing.m}>
-          <View style={styles.supportContent}>
-            <View style={styles.supportIconBox}>
-              <Icon size={22} color={Colors.primary} />
-            </View>
-            <View style={styles.supportInfo}>
-              <Text style={styles.supportTitle}>{title}</Text>
-              <Text style={styles.supportSubtitle}>{subtitle}</Text>
-            </View>
-            <ChevronRight size={18} color="rgba(255,255,255,0.3)" />
-          </View>
-        </GlassCard>
-      </TouchableOpacity>
-    </Animated.View>
   );
 }
 
@@ -149,14 +151,32 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
+  },
+  iconWrap: {
+    width: 90,
+    height: 90,
+    marginBottom: 16,
+  },
+  iconGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 45,
+    backgroundColor: Colors.primary + '25',
+  },
+  iconCircle: {
+    flex: 1,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   screenTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '900',
     color: '#fff',
     marginBottom: 8,
-    textAlign: 'center',
   },
   screenSubtitle: {
     color: 'rgba(255,255,255,0.5)',
@@ -164,102 +184,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 24,
   },
-  searchCard: {
-    width: '100%',
-    ...Shadows.glow,
+  formSection: {
+    gap: 14,
   },
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    color: 'rgba(255,255,255,0.3)',
+  messageLabel: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 16,
-    marginLeft: 4,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  categoryWrapper: {
-    width: '48%',
-  },
-  categoryCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 120,
-  },
-  categoryIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  categoryLabel: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  supportCard: {
-    marginBottom: 12,
-  },
-  supportContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  supportIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  supportInfo: {
-    flex: 1,
-  },
-  supportTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  supportSubtitle: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  communityBtn: {
-    alignItems: 'center',
-    paddingVertical: 15,
-    marginTop: 10,
-  },
-  communityText: {
-    color: Colors.primary,
-    fontSize: 14,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  messageCard: {
+    borderRadius: BorderRadius.l,
+    ...Shadows.glow,
+  },
+  messageInput: {
+    minHeight: 140,
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  helperText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  sendButton: {
+    marginTop: 10,
+  },
+  requestsSection: {
+    marginTop: 18,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 8,
   },
 });

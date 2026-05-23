@@ -1,17 +1,13 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
 import {
   User,
-  Settings,
-  CreditCard,
   Shield,
   Bell,
   HelpCircle,
   LogOut,
   ChevronRight,
   Star,
-  Zap,
-  CheckCircle2,
   Edit2
 } from 'lucide-react-native';
 import Animated, {
@@ -189,22 +185,15 @@ export default function ProfileTab() {
             />
             <MenuItem
               icon={Shield}
-              label="Security & Privacy"
+              label="Security"
               delay={600}
               gradient={['#BF5AF230', '#BF5AF210']}
               onPress={() => router.push('/profile/security')}
             />
             <MenuItem
-              icon={CreditCard}
-              label="Payment Methods"
-              delay={700}
-              gradient={['#32D74B30', '#32D74B10']}
-              onPress={() => router.push('/profile/payment-methods')}
-            />
-            <MenuItem
               icon={Bell}
               label="Notifications"
-              delay={800}
+              delay={700}
               gradient={['#FF9F0A30', '#FF9F0A10']}
               onPress={() => router.push('/profile/notifications')}
             />
@@ -215,11 +204,11 @@ export default function ProfileTab() {
             <MenuItem
               icon={HelpCircle}
               label="Help Center"
-              delay={900}
+              delay={800}
               gradient={['#64D2FF20', '#64D2FF05']}
               onPress={() => router.push('/profile/help-center')}
             />
-            <MenuItem icon={Star} label="Rate ApnaUstad" delay={1000} gradient={['#FFD60A20', '#FFD60A05']} />
+            <MenuItem icon={Star} label="Rate ApnaUstad" delay={900} gradient={['#FFD60A20', '#FFD60A05']} />
           </View>
 
           <Animated.View entering={FadeInDown.delay(1100)}>

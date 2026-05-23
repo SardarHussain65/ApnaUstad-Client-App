@@ -51,7 +51,9 @@ export default function SignupStep1() {
     progressAnim.value = withSpring(0.33, { damping: 20 });
   }, []);
 
-  const checkUserMutation = useMutation({
+  /* 
+  // ORIGINAL FIREBASE SMS FLOW (COMMENTED OUT)
+  const checkUserMutationOld = useMutation({
     mutationFn: async (phone: string) => {
       const endpoint = role === 'worker' ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
       const response = await fetch(`${BASE_URL}${endpoint}?phone=${encodeURIComponent(phone)}`);
@@ -90,6 +92,63 @@ export default function SignupStep1() {
     },
     onError: (error: any) => {
       Alert.alert('Error', error.message);
+    }
+  });
+  */
+
+  // NEW EMAIL OTP FLOW
+  const checkUserMutation = useMutation({
+    mutationFn: async (phone: string) => {
+      // 1. Check phone availability in database
+      const endpoint = role === 'worker' ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
+      const checkResponse = await fetch(`${BASE_URL}${endpoint}?phone=${encodeURIComponent(phone)}`);
+      if (!checkResponse.ok) {
+        throw new Error(`Failed to check ${role === 'worker' ? 'worker' : 'user'} availability`);
+      }
+      
+      const checkData = await checkResponse.json();
+      if (checkData.data?.exists) {
+        throw new Error('PHONE_EXISTS');
+      }
+
+      // 2. Send email OTP via backend
+      const otpResponse = await fetch(`${BASE_URL}/api/v1/otp/send-email-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!otpResponse.ok) {
+        const errorData = await otpResponse.json();
+        if (otpResponse.status === 409) {
+          throw new Error('EMAIL_EXISTS');
+        }
+        throw new Error(errorData.message || 'Failed to send verification email');
+      }
+
+      return { phone };
+    },
+    onSuccess: (data) => {
+      router.push({
+        pathname: '/(auth)/verify',
+        params: {
+          fullName,
+          email,
+          phone: data.phone,
+          role
+        }
+      });
+    },
+    onError: (error: any) => {
+      if (error.message === 'PHONE_EXISTS') {
+        Alert.alert('Account Exists', `This phone number is already registered as a ${role === 'worker' ? 'worker' : 'client'}.`);
+      } else if (error.message === 'EMAIL_EXISTS') {
+        Alert.alert('Account Exists', 'This email address is already registered to another account.');
+      } else {
+        Alert.alert('Registration Error', error.message || 'Failed to send verification code.');
+      }
     }
   });
 

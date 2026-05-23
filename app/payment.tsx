@@ -8,7 +8,7 @@ import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { 
-  ChevronLeft, CreditCard, Wallet, Banknote, 
+  ChevronLeft, Banknote, 
   ShieldCheck, CheckCircle2, Lock, ArrowRight
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,25 +21,11 @@ const { width } = Dimensions.get('window');
 
 const PAYMENT_METHODS = [
   {
-    id: 'card',
-    label: 'Credit / Debit Card',
-    icon: CreditCard,
-    color: '#00F5FF',
-    desc: 'Secure payment via Stripe gateway',
-  },
-  {
-    id: 'easypaisa',
-    label: 'Easypaisa / JazzCash',
-    icon: Wallet,
-    color: '#34C759',
-    desc: 'Mobile wallet instant transfer',
-  },
-  {
     id: 'cash',
     label: 'Cash Payment',
     icon: Banknote,
     color: '#FF8C00',
-    desc: 'Pay directly to the Ustad',
+    desc: 'Pay directly to the Ustad after the job is completed',
   }
 ];
 
@@ -47,7 +33,7 @@ export default function PaymentScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { bookingId, amount } = useLocalSearchParams<{ bookingId: string, amount: string }>();
-  const [selectedMethod, setSelectedMethod] = useState<string>('card');
+  const [selectedMethod, setSelectedMethod] = useState<'cash'>('cash');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -61,7 +47,7 @@ export default function PaymentScreen() {
     setTimeout(() => {
       payBooking({
         bookingId: bookingId as string,
-        paymentMethod: selectedMethod as any
+        paymentMethod: selectedMethod
       }, {
         onSuccess: () => {
           setIsProcessing(false);

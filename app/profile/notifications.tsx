@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
-import { Bell, MessageSquare, Briefcase, Zap, Mail, Smartphone } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Switch, ActivityIndicator } from 'react-native';
+import { Bell, MessageSquare, Briefcase, Smartphone } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
+import { usePreferences, useUpdatePreferencesMutation } from '../../hooks';
 
 export default function NotificationsScreen() {
+  const { data: preferences, isLoading } = usePreferences();
+  const { mutate: updatePreferences } = useUpdatePreferencesMutation();
+
   const [pushEnabled, setPushEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(false);
   const [jobAlerts, setJobAlerts] = useState(true);
   const [messages, setMessages] = useState(true);
-  const [promos, setPromos] = useState(false);
+
+  useEffect(() => {
+    if (!preferences) return;
+    setPushEnabled(preferences.notifications.pushEnabled);
+    setJobAlerts(preferences.notifications.jobAlerts);
+    setMessages(preferences.notifications.messages);
+  }, [preferences]);
+
+  const updateNotificationPreference = (key: 'pushEnabled' | 'jobAlerts' | 'messages', value: boolean) => {
+    updatePreferences({
+      notifications: { [key]: value },
+    });
+  };
 
   return (
     <BackgroundWrapper>
@@ -34,60 +49,53 @@ export default function NotificationsScreen() {
               <Bell size={40} color="#fff" />
             </View>
           </View>
-          <Text style={[styles.screenTitle, Typography.threeD]}>Signal Center</Text>
-          <Text style={styles.screenSubtitle}>Configure your incoming cosmic transmissions and alerts.</Text>
+          <Text style={[styles.screenTitle, Typography.threeD]}>Notifications</Text>
+          <Text style={styles.screenSubtitle}>Choose what you want to be notified about.</Text>
         </Animated.View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Primary Channels</Text>
+          <Text style={styles.sectionTitle}>Notification Types</Text>
           <NotificationToggle
             icon={Smartphone}
             label="Push Notifications"
             value={pushEnabled}
-            onValueChange={setPushEnabled}
+            onValueChange={(value) => {
+              setPushEnabled(value);
+              updateNotificationPreference('pushEnabled', value);
+            }}
             delay={300}
             color={Colors.primary}
           />
           <NotificationToggle
-            icon={Mail}
-            label="Email Alerts"
-            value={emailEnabled}
-            onValueChange={setEmailEnabled}
-            delay={400}
-            color={Colors.secondary}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Transactional Signal</Text>
-          <NotificationToggle
             icon={Briefcase}
-            label="New Job Invitations"
+            label="Booking Updates"
             value={jobAlerts}
-            onValueChange={setJobAlerts}
-            delay={500}
+            onValueChange={(value) => {
+              setJobAlerts(value);
+              updateNotificationPreference('jobAlerts', value);
+            }}
+            delay={400}
             color="#FF9500"
           />
           <NotificationToggle
             icon={MessageSquare}
-            label="Direct Messages"
+            label="Chat Messages"
             value={messages}
-            onValueChange={setMessages}
-            delay={600}
+            onValueChange={(value) => {
+              setMessages(value);
+              updateNotificationPreference('messages', value);
+            }}
+            delay={500}
             color="#32D74B"
-          />
-          <NotificationToggle
-            icon={Zap}
-            label="Cosmic Promotions"
-            value={promos}
-            onValueChange={setPromos}
-            delay={700}
-            color="#FF3B30"
           />
         </View>
 
         <View style={styles.footerInfo}>
-          <Text style={styles.footerText}>Transmission delays may occur depending on your sector's network stability.</Text>
+          {isLoading ? (
+            <ActivityIndicator color={Colors.primary} />
+          ) : (
+            <Text style={styles.footerText}>You can update these settings anytime.</Text>
+          )}
         </View>
       </ScrollView>
     </BackgroundWrapper>

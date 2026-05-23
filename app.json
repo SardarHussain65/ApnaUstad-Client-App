@@ -26,7 +26,10 @@
         "foregroundImage": "./assets/images/icon.jpeg"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -71,7 +74,11 @@
       "reactCompiler": true
     },
     "extra": {
-      "maptilerApiKey": "o3cm0oM4Yn3L4Nyf1ydh"
+      "maptilerApiKey": "o3cm0oM4Yn3L4Nyf1ydh",
+      "router": {},
+      "eas": {
+        "projectId": "679e09c9-47e0-41e5-9ca3-a60026d0a9df"
+      }
     }
   }
 }

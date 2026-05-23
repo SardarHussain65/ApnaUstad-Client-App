@@ -70,7 +70,7 @@ interface SendMessagePayload {
 
 interface PayBookingPayload {
   bookingId: string;
-  paymentMethod: 'card' | 'cash' | 'easypaisa';
+  paymentMethod: 'cash';
 }
 
 interface CreateReviewPayload {
@@ -82,6 +82,53 @@ interface CreateReviewPayload {
 
 interface MarkNotificationReadPayload {
   notificationId: string;
+}
+
+interface UpdateProfilePayload {
+  role: 'client' | 'worker';
+  id: string;
+  data: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    profileImage?: string;
+  };
+}
+
+interface ChangePasswordPayload {
+  role: 'client' | 'worker';
+  id: string;
+  oldPassword: string;
+  newPassword: string;
+}
+
+interface UpdatePreferencesPayload {
+  notifications?: {
+    pushEnabled?: boolean;
+    emailEnabled?: boolean;
+    jobAlerts?: boolean;
+    messages?: boolean;
+    promos?: boolean;
+  };
+  security?: {
+    twoFactorEnabled?: boolean;
+    biometricsEnabled?: boolean;
+  };
+}
+
+interface LogoutAllSessionsPayload {
+  role: 'client' | 'worker';
+  id: string;
+}
+
+interface SupportRequestPayload {
+  subject?: string;
+  message: string;
+  name?: string;
+  email?: string;
+  userId?: string;
 }
 
 // Mutation Functions
@@ -137,6 +184,41 @@ const createReview = async (payload: CreateReviewPayload): Promise<any> => {
 const markNotificationRead = async (payload: MarkNotificationReadPayload): Promise<any> => {
   const response = await api.post('/notifications/mark-read', payload);
   return response.data;
+};
+
+const updateProfile = async (payload: UpdateProfilePayload): Promise<any> => {
+  const endpoint = payload.role === 'worker' ? `/workers/${payload.id}` : `/users/${payload.id}`;
+  const response = await api.patch(endpoint, payload.data);
+  return response.data.data;
+};
+
+const changePassword = async (payload: ChangePasswordPayload): Promise<any> => {
+  const endpoint = payload.role === 'worker'
+    ? `/workers/${payload.id}/change-password`
+    : `/users/${payload.id}/change-password`;
+  const response = await api.put(endpoint, {
+    oldPassword: payload.oldPassword,
+    newPassword: payload.newPassword,
+  });
+  return response.data.data;
+};
+
+const updatePreferences = async (payload: UpdatePreferencesPayload): Promise<any> => {
+  const response = await api.put('/preferences/my', payload);
+  return response.data.data;
+};
+
+const logoutAllSessions = async (payload: LogoutAllSessionsPayload): Promise<any> => {
+  const endpoint = payload.role === 'worker'
+    ? `/workers/${payload.id}/logout-all`
+    : `/users/${payload.id}/logout-all`;
+  const response = await api.post(endpoint);
+  return response.data.data;
+};
+
+const createSupportRequest = async (payload: SupportRequestPayload): Promise<any> => {
+  const response = await api.post('/support/requests', payload);
+  return response.data.data;
 };
 
 const registerUser = async (payload: RegisterPayload & { role: 'client' | 'worker' }): Promise<any> => {
@@ -307,6 +389,54 @@ export function useMarkNotificationReadMutation(options?: Omit<UseMutationOption
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.list() });
       options?.onSuccess?.(data, variables, context, mutation);
     },
+  });
+}
+
+export function useUpdateProfileMutation(options?: Omit<UseMutationOptions<any, Error, UpdateProfilePayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, UpdateProfilePayload>({
+    mutationFn: updateProfile,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.current() });
+      if (variables.role === 'worker') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.workers.detail(variables.id) });
+      }
+    },
+    ...options,
+  });
+}
+
+export function useChangePasswordMutation(options?: Omit<UseMutationOptions<any, Error, ChangePasswordPayload>, 'mutationFn'>) {
+  return useMutation<any, Error, ChangePasswordPayload>({
+    mutationFn: changePassword,
+    ...options,
+  });
+}
+
+export function useUpdatePreferencesMutation(options?: Omit<UseMutationOptions<any, Error, UpdatePreferencesPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, UpdatePreferencesPayload>({
+    mutationFn: updatePreferences,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.preferences.current() });
+    },
+    ...options,
+  });
+}
+
+export function useLogoutAllSessionsMutation(options?: Omit<UseMutationOptions<any, Error, LogoutAllSessionsPayload>, 'mutationFn'>) {
+  return useMutation<any, Error, LogoutAllSessionsPayload>({
+    mutationFn: logoutAllSessions,
+    ...options,
+  });
+}
+
+export function useCreateSupportRequestMutation(options?: Omit<UseMutationOptions<any, Error, SupportRequestPayload>, 'mutationFn'>) {
+  return useMutation<any, Error, SupportRequestPayload>({
+    mutationFn: createSupportRequest,
+    ...options,
   });
 }
 

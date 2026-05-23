@@ -18,8 +18,8 @@ export default function ProfileLayout() {
       }}
     >
       <Stack.Screen name="personal-info" options={{ title: 'Personal Info' }} />
+      <Stack.Screen name="change-password" options={{ title: 'Change Password' }} />
       <Stack.Screen name="security" options={{ title: 'Security' }} />
-      <Stack.Screen name="payment-methods" options={{ title: 'Payment Methods' }} />
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="help-center" options={{ title: 'Help Center' }} />
     </Stack>

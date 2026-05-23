@@ -68,7 +68,7 @@ export interface Booking {
     coordinates: number[];
   };
   paymentStatus: 'unpaid' | 'paid';
-  paymentMethod: 'card' | 'cash' | 'easypaisa';
+  paymentMethod: 'cash';
   isReviewed: boolean;
   imageUrls?: string[];
   cancelReason?: string;
@@ -122,6 +122,100 @@ export interface NotificationsResponse {
   total: number;
   unreadCount: number;
   userRole?: 'user' | 'worker';
+}
+
+export interface UserPreferences {
+  notifications: {
+    pushEnabled: boolean;
+    emailEnabled: boolean;
+    jobAlerts: boolean;
+    messages: boolean;
+    promos: boolean;
+  };
+  security: {
+    twoFactorEnabled: boolean;
+    biometricsEnabled: boolean;
+  };
+}
+
+export interface PaymentSummary {
+  total: number;
+  paid: number;
+  payable: number;
+  pending: number;
+  cancelled: number;
+  currency: string;
+}
+
+export interface PaymentEntry {
+  _id: string;
+  status: string;
+  amount: number;
+  workerEarning: number;
+  createdAt: string;
+  updatedAt: string;
+  booking?: {
+    _id: string;
+    category?: string;
+    description?: string;
+    status?: string;
+    bookingType?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    address?: string;
+    paymentStatus?: string;
+  };
+  customer?: BookingPerson;
+  worker?: BookingPerson;
+}
+
+export interface PaymentsResponse {
+  payments: PaymentEntry[];
+  summary: PaymentSummary;
+  pagination?: {
+    total: number;
+    page: number;
+    pages: number;
+  };
+}
+
+export interface HelpTopic {
+  id: string;
+  title: string;
+  icon: string;
+  color: string;
+}
+
+export interface HelpArticle {
+  id: string;
+  topicId: string;
+  title: string;
+  body: string;
+  tags: string[];
+}
+
+export interface SupportChannel {
+  id: string;
+  title: string;
+  subtitle: string;
+  type: 'chat' | 'email' | 'community';
+  action: string;
+}
+
+export interface ProfileData {
+  _id: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  profileImage?: string;
+  address?: string;
+  city?: string;
+  category?: string;
+  hourlyRate?: number;
+  experience?: number;
+  skills?: string[];
+  isAvailable?: boolean;
+  bio?: string;
 }
 
 // Fetch Functions
@@ -190,6 +284,39 @@ const fetchNotifications = async (): Promise<NotificationsResponse> => {
     unreadCount: response.data.unreadCount || 0,
     userRole: response.data.userRole,
   };
+};
+
+const fetchProfile = async (id: string, role: 'client' | 'worker'): Promise<ProfileData> => {
+  const endpoint = role === 'worker' ? `/workers/${id}` : `/users/${id}`;
+  const response = await api.get(endpoint);
+  return response.data.data;
+};
+
+const fetchPreferences = async (): Promise<UserPreferences> => {
+  const response = await api.get('/preferences/my');
+  return response.data.data;
+};
+
+const fetchMyPayments = async (): Promise<PaymentsResponse> => {
+  const response = await api.get('/payments/my-payments');
+  return response.data.data;
+};
+
+const fetchHelpTopics = async (): Promise<HelpTopic[]> => {
+  const response = await api.get('/support/topics');
+  return response.data.data || [];
+};
+
+const fetchHelpChannels = async (): Promise<SupportChannel[]> => {
+  const response = await api.get('/support/channels');
+  return response.data.data || [];
+};
+
+const fetchHelpSearch = async (query: string): Promise<HelpArticle[]> => {
+  const response = await api.get('/support/search', {
+    params: { query },
+  });
+  return response.data.data || [];
 };
 
 // Query Hooks
@@ -303,6 +430,75 @@ export function useNotifications(options?: Omit<UseQueryOptions<NotificationsRes
     queryFn: fetchNotifications,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function usePreferences(options?: Omit<UseQueryOptions<UserPreferences>, 'queryKey' | 'queryFn'>) {
+  return useQuery<UserPreferences>({
+    queryKey: queryKeys.preferences.current(),
+    queryFn: fetchPreferences,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useMyPayments(options?: Omit<UseQueryOptions<PaymentsResponse>, 'queryKey' | 'queryFn'>) {
+  return useQuery<PaymentsResponse>({
+    queryKey: queryKeys.wallet.transactions(),
+    queryFn: fetchMyPayments,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useHelpTopics(options?: Omit<UseQueryOptions<HelpTopic[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<HelpTopic[]>({
+    queryKey: queryKeys.helpCenter.topics(),
+    queryFn: fetchHelpTopics,
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60,
+    ...options,
+  });
+}
+
+export function useHelpChannels(options?: Omit<UseQueryOptions<SupportChannel[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<SupportChannel[]>({
+    queryKey: queryKeys.helpCenter.channels(),
+    queryFn: fetchHelpChannels,
+    staleTime: 1000 * 60 * 60,
+    gcTime: 1000 * 60 * 60,
+    ...options,
+  });
+}
+
+export function useHelpSearch(
+  query: string,
+  options?: Omit<UseQueryOptions<HelpArticle[]>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery<HelpArticle[]>({
+    queryKey: queryKeys.helpCenter.search(query),
+    queryFn: () => fetchHelpSearch(query),
+    enabled: query.length > 0,
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
+    ...options,
+  });
+}
+
+export function useProfile(
+  id: string | undefined,
+  role: 'client' | 'worker' | null,
+  options?: Omit<UseQueryOptions<ProfileData>, 'queryKey' | 'queryFn'>
+) {
+  return useQuery<ProfileData>({
+    queryKey: [...queryKeys.profile.current(), role, id],
+    queryFn: () => fetchProfile(id!, role as 'client' | 'worker'),
+    enabled: !!id && !!role,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
     ...options,
   });
 }

@@ -24,6 +24,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
+import { BASE_URL } from '../../constants/Config';
 import { auth } from '../../firebaseConfig';
 import * as Haptics from 'expo-haptics';
 
@@ -38,12 +39,13 @@ export default function VerifyScreen() {
     fullName: string;
     email: string;
     phone: string;
-    verificationId: string;
+    verificationId?: string;
     role: string;
   }>();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   // 🎨 Dynamic accent color based on role
@@ -86,7 +88,9 @@ export default function VerifyScreen() {
     }
   };
 
-  const handleVerify = async () => {
+  /*
+  // ORIGINAL FIREBASE SMS VERIFICATION FLOW (COMMENTED OUT)
+  const handleVerifyOld = async () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) {
       Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
@@ -119,6 +123,80 @@ export default function VerifyScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsVerifying(false);
+    }
+  };
+  */
+
+  // NEW EMAIL OTP FLOW VERIFICATION
+  const handleVerify = async () => {
+    const otpString = otp.join('');
+    if (otpString.length !== 6) {
+      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/otp/verify-email-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          code: otpString
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid code.');
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      router.push({
+        pathname: '/(auth)/register-details',
+        params: {
+          fullName,
+          email,
+          phone,
+          role,
+          idToken: ''
+        }
+      });
+    } catch (error: any) {
+      Alert.alert('Verification Failed', error.message || 'Invalid or expired verification code.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (isResending) return;
+    setIsResending(true);
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/otp/send-email-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to resend code.');
+      }
+
+      Alert.alert('Verification Code Sent', 'A new verification code has been dispatched to your email address.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error: any) {
+      Alert.alert('Resend Failed', error.message || 'Could not resend code. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -204,8 +282,17 @@ export default function VerifyScreen() {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.resendBtn} activeOpacity={0.7}>
-                <Text style={styles.resendText}>NO CODE RECEIVED? <Text style={[styles.link, { color: accentColor }]}>RE-TRANSMIT</Text></Text>
+              <TouchableOpacity 
+                style={styles.resendBtn} 
+                activeOpacity={0.7} 
+                onPress={handleResend}
+                disabled={isResending}
+              >
+                {isResending ? (
+                  <ActivityIndicator size="small" color={accentColor} />
+                ) : (
+                  <Text style={styles.resendText}>NO CODE RECEIVED? <Text style={[styles.link, { color: accentColor }]}>RE-TRANSMIT</Text></Text>
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>

@@ -68,10 +68,24 @@ export const queryKeys = {
     current: () => [...queryKeys.profile.all, 'current'] as const,
   },
 
+  // Preferences
+  preferences: {
+    all: ['preferences'] as const,
+    current: () => [...queryKeys.preferences.all, 'current'] as const,
+  },
+
   // Wallet/Transactions
   wallet: {
     all: ['wallet'] as const,
     balance: () => [...queryKeys.wallet.all, 'balance'] as const,
     transactions: () => [...queryKeys.wallet.all, 'transactions'] as const,
+  },
+
+  // Help Center
+  helpCenter: {
+    all: ['help-center'] as const,
+    topics: () => [...queryKeys.helpCenter.all, 'topics'] as const,
+    channels: () => [...queryKeys.helpCenter.all, 'channels'] as const,
+    search: (query: string) => [...queryKeys.helpCenter.all, 'search', query] as const,
   },
 } as const;
