@@ -48,7 +48,7 @@ export function HomeHeader() {
             <View style={[styles.activeIndicator, { backgroundColor: Colors.success }]} />
           </TouchableOpacity>
           <View style={styles.welcomeText}>
-            <Text style={styles.greetingLabel}>{role === 'worker' ? 'Worker Access' : 'Client Access'}</Text>
+            <Text style={styles.greetingLabel}>{role === 'worker' ? 'Worker Name' : 'Client Name'}</Text>
             <Text style={styles.greetingHeader}>{user?.fullName || 'Welcome Back'}</Text>
           </View>
         </View>
