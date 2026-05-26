@@ -3,6 +3,12 @@
     "name": "ApnaUstad",
     "slug": "ApnaUstad",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/679e09c9-47e0-41e5-9ca3-a60026d0a9df"
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.jpeg",
     "scheme": "apnaustad",

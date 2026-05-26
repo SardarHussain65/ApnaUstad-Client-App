@@ -199,25 +199,17 @@ export default function RegisterDetailsScreen() {
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Backend response structure: { success, message, data: { user/worker, token, refreshToken } }
       const responseData = data.data || data;
-      const token = responseData.token;
-      const refreshToken = responseData.refreshToken;
-      const user = responseData.user || responseData.worker;
+      const user = responseData.user || responseData.worker || responseData;
       
-      if (!token || !refreshToken || !user) {
-        console.error('Invalid registration response - missing required fields:', { 
-          hasToken: !!token, 
-          hasRefreshToken: !!refreshToken, 
-          hasUser: !!user 
-        });
+      if (!user) {
+        console.error('Invalid registration response:', responseData);
         showError('Registration Error', 'Invalid server response. Please try again.');
         return;
       }
       
-      setAuth(token, refreshToken, params.role as 'client' | 'worker', user);
-      success('Welcome!', `Profile completed! Welcome to ApnaUstad as a ${params.role}.`);
-      router.replace('/(tabs)' as any);
+      success('Success!', `Profile completed successfully! Please log in to continue.`);
+      router.replace('/(auth)/login' as any);
     },
     onError: (error: any) => {
       showError('Registration Error', error.message);

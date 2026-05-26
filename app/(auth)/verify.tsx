@@ -27,6 +27,7 @@ import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../consta
 import { BASE_URL } from '../../constants/Config';
 import { auth } from '../../firebaseConfig';
 import * as Haptics from 'expo-haptics';
+import { OtpInput } from 'react-native-otp-entry';
 
 const { width } = Dimensions.get('window');
 
@@ -43,56 +44,24 @@ export default function VerifyScreen() {
     role: string;
   }>();
 
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const inputRefs = useRef<Array<TextInput | null>>([]);
 
   // 🎨 Dynamic accent color based on role
   const accentColor = role === 'worker' ? Colors.worker : Colors.cyan;
 
   // Animation values
   const progressAnim = useSharedValue(0.33); 
-  const cellScales = useRef(otp.map(() => useSharedValue(1))).current;
 
   useEffect(() => {
     progressAnim.value = withSpring(0.66, { damping: 20 }); 
   }, []);
 
-  const handleOtpChange = (value: string, index: number) => {
-    if (value.length > 1) {
-      value = value.slice(-1);
-    }
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    if (value.length === 1) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // Animate hit
-      cellScales[index].value = withSequence(
-        withSpring(1.2, { damping: 10, stiffness: 100 }),
-        withSpring(1, { damping: 15 })
-      );
-
-      if (index < 5) {
-        inputRefs.current[index + 1]?.focus();
-      }
-    }
-  };
-
-  const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && otp[index] === '' && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
   /*
   // ORIGINAL FIREBASE SMS VERIFICATION FLOW (COMMENTED OUT)
   const handleVerifyOld = async () => {
-    const otpString = otp.join('');
-    if (otpString.length !== 6) {
+    if (otp.length !== 6) {
       Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
       return;
     }
@@ -104,7 +73,7 @@ export default function VerifyScreen() {
       }
 
       // @ts-ignore
-      const credential = auth.PhoneAuthProvider.credential(verificationId, otpString);
+      const credential = auth.PhoneAuthProvider.credential(verificationId, otp);
       const result = await auth().signInWithCredential(credential);
       const idToken = await result.user.getIdToken();
 
@@ -129,8 +98,7 @@ export default function VerifyScreen() {
 
   // NEW EMAIL OTP FLOW VERIFICATION
   const handleVerify = async () => {
-    const otpString = otp.join('');
-    if (otpString.length !== 6) {
+    if (otp.length !== 6) {
       Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
       return;
     }
@@ -144,7 +112,7 @@ export default function VerifyScreen() {
         },
         body: JSON.stringify({
           email,
-          code: otpString
+          code: otp
         }),
       });
 
@@ -236,34 +204,32 @@ export default function VerifyScreen() {
             {/* Hero Section */}
             <View style={styles.hero}>
               <Text style={[styles.title, Typography.threeD]}>CONFIRM {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>IDENTITY</Text></Text>
-              <Text style={styles.subtitle}>CODE TRANSMITTED TO {'\n'}<Text style={styles.phoneLink}>{phone}</Text></Text>
+              <Text style={styles.subtitle}>CODE TRANSMITTED TO {'\n'}<Text style={styles.phoneLink}>{email}</Text></Text>
             </View>
 
             {/* Segmented OTP Input */}
-            <View style={styles.otpContainer}>
-              {otp.map((digit, index) => {
-                const animatedCell = useAnimatedStyle(() => ({
-                  transform: [{ scale: cellScales[index].value }],
-                  borderColor: digit ? accentColor : 'rgba(255,255,255,0.1)',
-                }));
-
-                return (
-                  <Animated.View key={index} style={[styles.otpCellWrapper, animatedCell]}>
-                    <GlassCard intensity={digit ? 30 : 10} style={styles.innerCell} padding={0}>
-                      <TextInput
-                        ref={(ref) => { inputRefs.current[index] = ref; }}
-                        style={styles.otpInput}
-                        keyboardType="number-pad"
-                        maxLength={1}
-                        value={digit}
-                        onChangeText={(value) => handleOtpChange(value, index)}
-                        onKeyPress={(e) => handleKeyPress(e, index)}
-                        selectionColor={accentColor}
-                      />
-                    </GlassCard>
-                  </Animated.View>
-                );
-              })}
+            <View style={styles.otpWrapper}>
+              <OtpInput
+                numberOfDigits={6}
+                focusColor={accentColor}
+                focusStickBlinkingDuration={500}
+                onTextChange={(text) => {
+                  setOtp(text);
+                  if (text.length > 0) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                }}
+                onFilled={(text) => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+                theme={{
+                  containerStyle: styles.otpContainer,
+                  pinCodeContainerStyle: styles.otpCell,
+                  pinCodeTextStyle: styles.otpText,
+                  focusStickStyle: { ...styles.focusStick, backgroundColor: accentColor },
+                  focusedPinCodeContainerStyle: { ...styles.activeOtpCell, borderColor: accentColor },
+                }}
+              />
             </View>
 
             <View style={styles.actions}>
@@ -383,30 +349,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '900',
   },
+  otpWrapper: {
+    marginBottom: 50,
+  },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 50,
+    width: '100%',
   },
-  otpCellWrapper: {
+  otpCell: {
     width: (width - 48 - 50) / 6,
     height: 65,
     borderRadius: 20,
     borderWidth: 1.5,
-  },
-  innerCell: {
-    flex: 1,
-    borderRadius: 18,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  otpInput: {
-    width: '100%',
-    height: '100%',
-    textAlign: 'center',
+  activeOtpCell: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  otpText: {
     fontSize: 24,
     fontWeight: '900',
     color: '#fff',
+  },
+  focusStick: {
+    width: 2,
+    height: 30,
   },
   actions: {
     flex: 1,
