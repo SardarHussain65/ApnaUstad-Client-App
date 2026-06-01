@@ -1,11 +1,19 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Banknote, ChevronRight, Clock, Hourglass, MapPin, Radar, X } from 'lucide-react-native';
+import {
+  Banknote,
+  BriefcaseBusiness,
+  CalendarDays,
+  Clock3,
+  Hourglass,
+  MapPin,
+  Radar,
+  Zap,
+} from 'lucide-react-native';
 import { Bid, Job } from '../../hooks/queries/useMessagesAndJobs';
-import { Colors, Typography } from '../../constants/Theme';
-import { GlassCard } from './GlassCard';
+import { BorderRadius, Colors, Shadows, Typography } from '../../constants/Theme';
 
 interface WorkerPendingBidCardProps {
   bid: Bid;
@@ -15,19 +23,27 @@ interface WorkerPendingBidCardProps {
   isWithdrawing?: boolean;
 }
 
+const withAlpha = (color: string, alpha: string) =>
+  color.startsWith('#') && color.length === 7 ? `${color}${alpha}` : color;
+
+const initialsFor = (name?: string) => {
+  if (!name?.trim()) return 'CL';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('');
+};
+
+const fallbackDate = (date?: string) => {
+  const parsed = date ? new Date(date) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return 'Today';
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 function getJobFromBid(bid: Bid): Job | null {
   return bid.jobPost && typeof bid.jobPost === 'object' ? bid.jobPost : null;
-}
-
-function formatJobTime(job: Job | null) {
-  if (!job) return 'Waiting for client';
-  if (job.urgency === 'instant') return 'Immediate request';
-
-  const dateLabel = job.scheduledDate
-    ? new Date(job.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : 'Scheduled request';
-
-  return job.scheduledTime ? `${dateLabel} at ${job.scheduledTime}` : dateLabel;
 }
 
 export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
@@ -38,248 +54,353 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   isWithdrawing = false,
 }: WorkerPendingBidCardProps) {
   const job = useMemo(() => getJobFromBid(bid), [bid]);
-  const price = bid.proposedPrice || job?.amount || bid.amount || 0;
+  const meta = bid.cardMeta;
+  const workerPerson = bid.worker && typeof bid.worker === 'object' ? bid.worker : null;
+  const customer = job?.customer && typeof job.customer === 'object' ? job.customer : null;
+  const accentColor = meta?.statusInfo?.accentColor || Colors.worker;
+  const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
+  const MissionIcon = isInstant ? Zap : CalendarDays;
+  const clientName = meta?.counterParty?.fullName || customer?.fullName || 'Client';
+  const clientRole = meta?.counterParty?.roleLabel || 'Client';
+  const clientAvatar = meta?.primaryImageUrl || meta?.counterParty?.profileImage || customer?.profileImage || '';
+  const completedJobs = Number(meta?.counterParty?.completedJobs || 0);
+  const title = meta?.title || job?.category || 'Pending mission';
+  const description = meta?.description || job?.description || bid.message || 'Your proposal is waiting for client review.';
+  const missionKindLabel = meta?.missionKindLabel || (isInstant ? 'Instant visit' : 'Scheduled visit');
+  const dateLabel = meta?.schedule?.dateLabel || fallbackDate(job?.scheduledDate);
+  const timeLabel = meta?.schedule?.timeLabel || job?.scheduledTime || 'ASAP';
+  const locationLabel = meta?.location?.address || job?.address || 'Service location';
+  const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
+  const statusLabel = meta?.statusInfo?.label || 'Awaiting client';
+
+  const gradientColors: [string, string, string] = [
+    withAlpha(accentColor, '32'),
+    'rgba(8, 10, 30, 0.96)',
+    'rgba(0, 245, 255, 0.09)',
+  ];
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 90).duration(520)}>
-      <GlassCard
-        style={styles.card}
-        contentStyle={styles.cardContent}
-        padding={0}
-        intensity={48}
-        hasGlow
-        glowColor={Colors.worker}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => onDetails(bid)}
+        style={[
+          styles.card,
+          {
+            borderColor: withAlpha(accentColor, '50'),
+            borderTopColor: withAlpha(accentColor, '60'),
+            borderLeftColor: withAlpha(accentColor, '48'),
+            shadowColor: accentColor,
+          },
+        ]}
       >
         <LinearGradient
-          colors={['rgba(255,140,0,0.17)', 'rgba(0,245,255,0.06)', 'rgba(255,255,255,0.03)']}
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
+        <View style={[styles.accentGlow, { backgroundColor: withAlpha(accentColor, '22') }]} />
+        <View style={[styles.accentLine, { backgroundColor: accentColor }]} />
 
         <View style={styles.topRow}>
-          <View style={styles.pendingPill}>
-            <Hourglass size={13} color={Colors.worker} />
-            <Text style={styles.pendingText}>Awaiting Client</Text>
-          </View>
-          <View style={styles.signalPill}>
-            <Radar size={13} color={Colors.cyan} />
-            <Text style={styles.signalText}>Interest Sent</Text>
-          </View>
-        </View>
-
-        <View style={styles.titleBlock}>
-          <Text style={[styles.category, Typography.threeD]} numberOfLines={1}>
-            {job?.category || 'Pending Mission'}
-          </Text>
-          <Text style={styles.description} numberOfLines={2}>
-            {job?.description || bid.message || 'Your response is waiting for client confirmation.'}
-          </Text>
-        </View>
-
-        <View style={styles.detailStrip}>
-          <View style={styles.stripItem}>
-            <Clock size={14} color="rgba(255,255,255,0.58)" />
-            <Text style={styles.stripText} numberOfLines={1}>{formatJobTime(job)}</Text>
-          </View>
-          <View style={styles.stripItem}>
-            <MapPin size={14} color="rgba(255,255,255,0.58)" />
-            <Text style={styles.stripText} numberOfLines={1}>{job?.address || 'Service location'}</Text>
-          </View>
-        </View>
-
-        <View style={styles.priceRow}>
-          <View style={styles.priceBadge}>
-            <Banknote size={15} color={Colors.green} />
-            <Text style={styles.priceText}>Rs. {price.toLocaleString()}</Text>
-          </View>
-          <Text style={styles.priceLabel}>Your quoted value</Text>
-        </View>
-
-        <View style={styles.actionRow}>
-          <TouchableOpacity activeOpacity={0.84} style={styles.detailsButton} onPress={() => onDetails(bid)}>
-            <Text style={styles.detailsText}>Details</Text>
-            <ChevronRight size={16} color="#001015" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.84}
-            disabled={isWithdrawing}
-            style={[styles.withdrawButton, isWithdrawing && styles.disabledButton]}
-            onPress={() => onWithdraw(bid)}
-          >
-            {isWithdrawing ? (
-              <ActivityIndicator size="small" color={Colors.error} />
+          <View style={[styles.avatarShell, { borderColor: withAlpha(accentColor, '72') }]}>
+            {clientAvatar ? (
+              <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
             ) : (
-              <>
-                <X size={15} color={Colors.error} />
-                <Text style={styles.withdrawText}>Withdraw</Text>
-              </>
+              <LinearGradient
+                colors={[withAlpha(accentColor, '72'), 'rgba(0,245,255,0.24)']}
+                style={styles.avatarFallback}
+              >
+                <Text style={styles.avatarText}>{initialsFor(clientName)}</Text>
+              </LinearGradient>
             )}
-          </TouchableOpacity>
+          </View>
+
+          <View style={styles.identityBlock}>
+            <Text style={styles.personRole}>{clientRole}</Text>
+            <Text style={[styles.personName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
+            <Text style={styles.clientHistory} numberOfLines={1}>
+              {completedJobs > 0 ? `${completedJobs} completed job${completedJobs === 1 ? '' : 's'}` : 'Proposal submitted'}
+            </Text>
+          </View>
+
+          <View style={[styles.statusBadge, { borderColor: withAlpha(accentColor, '60'), backgroundColor: withAlpha(accentColor, '18') }]}>
+            <Hourglass size={11} color={accentColor} strokeWidth={2.6} />
+            <Text style={[styles.statusText, { color: accentColor }]} numberOfLines={1}>{statusLabel}</Text>
+          </View>
         </View>
-      </GlassCard>
+
+        <View style={styles.serviceRow}>
+          <View style={[styles.serviceIcon, { borderColor: withAlpha(accentColor, '38') }]}>
+            <BriefcaseBusiness size={18} color={Colors.cyan} strokeWidth={2.4} />
+          </View>
+          <View style={styles.serviceCopy}>
+            <Text style={[styles.category, Typography.threeD]} numberOfLines={1}>{title}</Text>
+            <Text style={styles.description} numberOfLines={2}>{description}</Text>
+          </View>
+        </View>
+
+        <View style={styles.metaGrid}>
+          <View style={styles.metaPill}>
+            <MissionIcon size={13} color={isInstant ? Colors.worker : Colors.cyan} strokeWidth={2.4} />
+            <Text style={styles.metaText} numberOfLines={1}>{missionKindLabel}</Text>
+          </View>
+          <View style={styles.metaPill}>
+            <CalendarDays size={13} color={Colors.cyan} strokeWidth={2.4} />
+            <Text style={styles.metaText} numberOfLines={1}>{dateLabel}</Text>
+          </View>
+          <View style={styles.metaPill}>
+            <Clock3 size={13} color={Colors.worker} strokeWidth={2.4} />
+            <Text style={styles.metaText} numberOfLines={1}>{timeLabel}</Text>
+          </View>
+        </View>
+
+        <View style={styles.locationRow}>
+          <MapPin size={14} color={Colors.textMuted} strokeWidth={2.2} />
+          <Text style={styles.locationText} numberOfLines={1}>{locationLabel}</Text>
+        </View>
+
+        <View style={styles.offerRow}>
+          <View style={styles.amountBox}>
+            <Banknote size={14} color={Colors.green} strokeWidth={2.4} />
+            <View>
+              <Text style={styles.amountLabel}>Your quote</Text>
+              <Text style={styles.amountValue}>{amountText}</Text>
+            </View>
+          </View>
+          <View style={styles.sentState}>
+            <Radar size={14} color={Colors.cyan} strokeWidth={2.4} />
+            <Text style={styles.sentText}>Interest sent</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 26,
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
     marginBottom: 14,
+    padding: 14,
+    backgroundColor: 'rgba(8,10,30,0.9)',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    elevation: 8,
+    ...Shadows.bevel,
   },
-  cardContent: {
-    padding: 16,
+  accentGlow: {
+    position: 'absolute',
+    width: 126,
+    height: 126,
+    borderRadius: 63,
+    right: -45,
+    top: -54,
+  },
+  accentLine: {
+    position: 'absolute',
+    left: 0,
+    top: 18,
+    bottom: 18,
+    width: 3,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 14,
-  },
-  pendingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(255,140,0,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,140,0,0.34)',
-  },
-  pendingText: {
-    color: Colors.worker,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0,
-  },
-  signalPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(0,245,255,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.25)',
-    flexShrink: 1,
-  },
-  signalText: {
-    color: Colors.cyan,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0,
-  },
-  titleBlock: {
     marginBottom: 13,
+  },
+  avatarShell: {
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    borderWidth: 1.4,
+    padding: 3,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  avatarFallback: {
+    flex: 1,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  identityBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  personRole: {
+    color: Colors.textMuted,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  personName: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  clientHistory: {
+    color: 'rgba(255,255,255,0.42)',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    maxWidth: 126,
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    padding: 11,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 10,
+  },
+  serviceIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,245,255,0.08)',
+    borderWidth: 1,
+  },
+  serviceCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   category: {
     color: '#fff',
-    fontSize: 23,
+    fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 0,
-    marginBottom: 5,
   },
   description: {
-    color: 'rgba(255,255,255,0.66)',
-    fontSize: 13,
+    color: Colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: '600',
-    lineHeight: 18,
-    letterSpacing: 0,
+    marginTop: 3,
   },
-  detailStrip: {
-    gap: 8,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-    marginBottom: 13,
-  },
-  stripItem: {
+  metaGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stripText: {
-    flex: 1,
-    minWidth: 0,
-    color: 'rgba(255,255,255,0.68)',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
-  },
-  priceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 7,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(0,255,127,0.12)',
+    marginBottom: 9,
+  },
+  metaPill: {
+    flex: 1,
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 7,
+    borderRadius: 13,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.22)',
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.035)',
   },
-  priceText: {
-    color: Colors.green,
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 0,
-  },
-  priceLabel: {
-    color: 'rgba(255,255,255,0.46)',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0,
+  metaText: {
     flexShrink: 1,
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 10,
+    fontWeight: '800',
   },
-  actionRow: {
+  locationRow: {
+    minHeight: 38,
     flexDirection: 'row',
-    gap: 10,
-  },
-  detailsButton: {
-    flex: 1,
-    minHeight: 46,
-    borderRadius: 16,
-    backgroundColor: Colors.cyan,
     alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  detailsText: {
-    color: '#001015',
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0,
-  },
-  withdrawButton: {
-    minHeight: 46,
-    minWidth: 122,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
     gap: 7,
-    backgroundColor: 'rgba(255,59,48,0.10)',
+    borderRadius: 13,
     borderWidth: 1,
-    borderColor: 'rgba(255,59,48,0.28)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
-  disabledButton: {
-    opacity: 0.7,
+  locationText: {
+    flex: 1,
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
   },
-  withdrawText: {
-    color: Colors.error,
+  offerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 9,
+  },
+  amountBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,127,0.24)',
+    backgroundColor: 'rgba(0,255,127,0.10)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  amountLabel: {
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: 8,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  amountValue: {
+    color: Colors.green,
     fontSize: 14,
     fontWeight: '900',
-    letterSpacing: 0,
+    marginTop: 1,
+  },
+  sentState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0,245,255,0.20)',
+    backgroundColor: 'rgba(0,245,255,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  sentText: {
+    color: Colors.cyan,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
 });

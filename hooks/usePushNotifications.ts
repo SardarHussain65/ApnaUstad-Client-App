@@ -95,6 +95,7 @@ const handleNotificationTap = async (
     // Route based on user role and notification type
     if (userRole === 'client') {
       switch (notificationType) {
+        case 'booking_accepted':
         case 'worker_accepted':
           if (bookingId) {
             router.push({
@@ -104,6 +105,7 @@ const handleNotificationTap = async (
           }
           break;
 
+        case 'job_started':
         case 'worker_started':
           if (bookingId) {
             router.push({
@@ -113,6 +115,7 @@ const handleNotificationTap = async (
           }
           break;
 
+        case 'job_completed':
         case 'worker_completed':
           if (bookingId) {
             router.push({
@@ -153,6 +156,7 @@ const handleNotificationTap = async (
       // Worker-specific navigation
       switch (notificationType) {
         case 'new_job_available':
+        case 'job_available':
           if (categoryId) {
             router.push({
               pathname: '/category-details',
@@ -177,6 +181,7 @@ const handleNotificationTap = async (
           break;
 
         case 'payment_received':
+        case 'wallet_topup':
           router.push({
             pathname: '/(tabs)/wallet',
           });

@@ -6,6 +6,7 @@ export {
   useAllWorkers,
   useBookings,
   useMyBookings,
+  useClientHomeSummary,
   useWorkerBookings,
   useBookingDetails,
   useWorkerReviews,
@@ -24,12 +25,15 @@ export {
   type NotificationsResponse,
   type UserPreferences,
   type PaymentsResponse,
+  type PaymentEntry,
   type HelpTopic,
   type HelpArticle,
   type SupportChannel,
   type ProfileData,
   type Booking,
   type BookingPerson,
+  type ClientHomeSummary,
+  type ClientHomeStats,
 } from './queries/useData';
 
 export {
@@ -46,6 +50,7 @@ export {
 // Mutation Hooks - Data Changes
 export {
   useCreateJobMutation,
+  useCancelJobMutation,
   useSubmitBidMutation,
   useAcceptBidMutation,
   useAcceptInstantJobMutation,
@@ -63,6 +68,21 @@ export {
   useLogoutAllSessionsMutation,
   useCreateSupportRequestMutation,
 } from './mutations/useMutations';
+
+// Wallet Hooks
+export {
+  useWorkerWallet,
+  useWalletTransactions,
+  useWalletPaymentMethods,
+  useWalletTopUps,
+  useCreateWalletTopUpMutation,
+  type WorkerWallet,
+  type WalletTransaction,
+  type TransactionsResponse,
+  type WalletPaymentMethod,
+  type WalletTopUpRequest,
+  type TopUpsResponse,
+} from './queries/useWallet';
 
 // UI Hooks
 export { useToast } from './useToast';

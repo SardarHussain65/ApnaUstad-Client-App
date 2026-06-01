@@ -3,6 +3,7 @@ import {
   StyleSheet,
   View,
   ViewStyle,
+  StyleProp,
   Dimensions,
 } from 'react-native';
 import Animated, {
@@ -21,7 +22,7 @@ interface SkeletonProps {
   width?: number | string;
   height?: number;
   borderRadius?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function SkeletonLoader({
@@ -54,25 +55,25 @@ export function SkeletonLoader({
       style={[
         styles.skeleton,
         {
-          width: skeletonWidth,
+          width: skeletonWidth as any,
           height,
           borderRadius,
         },
         animatedStyle,
         style,
-      ]}
+      ] as any}
     />
   );
 }
 
 interface SkeletonCardProps {
   lines?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function SkeletonCard({ lines = 3, style }: SkeletonCardProps) {
   return (
-    <View style={[styles.skeletonCard, style]}>
+    <View style={[styles.skeletonCard, style] as any}>
       {/* Header skeleton */}
       <View style={styles.skeletonHeader}>
         <SkeletonLoader width={50} height={50} borderRadius={25} />
@@ -107,7 +108,7 @@ export function SkeletonCard({ lines = 3, style }: SkeletonCardProps) {
 
 interface SkeletonListProps {
   count?: number;
-  cardStyle?: ViewStyle;
+  cardStyle?: StyleProp<ViewStyle>;
 }
 
 export function SkeletonList({ count = 3, cardStyle }: SkeletonListProps) {
@@ -116,7 +117,7 @@ export function SkeletonList({ count = 3, cardStyle }: SkeletonListProps) {
       {Array(count)
         .fill(0)
         .map((_, i) => (
-          <SkeletonCard key={i} style={[styles.listItem, cardStyle]} />
+          <SkeletonCard key={i} style={[styles.listItem, cardStyle] as any} />
         ))}
     </View>
   );

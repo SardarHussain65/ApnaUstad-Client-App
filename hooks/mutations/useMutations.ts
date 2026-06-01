@@ -12,6 +12,9 @@ interface JobCreationPayload {
   latitude: number;
   imageUrl?: string;
   imageUrls?: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
+  audioUrls?: string[];
   amount?: number;
   targetWorkerId?: string;
   scheduledDate?: Date;
@@ -36,6 +39,7 @@ interface BidSubmissionPayload {
 interface AcceptBidPayload {
   jobId: string;
   bidId: string;
+  promoCode?: string;
 }
 
 interface CancelJobPayload {
@@ -66,6 +70,9 @@ interface RegisterPayload {
 interface SendMessagePayload {
   bookingId: string;
   message: string;
+  messageType?: 'text' | 'audio';
+  audioUrl?: string;
+  audioDurationSeconds?: number;
 }
 
 interface PayBookingPayload {
@@ -94,6 +101,12 @@ interface UpdateProfilePayload {
     address?: string;
     city?: string;
     profileImage?: string;
+    // Worker-only fields
+    bio?: string;
+    hourlyRate?: number;
+    experience?: number;
+    skills?: string[];
+    isAvailable?: boolean;
   };
 }
 
@@ -144,8 +157,8 @@ const submitBid = async (payload: BidSubmissionPayload): Promise<any> => {
 };
 
 const acceptBid = async (payload: AcceptBidPayload): Promise<any> => {
-  const { jobId, bidId } = payload;
-  const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
+  const { jobId, bidId, promoCode } = payload;
+  const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`, { promoCode });
   return response.data.data;
 };
 
@@ -228,12 +241,12 @@ const registerUser = async (payload: RegisterPayload & { role: 'client' | 'worke
 };
 
 const sendMessage = async (payload: SendMessagePayload): Promise<any> => {
-  const { bookingId, message } = payload;
-  const response = await api.post(`/messages/${bookingId}`, { message });
+  const { bookingId, ...messageData } = payload;
+  const response = await api.post(`/messages/${bookingId}`, messageData);
   return response.data.data;
 };
 
-const uploadJobImages = async (formData: FormData): Promise<{ imageUrls: string[] }> => {
+const uploadJobImages = async (formData: FormData): Promise<JobMediaUploadResponse> => {
   const response = await api.post('/jobs/upload-images', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -249,8 +262,8 @@ export function useCreateJobMutation(options?: Omit<UseMutationOptions<JobRespon
   return useMutation<JobResponse, Error, JobCreationPayload>({
     mutationFn: createJob,
     onSuccess: (data) => {
-      // Invalidate jobs list to refetch
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.list() });
+      // Invalidate all jobs queries (list, myPosts, nearby, detail) to refresh list
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
     },
     ...options,
   });
@@ -276,10 +289,12 @@ export function useAcceptBidMutation(options?: Omit<UseMutationOptions<any, Erro
   return useMutation<any, Error, AcceptBidPayload>({
     mutationFn: acceptBid,
     onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byJob(variables.jobId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
     },
     ...options,
@@ -292,9 +307,8 @@ export function useCancelJobMutation(options?: Omit<UseMutationOptions<any, Erro
   return useMutation<any, Error, CancelJobPayload>({
     mutationFn: cancelJob,
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.detail(variables.jobId) });
     },
     ...options,
   });
@@ -310,6 +324,7 @@ export function useAcceptInstantJobMutation(options?: Omit<UseMutationOptions<an
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
     },
     ...options,
   });
@@ -324,6 +339,7 @@ export function useUpdateBookingStatusMutation(options?: Omit<UseMutationOptions
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
@@ -355,6 +371,7 @@ export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Err
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
     ...options,
@@ -371,6 +388,7 @@ export function useCreateReviewMutation(options?: Omit<UseMutationOptions<any, E
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.booking) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.workers.detail(variables.worker) });
       queryClient.invalidateQueries({ queryKey: queryKeys.workers.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.reviews.byWorker(variables.worker) });
@@ -459,8 +477,10 @@ export function useSendMessageMutation(options?: Omit<UseMutationOptions<any, Er
   });
 }
 
-export function useUploadJobImagesMutation(options?: Omit<UseMutationOptions<{ imageUrls: string[] }, Error, FormData>, 'mutationFn'>) {
-  return useMutation<{ imageUrls: string[] }, Error, FormData>({
+type JobMediaUploadResponse = { imageUrls: string[]; videoUrls: string[]; audioUrls: string[] };
+
+export function useUploadJobImagesMutation(options?: Omit<UseMutationOptions<JobMediaUploadResponse, Error, FormData>, 'mutationFn'>) {
+  return useMutation<JobMediaUploadResponse, Error, FormData>({
     mutationFn: uploadJobImages,
     ...options,
   });

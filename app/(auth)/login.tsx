@@ -91,7 +91,6 @@ export default function LoginScreen() {
       
       await setAuth(token, refreshToken, finalRole, user);
 
-      Alert.alert('Success', 'Logged in successfully!');
       router.replace('/(tabs)' as any);
     },
     onError: (error: any) => {

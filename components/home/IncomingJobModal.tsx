@@ -1,1061 +1,1305 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
   StyleSheet,
-  View,
   Text,
   TouchableOpacity,
-  Modal,
-  Dimensions,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
+  View,
 } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
   SlideInDown,
   useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  withDelay,
   useSharedValue,
-  interpolate,
-  Easing,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
-import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Zap,
-  MapPin,
-  CircleDollarSign,
-  Navigation,
-  X,
+  Banknote,
+  BriefcaseBusiness,
+  CalendarDays,
   Check,
-  ShieldAlert,
-  Target,
-  Briefcase,
-  Clock,
-  Radio,
-  Wifi,
   ChevronLeft,
   ChevronRight,
+  CircleDollarSign,
+  Clock3,
+  Image as ImageIcon,
+  MapPin,
+  Maximize2,
+  Navigation,
+  PauseCircle,
+  PlayCircle,
+  Radio,
+  ShieldAlert,
+  ShieldCheck,
+  Star,
+  UserRound,
+  Volume2,
+  WalletCards,
+  X,
+  Zap,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 
-const { width, height } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.92;
+import { Colors, Shadows } from '../../constants/Theme';
+import { useAuth } from '../../context/AuthContext';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 24, 520);
 
 interface IncomingJobModalProps {
   visible: boolean;
   jobs: any[];
   onAccept: (job: any) => void;
+  onCounterOffer: (job: any) => void;
   onReject: (jobId: string) => void;
   onClose: () => void;
   acceptingJobId?: string | null;
 }
 
-// Corner bracket component for HUD aesthetic
-function CornerBracket({ position, color }: { position: 'tl' | 'tr' | 'bl' | 'br'; color: string }) {
-  const rotations = { tl: '0deg', tr: '90deg', br: '180deg', bl: '270deg' };
-  return (
-    <View style={[
-      styles.cornerBracket,
-      {
-        top: position.startsWith('t') ? 0 : undefined,
-        bottom: position.startsWith('b') ? 0 : undefined,
-        left: position.endsWith('l') ? 0 : undefined,
-        right: position.endsWith('r') ? 0 : undefined,
-        transform: [{ rotate: rotations[position] }],
-      }
-    ]}>
-      <View style={[styles.bracketH, { backgroundColor: color }]} />
-      <View style={[styles.bracketV, { backgroundColor: color }]} />
-    </View>
-  );
-}
+type MediaItem = {
+  type: 'image' | 'video' | 'audio';
+  url: string;
+};
 
-// Hex grid background cell
-function HexCell({ x, y, opacity }: { x: number; y: number; opacity: number }) {
-  return (
-    <View style={[styles.hexCell, { left: x, top: y, opacity }]}>
-      <View style={styles.hexShape} />
-    </View>
-  );
-}
+const compactUrls = (urls: (string | undefined | null)[]) =>
+  Array.from(new Set(urls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0)));
 
-export function IncomingJobModal({ visible, jobs, onAccept, onReject, onClose, acceptingJobId }: IncomingJobModalProps) {
-  const arrowBounce = useSharedValue(0);
+const getJobMedia = (job: any) => {
+  const images = Array.isArray(job.media?.images)
+    ? job.media.images
+    : compactUrls([job.imageUrl, ...(Array.isArray(job.imageUrls) ? job.imageUrls : [])]);
+  const videos = Array.isArray(job.media?.videos)
+    ? job.media.videos
+    : compactUrls([job.videoUrl, ...(Array.isArray(job.videoUrls) ? job.videoUrls : [])]);
+  const audios = Array.isArray(job.media?.audios)
+    ? job.media.audios
+    : compactUrls(Array.isArray(job.audioUrls) ? job.audioUrls : []);
 
-  useEffect(() => {
-    if (visible && jobs.length > 1) {
-      arrowBounce.value = withRepeat(
-        withSequence(
-          withTiming(0, { duration: 0 }),
-          withTiming(1, { duration: 700, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 700, easing: Easing.in(Easing.quad) })
-        ),
-        -1,
-        false
-      );
-    } else {
-      arrowBounce.value = 0;
-    }
-  }, [visible, jobs.length]);
-
-  const arrowStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateX: interpolate(arrowBounce.value, [0, 1], [0, 10]),
-      },
+  return {
+    images,
+    videos,
+    audios,
+    items: [
+      ...images.map((url: string) => ({ type: 'image' as const, url })),
+      ...videos.map((url: string) => ({ type: 'video' as const, url })),
+      ...audios.map((url: string) => ({ type: 'audio' as const, url })),
     ],
-    opacity: interpolate(arrowBounce.value, [0, 1], [0.35, 1]),
-  }));
+    totalCount: Number(job.media?.totalCount || images.length + videos.length + audios.length),
+  };
+};
+
+const getClientMeta = (job: any) => job.clientMeta || (typeof job.customer === 'object' ? job.customer : null);
+
+const formatMoney = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString()}`;
+
+const formatAge = (value?: string) => {
+  const timestamp = value ? new Date(value).getTime() : 0;
+  if (!timestamp || Number.isNaN(timestamp)) return 'New signal';
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (minutes < 1) return 'Posted just now';
+  if (minutes < 60) return `Posted ${minutes}m ago`;
+  return `Posted ${Math.floor(minutes / 60)}h ago`;
+};
+
+const formatCountdown = (seconds: number) => {
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainder = safeSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+};
+
+const resolveSecondsRemaining = (job: any) => {
+  const expiresAt = job.signalMeta?.expiresAt || job.expiresAt;
+  const expiryTimestamp = expiresAt ? new Date(expiresAt).getTime() : 0;
+  if (expiryTimestamp && !Number.isNaN(expiryTimestamp)) {
+    return Math.max(0, Math.floor((expiryTimestamp - Date.now()) / 1000));
+  }
+  return Math.max(0, Number(job.signalMeta?.responseWindowSeconds || 0));
+};
+
+export function IncomingJobModal({
+  visible,
+  jobs,
+  onAccept,
+  onCounterOffer,
+  onReject,
+  onClose,
+  acceptingJobId,
+}: IncomingJobModalProps) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [parentScrollEnabled, setParentScrollEnabled] = useState(true);
 
   if (!jobs || jobs.length === 0) return null;
 
-  return (
-    <Modal visible={visible} transparent animationType="none">
-      {/* Full screen backdrop */}
-      <View style={styles.backdrop}>
-        {/* Radial vignette overlay */}
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
-          style={StyleSheet.absoluteFillObject}
-        />
+  const handleWalletPress = () => {
+    onClose();
+    router.push('/(tabs)/wallet' as any);
+  };
 
-        <Animated.View
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(200)}
-          style={[styles.container, { height: '100%' }]}
-        >
-          {/* Global Close Button */}
-          <TouchableOpacity 
-            style={styles.closeModalBtn} 
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <LinearGradient colors={['rgba(2,4,16,0.82)', 'rgba(0,0,0,0.98)']} style={StyleSheet.absoluteFillObject} />
+
+        <Animated.View entering={FadeIn.duration(240)} exiting={FadeOut.duration(180)} style={styles.screen}>
+          <TouchableOpacity
+            style={[styles.closeButton, { top: insets.top + 10 }]}
             onPress={onClose}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <X size={22} color="#00F0FF" strokeWidth={2.5} />
+            <X size={21} color={Colors.cyan} strokeWidth={2.6} />
           </TouchableOpacity>
 
           <ScrollView
             horizontal
             pagingEnabled
+            scrollEnabled={parentScrollEnabled}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContainer}
+            contentContainerStyle={styles.jobPager}
             decelerationRate="fast"
           >
             {jobs.map((job, index) => (
-              <View key={job._id} style={{ width: width, alignItems: 'center', justifyContent: 'center' }}>
-                <JobCard
+              <View key={job._id} style={styles.jobPage}>
+                <JobDecisionCard
                   job={job}
-                  onAccept={() => onAccept(job)}
-                  onReject={() => onReject(job._id)}
-                  isLoading={acceptingJobId === job._id}
                   totalJobs={jobs.length}
                   currentIndex={index + 1}
+                  isLoading={acceptingJobId === job._id}
+                  onAccept={() => onAccept(job)}
+                  onCounterOffer={() => onCounterOffer(job)}
+                  onReject={() => onReject(job._id)}
+                  onWalletPress={handleWalletPress}
+                  onScrollActive={setParentScrollEnabled}
                 />
               </View>
             ))}
           </ScrollView>
 
           {jobs.length > 1 && (
-            <Animated.View entering={FadeIn.delay(250).duration(400)} style={[styles.jobArrowHint, arrowStyle]}>
-              <ChevronLeft size={24} color="#00F0FF" strokeWidth={2.5} />
-              <Text style={styles.jobArrowText}>SWIPE</Text>
-              <ChevronRight size={24} color="#00F0FF" strokeWidth={2.5} />
-            </Animated.View>
-          )}
-
-          {/* ── ALERT STRIP BELOW SCROLL ── */}
-          <Animated.View
-            entering={FadeIn.delay(400).duration(600)}
-            style={styles.alertStrip}
-          >
-            <View style={styles.alertInner}>
-              <ShieldAlert size={13} color="#FF3B3B" />
-              <Text style={styles.alertText}>
-                {jobs.length > 1 ? `MULTIPLE SIGNALS DETECTED: ${jobs.length} (SWIPE ↔)` : 'NEURAL LINK EXPIRES IN 30S'}
-              </Text>
-              {/* Blinking dot */}
-              <View style={styles.alertBlink} />
+            <View style={[styles.swipeHint, { bottom: insets.bottom + 14 }]}>
+              <ChevronLeft size={14} color={Colors.cyan} strokeWidth={2.5} />
+              <Text style={styles.swipeHintText}>Swipe for {jobs.length} offers</Text>
+              <ChevronRight size={14} color={Colors.cyan} strokeWidth={2.5} />
             </View>
-          </Animated.View>
+          )}
         </Animated.View>
       </View>
     </Modal>
   );
 }
 
-function JobCard({ job, onAccept, onReject, isLoading, totalJobs, currentIndex }: any) {
-  // Animation values
-  const scanY = useSharedValue(-200);
-  const glowPulse = useSharedValue(0);
-  const cardEntrance = useSharedValue(0);
-  const ringScale = useSharedValue(1);
-  const countdown = useSharedValue(29);
-  const dataFlicker = useSharedValue(1);
-  const borderFlow = useSharedValue(0);
+function JobDecisionCard({
+  job,
+  totalJobs,
+  currentIndex,
+  isLoading,
+  onAccept,
+  onCounterOffer,
+  onReject,
+  onWalletPress,
+  onScrollActive,
+}: {
+  job: any;
+  totalJobs: number;
+  currentIndex: number;
+  isLoading: boolean;
+  onAccept: () => void;
+  onCounterOffer: () => void;
+  onReject: () => void;
+  onWalletPress: () => void;
+  onScrollActive?: (active: boolean) => void;
+}) {
+  const { user } = useAuth();
+  const workerLoc = (user as any)?.address || (user as any)?.city || '';
+  const signal = job.signalMeta || {};
+  const isInstant = job.urgency === 'instant';
+  const accent = isInstant ? '#00F0FF' : '#FF8C00';
+  const accentSecondary = isInstant ? '#007AFF' : '#FF5E00';
+  const media = useMemo(() => getJobMedia(job), [job]);
+  const client = getClientMeta(job);
+  const [secondsRemaining, setSecondsRemaining] = useState(() => resolveSecondsRemaining(job));
+  const glow = useSharedValue(0.35);
 
   useEffect(() => {
-    // Scanning line that sweeps vertically
-    scanY.value = withRepeat(
-      withTiming(700, { duration: 2800, easing: Easing.linear }),
-      -1,
-      false
-    );
-    scanY.value = -200;
+    setSecondsRemaining(resolveSecondsRemaining(job));
+    const interval = setInterval(() => {
+      setSecondsRemaining(resolveSecondsRemaining(job));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [job]);
 
-    // Outer glow breathing
-    glowPulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1400 }),
-        withTiming(0.3, { duration: 1400 })
-      ),
+  useEffect(() => {
+    glow.value = withRepeat(
+      withSequence(withTiming(0.8, { duration: 1200 }), withTiming(0.35, { duration: 1200 })),
       -1,
       true
     );
+  }, [glow]);
 
-    // Icon ring pulse
-    ringScale.value = withRepeat(
-      withSequence(
-        withTiming(1.08, { duration: 900, easing: Easing.out(Easing.quad) }),
-        withTiming(1, { duration: 900, easing: Easing.in(Easing.quad) })
-      ),
-      -1,
-      true
-    );
-
-    // Data flicker effect
-    dataFlicker.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2000 }),
-        withTiming(0.6, { duration: 60 }),
-        withTiming(1, { duration: 60 }),
-        withTiming(0.8, { duration: 80 }),
-        withTiming(1, { duration: 1800 }),
-      ),
-      -1,
-      false
-    );
-
-    // Border flow animation
-    borderFlow.value = withRepeat(
-      withTiming(1, { duration: 3000, easing: Easing.linear }),
-      -1,
-      false
-    );
-
-    return () => {
-      scanY.value = -200;
-      glowPulse.value = 0;
-    };
-  }, []);
-
-  const scanStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scanY.value }],
-    opacity: interpolate(
-      scanY.value,
-      [-200, 0, 300, 600, 700],
-      [0, 0.8, 0.5, 0.3, 0]
-    ),
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowPulse.value,
-  }));
-
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ringScale.value }],
-  }));
-
-  const flickerStyle = useAnimatedStyle(() => ({
-    opacity: dataFlicker.value,
-  }));
-
-  const isInstant = job.urgency === 'instant';
-  const accentColor = isInstant ? '#00F0FF' : '#FF6B00';
-  const accentSecondary = isInstant ? '#0066FF' : '#FF2D55';
-  const accentDim = isInstant ? '#00F0FF30' : '#FF6B0030';
-
-  // Generate hex grid positions
-  const hexCells = [
-    { x: 20, y: 30, opacity: 0.06 }, { x: 55, y: 10, opacity: 0.04 },
-    { x: 90, y: 30, opacity: 0.08 }, { x: 125, y: 10, opacity: 0.03 },
-    { x: 160, y: 30, opacity: 0.06 }, { x: 195, y: 10, opacity: 0.05 },
-    { x: 230, y: 30, opacity: 0.07 }, { x: 265, y: 10, opacity: 0.04 },
-    { x: 300, y: 30, opacity: 0.06 }, { x: 335, y: 10, opacity: 0.03 },
-    { x: 37, y: 60, opacity: 0.05 }, { x: 72, y: 80, opacity: 0.07 },
-    { x: 107, y: 60, opacity: 0.04 }, { x: 142, y: 80, opacity: 0.06 },
-    { x: 177, y: 60, opacity: 0.08 }, { x: 212, y: 80, opacity: 0.05 },
-    { x: 247, y: 60, opacity: 0.04 }, { x: 282, y: 80, opacity: 0.07 },
-    { x: 317, y: 60, opacity: 0.03 }, { x: 352, y: 80, opacity: 0.05 },
-  ];
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value }));
+  const offerAmount = Number(signal.amount || job.amount || job.hourlyRate || 0);
+  const netEarning = Number(signal.estimatedNetEarning ?? offerAmount);
+  const commission = Number(signal.estimatedCommission || 0);
+  const walletBalance = Number(signal.walletBalance || 0);
+  const requiredWalletBalance = Number(signal.requiredWalletBalance || 0);
+  const isWalletEligible = signal.isWalletEligible !== false;
+  const distanceText = signal.distanceText || job.distanceText || 'Nearby';
+  const schedule = signal.schedule || {};
+  const clientRating = Number(client?.rating || 0);
+  const completedJobs = Number(client?.completedJobs || 0);
+  const totalJobsPosted = Number(client?.totalJobs || 0);
+  const timingText = isInstant
+    ? 'Immediate response requested'
+    : `${schedule.fullDateLabel || schedule.dateLabel || 'Scheduled visit'} at ${schedule.timeLabel || 'Time pending'}`;
+  const primaryAmountLabel = isInstant ? 'Net earning' : 'Client budget';
+  const primaryAmountText = isInstant
+    ? (signal.estimatedNetEarningText || formatMoney(netEarning))
+    : (signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : 'Open budget'));
+  const primaryAmountHint = isInstant
+    ? (commission > 0 ? `${formatMoney(commission)} commission` : 'No commission')
+    : 'Submit your own quote';
 
   return (
-    <View style={styles.cardWrapper}>
-      {/* Outer glow ring behind card */}
-      <Animated.View style={[styles.outerGlow, glowStyle, { shadowColor: accentColor }]} />
+    <Animated.View entering={SlideInDown.duration(420).springify().damping(18)} style={styles.cardFrame}>
+      <Animated.View style={[styles.cardGlow, { shadowColor: accent }, glowStyle]} />
 
-      {/* ─── MAIN CARD ─── */}
-      <Animated.View
-        entering={SlideInDown.duration(500).springify().damping(18)}
-        style={styles.card}
-      >
-        {/* Card base layer - dark background */}
-            <LinearGradient
-              colors={['#08091A', '#0C0E24', '#080916']}
-              style={styles.cardGradient}
+      <View style={styles.card}>
+        <LinearGradient colors={['rgba(8,11,31,0.98)', 'rgba(5,8,24,0.99)']} style={StyleSheet.absoluteFillObject} />
+
+        <LinearGradient
+          colors={[accent, accentSecondary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.liveBar}
+        >
+          <View style={styles.liveBarLeft}>
+            <Radio size={13} color="#001014" strokeWidth={2.8} />
+            <Text style={styles.liveBarText}>{isInstant ? 'LIVE JOB OFFER' : 'NEW SCHEDULED REQUEST'}</Text>
+          </View>
+          <View style={styles.liveBarRight}>
+            {totalJobs > 1 && <Text style={styles.queueText}>{currentIndex}/{totalJobs}</Text>}
+            <View style={styles.timer}>
+              <Clock3 size={11} color="#001014" strokeWidth={2.7} />
+              <Text style={styles.timerText}>{formatCountdown(secondsRemaining)}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={styles.cardScroll}
+          contentContainerStyle={styles.cardContent}
+        >
+          <View style={styles.summaryHeader}>
+            <View style={[styles.categoryIcon, { backgroundColor: `${accent}18`, borderColor: `${accent}42` }]}>
+              {isInstant ? (
+                <Zap size={25} color={accent} fill={accent} strokeWidth={2.4} />
+              ) : (
+                <BriefcaseBusiness size={24} color={accent} strokeWidth={2.3} />
+              )}
+            </View>
+            <View style={styles.summaryCopy}>
+              <View style={styles.eyebrowRow}>
+                <View style={[styles.signalDot, { backgroundColor: accent }]} />
+                <Text style={[styles.eyebrowText, { color: accent }]}>
+                  {isInstant ? 'Instant response' : 'Scheduled opportunity'}
+                </Text>
+                <Text style={styles.postedText}>{formatAge(job.createdAt)}</Text>
+              </View>
+              <Text style={styles.categoryTitle} numberOfLines={1}>{job.category || 'Service request'}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.descriptionText}>
+            {job.description || 'The client has requested professional assistance for this service.'}
+          </Text>
+
+          <View style={styles.primaryFacts}>
+            <DecisionMetric
+              icon={CircleDollarSign}
+              label={primaryAmountLabel}
+              value={primaryAmountText}
+              hint={primaryAmountHint}
+              color={Colors.green}
+            />
+            <DecisionMetric
+              icon={Navigation}
+              label="Travel distance"
+              value={distanceText}
+              hint={isInstant ? 'Respond nearby' : 'Plan your visit'}
+              color={accent}
+            />
+          </View>
+
+          <View style={styles.detailCard}>
+            <DetailRow icon={MapPin} label="Service location" value={job.address || 'Nearby service area'} color={accent} />
+            <DetailRow icon={CalendarDays} label="Visit timing" value={timingText} color={isInstant ? Colors.green : '#FF8C00'} />
+            <DetailRow
+              icon={Banknote}
+              label="Client offer"
+              value={signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : 'Open budget')}
+              color={Colors.green}
+              isLast
+            />
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderTitle}>
+              <ImageIcon size={14} color={accent} strokeWidth={2.4} />
+              <Text style={[styles.sectionTitle, { color: accent }]}>Work evidence</Text>
+            </View>
+            <Text style={styles.sectionMeta}>{media.totalCount} attachment{media.totalCount === 1 ? '' : 's'}</Text>
+          </View>
+
+          {media.items.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.mediaRail}
+              onTouchStart={() => onScrollActive?.(false)}
+              onTouchEnd={() => onScrollActive?.(true)}
+              onTouchCancel={() => onScrollActive?.(true)}
             >
-              {/* Hex grid pattern overlay */}
-              <View style={styles.hexGrid}>
-                {hexCells.map((cell, i) => (
-                  <HexCell key={i} {...cell} />
-                ))}
+              {media.items.map((item: MediaItem, index: number) => (
+                <EvidenceTile key={`${item.type}-${item.url}-${index}`} item={item} index={index} accent={accent} />
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyEvidence}>
+              <ImageIcon size={18} color="rgba(255,255,255,0.3)" />
+              <Text style={styles.emptyEvidenceText}>No work evidence attached. Review the brief carefully.</Text>
+            </View>
+          )}
+
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderTitle}>
+              <UserRound size={14} color={accent} strokeWidth={2.4} />
+              <Text style={[styles.sectionTitle, { color: accent }]}>Client context</Text>
+            </View>
+          </View>
+
+          <View style={styles.clientCard}>
+            {client?.profileImage ? (
+              <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
+            ) : (
+              <View style={[styles.clientAvatarFallback, { borderColor: `${accent}45` }]}>
+                <UserRound size={20} color={accent} />
               </View>
-
-              {/* Scanning beam */}
-              <Animated.View style={[styles.scanBeam, { backgroundColor: accentColor }, scanStyle]} />
-
-              {/* ── TOP STATUS BAR ── */}
-              <View style={[styles.topBar, { borderBottomColor: accentColor + '25' }]}>
-                <LinearGradient
-                  colors={[accentColor + 'CC', accentSecondary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.topBarGradient}
-                >
-                  {/* Left: Target label */}
-                  <View style={styles.topBarLeft}>
-                    <View style={styles.targetDot} />
-                    <Target size={12} color="#000" strokeWidth={2.5} />
-                    <Text style={styles.topBarLabel}>INTERCEPT ACTIVE</Text>
-                  </View>
-
-                  {/* Right: Countdown & Queue */}
-                  <View style={styles.topBarRight}>
-                    {totalJobs > 1 && (
-                      <View style={styles.queueBadge}>
-                        <Text style={styles.queueText}>{currentIndex} OF {totalJobs} JOBS</Text>
-                      </View>
-                    )}
-                    <View style={styles.timerBox}>
-                      <Clock size={10} color="#000" />
-                      <Text style={styles.timerText}>00:29</Text>
-                    </View>
-                  </View>
-                </LinearGradient>
+            )}
+            <View style={styles.clientCopy}>
+              <Text style={styles.clientLabel}>Service client</Text>
+              <Text style={styles.clientName} numberOfLines={1}>{client?.fullName || 'ApnaUstad client'}</Text>
+              <View style={styles.clientStats}>
+                <View style={styles.clientStat}>
+                  <Star size={11} color="#FFD700" fill={clientRating > 0 ? '#FFD700' : 'transparent'} />
+                  <Text style={styles.clientStatText}>{clientRating > 0 ? `${clientRating.toFixed(1)} rating` : 'New client'}</Text>
+                </View>
+                <View style={styles.clientStat}>
+                  <ShieldCheck size={11} color={Colors.green} />
+                  <Text style={styles.clientStatText}>{completedJobs}/{totalJobsPosted} jobs completed</Text>
+                </View>
               </View>
+            </View>
+          </View>
 
-              <ScrollView 
-                style={styles.scrollArea} 
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* ── HERO SECTION ── */}
-                <View style={styles.heroSection}>
-                  {/* Signal rings behind icon */}
-                  <View style={styles.iconWrapper}>
-                    {/* Outer pulsing rings */}
-                    <Animated.View style={[styles.ring, styles.ring3, { borderColor: accentColor + '10' }, ringStyle]} />
-                    <Animated.View style={[styles.ring, styles.ring2, { borderColor: accentColor + '20' }]} />
-                    <Animated.View style={[styles.ring, styles.ring1, { borderColor: accentColor + '40' }]} />
+          <View style={[
+            styles.walletCard,
+            {
+              borderColor: isWalletEligible ? 'rgba(0,255,127,0.28)' : 'rgba(255,140,0,0.34)',
+              backgroundColor: isWalletEligible ? 'rgba(0,255,127,0.07)' : 'rgba(255,140,0,0.1)',
+            }
+          ]}>
+            <View style={[styles.walletIcon, { backgroundColor: isWalletEligible ? 'rgba(0,255,127,0.12)' : 'rgba(255,140,0,0.14)' }]}>
+              <WalletCards size={18} color={isWalletEligible ? Colors.green : '#FF8C00'} strokeWidth={2.4} />
+            </View>
+            <View style={styles.walletCopy}>
+              <Text style={[styles.walletTitle, { color: isWalletEligible ? Colors.green : '#FF8C00' }]}>
+                {isWalletEligible ? 'Wallet ready for acceptance' : 'Wallet top-up required'}
+              </Text>
+              <Text style={styles.walletText}>
+                Balance {formatMoney(walletBalance)}. Minimum required {formatMoney(requiredWalletBalance)}.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
 
-                    {/* Icon circle */}
-                    <LinearGradient
-                      colors={[accentColor + '20', accentColor + '08']}
-                      style={styles.iconCircle}
-                    >
-                      <View style={[styles.iconInner, { borderColor: accentColor + '60' }]}>
-                        {isInstant
-                          ? <Zap size={34} color={accentColor} fill={accentColor} />
-                          : <Briefcase size={34} color={accentColor} />
-                        }
-                      </View>
-                    </LinearGradient>
-                  </View>
+        {isInstant && isWalletEligible ? (
+          <TouchableOpacity
+            style={styles.counterOfferButton}
+            onPress={onCounterOffer}
+            disabled={isLoading}
+            activeOpacity={0.82}
+          >
+            <View style={styles.counterOfferIcon}>
+              <Banknote size={17} color="#FFB000" strokeWidth={2.5} />
+            </View>
+            <View style={styles.counterOfferCopy}>
+              <Text style={styles.counterOfferTitle}>Offer feels low?</Text>
+              <Text style={styles.counterOfferText}>Propose your fair price with a short explanation</Text>
+            </View>
+            <ChevronRight size={17} color="#FFB000" strokeWidth={2.6} />
+          </TouchableOpacity>
+        ) : null}
 
-                  {/* Category title */}
-                  <Text style={styles.categoryTitle} numberOfLines={1}>
-                    {job.category?.toUpperCase() || 'ELECTRICIAN'}
-                  </Text>
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.skipButton} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
+            <X size={18} color="rgba(255,255,255,0.62)" strokeWidth={2.5} />
+            <Text style={styles.skipButtonText}>Skip</Text>
+          </TouchableOpacity>
 
-                  {/* Type badge */}
-                  <View style={[styles.typeBadge, { borderColor: accentColor + '50' }]}>
-                    <LinearGradient
-                      colors={[accentColor + '12', accentColor + '06']}
-                      style={styles.typeBadgeGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <View style={[styles.badgeDot, { backgroundColor: accentColor }]} />
-                      <Text style={[styles.typeBadgeText, { color: accentColor }]}>
-                        {isInstant ? 'INSTANT RESPONSE' : 'SCHEDULED MISSION'}
-                      </Text>
-                    </LinearGradient>
-                  </View>
-                </View>
-
-                {/* ── DIAGONAL SLASH DIVIDER ── */}
-                <View style={styles.slashDivider}>
-                  <LinearGradient
-                    colors={['transparent', accentColor + '60', accentColor, accentColor + '60', 'transparent']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.slashLine}
-                  />
-                </View>
-
-                {/* ── MISSION BRIEF ── */}
-                <Animated.View style={[styles.briefCard, flickerStyle]}>
-                  <View style={[styles.briefHeader, { borderLeftColor: accentColor }]}>
-                    <Radio size={11} color={accentColor} />
-                    <Text style={[styles.briefHeaderText, { color: accentColor }]}>MISSION BRIEF</Text>
-                    <View style={[styles.briefLiveDot, { backgroundColor: accentColor }]} />
-                  </View>
-                  <Text style={styles.briefText} numberOfLines={3}>
-                    {job.description || "Inbound request for professional services. Secure the mission immediately."}
-                  </Text>
-                </Animated.View>
-
-                {/* ── DATA PANELS ── */}
-                <View style={styles.dataPanels}>
-                  {/* Earning panel */}
-                  <View style={[styles.dataPanel, { borderColor: accentColor + '30' }]}>
-                    <LinearGradient
-                      colors={[accentColor + '10', 'transparent']}
-                      style={styles.dataPanelGrad}
-                    >
-                      <CircleDollarSign size={16} color={accentColor} />
-                      <Text style={[styles.dataPanelValue, { color: '#FFFFFF' }]}>
-                        {isInstant ? `Rs. ${job.hourlyRate || '500'}` : 'OPEN BID'}
-                      </Text>
-                      <Text style={[styles.dataPanelLabel, { color: accentColor + 'AA' }]}>
-                        {isInstant ? 'EST. EARNING' : 'COMPETITIVE'}
-                      </Text>
-                    </LinearGradient>
-                  </View>
-
-                  {/* Divider */}
-                  <View style={[styles.panelDivider, { backgroundColor: accentColor + '30' }]} />
-
-                  {/* Distance panel */}
-                  <View style={[styles.dataPanel, { borderColor: accentColor + '30' }]}>
-                    <LinearGradient
-                      colors={[accentColor + '10', 'transparent']}
-                      style={styles.dataPanelGrad}
-                    >
-                      <Navigation size={16} color={accentColor} />
-                      <Text style={[styles.dataPanelValue, { color: '#FFFFFF' }]}>1.4 KM</Text>
-                      <Text style={[styles.dataPanelLabel, { color: accentColor + 'AA' }]}>DISTANCE</Text>
-                    </LinearGradient>
-                  </View>
-                </View>
-
-                {/* ── LOCATION ROW ── */}
-                <View style={[styles.locationRow, { borderColor: accentColor + '20' }]}>
-                  <MapPin size={13} color={accentColor + 'AA'} />
-                  <Text style={styles.locationText} numberOfLines={1}>
-                    {job.address || "Sector 7G, Neo Lahore"}
-                  </Text>
-                  <View style={[styles.locationPing, { backgroundColor: accentColor }]} />
-                </View>
-              </ScrollView>
-
-              {/* ── CORNER BRACKETS ── */}
-              <CornerBracket position="tl" color={accentColor} />
-              <CornerBracket position="tr" color={accentColor} />
-              <CornerBracket position="bl" color={accentColor} />
-              <CornerBracket position="br" color={accentColor} />
-
-              {/* ── ACTION FOOTER ── */}
-              <View style={styles.footer}>
-                {/* Reject button */}
-                <TouchableOpacity
-                  style={styles.rejectBtn}
-                  onPress={onReject}
-                  disabled={isLoading}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.rejectInner}>
-                    <X size={20} color="rgba(255,255,255,0.5)" strokeWidth={2.5} />
-                  </View>
-                </TouchableOpacity>
-
-                {/* Accept button */}
-                <TouchableOpacity
-                  style={styles.acceptBtn}
-                  onPress={onAccept}
-                  disabled={isLoading}
-                  activeOpacity={0.85}
-                >
-                  <LinearGradient
-                    colors={isInstant
-                      ? ['#00F0FF', '#008FFF', '#0055FF']
-                      : ['#FF6B00', '#FF3D00', '#FF0055']
-                    }
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.acceptGradient}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#000" size="small" />
-                    ) : (
-                      <>
-                        {/* Left glow accent */}
-                        <View style={styles.acceptGlowDot} />
-                        <Check size={20} color="#000" strokeWidth={3} />
-                        <Text style={styles.acceptText}>
-                          {isInstant ? 'ACCEPT MISSION' : 'VIEW DETAILS'}
-                        </Text>
-                        {/* Right chevron indicator */}
-                        <View style={styles.acceptChevron}>
-                          <Text style={styles.acceptChevronText}>›</Text>
-                        </View>
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={isWalletEligible ? onAccept : onWalletPress}
+            disabled={isLoading}
+            activeOpacity={0.86}
+          >
+            <LinearGradient
+              colors={isWalletEligible ? [accent, accentSecondary] : ['#FFB000', '#FF7300']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.primaryButtonGradient}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#001014" size="small" />
+              ) : isWalletEligible ? (
+                <>
+                  <Check size={19} color="#001014" strokeWidth={3} />
+                  <Text style={styles.primaryButtonText}>{isInstant ? 'Accept offer' : 'Continue to bid'}</Text>
+                  <ChevronRight size={17} color="#001014" strokeWidth={3} />
+                </>
+              ) : (
+                <>
+                  <WalletCards size={18} color="#201000" strokeWidth={2.7} />
+                  <Text style={styles.primaryButtonText}>Top up wallet</Text>
+                  <ChevronRight size={17} color="#201000" strokeWidth={3} />
+                </>
+              )}
             </LinearGradient>
-          </Animated.View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footerNote}>
+          <ShieldAlert size={11} color="rgba(255,255,255,0.4)" />
+          <Text style={styles.footerNoteText}>
+            {isInstant ? 'Acceptance sends your interest to the client for confirmation.' : 'Submit your quote after reviewing the complete request.'}
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+function DecisionMetric({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  color,
+}: {
+  icon: React.ComponentType<any>;
+  label: string;
+  value: string;
+  hint: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.metric}>
+      <View style={styles.metricHeader}>
+        <Icon size={15} color={color} strokeWidth={2.5} />
+        <Text style={styles.metricLabel}>{label}</Text>
+      </View>
+      <Text style={styles.metricValue} numberOfLines={1}>{value}</Text>
+      <Text style={styles.metricHint} numberOfLines={1}>{hint}</Text>
     </View>
+  );
+}
+
+function DetailRow({
+  icon: Icon,
+  label,
+  value,
+  color,
+  isLast,
+}: {
+  icon: React.ComponentType<any>;
+  label: string;
+  value: string;
+  color: string;
+  isLast?: boolean;
+}) {
+  return (
+    <View style={[styles.detailRow, !isLast && styles.detailRowBorder]}>
+      <View style={[styles.detailIcon, { backgroundColor: `${color}12` }]}>
+        <Icon size={15} color={color} strokeWidth={2.4} />
+      </View>
+      <View style={styles.detailCopy}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailValue} numberOfLines={2}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+function EvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  if (item.type === 'audio') {
+    return <AudioEvidenceTile item={item} index={index} accent={accent} />;
+  }
+  if (item.type === 'video') {
+    return <VideoEvidenceTile item={item} index={index} accent={accent} />;
+  }
+  return <ImageEvidenceTile item={item} index={index} accent={accent} />;
+}
+
+function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  const [previewVisible, setPreviewVisible] = useState(false);
+  return (
+    <>
+      <TouchableOpacity
+        activeOpacity={0.82}
+        onPress={() => setPreviewVisible(true)}
+        style={[styles.mediaTile, { borderColor: `${accent}38` }]}
+      >
+        <Image source={{ uri: item.url }} style={styles.mediaImage} />
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFillObject} />
+        <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
+        <View style={styles.expandBadge}>
+          <Maximize2 size={12} color="#FFFFFF" strokeWidth={2.4} />
+        </View>
+        <View style={styles.mediaTypeBadge}>
+          <Text style={styles.mediaTypeText}>PHOTO</Text>
+        </View>
+      </TouchableOpacity>
+      <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
+        <View style={styles.previewBackdrop}>
+          <TouchableOpacity style={styles.previewCloseButton} onPress={() => setPreviewVisible(false)} activeOpacity={0.8}>
+            <X size={22} color="#FFFFFF" strokeWidth={2.7} />
+          </TouchableOpacity>
+          <Image source={{ uri: item.url }} style={styles.previewMedia} resizeMode="contain" />
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+function VideoEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const player = useVideoPlayer(item.url);
+
+  useEffect(() => {
+    if (!previewVisible) player.pause();
+  }, [player, previewVisible]);
+
+  return (
+    <>
+      <TouchableOpacity
+        activeOpacity={0.82}
+        onPress={() => setPreviewVisible(true)}
+        style={[styles.mediaTile, { borderColor: `${accent}38` }]}
+      >
+        <View style={styles.videoTile}>
+          <PlayCircle size={34} color={accent} strokeWidth={1.8} />
+          <Text style={styles.videoTileText}>Play job video</Text>
+        </View>
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFillObject} />
+        <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
+        <View style={styles.mediaTypeBadge}>
+          <Text style={styles.mediaTypeText}>VIDEO</Text>
+        </View>
+      </TouchableOpacity>
+      <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
+        <View style={styles.previewBackdrop}>
+          <TouchableOpacity style={styles.previewCloseButton} onPress={() => setPreviewVisible(false)} activeOpacity={0.8}>
+            <X size={22} color="#FFFFFF" strokeWidth={2.7} />
+          </TouchableOpacity>
+          <VideoView player={player} style={styles.previewMedia} nativeControls allowsFullscreen />
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const formatPlaybackTime = (seconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+  return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
+};
+
+function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  const player = useAudioPlayer(item.url);
+  const status = useAudioPlayerStatus(player);
+
+  const togglePlayback = async () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    if (status.didJustFinish || (status.duration > 0 && status.currentTime >= status.duration)) {
+      await player.seekTo(0);
+    }
+    player.play();
+  };
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.82}
+      onPress={togglePlayback}
+      style={[styles.mediaTile, styles.audioTile, { borderColor: `${accent}38` }]}
+    >
+      <View style={[styles.audioPlayButton, { borderColor: `${accent}55`, backgroundColor: `${accent}16` }]}>
+        {status.playing ? (
+          <PauseCircle size={32} color={accent} strokeWidth={1.8} />
+        ) : (
+          <PlayCircle size={32} color={accent} strokeWidth={1.8} />
+        )}
+      </View>
+      <View style={styles.audioCopy}>
+        <View style={styles.audioTitleRow}>
+          <Volume2 size={14} color={accent} strokeWidth={2.3} />
+          <Text style={styles.audioTitle}>Client voice brief</Text>
+        </View>
+        <Text style={styles.audioSubtitle}>
+          {status.playing ? 'Playing requirement details' : 'Tap to listen before responding'}
+        </Text>
+        <Text style={[styles.audioDuration, { color: accent }]}>
+          {formatPlaybackTime(status.currentTime)} / {formatPlaybackTime(status.duration)}
+        </Text>
+      </View>
+      <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
+      <View style={styles.mediaTypeBadge}>
+        <Text style={styles.mediaTypeText}>VOICE</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(3, 4, 18, 0.97)',
+    backgroundColor: 'rgba(2,4,16,0.96)',
+  },
+  screen: {
+    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
   },
-
-  container: {
-    width: '100%',
-  },
-  
-  closeModalBtn: {
+  closeButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 30,
-    right: 20,
-    zIndex: 100,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    right: 18,
+    zIndex: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.64)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.4)',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
+    borderColor: 'rgba(0,240,255,0.34)',
   },
-  
-  scrollContainer: {
+  jobPager: {
+    alignItems: 'center',
+  },
+  jobPage: {
+    width: SCREEN_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
   },
-
-  cardWrapper: {
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 16,
-  },
-
-  outerGlow: {
+  swipeHint: {
     position: 'absolute',
-    width: CARD_WIDTH + 40,
-    height: 580,
-    borderRadius: 36,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.24)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  swipeHintText: {
+    color: Colors.cyan,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  cardFrame: {
+    width: CARD_WIDTH,
+    maxHeight: Math.min(SCREEN_HEIGHT * 0.82, 760),
+  },
+  cardGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 28,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 40,
-    elevation: 0,
+    shadowRadius: 32,
   },
-
-  // ─── CARD ───
   card: {
-    width: CARD_WIDTH,
+    overflow: 'hidden',
+    maxHeight: Math.min(SCREEN_HEIGHT * 0.82, 760),
     borderRadius: 28,
-    overflow: 'hidden',
-    height: Platform.OS === 'ios' ? height * 0.78 : height * 0.85,
-    maxHeight: 700,
-    // Drop shadow
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 30,
-    elevation: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.28)',
+    backgroundColor: '#07091A',
+    ...Shadows.depth,
   },
-
-  cardGradient: {
-    flex: 1,
-    borderRadius: 28,
-    borderWidth: 0.5,
-    borderColor: 'rgba(0, 240, 255, 0.2)',
-    overflow: 'hidden',
-  },
-
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-
-  // Hex grid
-  hexGrid: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  hexCell: {
-    position: 'absolute',
-    width: 30,
-    height: 34,
-  },
-  hexShape: {
-    width: 30,
-    height: 34,
-    borderWidth: 0.5,
-    borderColor: '#00F0FF',
-    backgroundColor: 'transparent',
-    // Hexagon via border radius approximation
-    borderRadius: 4,
-    transform: [{ rotate: '30deg' }],
-  },
-
-  // Scan beam
-  scanBeam: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 2,
-    opacity: 0.15,
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-  },
-
-  // ─── TOP BAR ───
-  topBar: {
-    borderBottomWidth: 0.5,
-    overflow: 'hidden',
-  },
-  topBarGradient: {
-    height: 36,
+  liveBar: {
+    height: 42,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
   },
-  topBarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  targetDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#000',
-    opacity: 0.6,
-  },
-  topBarLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: 1.5,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  timerBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  timerText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#000',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  topBarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  queueBadge: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 0.5,
-    borderColor: '#00F0FF',
-  },
-  queueText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#00F0FF',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-
-  // ─── HERO ───
-  heroSection: {
-    alignItems: 'center',
-    paddingTop: 28,
-    paddingBottom: 20,
-  },
-
-  iconWrapper: {
-    position: 'relative',
-    width: 110,
-    height: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
-  },
-
-  ring: {
-    position: 'absolute',
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  ring1: { width: 86, height: 86 },
-  ring2: { width: 96, height: 96 },
-  ring3: { width: 110, height: 110 },
-
-  iconCircle: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconInner: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  categoryTitle: {
-    fontSize: 38,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 3,
-    marginBottom: 12,
-    textShadowColor: 'rgba(0,240,255,0.3)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
-  },
-
-  typeBadge: {
-    borderWidth: 0.5,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  typeBadgeGradient: {
+  liveBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
   },
-  badgeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  typeBadgeText: {
+  liveBarText: {
+    color: '#001014',
     fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  liveBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  queueText: {
+    color: '#001014',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  timer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  timerText: {
+    color: '#001014',
+    fontSize: 11,
+    fontWeight: '900',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-
-  // ─── SLASH DIVIDER ───
-  slashDivider: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+  cardScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
-  slashLine: {
-    height: 1,
-    width: '100%',
-  },
-
-  // ─── BRIEF ───
-  briefCard: {
-    marginHorizontal: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.07)',
+  cardContent: {
     padding: 16,
-    marginBottom: 14,
+    paddingBottom: 14,
   },
-  briefHeader: {
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  categoryIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 19,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  eyebrowRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderLeftWidth: 2,
-    paddingLeft: 8,
-    marginBottom: 10,
+    marginBottom: 4,
   },
-  briefHeaderText: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  briefLiveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginLeft: 4,
-    opacity: 0.8,
-  },
-  briefText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.75)',
-    lineHeight: 21,
-    letterSpacing: 0.2,
-  },
-
-  // ─── DATA PANELS ───
-  dataPanels: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 14,
-    borderRadius: 16,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  dataPanel: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  dataPanelGrad: {
-    padding: 16,
-    alignItems: 'center',
-    gap: 6,
-  },
-  dataPanelValue: {
-    fontSize: 19,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  dataPanelLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  panelDivider: {
-    width: 0.5,
-    marginVertical: 12,
-  },
-
-  // ─── LOCATION ───
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderWidth: 0.5,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-  },
-  locationText: {
-    flex: 1,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-  locationPing: {
+  signalDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    opacity: 0.7,
   },
-
-  // ─── CORNER BRACKETS ───
-  cornerBracket: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
+  eyebrowText: {
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
-  bracketH: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 16,
-    height: 2,
-    borderRadius: 1,
+  postedText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'right',
   },
-  bracketV: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 2,
-    height: 16,
-    borderRadius: 1,
+  categoryTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
   },
-
-  // ─── FOOTER ───
-  footer: {
+  descriptionText: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  primaryFacts: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-    paddingTop: 4,
-    gap: 12,
-    borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    gap: 9,
+    marginBottom: 12,
   },
-
-  rejectBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  rejectInner: {
+  metric: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.12)',
+    minHeight: 98,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    padding: 12,
   },
-
-  acceptBtn: {
-    flex: 1,
-    height: 56,
-    borderRadius: 18,
-    overflow: 'hidden',
-    // Subtle shadow
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  acceptGradient: {
-    flex: 1,
+  metricHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+  },
+  metricLabel: {
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 8,
+  },
+  metricHint: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  detailCard: {
+    overflow: 'hidden',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
-    position: 'relative',
-    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
   },
-  acceptGlowDot: {
-    position: 'absolute',
-    left: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  detailRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
   },
-  acceptText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-  },
-  acceptChevron: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+  detailIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  acceptChevronText: {
-    fontSize: 16,
-    color: '#000',
-    fontWeight: '900',
-    marginTop: -1,
+  detailCopy: {
+    flex: 1,
+    minWidth: 0,
   },
-
-  jobArrowHint: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 170 : 150, // Moved up to avoid overlap
-    alignSelf: 'center',
+  detailLabel: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  sectionHeader: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 240, 255, 0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 240, 255, 0.4)',
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 10,
-    zIndex: 99,
+    justifyContent: 'space-between',
+    marginBottom: 9,
   },
-  jobArrowText: {
+  sectionHeaderTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  sectionTitle: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#00F0FF',
-    letterSpacing: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-
-  // ─── ALERT STRIP ───
-  alertStrip: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 40 : 20,
-    alignSelf: 'center',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,59,59,0.3)',
-    borderRadius: 12,
+  sectionMeta: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  mediaRail: {
+    gap: 9,
+    paddingRight: 2,
+    marginBottom: 16,
+  },
+  mediaTile: {
+    width: Math.min(CARD_WIDTH - 32, 250),
+    height: 132,
     overflow: 'hidden',
-    backgroundColor: '#0F0404', // Ensure it's opaque when placed absolute
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
-  alertInner: {
-    flexDirection: 'row',
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoTile: {
+    flex: 1,
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,59,59,0.08)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: 'rgba(0,240,255,0.08)',
   },
-  alertText: {
+  videoTileText: {
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 11,
     fontWeight: '900',
-    color: '#FF3B3B',
-    letterSpacing: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
-  alertBlink: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#FF3B3B',
-    marginLeft: 4,
+  audioTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,140,0,0.08)',
+  },
+  audioPlayButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioCopy: {
+    flex: 1,
+    minWidth: 0,
+    paddingBottom: 14,
+  },
+  audioTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  audioTitle: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  audioSubtitle: {
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  audioDuration: {
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 6,
+  },
+  mediaIndex: {
+    position: 'absolute',
+    left: 11,
+    bottom: 10,
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  mediaTypeBadge: {
+    position: 'absolute',
+    right: 9,
+    bottom: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.46)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  mediaTypeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+  },
+  expandBadge: {
+    position: 'absolute',
+    top: 9,
+    right: 9,
+    width: 27,
+    height: 27,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  previewBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.96)',
+    paddingHorizontal: 12,
+    paddingVertical: 70,
+  },
+  previewCloseButton: {
+    position: 'absolute',
+    top: 54,
+    right: 18,
+    zIndex: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  previewMedia: {
+    width: '100%',
+    height: '100%',
+  },
+  emptyEvidence: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  emptyEvidenceText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+  clientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    padding: 11,
+    marginBottom: 12,
+  },
+  clientAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+  },
+  clientAvatarFallback: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  clientCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  clientLabel: {
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  clientName: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  clientStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+    marginTop: 5,
+  },
+  clientStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  clientStatText: {
+    color: 'rgba(255,255,255,0.52)',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  walletCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 11,
+  },
+  walletIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  walletTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  walletText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 15,
+    marginTop: 3,
+  },
+  counterOfferButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 14,
+    marginTop: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(255,176,0,0.26)',
+    backgroundColor: 'rgba(255,176,0,0.07)',
+  },
+  counterOfferIcon: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,176,0,0.11)',
+  },
+  counterOfferCopy: {
+    flex: 1,
+  },
+  counterOfferTitle: {
+    color: '#FFB000',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  counterOfferText: {
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 9,
+    lineHeight: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(2,4,16,0.84)',
+  },
+  skipButton: {
+    width: 74,
+    height: 54,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  skipButtonText: {
+    color: 'rgba(255,255,255,0.62)',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  primaryButton: {
+    flex: 1,
+    height: 54,
+    overflow: 'hidden',
+    borderRadius: 17,
+    ...Shadows.glow,
+  },
+  primaryButtonGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+  },
+  primaryButtonText: {
+    color: '#001014',
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  footerNote: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    backgroundColor: 'rgba(2,4,16,0.84)',
+  },
+  footerNoteText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.38)',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 13,
+    textAlign: 'center',
   },
 });

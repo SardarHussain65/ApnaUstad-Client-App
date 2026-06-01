@@ -74,19 +74,21 @@ export default function OnboardingScreen() {
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
         <Animated.FlatList
-          ref={flatListRef as any}
-          data={DATA}
-          renderItem={({ item, index }) => (
-            <OnboardingSlide item={item} index={index} scrollX={scrollX} />
-          )}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+          {...({
+            ref: flatListRef,
+            data: DATA,
+            renderItem: ({ item, index }: any) => (
+              <OnboardingSlide item={item} index={index} scrollX={scrollX} />
+            ),
+            keyExtractor: (item: any) => item.id,
+            horizontal: true,
+            pagingEnabled: true,
+            showsHorizontalScrollIndicator: false,
+            onScroll: scrollHandler,
+            scrollEventThrottle: 16,
+            onViewableItemsChanged: onViewableItemsChanged,
+            viewabilityConfig: { itemVisiblePercentThreshold: 50 }
+          } as any)}
         />
 
         <View style={styles.footer}>
