@@ -32,6 +32,7 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../consta
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useProfile, useUpdateProfileMutation, useToast } from '../../hooks';
 import * as ImagePicker from 'expo-image-picker';
@@ -39,6 +40,7 @@ import { BASE_URL } from '../../constants/Config';
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { success, error: showError } = useToast();
   const { user, role, updateUser } = useAuth();
   const userId = user?._id;
@@ -173,7 +175,7 @@ export default function PersonalInfoScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <Animated.View entering={FadeInDown.delay(0)} style={styles.header}>
+          <Animated.View entering={FadeInDown.delay(0)} style={[styles.header, { paddingTop: insets.top + 8 }]}>
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
               <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
@@ -375,7 +377,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: Spacing.l, paddingBottom: 60 },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Platform.OS === 'ios' ? 56 : 24, paddingBottom: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 },
   backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
 

@@ -5,6 +5,7 @@ import { BASE_URL } from '../constants/Config';
 
 const api = axios.create({
   baseURL: BASE_URL + '/api/v1',
+  timeout: 15000, // 15 seconds request timeout limit
   headers: {
     'Content-Type': 'application/json',
   },
@@ -140,6 +141,25 @@ api.interceptors.response.use(
         router.push('/(tabs)/wallet');
       } catch (navError) {
         console.error('Error navigating or showing toast for 402:', navError);
+      }
+    }
+
+    // Network / Offline Error and Timeout handling
+    if (!error.response) {
+      try {
+        const Toast = require('react-native-toast-message').default;
+        const isTimeout = error.code === 'ECONNABORTED';
+        
+        Toast.show({
+          type: 'error',
+          text1: isTimeout ? 'Request Timeout' : 'Connection Failed',
+          text2: isTimeout 
+            ? 'The server took too long to respond. Please retry.' 
+            : 'Please check your internet connection and try again.',
+          visibilityTime: 4000,
+        });
+      } catch (toastError) {
+        console.error('Failed to show offline/timeout Toast:', toastError);
       }
     }
 

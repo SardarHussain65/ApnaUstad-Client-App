@@ -84,6 +84,13 @@ export {
   type TopUpsResponse,
 } from './queries/useWallet';
 
+export {
+  useUserWallet,
+  type UserWallet,
+  type UserWalletTransaction,
+  type UserWalletResponse,
+} from './queries/useUserWallet';
+
 // UI Hooks
 export { useToast } from './useToast';
 export { useModal, useConfirmModal, useAlertModal, useBottomSheet } from './useUIModals';

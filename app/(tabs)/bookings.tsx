@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
+import { SkeletonList } from '../../components/ui';
 
 const TABS = ['Active', 'Completed', 'Cancelled'] as const;
 type TabType = typeof TABS[number];
@@ -230,7 +231,7 @@ export default function BookingsTab() {
 
         {/* List of Bookings */}
         {isLoading && combinedData.length === 0 ? (
-          <ActivityIndicator color={Colors.cyan} style={{ marginTop: 40 }} />
+          <SkeletonList count={3} />
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}

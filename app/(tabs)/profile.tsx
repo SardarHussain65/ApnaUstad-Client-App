@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -41,6 +41,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useMyBookings, useWorkerBookings, useWorker, useUpdateProfileMutation } from '../../hooks';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BlurView } from 'expo-blur';
+import api from '../../services/api';
+import { getOptimizedImageUrl } from '../../constants/Config';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 240;
@@ -136,6 +138,29 @@ export default function ProfileTab() {
   const { data: workerProfile } = useWorker(role === 'worker' ? user?._id : undefined);
   const { mutateAsync: updateProfile } = useUpdateProfileMutation();
 
+  const [verificationStatus, setVerificationStatus] = useState<string>('Verify identity');
+
+  useEffect(() => {
+    if (isWorker) {
+      api.get('/workers/verification/status')
+        .then(res => {
+          const details = res.data?.data;
+          if (details) {
+            if (details.status === 'approved') setVerificationStatus('Verified');
+            else if (details.status === 'pending') setVerificationStatus('Pending review');
+            else if (details.status === 'rejected') setVerificationStatus('Rejected (Action required)');
+          } else if (workerProfile?.isVerified) {
+            setVerificationStatus('Verified');
+          } else {
+            setVerificationStatus('Verify identity');
+          }
+        })
+        .catch(() => {
+          setVerificationStatus(workerProfile?.isVerified ? 'Verified' : 'Verify identity');
+        });
+    }
+  }, [isWorker, workerProfile]);
+
   const stats = React.useMemo(() => {
     const completed = bookings.filter(b => b.status === 'completed').length;
     const jobs = role === 'worker'
@@ -160,8 +185,10 @@ export default function ProfileTab() {
     };
   }, [bookings]);
 
-  const avatarUri = workerProfile?.profileImage || user?.profileImage
-    || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=300&auto=format&fit=crop';
+  const rawAvatarUri = workerProfile?.profileImage || user?.profileImage;
+  const avatarUri = rawAvatarUri
+    ? getOptimizedImageUrl(rawAvatarUri, 180, 180)
+    : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=300&auto=format&fit=crop';
 
   const scrollHandler = useAnimatedScrollHandler(e => { scrollY.value = e.contentOffset.y; });
 
@@ -196,7 +223,7 @@ export default function ProfileTab() {
           <Animated.View entering={FadeInUp.delay(180).springify()} style={styles.nameBlock}>
             <View style={styles.nameRow}>
               <Text style={styles.userName}>{workerProfile?.fullName || user?.fullName || 'User'}</Text>
-              {isWorker && (workerProfile?.rating ?? 0) >= 4.5 && (
+              {isWorker && (workerProfile?.isVerified || (workerProfile?.rating ?? 0) >= 4.5) && (
                 <BadgeCheck size={20} color="#00F5FF" strokeWidth={2.5} style={{ marginLeft: 5 }} />
               )}
             </View>
@@ -272,16 +299,34 @@ export default function ProfileTab() {
           <View style={styles.menuSection}>
             <Text style={styles.sectionLabel}>Account</Text>
             <MenuItem icon={User} label="Personal Information" sublabel="Name, phone & photo" delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
-            <MenuItem icon={Shield} label="Security" sublabel="Password & login" delay={670} accent="#BF5AF2" onPress={() => router.push('/profile/security')} />
-            <MenuItem icon={Bell} label="Notifications" sublabel="Alerts & preferences" delay={700} accent="#FF9F0A" onPress={() => router.push('/profile/notifications')} />
+            {isWorker && (
+              <MenuItem
+                icon={BadgeCheck}
+                label="Identity Verification"
+                sublabel={verificationStatus}
+                delay={670}
+                accent={
+                  verificationStatus === 'Verified'
+                    ? '#34C759'
+                    : verificationStatus === 'Pending review'
+                    ? '#FF9F0A'
+                    : verificationStatus.includes('Rejected')
+                    ? '#FF3B30'
+                    : '#00F5FF'
+                }
+                onPress={() => router.push('/profile/identity-verification')}
+              />
+            )}
+            <MenuItem icon={Shield} label="Security" sublabel="Password & login" delay={700} accent="#BF5AF2" onPress={() => router.push('/profile/security')} />
+            <MenuItem icon={Bell} label="Notifications" sublabel="Alerts & preferences" delay={730} accent="#FF9F0A" onPress={() => router.push('/profile/notifications')} />
           </View>
 
           {/* Support */}
           <View style={styles.menuSection}>
             <Text style={styles.sectionLabel}>Support</Text>
-            <MenuItem icon={HelpCircle} label="Help Center" sublabel="FAQs & articles" delay={730} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
-            <MenuItem icon={Star} label="Rate ApnaUstad" sublabel="Share your feedback" delay={760} accent="#FFD60A" />
-            <MenuItem icon={Settings} label="App Settings" delay={790} accent="#8E8E93" />
+            <MenuItem icon={HelpCircle} label="Help Center" sublabel="FAQs & articles" delay={760} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
+            <MenuItem icon={Star} label="Rate ApnaUstad" sublabel="Share your feedback" delay={790} accent="#FFD60A" />
+            <MenuItem icon={Settings} label="App Settings" delay={820} accent="#8E8E93" />
           </View>
 
           {/* Logout */}
