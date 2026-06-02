@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // For local development on your Mac, you can switch this back to your local IP address:
-export const BASE_URL = 'http://192.168.18.139:5001';
+// export const BASE_URL = 'http://192.168.18.139:5001';
 
 // Production VPS Server:
 // export const BASE_URL = 'https://api.apnaustad.app';
@@ -24,7 +24,7 @@ export const getOptimizedImageUrl = (
   quality = 80
 ): string => {
   if (!url) return '';
-  
+
   // Verify if it is an ImageKit URL
   const isImageKit = url.includes('ik.imagekit.io');
   if (!isImageKit) return url;
