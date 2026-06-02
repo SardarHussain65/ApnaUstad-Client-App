@@ -4,9 +4,6 @@ import Animated, {
   useAnimatedStyle, 
   useSharedValue, 
   withSpring, 
-  withTiming,
-  interpolate,
-  Extrapolate
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -55,7 +52,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   });
 
   const handlePressIn = () => {
-    if (disabled) return;
+    if (disabled || isLoading) return;
     scale.value = withSpring(0.96, Animation.spring);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -69,10 +66,12 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       activeOpacity={1}
       style={[
         styles.container,
+        variant === 'orange' && styles.orangeGlow,
+        variant === 'success' && styles.successGlow,
         variant === 'outline' && styles.outline,
         variant === 'ghost' && styles.ghost,
         disabled && styles.disabled,
@@ -108,7 +107,7 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
 const styles = StyleSheet.create({
   container: {
     height: 60,
-    borderRadius: BorderRadius.m,
+    borderRadius: BorderRadius.l,
     overflow: 'hidden',
     shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 10 },
@@ -116,11 +115,18 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 8,
   },
+  orangeGlow: {
+    shadowColor: Colors.worker,
+  },
+  successGlow: {
+    shadowColor: Colors.success,
+  },
   gradient: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.s,
     paddingHorizontal: Spacing.m,
   },
   outline: {

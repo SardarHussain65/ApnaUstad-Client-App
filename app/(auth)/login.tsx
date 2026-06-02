@@ -1,68 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform, 
-  ActivityIndicator, 
+import React, { useState } from 'react';
+import {
   Alert,
-  Dimensions
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring, 
-  withDelay, 
-  withTiming,
-  interpolate,
-} from 'react-native-reanimated';
-import { ChevronLeft, Eye, EyeOff, Mail, Phone, Lock } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
-import { BASE_URL } from '../../constants/Config';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Eye, EyeOff, Lock, Mail, Phone } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-
-import { useAuth } from '../../context/AuthContext';
-
+import { AnimatedButton } from '../../components/AnimatedButton';
+import { InputField } from '../../components/InputField';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { AuthHero } from '../../components/auth/AuthHero';
+import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { BASE_URL } from '../../constants/Config';
+import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { role: urlRole } = useLocalSearchParams<{ role: string }>();
-  const { setRole, setAuth } = useAuth();
-
-  // 🎨 Dynamic accent color based on role
-  const accentColor = urlRole === 'worker' ? Colors.worker : Colors.cyan;
+  const { role: urlRole } = useLocalSearchParams<{ role?: string }>();
+  const { setAuth } = useAuth();
+  const isWorker = urlRole === 'worker';
+  const accentColor = isWorker ? Colors.worker : Colors.cyan;
+  const roleLabel = isWorker ? 'specialist' : 'client';
 
   const [loginType, setLoginType] = useState<'phone' | 'email'>('email');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [identifierError, setIdentifierError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleTabChange = (type: 'phone' | 'email') => {
     if (type === loginType) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoginType(type);
+    setIdentifier('');
+    setIdentifierError('');
   };
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const payload = loginType === 'email' 
-        ? { email: identifier, password } 
-        : { phone: identifier, password };
-
-      const endpoint = urlRole === 'worker' ? '/api/v1/workers/login' : '/api/v1/users/login';
+      const normalizedIdentifier = identifier.trim();
+      const payload = loginType === 'email'
+        ? { email: normalizedIdentifier.toLowerCase(), password }
+        : { phone: normalizedIdentifier, password };
+      const endpoint = isWorker ? '/api/v1/workers/login' : '/api/v1/users/login';
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -72,154 +68,202 @@ export default function LoginScreen() {
       return response.json();
     },
     onSuccess: async (data) => {
-      // Backend response structure: { success, message, data: { user/worker, token, refreshToken } }
       const responseData = data.data || data;
       const token = responseData.token;
       const refreshToken = responseData.refreshToken;
       const user = responseData.user || responseData.worker;
       const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
-      
+
       if (!token || !refreshToken || !user) {
-        console.error('Invalid login response - missing required fields:', { 
-          hasToken: !!token, 
-          hasRefreshToken: !!refreshToken, 
-          hasUser: !!user 
-        });
-        Alert.alert('Login Error', 'Invalid server response. Please try again.');
+        Alert.alert('Login error', 'The server returned an incomplete response. Please try again.');
         return;
       }
-      
-      await setAuth(token, refreshToken, finalRole, user);
 
-      router.replace('/(tabs)' as any);
+      await setAuth(token, refreshToken, finalRole, user);
+      router.replace('/(tabs)' as never);
     },
-    onError: (error: any) => {
-      Alert.alert('Login Error', error.message);
-    }
+    onError: (error: Error) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Unable to sign in', error.message);
+    },
   });
+
+  const handleLogin = () => {
+    const normalizedIdentifier = identifier.trim();
+    setIdentifierError('');
+    setPasswordError('');
+
+    if (!normalizedIdentifier) {
+      setIdentifierError(`Enter your ${loginType === 'email' ? 'email address' : 'phone number'}.`);
+      return;
+    }
+    if (loginType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier)) {
+      setIdentifierError('Enter a valid email address.');
+      return;
+    }
+    if (!password) {
+      setPasswordError('Enter your password.');
+      return;
+    }
+
+    loginMutation.mutate();
+  };
 
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent} 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView
             bounces={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft size={24} color="#fff" />
+            <AuthHeader title="Secure sign in" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHero
+              accentColor={accentColor}
+              eyebrow={`${roleLabel} access`}
+              title="Welcome"
+              highlight="back"
+              description={`Sign in to manage your ${isWorker ? 'work, bookings, and earnings' : 'service requests and bookings'}.`}
+            />
+
+            <GlassCard
+              intensity={25}
+              padding={Spacing.l}
+              style={styles.loginCard}
+              gradient={[`${accentColor}16`, 'rgba(191,90,242,0.06)']}
+            >
+              <View style={styles.tabContainer}>
+                <LoginTab
+                  active={loginType === 'email'}
+                  accentColor={accentColor}
+                  icon={<Mail size={15} color={loginType === 'email' ? accentColor : Colors.textDim} />}
+                  label="Email"
+                  onPress={() => handleTabChange('email')}
+                />
+                <LoginTab
+                  active={loginType === 'phone'}
+                  accentColor={accentColor}
+                  icon={<Phone size={15} color={loginType === 'phone' ? accentColor : Colors.textDim} />}
+                  label="Phone"
+                  onPress={() => handleTabChange('phone')}
+                />
+              </View>
+
+              <InputField
+                accentColor={accentColor}
+                autoCapitalize="none"
+                autoComplete={loginType === 'email' ? 'email' : 'tel'}
+                error={identifierError}
+                icon={loginType === 'email'
+                  ? <Mail size={18} color={accentColor} />
+                  : <Phone size={18} color={accentColor} />}
+                keyboardType={loginType === 'email' ? 'email-address' : 'phone-pad'}
+                label={loginType === 'email' ? 'Email address' : 'Phone number'}
+                onChangeText={(value) => {
+                  setIdentifier(value);
+                  if (identifierError) setIdentifierError('');
+                }}
+                placeholder={loginType === 'email' ? 'name@example.com' : '+92 300 0000000'}
+                value={identifier}
+              />
+
+              <InputField
+                accentColor={accentColor}
+                autoCapitalize="none"
+                autoComplete="password"
+                error={passwordError}
+                icon={<Lock size={18} color={accentColor} />}
+                label="Password"
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (passwordError) setPasswordError('');
+                }}
+                placeholder="Enter your password"
+                rightIcon={
+                  <TouchableOpacity
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    hitSlop={8}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword
+                      ? <EyeOff size={18} color={Colors.textMuted} />
+                      : <Eye size={18} color={Colors.textMuted} />}
+                  </TouchableOpacity>
+                }
+                secureTextEntry={!showPassword}
+                value={password}
+              />
+
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => router.push({
+                  pathname: '/(auth)/forgot-password' as never,
+                  params: { role: urlRole },
+                })}
+                style={styles.forgotButton}
+              >
+                <Text style={[styles.forgotText, { color: accentColor }]}>Forgot password?</Text>
               </TouchableOpacity>
-              <Text style={[styles.headerTitle, Typography.threeD]}>SECURE ENTRY</Text>
-              <View style={{ width: 44 }} />
+
+              <AnimatedButton
+                isLoading={loginMutation.isPending}
+                onPress={handleLogin}
+                style={styles.submitButton}
+                title="Sign in securely"
+                variant={isWorker ? 'orange' : 'cyan'}
+              />
+            </GlassCard>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>New to ApnaUstad?</Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => router.push({
+                  pathname: '/(auth)/signup' as never,
+                  params: { role: urlRole },
+                })}
+              >
+                <Text style={[styles.footerLink, { color: accentColor }]}> Create an account</Text>
+              </TouchableOpacity>
             </View>
 
-            <Animated.View style={styles.hero}>
-              <Text style={[styles.title, Typography.threeD]}>WELCOME {'\n'}BACK</Text>
-              <Text style={styles.subtitle}>
-                RE-ESTABLISHING CONNECTION AS <Text style={[styles.roleText, { color: accentColor }]}>{urlRole?.toUpperCase() || 'USER'}</Text>
-              </Text>
-            </Animated.View>
-
-            {/* Glass Login Form */}
-            <GlassCard intensity={25} style={styles.loginCard}>
-              {/* Tab Selector */}
-              <View style={styles.tabContainer}>
-                <TouchableOpacity 
-                   style={[styles.tabBtn, loginType === 'phone' && { backgroundColor: accentColor + '30', borderColor: accentColor + '50' }]} 
-                   onPress={() => handleTabChange('phone')}
-                >
-                  <Text style={[styles.tabLabel, loginType === 'phone' && { color: '#fff' }]}>PHONE</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                   style={[styles.tabBtn, loginType === 'email' && { backgroundColor: accentColor + '30', borderColor: accentColor + '50' }]} 
-                   onPress={() => handleTabChange('email')}
-                >
-                  <Text style={[styles.tabLabel, loginType === 'email' && { color: '#fff' }]}>EMAIL</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Input Fields */}
-              <View style={styles.form}>
-                <View style={styles.inputSection}>
-                  <Text style={styles.label}>{loginType === 'email' ? 'QUANTUM MAIL' : 'COMM LINK'}</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}>
-                      {loginType === 'email' 
-                        ? <Mail size={18} color={accentColor} /> 
-                        : <Phone size={18} color={accentColor} />}
-                    </View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder={loginType === 'email' ? "address@system.com" : "+92 300 0000000"}
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      value={identifier}
-                      onChangeText={setIdentifier}
-                      keyboardType={loginType === 'email' ? 'email-address' : 'phone-pad'}
-                      autoCapitalize="none"
-                    />
-                  </View>
-                </View>
-
-                <View style={[styles.inputSection, { marginTop: 20 }]}>
-                  <Text style={styles.label}>ACCESS KEY</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}>
-                      <Lock size={18} color={accentColor} />
-                    </View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="••••••••••••"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      secureTextEntry={!showPassword}
-                      value={password}
-                      onChangeText={setPassword}
-                    />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                      {showPassword ? <EyeOff size={18} color="rgba(255,255,255,0.5)" /> : <Eye size={18} color="rgba(255,255,255,0.5)" />}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.forgotBtn} 
-                  activeOpacity={0.7}
-                  onPress={() => router.push({ pathname: '/(auth)/forgot-password' as any, params: { role: urlRole } })}
-                >
-                  <Text style={[styles.forgotText, { color: accentColor }]}>FORGOT ACCESS KEY?</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.signInBtn, { backgroundColor: accentColor }, loginMutation.isPending && { opacity: 0.7 }]} 
-                  onPress={() => loginMutation.mutate()}
-                  disabled={loginMutation.isPending}
-                >
-                  {loginMutation.isPending ? (
-                    <ActivityIndicator color={urlRole === 'worker' ? '#000' : '#000'} />
-                  ) : (
-                    <Text style={styles.signInBtnText}>AUTHORIZE LOGIN</Text>
-                  )}
-                </TouchableOpacity>
-
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>
-                    NEW TO THE SYSTEM?{' '}
-                    <Text 
-                      style={[styles.link, { color: accentColor }]} 
-                      onPress={() => router.push({ pathname: '/(auth)/signup', params: { role: urlRole } })}
-                    >
-                      INITIALIZE ACCOUNT
-                    </Text>
-                  </Text>
-                </View>
-              </View>
-            </GlassCard>
+            <SecurityNote accentColor={accentColor} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </BackgroundWrapper>
+  );
+}
+
+interface LoginTabProps {
+  accentColor: string;
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+}
+
+function LoginTab({ accentColor, active, icon, label, onPress }: LoginTabProps) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={[
+        styles.tabButton,
+        active && {
+          backgroundColor: `${accentColor}16`,
+          borderColor: `${accentColor}48`,
+        },
+      ]}
+    >
+      {icon}
+      <Text style={[styles.tabText, active && { color: '#fff' }]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -229,149 +273,63 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  hero: {
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#fff',
-    lineHeight: 46,
-    letterSpacing: -1,
-  },
-  subtitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    marginTop: 10,
-    letterSpacing: 1,
-  },
-  roleText: {
-    fontWeight: '900',
+    paddingHorizontal: Spacing.l,
+    paddingBottom: Spacing.xl,
   },
   loginCard: {
-    padding: 24,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: BorderRadius.xxl,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 20,
+    gap: Spacing.s,
     padding: 4,
-    marginBottom: 30,
+    marginBottom: Spacing.l,
+    borderRadius: BorderRadius.l,
+    backgroundColor: 'rgba(0,0,0,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
-  tabBtn: {
+  tabButton: {
     flex: 1,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 11,
+    borderRadius: BorderRadius.m,
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.4)',
-    letterSpacing: 1,
+  tabText: {
+    color: Colors.textDim,
+    fontSize: 12,
+    fontWeight: '800',
   },
-  form: {
-    flex: 1,
-  },
-  inputSection: {
-    marginBottom: 0,
-  },
-  label: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  iconContainer: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 15,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  eyeBtn: {
-    padding: 4,
-  },
-  forgotBtn: {
+  forgotButton: {
     alignSelf: 'flex-end',
-    marginTop: 15,
-    marginBottom: 35,
+    marginTop: -2,
+    marginBottom: Spacing.l,
   },
   forgotText: {
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 0.5,
   },
-  signInBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.glow,
-  },
-  signInBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
+  submitButton: {
+    width: '100%',
   },
   footer: {
-    marginTop: 30,
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: Spacing.xl,
   },
   footerText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 13,
     fontWeight: '600',
   },
-  link: {
-    fontWeight: '900',
+  footerLink: {
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

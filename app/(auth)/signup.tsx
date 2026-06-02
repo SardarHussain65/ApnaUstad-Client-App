@@ -1,123 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert,
-  Dimensions
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withDelay,
-  withTiming,
-  interpolate
-} from 'react-native-reanimated';
-import { ChevronLeft, User, Mail, Phone, ChevronRight } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
-import { BASE_URL } from '../../constants/Config';
-import { auth } from '../../firebaseConfig';
-
-const { width } = Dimensions.get('window');
-
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Mail, Phone, User } from 'lucide-react-native';
+import { AnimatedButton } from '../../components/AnimatedButton';
+import { InputField } from '../../components/InputField';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { AuthHero } from '../../components/auth/AuthHero';
+import { AuthProgress } from '../../components/auth/AuthProgress';
+import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { BASE_URL } from '../../constants/Config';
+import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
 
-export default function SignupStep1() {
+export default function SignupScreen() {
   const router = useRouter();
-  const { role } = useLocalSearchParams<{ role: string }>();
-
-  // 🎨 Dynamic accent color based on role
-  const accentColor = role === 'worker' ? Colors.worker : Colors.cyan;
+  const { role } = useLocalSearchParams<{ role?: string }>();
+  const isWorker = role === 'worker';
+  const accentColor = isWorker ? Colors.worker : Colors.cyan;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
-  // Animation values
-  const progressAnim = useSharedValue(0.33); // Step 1 = 33%
-
-  useEffect(() => {
-    progressAnim.value = withSpring(0.33, { damping: 20 });
-  }, []);
-
-  /* 
-  // ORIGINAL FIREBASE SMS FLOW (COMMENTED OUT)
-  const checkUserMutationOld = useMutation({
-    mutationFn: async (phone: string) => {
-      const endpoint = role === 'worker' ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
-      const response = await fetch(`${BASE_URL}${endpoint}?phone=${encodeURIComponent(phone)}`);
-      if (!response.ok) {
-        if (response.status === 404) return { data: { exists: false } };
-        throw new Error(`Failed to check ${role === 'worker' ? 'worker' : 'user'} availability`);
-      }
-      return response.json();
-    },
-    onSuccess: async (data, variables) => {
-      if (data.data.exists) {
-        Alert.alert('Account Exists', `This phone number is already registered as a ${role === 'worker' ? 'worker' : 'client'}.`);
-      } else {
-        try {
-          const cleanPhone = variables.replace(/\D/g, '');
-          const phoneNumberWithCode = variables.startsWith('+')
-            ? variables
-            : `+92${cleanPhone.startsWith('92') ? cleanPhone.slice(2) : cleanPhone.replace(/^0+/, '')}`;
-
-          const confirmationResult = await auth().signInWithPhoneNumber(phoneNumberWithCode);
-
-          router.push({
-            pathname: '/(auth)/verify',
-            params: {
-              fullName,
-              email,
-              phone: variables,
-              verificationId: confirmationResult.verificationId,
-              role
-            }
-          });
-        } catch (error: any) {
-          Alert.alert('OTP Error', error.message || 'Failed to send verification code.');
-        }
-      }
-    },
-    onError: (error: any) => {
-      Alert.alert('Error', error.message);
-    }
-  });
-  */
-
-  // NEW EMAIL OTP FLOW
   const checkUserMutation = useMutation({
     mutationFn: async (phone: string) => {
-      // 1. Check phone availability in database
-      const endpoint = role === 'worker' ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
+      const endpoint = isWorker ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
       const checkResponse = await fetch(`${BASE_URL}${endpoint}?phone=${encodeURIComponent(phone)}`);
       if (!checkResponse.ok) {
-        throw new Error(`Failed to check ${role === 'worker' ? 'worker' : 'user'} availability`);
+        throw new Error(`Failed to check ${isWorker ? 'specialist' : 'client'} availability`);
       }
-      
+
       const checkData = await checkResponse.json();
       if (checkData.data?.exists) {
         throw new Error('PHONE_EXISTS');
       }
 
-      // 2. Send email OTP via backend
       const otpResponse = await fetch(`${BASE_URL}/api/v1/otp/send-email-otp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
       if (!otpResponse.ok) {
@@ -130,145 +66,151 @@ export default function SignupStep1() {
 
       return { phone };
     },
-    onSuccess: (data) => {
+    onSuccess: ({ phone }) => {
       router.push({
-        pathname: '/(auth)/verify',
+        pathname: '/(auth)/verify' as never,
         params: {
-          fullName,
-          email,
-          phone: data.phone,
-          role
-        }
+          fullName: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phone,
+          role,
+        },
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (error.message === 'PHONE_EXISTS') {
-        Alert.alert('Account Exists', `This phone number is already registered as a ${role === 'worker' ? 'worker' : 'client'}.`);
+        Alert.alert('Account already exists', `This phone number is already registered as a ${isWorker ? 'specialist' : 'client'}.`);
       } else if (error.message === 'EMAIL_EXISTS') {
-        Alert.alert('Account Exists', 'This email address is already registered to another account.');
+        Alert.alert('Account already exists', 'This email address is already registered to another account.');
       } else {
-        Alert.alert('Registration Error', error.message || 'Failed to send verification code.');
+        Alert.alert('Unable to continue', error.message || 'Failed to send the verification code.');
       }
-    }
+    },
   });
 
   const handleNext = () => {
-    if (!fullName || !phoneNumber || !email) {
-      Alert.alert('Missing Fields', 'All fields are required.');
-      return;
-    }
-    checkUserMutation.mutate(phoneNumber);
-  };
+    const normalizedName = fullName.trim();
+    const normalizedEmail = email.trim();
+    const normalizedPhone = phoneNumber.trim();
+    const phoneDigits = normalizedPhone.replace(/\D/g, '');
+    let hasError = false;
 
-  const animatedProgressBar = useAnimatedStyle(() => ({
-    width: `${progressAnim.value * 100}%`,
-  }));
+    setNameError('');
+    setEmailError('');
+    setPhoneError('');
+
+    if (normalizedName.length < 3) {
+      setNameError('Enter your full name.');
+      hasError = true;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setEmailError('Enter a valid email address.');
+      hasError = true;
+    }
+    if (phoneDigits.length < 10) {
+      setPhoneError('Enter a valid phone number.');
+      hasError = true;
+    }
+
+    if (!hasError) {
+      checkUserMutation.mutate(normalizedPhone);
+    }
+  };
 
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView
             contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={[styles.headerTitle, Typography.threeD]}>INITIALIZE</Text>
-              <View style={{ width: 44 }} />
-            </View>
+            <AuthHeader title="Create account" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthProgress currentStep={1} accentColor={accentColor} />
+            <AuthHero
+              accentColor={accentColor}
+              eyebrow={isWorker ? 'Specialist profile' : 'Client profile'}
+              title="Start your"
+              highlight="journey"
+              description="Tell us the basics first. We will verify your email before setting up your profile."
+            />
 
-            {/* Premium Progress Bar */}
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBackground}>
-                <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor }]} />
-              </View>
-              <View style={styles.stepsRow}>
-                <Text style={[styles.stepLabel, { color: accentColor }]}>PHASE 01</Text>
-                <Text style={styles.stepLabel}>PHASE 02</Text>
-                <Text style={styles.stepLabel}>FINAL</Text>
-              </View>
-            </View>
+            <GlassCard
+              intensity={25}
+              padding={Spacing.l}
+              style={styles.formCard}
+              gradient={[`${accentColor}16`, 'rgba(191,90,242,0.06)']}
+            >
+              <InputField
+                accentColor={accentColor}
+                autoComplete="name"
+                error={nameError}
+                icon={<User size={18} color={accentColor} />}
+                label="Full name"
+                onChangeText={(value) => {
+                  setFullName(value);
+                  if (nameError) setNameError('');
+                }}
+                placeholder="Your full name"
+                value={fullName}
+              />
+              <InputField
+                accentColor={accentColor}
+                autoCapitalize="none"
+                autoComplete="email"
+                error={emailError}
+                icon={<Mail size={18} color={accentColor} />}
+                keyboardType="email-address"
+                label="Email address"
+                onChangeText={(value) => {
+                  setEmail(value);
+                  if (emailError) setEmailError('');
+                }}
+                placeholder="name@example.com"
+                value={email}
+              />
+              <InputField
+                accentColor={accentColor}
+                autoComplete="tel"
+                error={phoneError}
+                icon={<Phone size={18} color={accentColor} />}
+                keyboardType="phone-pad"
+                label="Phone number"
+                onChangeText={(value) => {
+                  setPhoneNumber(value);
+                  if (phoneError) setPhoneError('');
+                }}
+                placeholder="+92 300 0000000"
+                value={phoneNumber}
+              />
 
-            {/* Hero Section */}
-            <View style={styles.hero}>
-              <Text style={[styles.title, Typography.threeD]}>CREATE {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>PROFILE</Text></Text>
-              <Text style={styles.subtitle}>ESTABLISHING YOUR UNIQUE IDENTITY LINK</Text>
-            </View>
-
-            <GlassCard intensity={25} style={styles.signupCard}>
-              <View style={styles.form}>
-                <View style={styles.inputSection}>
-                  <Text style={styles.label}>FULL NAME</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}><User size={18} color={accentColor} /></View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="ENTER NAME"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      value={fullName}
-                      onChangeText={setFullName}
-                    />
-                  </View>
-                </View>
-
-                <View style={[styles.inputSection, { marginTop: 20 }]}>
-                  <Text style={styles.label}>QUANTUM MAIL</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}><Mail size={18} color={accentColor} /></View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="address@system.com"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      value={email}
-                      onChangeText={setEmail}
-                    />
-                  </View>
-                </View>
-
-                <View style={[styles.inputSection, { marginTop: 20 }]}>
-                  <Text style={styles.label}>COMM LINK (PHONE)</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}><Phone size={18} color={accentColor} /></View>
-                    <Text style={styles.countryCode}>+92</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="300 0000000"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      keyboardType="phone-pad"
-                      value={phoneNumber}
-                      onChangeText={setPhoneNumber}
-                    />
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.nextBtn, { backgroundColor: accentColor }, checkUserMutation.isPending && { opacity: 0.7 }]}
-                  onPress={handleNext}
-                  disabled={checkUserMutation.isPending}
-                >
-                  {checkUserMutation.isPending ? (
-                    <ActivityIndicator color="#000" />
-                  ) : (
-                    <>
-                      <Text style={styles.nextBtnText}>NEXT PHASE</Text>
-                      <ChevronRight size={20} color="#000" />
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>
-                    ALREADY REGISTERED? <Text style={[styles.link, { color: accentColor }]} onPress={() => router.push({ pathname: '/(auth)/login', params: { role } })}>AUTHORIZE LOGIN</Text>
-                  </Text>
-                </View>
-              </View>
+              <AnimatedButton
+                isLoading={checkUserMutation.isPending}
+                onPress={handleNext}
+                style={styles.submitButton}
+                title="Continue to verification"
+                variant={isWorker ? 'orange' : 'cyan'}
+              />
             </GlassCard>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => router.push({
+                  pathname: '/(auth)/login' as never,
+                  params: { role },
+                })}
+              >
+                <Text style={[styles.footerLink, { color: accentColor }]}> Sign in</Text>
+              </TouchableOpacity>
+            </View>
+
+            <SecurityNote accentColor={accentColor} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -282,147 +224,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.l,
+    paddingBottom: Spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
+  formCard: {
+    borderRadius: BorderRadius.xxl,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  progressContainer: {
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  progressBackground: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressActive: {
-    height: '100%',
-    borderRadius: 2,
-    ...Shadows.glow,
-  },
-  stepsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  stepLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 1,
-  },
-  hero: {
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#fff',
-    lineHeight: 46,
-    letterSpacing: -1,
-  },
-  brandText: {
-    fontWeight: '900',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    marginTop: 10,
-    letterSpacing: 1,
-  },
-  signupCard: {
-    padding: 24,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  form: {
-    flex: 1,
-  },
-  inputSection: {
-    marginBottom: 0,
-  },
-  label: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  iconContainer: {
-    marginRight: 12,
-  },
-  countryCode: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#fff',
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 15,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  nextBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    marginTop: 40,
-    ...Shadows.glow,
-  },
-  nextBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginRight: 8,
+  submitButton: {
+    marginTop: Spacing.s,
+    width: '100%',
   },
   footer: {
-    marginTop: 30,
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: Spacing.xl,
   },
   footerText: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 13,
     fontWeight: '600',
   },
-  link: {
-    fontWeight: '900',
+  footerLink: {
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

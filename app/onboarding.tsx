@@ -1,41 +1,59 @@
-import React, { useRef } from 'react';
-import { StyleSheet, View, FlatList, Dimensions, Text, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { 
-  useAnimatedScrollHandler, 
-  useSharedValue, 
-  useAnimatedStyle,
-  interpolate,
-  withSpring
-} from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OnboardingSlide } from '../components/OnboardingSlide';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  Extrapolate,
+  interpolate,
+  SharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { ArrowRight } from 'lucide-react-native';
 import { AnimatedButton } from '../components/AnimatedButton';
-import { Colors, Spacing, Typography, Animation } from '../constants/Theme';
-
+import { OnboardingSlide } from '../components/OnboardingSlide';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { BorderRadius, Colors, Spacing } from '../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
 const DATA = [
   {
     id: '1',
-    title: 'The Service Nebula',
-    description: 'Drift through a galaxy of elite professionals ready for any terrestrial or quantum challenge.',
+    eyebrow: 'Services, simplified',
+    title: 'The right help, right when you need it',
+    description: 'Explore trusted professionals for everyday tasks, urgent repairs, and everything in between.',
+    benefit: 'Find skilled specialists near you in a few taps.',
     image: require('../assets/images/onboarding1.png'),
+    accent: Colors.cyan,
   },
   {
     id: '2',
-    title: 'Your Craft, Your Galaxy',
-    description: 'Broadcast your skills across the system. Build your legacy and command your professional orbit.',
+    eyebrow: 'Built for specialists',
+    title: 'Turn your skills into new opportunities',
+    description: 'Showcase your expertise, discover nearby work, and build a reputation clients can trust.',
+    benefit: 'Manage jobs, bids, and earnings from one place.',
     image: require('../assets/images/onboarding2.png'),
+    accent: Colors.worker,
   },
   {
     id: '3',
-    title: 'Zero-Gravity Security',
-    description: 'Execute missions with absolute peace of mind. Every flow is encrypted and every asset is secured.',
+    eyebrow: 'Book with confidence',
+    title: 'A smoother path from request to result',
+    description: 'Stay informed from booking to completion with clear progress updates and secure account access.',
+    benefit: 'Every step is designed to feel simple and reliable.',
     image: require('../assets/images/onboarding3.png'),
+    accent: Colors.success,
   },
 ];
 
@@ -43,29 +61,29 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
-  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentSlide = DATA[currentIndex];
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollX.value = event.contentOffset.x;
   });
 
-  const handleNext = async () => {
-    if (currentIndex < DATA.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      await AsyncStorage.setItem('onboarding_completed', 'true');
-      router.replace('/role-selection');
-    }
-  };
-
-  const handleSkip = async () => {
+  const completeOnboarding = async () => {
     await AsyncStorage.setItem('onboarding_completed', 'true');
     router.replace('/role-selection');
   };
 
+  const handleNext = async () => {
+    if (currentIndex < DATA.length - 1) {
+      flatListRef.current?.scrollToIndex({ animated: true, index: currentIndex + 1 });
+      setCurrentIndex(currentIndex + 1);
+      return;
+    }
+    await completeOnboarding();
+  };
+
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
+    if (viewableItems.length > 0 && typeof viewableItems[0].index === 'number') {
       setCurrentIndex(viewableItems[0].index);
     }
   }).current;
@@ -73,117 +91,174 @@ export default function OnboardingScreen() {
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.brand}>
+            <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
+            <View>
+              <Text style={styles.brandName}>APNAUSTAD</Text>
+              <Text style={styles.brandTagline}>SERVICES, MADE SIMPLE</Text>
+            </View>
+          </View>
+          {currentIndex < DATA.length - 1 && (
+            <TouchableOpacity activeOpacity={0.7} onPress={completeOnboarding} style={styles.skipButton}>
+              <Text style={styles.skipText}>Skip</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <Animated.FlatList
           {...({
-            ref: flatListRef,
             data: DATA,
+            horizontal: true,
+            keyExtractor: (item: any) => item.id,
+            onScroll: scrollHandler,
+            onViewableItemsChanged,
+            pagingEnabled: true,
+            ref: flatListRef,
             renderItem: ({ item, index }: any) => (
               <OnboardingSlide item={item} index={index} scrollX={scrollX} />
             ),
-            keyExtractor: (item: any) => item.id,
-            horizontal: true,
-            pagingEnabled: true,
-            showsHorizontalScrollIndicator: false,
-            onScroll: scrollHandler,
             scrollEventThrottle: 16,
-            onViewableItemsChanged: onViewableItemsChanged,
-            viewabilityConfig: { itemVisiblePercentThreshold: 50 }
+            showsHorizontalScrollIndicator: false,
+            viewabilityConfig: { itemVisiblePercentThreshold: 50 },
           } as any)}
+          style={styles.slides}
         />
 
         <View style={styles.footer}>
-          {/* Pagination Dots */}
-          <View style={styles.pagination}>
-            {DATA.map((_, i) => {
-              const dotStyle = useAnimatedStyle(() => {
-                const isActive = Math.round(scrollX.value / width) === i;
-                const dotWidth = interpolate(
-                  scrollX.value,
-                  [(i - 1) * width, i * width, (i + 1) * width],
-                  [8, 28, 8],
-                  'clamp'
-                );
-                return {
-                  width: dotWidth,
-                  backgroundColor: isActive ? Colors.cyan : 'rgba(255,255,255,0.2)',
-                  opacity: interpolate(
-                    scrollX.value,
-                    [(i - 1) * width, i * width, (i + 1) * width],
-                    [0.3, 1, 0.3],
-                    'clamp'
-                  ),
-                };
-              });
-              return <Animated.View key={i} style={[styles.dot, dotStyle]} />;
-            })}
+          <View style={styles.paginationRow}>
+            <Text style={[styles.slideCount, { color: currentSlide.accent }]}>
+              0{currentIndex + 1}
+              <Text style={styles.slideTotal}> / 0{DATA.length}</Text>
+            </Text>
+            <View style={styles.pagination}>
+              {DATA.map((item, index) => (
+                <PaginationDot
+                  accentColor={item.accent}
+                  index={index}
+                  key={item.id}
+                  scrollX={scrollX}
+                />
+              ))}
+            </View>
           </View>
 
-          <View style={styles.buttonContainer}>
-            {currentIndex < DATA.length - 1 ? (
-              <View style={styles.row}>
-                <AnimatedButton 
-                  title="SKIP" 
-                  variant="ghost" 
-                  onPress={handleSkip} 
-                  style={styles.skipBtn}
-                />
-                <AnimatedButton 
-                  title="NEXT" 
-                  variant="cyan" 
-                  onPress={handleNext} 
-                  style={styles.nextBtn}
-                />
-              </View>
-            ) : (
-              <AnimatedButton 
-                title="INITIATE ADVENTURE" 
-                variant="cyan" 
-                onPress={handleNext} 
-                style={styles.startBtn}
-              />
-            )}
-          </View>
+          <AnimatedButton
+            icon={<ArrowRight size={18} color="#000" strokeWidth={2.8} />}
+            onPress={handleNext}
+            style={styles.nextButton}
+            title={currentIndex === DATA.length - 1 ? 'Get started' : 'Continue'}
+            variant="cyan"
+          />
         </View>
       </SafeAreaView>
     </BackgroundWrapper>
   );
 }
 
+interface PaginationDotProps {
+  accentColor: string;
+  index: number;
+  scrollX: SharedValue<number>;
+}
+
+function PaginationDot({ accentColor, index, scrollX }: PaginationDotProps) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollX.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [0.25, 1, 0.25],
+      Extrapolate.CLAMP,
+    ),
+    width: interpolate(
+      scrollX.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [7, 24, 7],
+      Extrapolate.CLAMP,
+    ),
+  }));
+
+  return <Animated.View style={[styles.dot, { backgroundColor: accentColor }, animatedStyle]} />;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.l,
+    paddingTop: Spacing.s,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  brandLogo: {
+    width: 42,
+    height: 42,
+    marginRight: 9,
+  },
+  brandName: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.8,
+  },
+  brandTagline: {
+    color: Colors.cyan,
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 1.3,
+    marginTop: 3,
+  },
+  skipButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  skipText: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  slides: {
+    flex: 1,
   },
   footer: {
     paddingHorizontal: Spacing.l,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.l,
+    paddingTop: Spacing.s,
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.m,
+  },
+  slideCount: {
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  slideTotal: {
+    color: Colors.textDim,
   },
   pagination: {
     flexDirection: 'row',
-    height: 40,
-    justifyContent: 'center',
     alignItems: 'center',
   },
   dot: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.cyan,
-    marginHorizontal: 4,
+    height: 7,
+    borderRadius: BorderRadius.full,
+    marginLeft: 6,
   },
-  buttonContainer: {
-    marginTop: Spacing.l,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.m,
-  },
-  skipBtn: {
-    flex: 1,
-  },
-  nextBtn: {
-    flex: 2,
-  },
-  startBtn: {
+  nextButton: {
     width: '100%',
-  }
+  },
 });

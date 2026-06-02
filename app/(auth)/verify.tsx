@@ -1,105 +1,61 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform, 
-  ActivityIndicator, 
+import React, { useEffect, useState } from 'react';
+import {
   Alert,
-  Dimensions
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring, 
-  withDelay, 
-  withSequence,
-  interpolate
-} from 'react-native-reanimated';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
-import { BASE_URL } from '../../constants/Config';
-import { auth } from '../../firebaseConfig';
-import * as Haptics from 'expo-haptics';
+import { MailCheck } from 'lucide-react-native';
 import { OtpInput } from 'react-native-otp-entry';
+import * as Haptics from 'expo-haptics';
+import { AnimatedButton } from '../../components/AnimatedButton';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { AuthHero } from '../../components/auth/AuthHero';
+import { AuthProgress } from '../../components/auth/AuthProgress';
+import { SecurityNote } from '../../components/auth/SecurityNote';
+import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { GlassCard } from '../../components/home/GlassCard';
+import { BASE_URL } from '../../constants/Config';
+import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
-import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
-import { GlassCard } from '../../components/home/GlassCard';
-
 export default function VerifyScreen() {
   const router = useRouter();
-  const { fullName, email, phone, verificationId, role } = useLocalSearchParams<{ 
+  const { fullName, email, phone, role } = useLocalSearchParams<{
     fullName: string;
     email: string;
     phone: string;
-    verificationId?: string;
-    role: string;
+    role?: string;
   }>();
+  const isWorker = role === 'worker';
+  const accentColor = isWorker ? Colors.worker : Colors.cyan;
 
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-
-  // 🎨 Dynamic accent color based on role
-  const accentColor = role === 'worker' ? Colors.worker : Colors.cyan;
-
-  // Animation values
-  const progressAnim = useSharedValue(0.33); 
+  const [resendCooldown, setResendCooldown] = useState(30);
 
   useEffect(() => {
-    progressAnim.value = withSpring(0.66, { damping: 20 }); 
-  }, []);
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
 
-  /*
-  // ORIGINAL FIREBASE SMS VERIFICATION FLOW (COMMENTED OUT)
-  const handleVerifyOld = async () => {
-    if (otp.length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
-      return;
-    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
-    setIsVerifying(true);
-    try {
-      if (!verificationId) {
-        throw new Error('Verification session expired. Please go back and try again.');
-      }
-
-      // @ts-ignore
-      const credential = auth.PhoneAuthProvider.credential(verificationId, otp);
-      const result = await auth().signInWithCredential(credential);
-      const idToken = await result.user.getIdToken();
-
-      router.push({
-        pathname: '/(auth)/register-details',
-        params: {
-          fullName,
-          email,
-          phone,
-          role,
-          idToken
-        }
-      });
-    } catch (error: any) {
-      Alert.alert('Verification Failed', error.message || 'Invalid code.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-  */
-
-  // NEW EMAIL OTP FLOW VERIFICATION
   const handleVerify = async () => {
     if (otp.length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Code required', 'Enter the 6-digit verification code sent to your email.');
       return;
     }
 
@@ -107,160 +63,133 @@ export default function VerifyScreen() {
     try {
       const response = await fetch(`${BASE_URL}/api/v1/otp/verify-email-otp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          code: otp
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: otp }),
       });
-
       const data = await response.json();
+
       if (!response.ok) {
         throw new Error(data.message || 'Invalid code.');
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
       router.push({
-        pathname: '/(auth)/register-details',
-        params: {
-          fullName,
-          email,
-          phone,
-          role,
-          idToken: ''
-        }
+        pathname: '/(auth)/register-details' as never,
+        params: { fullName, email, phone, role, idToken: '' },
       });
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.message || 'Invalid or expired verification code.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Verification failed', error.message || 'The code is invalid or has expired.');
     } finally {
       setIsVerifying(false);
     }
   };
 
   const handleResend = async () => {
-    if (isResending) return;
+    if (isResending || resendCooldown > 0) return;
     setIsResending(true);
+
     try {
       const response = await fetch(`${BASE_URL}/api/v1/otp/send-email-otp`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
       const data = await response.json();
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to resend code.');
       }
 
-      Alert.alert('Verification Code Sent', 'A new verification code has been dispatched to your email address.');
+      setResendCooldown(30);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Code sent', 'A fresh verification code has been sent to your email.');
     } catch (error: any) {
-      Alert.alert('Resend Failed', error.message || 'Could not resend code. Please try again.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Unable to resend', error.message || 'Please try again in a moment.');
     } finally {
       setIsResending(false);
     }
   };
 
-  const animatedProgressBar = useAnimatedStyle(() => ({
-    width: `${progressAnim.value * 100}%`,
-  }));
-
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView
+            bounces={false}
             contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={[styles.headerTitle, Typography.threeD]}>VERIFICATION</Text>
-              <View style={{ width: 44 }} />
-            </View>
+            <AuthHeader title="Email verification" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthProgress currentStep={2} accentColor={accentColor} />
+            <AuthHero
+              accentColor={accentColor}
+              align="center"
+              description={`We sent a 6-digit code to ${email}. Enter it below to confirm your account.`}
+              highlight="your email"
+              icon={<MailCheck size={36} color={accentColor} strokeWidth={1.8} />}
+              title="Verify"
+            />
 
-            {/* Premium Progress Bar */}
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBackground}>
-                <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor }]} />
-              </View>
-              <View style={styles.stepsRow}>
-                <Text style={styles.stepLabel}>PHASE 01</Text>
-                <Text style={[styles.stepLabel, { color: accentColor }]}>PHASE 02</Text>
-                <Text style={styles.stepLabel}>FINAL</Text>
-              </View>
-            </View>
-
-            {/* Hero Section */}
-            <View style={styles.hero}>
-              <Text style={[styles.title, Typography.threeD]}>CONFIRM {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>IDENTITY</Text></Text>
-              <Text style={styles.subtitle}>CODE TRANSMITTED TO {'\n'}<Text style={styles.phoneLink}>{email}</Text></Text>
-            </View>
-
-            {/* Segmented OTP Input */}
-            <View style={styles.otpWrapper}>
+            <GlassCard
+              intensity={25}
+              padding={Spacing.l}
+              style={styles.otpCard}
+              gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
+            >
+              <Text style={styles.otpLabel}>6-digit verification code</Text>
               <OtpInput
                 numberOfDigits={6}
                 focusColor={accentColor}
                 focusStickBlinkingDuration={500}
-                onTextChange={(text) => {
-                  setOtp(text);
-                  if (text.length > 0) {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                }}
-                onFilled={(text) => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
+                onFilled={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
+                onTextChange={setOtp}
                 theme={{
                   containerStyle: styles.otpContainer,
                   pinCodeContainerStyle: styles.otpCell,
                   pinCodeTextStyle: styles.otpText,
                   focusStickStyle: { ...styles.focusStick, backgroundColor: accentColor },
-                  focusedPinCodeContainerStyle: { ...styles.activeOtpCell, borderColor: accentColor },
+                  focusedPinCodeContainerStyle: {
+                    ...styles.activeOtpCell,
+                    borderColor: accentColor,
+                    shadowColor: accentColor,
+                  },
                 }}
               />
-            </View>
 
-            <View style={styles.actions}>
-              <TouchableOpacity 
-                style={[styles.verifyBtn, { backgroundColor: accentColor }, isVerifying && { opacity: 0.7 }]} 
+              <AnimatedButton
+                isLoading={isVerifying}
                 onPress={handleVerify}
-                disabled={isVerifying}
-              >
-                {isVerifying ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <>
-                    <Text style={styles.verifyBtnText}>AUTHORIZE ACCESS</Text>
-                    <ChevronRight size={20} color="#000" />
-                  </>
-                )}
-              </TouchableOpacity>
+                style={styles.verifyButton}
+                title="Verify and continue"
+                variant={isWorker ? 'orange' : 'cyan'}
+              />
+            </GlassCard>
 
-              <TouchableOpacity 
-                style={styles.resendBtn} 
-                activeOpacity={0.7} 
+            <View style={styles.resendRow}>
+              <Text style={styles.resendHint}>Did not receive the code?</Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                disabled={isResending || resendCooldown > 0}
                 onPress={handleResend}
-                disabled={isResending}
               >
-                {isResending ? (
-                  <ActivityIndicator size="small" color={accentColor} />
-                ) : (
-                  <Text style={styles.resendText}>NO CODE RECEIVED? <Text style={[styles.link, { color: accentColor }]}>RE-TRANSMIT</Text></Text>
-                )}
+                <Text
+                  style={[
+                    styles.resendButton,
+                    { color: resendCooldown > 0 ? Colors.textDim : accentColor },
+                  ]}
+                >
+                  {isResending ? ' Sending...' : resendCooldown > 0 ? ` Resend in ${resendCooldown}s` : ' Resend now'}
+                </Text>
               </TouchableOpacity>
             </View>
+
+            <SecurityNote accentColor={accentColor} text="Your verification code expires automatically for your security." />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -274,83 +203,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.l,
+    paddingBottom: Spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
+  otpCard: {
+    borderRadius: BorderRadius.xxl,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  progressContainer: {
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  progressBackground: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressActive: {
-    height: '100%',
-    borderRadius: 2,
-    ...Shadows.glow,
-  },
-  stepsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  stepLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 1,
-  },
-  hero: {
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#fff',
-    lineHeight: 46,
-    letterSpacing: -1,
-  },
-  brandText: {
-    fontWeight: '900',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    marginTop: 10,
-    letterSpacing: 1,
-  },
-  phoneLink: {
-    color: '#fff',
-    fontWeight: '900',
-  },
-  otpWrapper: {
-    marginBottom: 50,
+  otpLabel: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    marginBottom: Spacing.m,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   otpContainer: {
     flexDirection: 'row',
@@ -358,56 +225,44 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   otpCell: {
-    width: (width - 48 - 50) / 6,
-    height: 65,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    width: (width - 48 - 64 - 40) / 6,
+    height: 58,
+    borderRadius: BorderRadius.m,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.11)',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   activeOtpCell: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
   otpText: {
-    fontSize: 24,
-    fontWeight: '900',
     color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
   },
   focusStick: {
     width: 2,
-    height: 30,
+    height: 24,
   },
-  actions: {
-    flex: 1,
+  verifyButton: {
+    marginTop: Spacing.xl,
+    width: '100%',
   },
-  verifyBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  resendRow: {
     flexDirection: 'row',
-    ...Shadows.glow,
+    justifyContent: 'center',
+    marginTop: Spacing.xl,
   },
-  verifyBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginRight: 8,
+  resendHint: {
+    color: 'rgba(255,255,255,0.46)',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  resendBtn: {
-    marginTop: 30,
-    alignItems: 'center',
-  },
-  resendText: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.4)',
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  link: {
-    fontWeight: '900',
+  resendButton: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

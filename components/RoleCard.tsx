@@ -1,60 +1,60 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring, 
-  withTiming,
-  interpolateColor
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, BorderRadius, Spacing, Typography, Animation, Shadows } from '../constants/Theme';
-
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CheckCircle2 } from 'lucide-react-native';
 import { GlassCard } from './home/GlassCard';
-
-const { width } = Dimensions.get('window');
+import { BorderRadius, Colors, Spacing } from '../constants/Theme';
 
 interface RoleCardProps {
-  title: string;
   description: string;
   icon: React.ReactNode;
-  onPress: () => void;
-  variant: 'client' | 'worker';
   isSelected?: boolean;
+  label: string;
+  onPress: () => void;
+  title: string;
+  variant: 'client' | 'worker';
 }
 
 export const RoleCard: React.FC<RoleCardProps> = ({
-  title,
   description,
   icon,
+  isSelected,
+  label,
   onPress,
+  title,
   variant,
-  isSelected
 }) => {
   const mainColor = variant === 'client' ? Colors.cyan : Colors.worker;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onPress}
-      style={styles.touchable}
-    >
-      <GlassCard 
-        intensity={isSelected ? 40 : 15} 
-        style={[styles.container, isSelected && { borderColor: mainColor + '60' }]}
-        hasGlow={isSelected}
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={styles.touchable}>
+      <GlassCard
+        contentStyle={styles.cardContent}
         glowColor={mainColor}
+        gradient={[`${mainColor}18`, 'rgba(191,90,242,0.04)']}
+        hasGlow={isSelected}
+        intensity={isSelected ? 38 : 20}
+        padding={Spacing.m}
+        style={[
+          styles.container,
+          isSelected && {
+            borderColor: `${mainColor}70`,
+            backgroundColor: `${mainColor}0B`,
+          },
+        ]}
       >
-        <View style={[styles.iconContainer, { backgroundColor: isSelected ? mainColor + '30' : 'rgba(255,255,255,0.05)' }]}>
+        <View style={[styles.iconContainer, { backgroundColor: `${mainColor}18` }]}>
           {icon}
         </View>
-        <View style={styles.content}>
-          <Text style={[styles.title, Typography.threeD, isSelected && { color: '#fff' }]}>{title}</Text>
-          <Text style={[styles.description, isSelected && { color: 'rgba(255,255,255,0.7)' }]}>{description}</Text>
+        <View style={styles.copy}>
+          <Text style={[styles.label, { color: mainColor }]}>{label}</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.description}>{description}</Text>
         </View>
-        {isSelected && (
-           <View style={[styles.activeIndicator, { backgroundColor: mainColor }]} />
-        )}
+        <CheckCircle2
+          color={isSelected ? mainColor : 'rgba(255,255,255,0.18)'}
+          size={21}
+          strokeWidth={isSelected ? 2.8 : 1.8}
+        />
       </GlassCard>
     </TouchableOpacity>
   );
@@ -62,51 +62,49 @@ export const RoleCard: React.FC<RoleCardProps> = ({
 
 const styles = StyleSheet.create({
   touchable: {
-    width: '100%',
     marginBottom: Spacing.m,
+    width: '100%',
   },
   container: {
-    padding: 24,
-    borderRadius: 30,
+    borderRadius: BorderRadius.xl,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 120,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    minHeight: 104,
   },
   iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    justifyContent: 'center',
+    width: 54,
+    height: 54,
     alignItems: 'center',
-    marginRight: 20,
+    justifyContent: 'center',
+    borderRadius: BorderRadius.l,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+    marginRight: Spacing.m,
   },
-  content: {
+  copy: {
     flex: 1,
+    paddingRight: Spacing.s,
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+    textTransform: 'uppercase',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: 6,
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 5,
   },
   description: {
+    color: Colors.textMuted,
     fontSize: 12,
-    color: Colors.textDim,
-    lineHeight: 18,
-    fontWeight: '600',
+    fontWeight: '500',
+    lineHeight: 17,
   },
-  activeIndicator: {
-    position: 'absolute',
-    right: 20,
-    top: 20,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
-  }
 });

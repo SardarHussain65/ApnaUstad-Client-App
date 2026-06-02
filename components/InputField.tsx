@@ -7,14 +7,18 @@ interface InputFieldProps extends TextInputProps {
   label?: string;
   error?: string;
   icon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
   containerStyle?: ViewStyle;
+  accentColor?: string;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({ 
   label, 
   error, 
   icon, 
+  rightIcon,
   containerStyle, 
+  accentColor = Colors.cyan,
   onFocus, 
   onBlur, 
   ...props 
@@ -22,7 +26,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   const [focused, setFocused] = useState(false);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    borderColor: withTiming(error ? Colors.error : (focused ? Colors.cyan : Colors.border)),
+    borderColor: withTiming(error ? Colors.error : (focused ? accentColor : 'rgba(255,255,255,0.11)')),
     borderWidth: withTiming(focused || error ? 1.5 : 1),
   }));
 
@@ -46,9 +50,10 @@ export const InputField: React.FC<InputFieldProps> = ({
           placeholderTextColor={Colors.textDim}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          selectionColor={Colors.cyan}
+          selectionColor={accentColor}
           {...props}
         />
+        {rightIcon && <View style={styles.rightIconContainer}>{rightIcon}</View>}
       </Animated.View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -63,21 +68,26 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.caption,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     marginBottom: Spacing.s,
     color: Colors.textMuted,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.inputBackground,
-    borderRadius: BorderRadius.m,
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderRadius: BorderRadius.l,
     paddingHorizontal: Spacing.m,
-    height: 64,
+    height: 60,
   },
   iconContainer: {
     marginRight: Spacing.s,
+    opacity: 0.8,
+  },
+  rightIconContainer: {
+    marginLeft: Spacing.s,
     opacity: 0.8,
   },
   input: {
@@ -90,7 +100,7 @@ const styles = StyleSheet.create({
   errorText: {
     ...Typography.caption,
     color: Colors.error,
-    marginTop: Spacing.xs,
+    marginTop: 6,
     fontSize: 12,
   },
 });

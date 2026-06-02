@@ -1,226 +1,228 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  KeyboardAvoidingView, 
-  Platform, 
-  ActivityIndicator, 
+import {
   Alert,
-  Dimensions
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
-import { ChevronLeft, Eye, EyeOff, Lock, ChevronRight } from 'lucide-react-native';
-import { Colors, Typography, Shadows } from '../../constants/Theme';
-import { BASE_URL } from '../../constants/Config';
-import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react-native';
 import { OtpInput } from 'react-native-otp-entry';
+import * as Haptics from 'expo-haptics';
+import { AnimatedButton } from '../../components/AnimatedButton';
+import { InputField } from '../../components/InputField';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { AuthHero } from '../../components/auth/AuthHero';
+import { SecurityNote } from '../../components/auth/SecurityNote';
+import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { GlassCard } from '../../components/home/GlassCard';
+import { BASE_URL } from '../../constants/Config';
+import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
-import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
-import { GlassCard } from '../../components/home/GlassCard';
-
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { email, role } = useLocalSearchParams<{ email: string; role: string }>();
-
-  // 🎨 Dynamic accent color based on role
-  const accentColor = role === 'worker' ? Colors.worker : Colors.cyan;
+  const { email, role } = useLocalSearchParams<{ email: string; role?: string }>();
+  const isWorker = role === 'worker';
+  const accentColor = isWorker ? Colors.worker : Colors.cyan;
 
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
 
   const resetMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`${BASE_URL}/api/v1/otp/forgot-password/reset`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: otp.trim(),
-          newPassword: newPassword,
-          type: role || 'user'
+          newPassword,
+          type: role || 'user',
         }),
       });
-
       const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.message || 'Verification or password update failed');
+        throw new Error(data.message || 'Verification or password update failed.');
       }
       return data;
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        'Success',
-        'Your access key has been successfully re-established. Please log in with your new password.',
-        [
-          {
-            text: 'LOGIN',
-            onPress: () => {
-              router.replace({
-                pathname: '/(auth)/login',
-                params: { role }
-              });
-            }
-          }
-        ]
+        'Password updated',
+        'Your new password is ready. You can now sign in securely.',
+        [{
+          text: 'Sign in',
+          onPress: () => router.replace({
+            pathname: '/(auth)/login' as never,
+            params: { role },
+          }),
+        }],
       );
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Reset Failed', error.message || 'Invalid verification code or update failed.');
-    }
+      Alert.alert('Unable to reset password', error.message || 'The code is invalid or has expired.');
+    },
   });
 
   const handleResetPassword = () => {
+    setPasswordError('');
+    setConfirmError('');
+
     if (otp.length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter the 6-digit verification code.');
-      return;
-    }
-    if (!newPassword || !confirmPassword) {
-      Alert.alert('Missing Fields', 'All access key fields are required.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Code required', 'Enter the 6-digit code sent to your email.');
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Weak Password', 'Your new password must be at least 6 characters.');
+      setPasswordError('Use at least 6 characters.');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Mismatch', 'The passwords entered do not match.');
+      setConfirmError('Passwords do not match.');
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     resetMutation.mutate();
   };
 
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView
             contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={[styles.headerTitle, Typography.threeD]}>SECURE RESET</Text>
-              <View style={{ width: 44 }} />
-            </View>
+            <AuthHeader title="Secure reset" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHero
+              accentColor={accentColor}
+              align="center"
+              description={`Enter the code sent to ${email}, then choose a new password for your account.`}
+              highlight="new password"
+              icon={<ShieldCheck size={36} color={accentColor} strokeWidth={1.8} />}
+              title="Create a"
+            />
 
-            {/* Hero Section */}
-            <View style={styles.hero}>
-              <Text style={[styles.title, Typography.threeD]}>NEW {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>PASSWORD</Text></Text>
-              <Text style={styles.subtitle}>CODE TRANSMITTED TO {'\n'}<Text style={styles.emailLink}>{email}</Text></Text>
-            </View>
-
-            {/* Segmented OTP Input */}
-            <View style={styles.otpWrapper}>
-              <Text style={styles.label}>6-DIGIT VERIFICATION CODE</Text>
+            <GlassCard
+              intensity={25}
+              padding={Spacing.l}
+              style={styles.formCard}
+              gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
+            >
+              <Text style={styles.otpLabel}>Recovery code</Text>
               <OtpInput
                 numberOfDigits={6}
                 focusColor={accentColor}
                 focusStickBlinkingDuration={500}
-                onTextChange={(text) => {
-                  setOtp(text);
-                  if (text.length > 0) {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }
-                }}
-                onFilled={(text) => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                }}
+                onFilled={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
+                onTextChange={setOtp}
                 theme={{
                   containerStyle: styles.otpContainer,
                   pinCodeContainerStyle: styles.otpCell,
                   pinCodeTextStyle: styles.otpText,
                   focusStickStyle: { ...styles.focusStick, backgroundColor: accentColor },
-                  focusedPinCodeContainerStyle: { ...styles.activeOtpCell, borderColor: accentColor },
+                  focusedPinCodeContainerStyle: {
+                    ...styles.activeOtpCell,
+                    borderColor: accentColor,
+                    shadowColor: accentColor,
+                  },
                 }}
               />
-            </View>
 
-            {/* Password Form */}
-            <GlassCard intensity={25} style={styles.formCard}>
-              <View style={styles.form}>
-                <View style={styles.inputSection}>
-                  <Text style={styles.label}>NEW ACCESS KEY</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}>
-                      <Lock size={18} color={accentColor} />
-                    </View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="••••••••••••"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      secureTextEntry={!showNewPassword}
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={styles.eyeBtn}>
-                      {showNewPassword ? <EyeOff size={18} color="rgba(255,255,255,0.5)" /> : <Eye size={18} color="rgba(255,255,255,0.5)" />}
-                    </TouchableOpacity>
-                  </View>
-                </View>
+              <InputField
+                accentColor={accentColor}
+                autoCapitalize="none"
+                error={passwordError}
+                icon={<Lock size={18} color={accentColor} />}
+                label="New password"
+                onChangeText={(value) => {
+                  setNewPassword(value);
+                  if (passwordError) setPasswordError('');
+                }}
+                placeholder="At least 6 characters"
+                rightIcon={
+                  <PasswordVisibilityButton
+                    isVisible={showNewPassword}
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                  />
+                }
+                secureTextEntry={!showNewPassword}
+                value={newPassword}
+              />
+              <InputField
+                accentColor={accentColor}
+                autoCapitalize="none"
+                error={confirmError}
+                icon={<Lock size={18} color={accentColor} />}
+                label="Confirm new password"
+                onChangeText={(value) => {
+                  setConfirmPassword(value);
+                  if (confirmError) setConfirmError('');
+                }}
+                placeholder="Repeat your new password"
+                rightIcon={
+                  <PasswordVisibilityButton
+                    isVisible={showConfirmPassword}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  />
+                }
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+              />
 
-                <View style={[styles.inputSection, { marginTop: 20 }]}>
-                  <Text style={styles.label}>CONFIRM NEW ACCESS KEY</Text>
-                  <View style={styles.inputWrapper}>
-                    <View style={styles.iconContainer}>
-                      <Lock size={18} color={accentColor} />
-                    </View>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="••••••••••••"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      secureTextEntry={!showConfirmPassword}
-                      value={confirmPassword}
-                      onChangeText={setConfirmPassword}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeBtn}>
-                      {showConfirmPassword ? <EyeOff size={18} color="rgba(255,255,255,0.5)" /> : <Eye size={18} color="rgba(255,255,255,0.5)" />}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <TouchableOpacity 
-                  style={[styles.resetBtn, { backgroundColor: accentColor }, resetMutation.isPending && { opacity: 0.7 }]} 
-                  onPress={handleResetPassword}
-                  disabled={resetMutation.isPending}
-                >
-                  {resetMutation.isPending ? (
-                    <ActivityIndicator color="#000" />
-                  ) : (
-                    <>
-                      <Text style={styles.resetBtnText}>UPDATE ACCESS KEY</Text>
-                      <ChevronRight size={20} color="#000" />
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
+              <AnimatedButton
+                isLoading={resetMutation.isPending}
+                onPress={handleResetPassword}
+                style={styles.resetButton}
+                title="Update password"
+                variant={isWorker ? 'orange' : 'cyan'}
+              />
             </GlassCard>
+
+            <SecurityNote accentColor={accentColor} text="Your password is updated through a secure, one-time recovery request." />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </BackgroundWrapper>
+  );
+}
+
+interface PasswordVisibilityButtonProps {
+  isVisible: boolean;
+  onPress: () => void;
+}
+
+function PasswordVisibilityButton({ isVisible, onPress }: PasswordVisibilityButtonProps) {
+  return (
+    <TouchableOpacity
+      accessibilityLabel={isVisible ? 'Hide password' : 'Show password'}
+      hitSlop={8}
+      onPress={onPress}
+    >
+      {isVisible
+        ? <EyeOff size={18} color={Colors.textMuted} />
+        : <Eye size={18} color={Colors.textMuted} />}
+    </TouchableOpacity>
   );
 }
 
@@ -230,140 +232,53 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.l,
+    paddingBottom: Spacing.xl,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
+  formCard: {
+    borderRadius: BorderRadius.xxl,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  hero: {
-    marginBottom: 30,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#fff',
-    lineHeight: 46,
-    letterSpacing: -1,
-  },
-  brandText: {
-    fontWeight: '900',
-  },
-  subtitle: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    marginTop: 10,
-    letterSpacing: 1,
-  },
-  emailLink: {
-    color: '#fff',
-    fontWeight: '900',
-  },
-  otpWrapper: {
-    marginBottom: 30,
+  otpLabel: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    marginBottom: Spacing.m,
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: Spacing.xl,
     width: '100%',
   },
   otpCell: {
-    width: (width - 48 - 50) / 6,
-    height: 65,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    width: (width - 48 - 64 - 40) / 6,
+    height: 56,
+    borderRadius: BorderRadius.m,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.11)',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   activeOtpCell: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
   },
   otpText: {
-    fontSize: 24,
-    fontWeight: '900',
     color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
   },
   focusStick: {
     width: 2,
-    height: 30,
+    height: 24,
   },
-  formCard: {
-    padding: 24,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  form: {
-    flex: 1,
-  },
-  inputSection: {
-    marginBottom: 0,
-  },
-  label: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 10,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  iconContainer: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 15,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  eyeBtn: {
-    padding: 4,
-  },
-  resetBtn: {
-    borderRadius: 20,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    marginTop: 40,
-    ...Shadows.glow,
-  },
-  resetBtnText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginRight: 8,
+  resetButton: {
+    marginTop: Spacing.s,
+    width: '100%',
   },
 });

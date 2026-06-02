@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,35 +10,29 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Image,
-  Dimensions
+  Image
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withDelay,
-  withTiming,
-  interpolate
-} from 'react-native-reanimated';
 import {
-  ChevronLeft, Camera, MapPin, Building,
+  Camera, MapPin, Building,
   Lock, CreditCard, Briefcase, Award, PenTool,
-  BadgeDollarSign, FileText, CheckCircle
+  BadgeDollarSign, FileText, CheckCircle, Eye, EyeOff
 } from 'lucide-react-native';
-import { useAuth } from '../../context/AuthContext';
-import { Colors, Typography, BorderRadius, Shadows } from '../../constants/Theme';
+import { Colors, BorderRadius, Shadows, Spacing } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../../hooks';
 
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { AuthHeader } from '../../components/auth/AuthHeader';
+import { AuthHero } from '../../components/auth/AuthHero';
+import { AuthProgress } from '../../components/auth/AuthProgress';
+import { SecurityNote } from '../../components/auth/SecurityNote';
 
 export default function RegisterDetailsScreen() {
   const router = useRouter();
@@ -50,9 +44,6 @@ export default function RegisterDetailsScreen() {
     role: string;
     idToken: string;
   }>();
-  const { setAuth } = useAuth();
-
-  // 🎨 Dynamic accent color based on role
   const accentColor = params.role === 'worker' ? Colors.worker : Colors.cyan;
 
   const [image, setImage] = useState<string | null>(null);
@@ -61,6 +52,7 @@ export default function RegisterDetailsScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   // Worker Specific States
@@ -76,19 +68,7 @@ export default function RegisterDetailsScreen() {
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
 
-  // Animation values
-  const progressAnim = useSharedValue(0.66); 
-
-  useEffect(() => {
-    progressAnim.value = withSpring(1.0, { damping: 20 }); 
-
-    if (params.role === 'worker') {
-      fetchCategories();
-    }
-    captureCurrentLocation();
-  }, []);
-
-  const captureCurrentLocation = async () => {
+  const captureCurrentLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
@@ -109,20 +89,18 @@ export default function RegisterDetailsScreen() {
 
       if (results.length > 0) {
         const geo = results[0];
-        if (!city && geo.city) setCity(geo.city);
-        if (!address) {
-          const detectedAddress = [geo.name, geo.street, geo.district, geo.city]
-            .filter(Boolean)
-            .join(', ');
-          if (detectedAddress) setAddress(detectedAddress);
-        }
+        if (geo.city) setCity((currentCity) => currentCity || geo.city || '');
+        const detectedAddress = [geo.name, geo.street, geo.district, geo.city]
+          .filter(Boolean)
+          .join(', ');
+        if (detectedAddress) setAddress((currentAddress) => currentAddress || detectedAddress);
       }
     } catch (error) {
       console.warn('Could not capture registration location:', error);
     }
-  };
+  }, []);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setIsFetchingCategories(true);
     try {
       const response = await fetch(`${BASE_URL}/api/v1/users/categories`);
@@ -135,7 +113,14 @@ export default function RegisterDetailsScreen() {
     } finally {
       setIsFetchingCategories(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (params.role === 'worker') {
+      void fetchCategories();
+    }
+    void captureCurrentLocation();
+  }, [captureCurrentLocation, fetchCategories, params.role]);
 
   const pickImage = async (type: 'profile' | 'cnicFront' | 'cnicBack') => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -208,8 +193,11 @@ export default function RegisterDetailsScreen() {
         return;
       }
       
-      success('Success!', `Profile completed successfully! Please log in to continue.`);
-      router.replace('/(auth)/login' as any);
+      success('Profile created', 'Your account is ready. Sign in to continue.');
+      router.replace({
+        pathname: '/(auth)/login' as any,
+        params: { role: params.role },
+      });
     },
     onError: (error: any) => {
       showError('Registration Error', error.message);
@@ -221,6 +209,10 @@ export default function RegisterDetailsScreen() {
     // Basic Validation
     if (!address || !city || !password) {
       showError('Missing Fields', 'Please fill in your address, city, and password.');
+      return;
+    }
+    if (password.length < 6) {
+      showError('Weak Password', 'Please use at least 6 characters for your password.');
       return;
     }
 
@@ -243,7 +235,7 @@ export default function RegisterDetailsScreen() {
       let cnicBackUrl = '';
 
       if (image) {
-        setUploadProgress('SYNCING AVATAR...');
+        setUploadProgress('UPLOADING PROFILE PHOTO...');
         profileImageUrl = await uploadImageMutation.mutateAsync({
           uri: image,
           fieldName: 'profileImage',
@@ -253,7 +245,7 @@ export default function RegisterDetailsScreen() {
 
       if (params.role === 'worker') {
         if (cnicFront) {
-          setUploadProgress('SYNCING CNIC FRONT...');
+          setUploadProgress('UPLOADING CNIC FRONT...');
           cnicFrontUrl = await uploadImageMutation.mutateAsync({
             uri: cnicFront,
             fieldName: 'cnicFrontImage',
@@ -261,7 +253,7 @@ export default function RegisterDetailsScreen() {
           });
         }
         if (cnicBack) {
-          setUploadProgress('SYNCING CNIC BACK...');
+          setUploadProgress('UPLOADING CNIC BACK...');
           cnicBackUrl = await uploadImageMutation.mutateAsync({
             uri: cnicBack,
             fieldName: 'cnicBackImage',
@@ -270,7 +262,7 @@ export default function RegisterDetailsScreen() {
         }
       }
 
-      setUploadProgress('FINALIZING PROTOCOL...');
+      setUploadProgress('FINALIZING PROFILE...');
 
       const payload: any = {
         fullName: params.fullName,
@@ -304,41 +296,22 @@ export default function RegisterDetailsScreen() {
     }
   };
 
-  const animatedProgressBar = useAnimatedStyle(() => ({
-    width: `${progressAnim.value * 100}%`,
-  }));
-
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <ChevronLeft size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={[styles.headerTitle, Typography.threeD]}>CONFIGURATION</Text>
-              <View style={{ width: 44 }} />
-            </View>
-
-            {/* Premium Progress Bar */}
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBackground}>
-                <Animated.View style={[styles.progressActive, animatedProgressBar, { backgroundColor: accentColor }]} />
-              </View>
-              <View style={styles.stepsRow}>
-                <Text style={styles.stepLabel}>PHASE 01</Text>
-                <Text style={styles.stepLabel}>PHASE 02</Text>
-                <Text style={[styles.stepLabel, { color: accentColor }]}>FINAL PHASE</Text>
-              </View>
-            </View>
-
-            {/* Hero Section */}
-            <View style={styles.hero}>
-              <Text style={[styles.title, Typography.threeD]}>FINALIZE {'\n'}<Text style={[styles.brandText, { color: accentColor }]}>SETUP</Text></Text>
-              <Text style={styles.subtitle}>COMPLETE YOUR DIMENSIONAL PARAMETERS</Text>
-            </View>
+            <AuthHeader title="Profile setup" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthProgress currentStep={3} accentColor={accentColor} />
+            <AuthHero
+              accentColor={accentColor}
+              eyebrow={params.role === 'worker' ? 'Specialist details' : 'Almost there'}
+              title="Complete your"
+              highlight="profile"
+              description={params.role === 'worker'
+                ? 'Add your professional details so nearby clients can confidently book your services.'
+                : 'Add your location and password to finish creating your ApnaUstad account.'}
+            />
 
             <View style={styles.form}>
               {/* Profile Image Picker with Glow */}
@@ -352,11 +325,12 @@ export default function RegisterDetailsScreen() {
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <Camera size={32} color={accentColor} />
-                    <Text style={[styles.pickerText, { color: accentColor }]}>SYNC PHOTO</Text>
+                    <Text style={[styles.pickerText, { color: accentColor }]}>ADD PHOTO</Text>
                   </View>
                 )}
                 {image && <View style={[styles.imageGlow, { backgroundColor: accentColor }]} />}
               </TouchableOpacity>
+              <Text style={styles.photoHint}>Profile photo is optional, but it helps people recognize you.</Text>
 
               {/* Worker Specific Sections */}
               {params.role === 'worker' && (
@@ -367,7 +341,7 @@ export default function RegisterDetailsScreen() {
                       <Text style={[styles.sectionTitle, { color: accentColor }]}>IDENTITY VERIFICATION</Text>
                     </View>
 
-                    <Text style={styles.label}>CNIC IDENTIFIER</Text>
+                    <Text style={styles.label}>CNIC NUMBER</Text>
                     <View style={styles.inputWrapper}>
                       <View style={styles.iconContainer}><CreditCard size={18} color={accentColor} /></View>
                       <TextInput
@@ -390,7 +364,7 @@ export default function RegisterDetailsScreen() {
                         ) : (
                           <>
                             <Camera size={20} color={accentColor} />
-                            <Text style={styles.cnicPickerText}>FRONT SIDE</Text>
+                            <Text style={styles.cnicPickerText}>CNIC FRONT</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -404,7 +378,7 @@ export default function RegisterDetailsScreen() {
                         ) : (
                           <>
                             <Camera size={20} color={accentColor} />
-                            <Text style={styles.cnicPickerText}>BACK SIDE</Text>
+                            <Text style={styles.cnicPickerText}>CNIC BACK</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -414,16 +388,17 @@ export default function RegisterDetailsScreen() {
                   <GlassCard intensity={25} style={[styles.formSection, { marginTop: 20 }]}>
                     <View style={styles.sectionHeader}>
                       <Briefcase size={18} color={accentColor} />
-                      <Text style={[styles.sectionTitle, { color: accentColor }]}>PROFESSIONAL LINK</Text>
+                      <Text style={[styles.sectionTitle, { color: accentColor }]}>PROFESSIONAL DETAILS</Text>
                     </View>
 
-                    <Text style={styles.label}>SELECT ARCHETYPE (CATEGORY)</Text>
+                    <Text style={styles.label}>SERVICE CATEGORY</Text>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
                       style={styles.categoryScroll}
                       contentContainerStyle={{ gap: 10 }}
                     >
+                      {isFetchingCategories && <ActivityIndicator color={accentColor} style={styles.categoryLoader} />}
                       {categories.map((cat) => (
                         <TouchableOpacity
                           key={cat._id}
@@ -444,7 +419,7 @@ export default function RegisterDetailsScreen() {
                       ))}
                     </ScrollView>
 
-                    <Text style={styles.label}>SKILLSET (COMMA SEPARATED)</Text>
+                    <Text style={styles.label}>SKILLS (COMMA-SEPARATED)</Text>
                     <View style={styles.inputWrapper}>
                       <View style={styles.iconContainer}><PenTool size={18} color={accentColor} /></View>
                       <TextInput
@@ -458,7 +433,7 @@ export default function RegisterDetailsScreen() {
 
                     <View style={styles.rowInputs}>
                       <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={styles.label}>RATE / HR</Text>
+                        <Text style={styles.label}>RATE / HOUR</Text>
                         <View style={styles.inputWrapper}>
                           <View style={styles.iconContainer}><BadgeDollarSign size={18} color={accentColor} /></View>
                           <TextInput
@@ -472,7 +447,7 @@ export default function RegisterDetailsScreen() {
                         </View>
                       </View>
                       <View style={{ flex: 1, marginLeft: 8 }}>
-                        <Text style={styles.label}>EXP (YRS)</Text>
+                        <Text style={styles.label}>EXPERIENCE</Text>
                         <View style={styles.inputWrapper}>
                           <View style={styles.iconContainer}><Award size={18} color={accentColor} /></View>
                           <TextInput
@@ -487,7 +462,7 @@ export default function RegisterDetailsScreen() {
                       </View>
                     </View>
 
-                    <Text style={[styles.label, { marginTop: 20 }]}>MISSION DESCRIPTION (BIO)</Text>
+                    <Text style={[styles.label, { marginTop: 20 }]}>ABOUT YOUR WORK</Text>
                     <View style={[styles.inputWrapper, { alignItems: 'flex-start', paddingTop: 12, minHeight: 100 }]}>
                       <View style={[styles.iconContainer, { marginTop: 4 }]}><FileText size={18} color={accentColor} /></View>
                       <TextInput
@@ -506,7 +481,7 @@ export default function RegisterDetailsScreen() {
               <GlassCard intensity={25} style={[styles.formSection, { marginTop: 20 }]}>
                 <View style={styles.sectionHeader}>
                   <MapPin size={18} color={accentColor} />
-                  <Text style={[styles.sectionTitle, { color: accentColor }]}>DIMENSIONAL CO-ORDINATES</Text>
+                  <Text style={[styles.sectionTitle, { color: accentColor }]}>ADDRESS DETAILS</Text>
                 </View>
 
                 <Text style={styles.label}>STREET ADDRESS</Text>
@@ -533,17 +508,37 @@ export default function RegisterDetailsScreen() {
                   />
                 </View>
 
-                <Text style={[styles.label, { marginTop: 20 }]}>ACCESS KEY (PASSWORD)</Text>
+                {params.role === 'worker' && (
+                  <View style={styles.locationStatus}>
+                    <MapPin size={14} color={latitude !== null && longitude !== null ? Colors.success : Colors.textMuted} />
+                    <Text style={styles.locationStatusText}>
+                      {latitude !== null && longitude !== null
+                        ? 'Current location captured for nearby job matching.'
+                        : 'Allow location access to receive nearby jobs.'}
+                    </Text>
+                  </View>
+                )}
+
+                <Text style={[styles.label, { marginTop: 20 }]}>PASSWORD</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}><Lock size={18} color={accentColor} /></View>
                   <TextInput
                     style={styles.input}
                     placeholder="••••••••••••"
                     placeholderTextColor="rgba(255,255,255,0.3)"
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
                   />
+                  <TouchableOpacity
+                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    hitSlop={8}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword
+                      ? <EyeOff size={18} color={Colors.textMuted} />
+                      : <Eye size={18} color={Colors.textMuted} />}
+                  </TouchableOpacity>
                 </View>
               </GlassCard>
 
@@ -563,11 +558,12 @@ export default function RegisterDetailsScreen() {
                   </View>
                 ) : (
                   <>
-                    <Text style={styles.completeBtnText}>INITIALIZE PROFILE</Text>
+                    <Text style={styles.completeBtnText}>CREATE PROFILE</Text>
                     <CheckCircle size={20} color="#000" />
                   </>
                 )}
               </TouchableOpacity>
+              <SecurityNote accentColor={accentColor} />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -584,74 +580,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 20,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  headerTitle: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  progressContainer: {
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  progressBackground: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressActive: {
-    height: '100%',
-    borderRadius: 2,
-    ...Shadows.glow,
-  },
-  stepsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  stepLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 1,
-  },
-  hero: {
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#fff',
-    lineHeight: 46,
-    letterSpacing: -1,
-  },
-  brandText: {
-    fontWeight: '900',
-  },
-  subtitle: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
-    fontWeight: '700',
-    marginTop: 10,
-    letterSpacing: 1,
   },
   form: {
     flex: 1,
@@ -670,6 +598,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     shadowOpacity: 0.5,
     shadowRadius: 15,
+  },
+  photoHint: {
+    color: 'rgba(255,255,255,0.42)',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: Spacing.l,
+    marginTop: -Spacing.l,
+    textAlign: 'center',
   },
   profileImage: {
     width: '100%',
@@ -699,7 +635,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   formSection: {
-    padding: 24,
     borderRadius: 30,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
@@ -748,6 +683,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginHorizontal: -5,
   },
+  categoryLoader: {
+    marginHorizontal: Spacing.s,
+  },
   categoryChip: {
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -792,6 +730,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#fff',
     fontWeight: '600',
+  },
+  locationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.m,
+    padding: Spacing.m,
+    borderRadius: BorderRadius.m,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  locationStatusText: {
+    flex: 1,
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
+    marginLeft: Spacing.s,
   },
   completeBtn: {
     borderRadius: 22,
