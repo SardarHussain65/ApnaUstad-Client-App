@@ -1,668 +1,496 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  Dimensions,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
-  Animated,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Colors, Spacing } from '../constants/Theme';
-import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import AnimatedRN, {
-  FadeInDown,
-  FadeInUp,
-  SlideInLeft,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  interpolate,
-  useAnimatedScrollHandler,
-  Extrapolate,
-} from 'react-native-reanimated';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  ChevronLeft,
-  Star,
-  ShieldCheck,
-  Share2,
-  Award,
-  Zap,
-  Clock,
-  MessageSquare,
-  Phone,
-  Target,
-  TrendingUp,
-  CheckCircle,
-  Image as ImageIcon,
-} from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useWorker, useWorkerReviews } from '../hooks';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import {
+  Award,
+  BriefcaseBusiness,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  MapPin,
+  MessageSquare,
+  Phone,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Wrench,
+  Zap,
+} from 'lucide-react-native';
+import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { useBookingDetails, useWorker, useWorkerReviews } from '../hooks';
 import api from '../services/api';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const AVATAR_SIZE = SCREEN_WIDTH * 0.32;
+const C = {
+  cyan: '#00F5FF',
+  blue: '#087BFF',
+  green: '#00E887',
+  amber: '#FFB000',
+  pink: '#FF4D8D',
+  text: '#FFFFFF',
+  muted: '#A8B0C2',
+  dim: '#6E778C',
+  surface: 'rgba(5, 11, 31, 0.88)',
+  border: 'rgba(255,255,255,0.09)',
+};
 
-// ─── Design Tokens ──────────────────────────────────────────────────────────────
-const NEON_CYAN = '#00F5FF';
-const NEON_AMBER = '#FFB800';
-const NEON_GREEN = '#39FF14';
-const NEON_PINK = '#FF2D78';
-const NEON_BLUE = '#1E90FF';
-const NEON_PURPLE = '#BF5FFF';
-const GOLD = '#FFD700';
-const BORDER_S = 'rgba(255,255,255,0.07)';
+const firstParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
-const PORTFOLIO = [
-  { id: '1', url: 'https://images.unsplash.com/photo-1581578731548-c64a958b4751?q=80&w=400' },
-  { id: '2', url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=400' },
-  { id: '3', url: 'https://images.unsplash.com/photo-1558403194-611308249627?q=80&w=400' },
-];
+const initialsFor = (name?: string) => {
+  if (!name?.trim()) return 'AU';
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
+};
 
-// ─── NeonCard ──────────────────────────────────────────────────────────────────
-function NeonCard({
-  children,
-  accentColor = NEON_CYAN,
-  style,
-}: {
-  children: React.ReactNode;
-  accentColor?: string;
-  style?: object;
-}) {
-  const pulse = useRef(new Animated.Value(0.3)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 0.85, duration: 2800, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.3, duration: 2800, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
+const formatDate = (value?: string) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'Recent';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
-  return (
-    <View style={[styles.neonWrapper, style]}>
-      <View style={[styles.cTL, { borderColor: accentColor }]} />
-      <View style={[styles.cTR, { borderColor: accentColor }]} />
-      <View style={[styles.cBL, { borderColor: accentColor }]} />
-      <View style={[styles.cBR, { borderColor: accentColor }]} />
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          { borderRadius: 22, borderWidth: 1, borderColor: accentColor, opacity: pulse },
-        ]}
-      />
-      <View style={[styles.neonInner, { backgroundColor: `${accentColor}06` }]}>
-        {children}
-      </View>
-    </View>
-  );
-}
-
-// ─── Section Header ────────────────────────────────────────────────────────────
-function SectionHeader({
-  icon: Icon,
-  title,
-  color,
-  right,
-}: {
-  icon: any;
-  title: string;
-  color: string;
-  right?: React.ReactNode;
-}) {
-  return (
-    <View style={styles.secHeader}>
-      <Icon size={13} color={color} />
-      <Text style={[styles.secHeaderText, { color }]}>{title}</Text>
-      <View style={[styles.secHeaderLine, { backgroundColor: `${color}35` }]} />
-      {right}
-    </View>
-  );
-}
-
-// ─── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({
-  icon: Icon,
-  value,
-  label,
-  color,
-  delay,
-}: {
-  icon: any;
-  value: string;
-  label: string;
-  color: string;
-  delay: number;
-}) {
-  return (
-    <AnimatedRN.View entering={FadeInDown.delay(delay).duration(600)} style={{ flex: 1 }}>
-      <View style={[styles.statCard, { borderColor: `${color}22` }]}>
-        <LinearGradient
-          colors={[`${color}18`, 'transparent']}
-          start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
-        />
-        <View style={[styles.statIconWrap, { backgroundColor: `${color}18` }]}>
-          <Icon size={18} color={color} />
-        </View>
-        <Text style={[styles.statValue, { color }]}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-    </AnimatedRN.View>
-  );
-}
-
-// ─── Review Item ───────────────────────────────────────────────────────────────
-function ReviewItem({ review, isLast }: { review: any; isLast: boolean }) {
-  return (
-    <View style={[styles.reviewItem, !isLast && styles.reviewDivider]}>
-      <View style={styles.reviewTop}>
-        <View style={styles.reviewAvatarWrap}>
-          <Text style={styles.reviewAvatarLetter}>
-            {review.customer?.fullName?.[0]?.toUpperCase() || 'C'}
-          </Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.reviewerName}>{review.customer?.fullName || 'Customer'}</Text>
-          <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
-        </View>
-        <View style={styles.reviewStarRow}>
-          {[1, 2, 3, 4, 5].map(i => (
-            <Star
-              key={i} size={11} color={GOLD}
-              fill={i <= review.rating ? GOLD : 'transparent'}
-            />
-          ))}
-        </View>
-      </View>
-      {!!review.comment && (
-        <Text style={styles.reviewComment}>{review.comment}</Text>
-      )}
-    </View>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function WorkerDetailsScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{
+    id?: string | string[];
+    bidId?: string | string[];
+    jobId?: string | string[];
+    bookingId?: string | string[];
+  }>();
+  const workerId = firstParam(params.id);
+  const bidId = firstParam(params.bidId);
+  const jobId = firstParam(params.jobId);
+  const bookingId = firstParam(params.bookingId);
+  const [isAccepting, setIsAccepting] = useState(false);
 
-  const scrollY = useSharedValue(0);
-  const orbRotation = useSharedValue(0);
-  const [accepting, setAccepting] = useState(false);
+  const { data: worker, isLoading } = useWorker(workerId);
+  const { data: reviews = [], isLoading: isLoadingReviews } = useWorkerReviews(workerId);
+  const { data: contextBooking } = useBookingDetails(bookingId);
 
-  const { data: worker, isLoading } = useWorker(params.id as string);
-  const { data: reviews = [], isLoading: isLoadingReviews } = useWorkerReviews(params.id as string);
+  const rating = Number(worker?.rating || 0);
+  const reviewCount = Number(worker?.totalReviews || reviews.length || 0);
+  const completedJobs = Number(worker?.totalJobs || 0);
+  const experience = Number(worker?.experience || 0);
+  const hourlyRate = Number(worker?.hourlyRate || 0);
+  const skills = Array.isArray(worker?.skills) ? worker.skills : [];
+  const isAvailable = worker?.isAvailable !== false;
+  const hasBid = Boolean(bidId && jobId);
+  const hasBooking = Boolean(bookingId);
+  const isCommunicationLocked = hasBooking
+    && (!contextBooking || contextBooking.status === 'completed' || contextBooking.status === 'cancelled');
+  const hasActiveBooking = hasBooking && !isCommunicationLocked;
+  const bookingWorker = typeof contextBooking?.worker === 'object' ? contextBooking.worker : null;
+  const workerPhone = hasActiveBooking && bookingWorker?._id === workerId ? bookingWorker?.phone : '';
+  const primaryLabel = hasBid ? 'SELECT USTAD' : 'REQUEST SERVICE';
 
-  useEffect(() => {
-    orbRotation.value = withRepeat(withTiming(360, { duration: 14000 }), -1, false);
-  }, []);
+  const shareProfile = async () => {
+    await Share.share({
+      message: `${worker?.fullName || 'ApnaUstad specialist'} - ${worker?.category || 'Service specialist'}${worker?.city ? ` in ${worker.city}` : ''}.`,
+    });
+  };
 
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: (e) => { scrollY.value = e.contentOffset.y; },
-  });
+  const callWorker = async () => {
+    if (!workerPhone) {
+      Alert.alert('Phone unavailable', 'This Ustad has not shared a contact number.');
+      return;
+    }
+    await Linking.openURL(`tel:${workerPhone}`);
+  };
 
-  // Orb shrinks as user scrolls
-  const orbStyle = useAnimatedStyle(() => ({
-    transform: [
-      { rotate: `${orbRotation.value}deg` },
-      { scale: interpolate(scrollY.value, [0, 120], [1, 0.75], Extrapolate.CLAMP) },
-    ],
-    opacity: interpolate(scrollY.value, [0, 120], [0.7, 0.3], Extrapolate.CLAMP),
-  }));
+  const openChat = () => {
+    if (!hasActiveBooking || !bookingId || !workerId) return;
+    router.push({
+      pathname: '/chat',
+      params: { bookingId, recipientId: workerId, recipientName: worker?.fullName || 'Ustad' },
+    });
+  };
 
-  // Header title fades in on scroll
-  const headerTitleStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [60, 120], [0, 1], Extrapolate.CLAMP),
-  }));
-
-  const handleAccept = async () => {
-    if (!params.bidId) return;
-    setAccepting(true);
+  const acceptProposal = async () => {
+    if (!jobId || !bidId) return;
+    setIsAccepting(true);
     try {
-      const res = await api.post(`/jobs/${params.jobId}/bids/${params.bidId}/accept`);
-      router.replace({ pathname: '/transaction-details', params: { id: res.data.data._id } });
-    } catch (e) {
-      console.error(e);
+      const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
+      router.replace({ pathname: '/transaction-details', params: { id: response.data.data._id } });
+    } catch (error: any) {
+      Alert.alert('Unable to select Ustad', error?.response?.data?.message || 'Please try again in a moment.');
     } finally {
-      setAccepting(false);
+      setIsAccepting(false);
     }
   };
 
-  // ── Loading ──────────────────────────────────────────────────────────────
+  const handlePrimaryAction = () => {
+    if (hasBid) {
+      acceptProposal();
+      return;
+    }
+    router.push({
+      pathname: '/job-creation',
+      params: {
+        title: worker?.category,
+        targetWorkerId: worker?._id,
+        targetWorkerName: worker?.fullName,
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <BackgroundWrapper>
-        <View style={styles.centerFill}>
-          <View style={styles.loadingRing}>
-            <View style={styles.loadingCore}>
-              <Target size={24} color={NEON_CYAN} />
-            </View>
-          </View>
-          <Text style={styles.loadingLabel}>LOADING OPERATIVE</Text>
-          <Text style={styles.loadingSub}>Retrieving specialist data…</Text>
+        <View style={styles.center}>
+          <ActivityIndicator color={C.cyan} />
+          <Text style={styles.loadingText}>Loading Ustad profile</Text>
         </View>
       </BackgroundWrapper>
     );
   }
 
-  const hasBid = !!params.bidId;
-  const actionColors = hasBid ? [NEON_CYAN, NEON_BLUE] : [NEON_BLUE, NEON_PURPLE];
-  const actionLabel = hasBid ? 'ACCEPT PROPOSAL' : 'INITIATE MISSION';
+  if (!worker) {
+    return (
+      <BackgroundWrapper>
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>Ustad profile unavailable</Text>
+          <TouchableOpacity style={styles.emptyAction} onPress={() => router.back()}>
+            <Text style={styles.emptyActionText}>GO BACK</Text>
+          </TouchableOpacity>
+        </View>
+      </BackgroundWrapper>
+    );
+  }
 
   return (
     <BackgroundWrapper>
-      {/* Ambient gradient */}
-      <LinearGradient
-        colors={[`${NEON_CYAN}08`, 'transparent', `${NEON_PURPLE}05`]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
-
-      <View style={{ flex: 1 }}>
-
-        {/* ── Scroll-fade Header ──────────────────────────────────────────── */}
-        <AnimatedRN.View style={[styles.solidHeader, { paddingTop: insets.top + 6, height: 60 + insets.top }, headerTitleStyle]}>
-          <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFillObject} />
-          <View style={styles.solidHeaderLine} />
-          <Text style={styles.solidHeaderTitle} numberOfLines={1}>
-            {worker?.fullName?.toUpperCase()}
-          </Text>
-        </AnimatedRN.View>
-
-        {/* ── Fixed Controls ──────────────────────────────────────────────── */}
-        <View style={[styles.topControls, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ChevronLeft color={NEON_CYAN} size={22} />
+      <View style={styles.root}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
+            <ChevronLeft size={22} color={C.text} strokeWidth={2.4} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Share2 color="rgba(255,255,255,0.6)" size={19} />
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerEyebrow}>USTAD PROFILE</Text>
+            <Text style={styles.headerTitle}>Specialist Overview</Text>
+          </View>
+          <TouchableOpacity style={styles.headerButton} onPress={shareProfile} activeOpacity={0.8}>
+            <Share2 size={18} color={C.muted} strokeWidth={2.3} />
           </TouchableOpacity>
         </View>
 
-        {/* ── Scrollable Content ──────────────────────────────────────────── */}
-        <AnimatedRN.ScrollView
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 108 }]}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingTop: insets.top + 70,
-            paddingBottom: 130,
-            paddingHorizontal: 16,
-          }}
         >
-
-          {/* ── Profile Hero ─────────────────────────────────────────────── */}
-          <AnimatedRN.View entering={FadeInUp.delay(100).duration(700)} style={styles.heroSection}>
-            {/* Spinning orb behind avatar */}
-            <View style={styles.orbContainer}>
-              <AnimatedRN.View style={[styles.orbRing, orbStyle]}>
-                <LinearGradient
-                  colors={[NEON_CYAN, NEON_PURPLE, NEON_PINK, NEON_CYAN]}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-              </AnimatedRN.View>
-
-              {/* Avatar */}
-              <View style={styles.avatarRing}>
-                <Image
-                  source={{
-                    uri: worker?.profileImage ||
-                      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
-                  }}
-                  style={styles.avatar}
-                />
+          <Animated.View entering={FadeInUp.duration(520)} style={styles.heroCard}>
+            <LinearGradient
+              colors={['rgba(0,245,255,0.16)', 'rgba(5,11,31,0.92)', 'rgba(8,123,255,0.08)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.heroTop}>
+              <View style={styles.avatarShell}>
+                {worker.profileImage ? (
+                  <Image source={{ uri: worker.profileImage }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarFallback}>
+                    <Text style={styles.avatarFallbackText}>{initialsFor(worker.fullName)}</Text>
+                  </View>
+                )}
+                <View style={[styles.availabilityDot, !isAvailable && styles.availabilityDotBusy]} />
               </View>
 
-              {/* Verified badge */}
-              {worker?.isVerified && (
-                <AnimatedRN.View entering={FadeInDown.delay(400)} style={styles.verifiedBadge}>
-                  <CheckCircle size={13} color="#fff" fill={NEON_GREEN} />
-                </AnimatedRN.View>
-              )}
-            </View>
-
-            {/* Name + Role + Rating */}
-            <Text style={styles.heroName}>{worker?.fullName || 'Specialist'}</Text>
-            <Text style={[styles.heroRole, { color: NEON_CYAN }]}>
-              {worker?.category?.toUpperCase() || 'CERTIFIED OPERATIVE'}
-            </Text>
-
-            <View style={styles.ratingPill}>
-              {[1, 2, 3, 4, 5].map(i => (
-                <Star key={i} size={13} color={GOLD} fill={i <= Math.round(worker?.rating ?? 5) ? GOLD : 'transparent'} />
-              ))}
-              <Text style={styles.ratingNum}>{worker?.rating?.toFixed(1) || '5.0'}</Text>
-              <Text style={styles.ratingMissions}>· {worker?.totalReviews || 0} missions</Text>
-            </View>
-          </AnimatedRN.View>
-
-          {/* ── Stats Row ────────────────────────────────────────────────── */}
-          <View style={styles.statsRow}>
-            <StatCard icon={Award} value={`${worker?.experience || 1}y`} label="EXPERIENCE" color={NEON_AMBER} delay={300} />
-            <StatCard icon={TrendingUp} value="100%" label="SUCCESS" color={NEON_GREEN} delay={400} />
-            <StatCard icon={Clock} value={`₨${worker?.hourlyRate || '--'}`} label="RATE/HR" color={NEON_CYAN} delay={500} />
-          </View>
-
-          {/* ── Bio ──────────────────────────────────────────────────────── */}
-          <AnimatedRN.View entering={FadeInUp.delay(550).duration(600)} style={{ marginBottom: 16 }}>
-            <NeonCard accentColor="rgba(255,255,255,0.18)">
-              <SectionHeader icon={Target} title="OPERATIVE BIO" color="rgba(255,255,255,0.45)" />
-              <Text style={styles.bioText}>
-                {worker?.bio || 'No professional biography provided. Standards of excellence apply.'}
-              </Text>
-            </NeonCard>
-          </AnimatedRN.View>
-
-          {/* ── Reviews ──────────────────────────────────────────────────── */}
-          <AnimatedRN.View entering={FadeInUp.delay(620).duration(600)} style={{ marginBottom: 16 }}>
-            <NeonCard accentColor={GOLD}>
-              <SectionHeader
-                icon={Star}
-                title="CLIENT REVIEWS"
-                color={GOLD}
-                right={
-                  <Text style={[styles.reviewCount, { color: `${GOLD}70` }]}>
-                    {worker?.totalReviews || reviews.length} TOTAL
-                  </Text>
-                }
-              />
-              {isLoadingReviews ? (
-                <ActivityIndicator color={NEON_CYAN} style={{ paddingVertical: 20 }} />
-              ) : reviews.length > 0 ? (
-                reviews.slice(0, 3).map((review: any, i: number) => (
-                  <ReviewItem key={review._id} review={review} isLast={i === Math.min(reviews.length, 3) - 1} />
-                ))
-              ) : (
-                <View style={styles.noReviewsBox}>
-                  <Text style={styles.noReviewsText}>No reviews yet. Be the first!</Text>
+              <View style={styles.heroCopy}>
+                <View style={styles.heroBadgeRow}>
+                  <View style={[styles.verificationPill, !worker.isVerified && styles.verificationPillPending]}>
+                    <ShieldCheck size={12} color={worker.isVerified ? C.green : C.amber} />
+                    <Text style={[styles.verificationText, !worker.isVerified && styles.verificationTextPending]}>
+                      {worker.isVerified ? 'VERIFIED USTAD' : 'VERIFICATION PENDING'}
+                    </Text>
+                  </View>
                 </View>
-              )}
-            </NeonCard>
-          </AnimatedRN.View>
+                <Text style={styles.workerName}>{worker.fullName}</Text>
+                <Text style={styles.workerCategory}>{worker.category || 'Service Specialist'}</Text>
+                <View style={styles.locationLine}>
+                  <MapPin size={13} color={C.pink} />
+                  <Text style={styles.locationText} numberOfLines={1}>{worker.city || 'Service area not added'}</Text>
+                </View>
+              </View>
+            </View>
 
-          {/* ── Portfolio ────────────────────────────────────────────────── */}
-          <AnimatedRN.View entering={FadeInUp.delay(700).duration(600)} style={{ marginBottom: 16 }}>
-            <NeonCard accentColor={NEON_PINK}>
-              <SectionHeader
-                icon={ImageIcon}
-                title="MISSION PORTFOLIO"
-                color={NEON_PINK}
-                right={
-                  <TouchableOpacity>
-                    <Text style={[styles.viewAllText, { color: NEON_PINK }]}>VIEW ALL</Text>
-                  </TouchableOpacity>
-                }
-              />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                {PORTFOLIO.map((item) => (
-                  <View key={item.id} style={styles.portfolioThumb}>
-                    <Image source={{ uri: item.url }} style={StyleSheet.absoluteFillObject as any} />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(0,0,0,0.5)']}
-                      style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
+            <View style={styles.heroDivider} />
+
+            <View style={styles.heroBottom}>
+              <View style={styles.ratingBlock}>
+                <View style={styles.ratingStars}>
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <Star
+                      key={value}
+                      size={14}
+                      color={C.amber}
+                      fill={value <= Math.round(rating) ? C.amber : 'transparent'}
                     />
+                  ))}
+                </View>
+                <Text style={styles.ratingText}>{rating > 0 ? rating.toFixed(1) : 'New profile'}</Text>
+                <Text style={styles.ratingMeta}>{reviewCount} review{reviewCount === 1 ? '' : 's'}</Text>
+              </View>
+              <View style={[styles.availabilityPill, !isAvailable && styles.availabilityPillBusy]}>
+                <View style={[styles.availabilityMiniDot, !isAvailable && styles.availabilityDotBusy]} />
+                <Text style={[styles.availabilityLabel, !isAvailable && styles.availabilityLabelBusy]}>
+                  {isAvailable ? 'AVAILABLE FOR WORK' : 'CURRENTLY BUSY'}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(80).duration(520)} style={styles.statsStrip}>
+            <Metric icon={Award} value={experience > 0 ? `${experience} yrs` : 'New'} label="EXPERIENCE" color={C.amber} />
+            <View style={styles.metricDivider} />
+            <Metric icon={BriefcaseBusiness} value={String(completedJobs)} label="JOBS" color={C.green} />
+            <View style={styles.metricDivider} />
+            <Metric icon={Clock3} value={hourlyRate > 0 ? `Rs. ${hourlyRate.toLocaleString()}` : 'Open'} label="RATE / HR" color={C.cyan} />
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(130).duration(520)} style={styles.sectionCard}>
+            <SectionTitle icon={Sparkles} title="PROFESSIONAL SUMMARY" color={C.cyan} />
+            <Text style={styles.bioText}>{worker.bio || 'This Ustad has not added a professional summary yet.'}</Text>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(180).duration(520)} style={styles.sectionCard}>
+            <SectionTitle icon={Wrench} title="SKILLS & SERVICE" color={C.pink} />
+            {skills.length > 0 ? (
+              <View style={styles.skillsWrap}>
+                {skills.map((skill) => (
+                  <View key={skill} style={styles.skillPill}>
+                    <Check size={12} color={C.cyan} strokeWidth={3} />
+                    <Text style={styles.skillText}>{skill}</Text>
                   </View>
                 ))}
-              </ScrollView>
-            </NeonCard>
-          </AnimatedRN.View>
+              </View>
+            ) : (
+              <Text style={styles.emptySectionText}>Skills have not been added yet.</Text>
+            )}
+          </Animated.View>
 
-        </AnimatedRN.ScrollView>
+          <Animated.View entering={FadeInDown.delay(230).duration(520)} style={styles.sectionCard}>
+            <SectionTitle
+              icon={Star}
+              title="CLIENT REVIEWS"
+              color={C.amber}
+              right={<Text style={styles.sectionCount}>{reviewCount} TOTAL</Text>}
+            />
+            {isLoadingReviews ? (
+              <ActivityIndicator color={C.cyan} style={styles.reviewsLoader} />
+            ) : reviews.length > 0 ? (
+              reviews.slice(0, 3).map((review: any, index: number) => (
+                <ReviewItem key={review._id} review={review} isLast={index === Math.min(reviews.length, 3) - 1} />
+              ))
+            ) : (
+              <View style={styles.emptyReviews}>
+                <Star size={18} color={C.dim} />
+                <Text style={styles.emptySectionText}>No client reviews yet.</Text>
+              </View>
+            )}
+          </Animated.View>
+        </ScrollView>
 
-        {/* ── Action Dock ──────────────────────────────────────────────────── */}
-        <AnimatedRN.View
-          entering={FadeInDown.delay(800).duration(700)}
-          style={[styles.dock, { paddingBottom: insets.bottom + 14 }]}
-        >
-          <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
-          <View style={styles.dockLine} />
-          <View style={styles.dockRow}>
-
-            {/* Message */}
-            <TouchableOpacity style={styles.dockIconBtn}>
-              <LinearGradient
-                colors={[`${NEON_CYAN}20`, `${NEON_CYAN}08`]}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <MessageSquare size={20} color={NEON_CYAN} />
-            </TouchableOpacity>
-
-            {/* Call */}
-            <TouchableOpacity style={styles.dockIconBtn}>
-              <LinearGradient
-                colors={[`${NEON_GREEN}20`, `${NEON_GREEN}08`]}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Phone size={20} color={NEON_GREEN} />
-            </TouchableOpacity>
-
-            {/* Primary CTA */}
-            <TouchableOpacity
-              style={[styles.ctaBtn, accepting && { opacity: 0.6 }]}
-              onPress={() => {
-                if (hasBid) {
-                  handleAccept();
-                } else {
-                  router.push({
-                    pathname: '/job-creation',
-                    params: {
-                      title: worker?.category,
-                      targetWorkerId: worker?._id,
-                      targetWorkerName: worker?.fullName,
-                    },
-                  });
-                }
-              }}
-              disabled={accepting}
-              activeOpacity={0.85}
-            >
-              <LinearGradient colors={actionColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
-              {/* Shine */}
-              <View style={styles.ctaShine} />
-              {accepting ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <Zap size={17} color="#fff" fill="#fff" />
-                  <Text style={styles.ctaText}>{actionLabel}</Text>
-                </>
+        {(!hasBooking || hasActiveBooking) && (
+          <View style={[styles.dock, { paddingBottom: insets.bottom + 12 }]}>
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+            <View style={styles.dockLine} />
+            <View style={[styles.dockRow, hasActiveBooking && styles.bookingDockRow]}>
+              <TouchableOpacity
+                style={[styles.dockButton, hasActiveBooking && styles.bookingDockButton]}
+                onPress={hasActiveBooking ? openChat : shareProfile}
+                activeOpacity={0.8}
+              >
+                {hasActiveBooking ? <MessageSquare size={19} color={C.cyan} /> : <Share2 size={19} color={C.cyan} />}
+              </TouchableOpacity>
+              {hasActiveBooking && (
+                <TouchableOpacity style={[styles.dockButton, styles.bookingDockButton]} onPress={callWorker} activeOpacity={0.8}>
+                  <Phone size={19} color={C.green} />
+                </TouchableOpacity>
               )}
-            </TouchableOpacity>
-
+              {!hasBooking && (
+                <TouchableOpacity style={styles.primaryAction} onPress={handlePrimaryAction} activeOpacity={0.86} disabled={isAccepting}>
+                  <LinearGradient colors={[C.cyan, C.blue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
+                  {isAccepting ? (
+                    <ActivityIndicator color="#001018" size="small" />
+                  ) : (
+                    <>
+                      <Zap size={18} color="#001018" fill="#001018" />
+                      <Text style={styles.primaryActionText}>{primaryLabel}</Text>
+                      <ChevronRight size={18} color="#001018" strokeWidth={3} />
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </AnimatedRN.View>
-
+        )}
       </View>
     </BackgroundWrapper>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatDate(val?: string) {
-  if (!val) return 'Recent';
-  const d = new Date(val);
-  return isNaN(d.getTime()) ? 'Recent' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function Metric({
+  icon: Icon,
+  value,
+  label,
+  color,
+}: {
+  icon: React.ComponentType<any>;
+  value: string;
+  label: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.metric}>
+      <Icon size={16} color={color} />
+      <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
+    </View>
+  );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+function SectionTitle({
+  icon: Icon,
+  title,
+  color,
+  right,
+}: {
+  icon: React.ComponentType<any>;
+  title: string;
+  color: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <View style={styles.sectionHeading}>
+      <View style={[styles.sectionIcon, { backgroundColor: `${color}12` }]}>
+        <Icon size={14} color={color} />
+      </View>
+      <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
+      <View style={[styles.sectionLine, { backgroundColor: `${color}35` }]} />
+      {right}
+    </View>
+  );
+}
+
+function ReviewItem({ review, isLast }: { review: any; isLast: boolean }) {
+  return (
+    <View style={[styles.reviewItem, !isLast && styles.reviewDivider]}>
+      <View style={styles.reviewHeader}>
+        <View style={styles.reviewAvatar}>
+          {review.customer?.profileImage ? (
+            <Image source={{ uri: review.customer.profileImage }} style={styles.reviewAvatarImage} />
+          ) : (
+            <Text style={styles.reviewAvatarText}>{initialsFor(review.customer?.fullName || 'Client')}</Text>
+          )}
+        </View>
+        <View style={styles.reviewCopy}>
+          <Text style={styles.reviewerName}>{review.customer?.fullName || 'Client'}</Text>
+          <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+        </View>
+        <View style={styles.reviewRating}>
+          <Star size={12} color={C.amber} fill={C.amber} />
+          <Text style={styles.reviewRatingText}>{review.rating}</Text>
+        </View>
+      </View>
+      {!!review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-
-  centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-  // Loading
-  loadingRing: {
-    width: 76, height: 76, borderRadius: 38,
-    borderWidth: 1, borderColor: `${NEON_CYAN}38`,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-  },
-  loadingCore: {
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: `${NEON_CYAN}13`,
-    borderWidth: 1, borderColor: `${NEON_CYAN}55`,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  loadingLabel: { color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 3, marginBottom: 6 },
-  loadingSub: { color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: 1 },
-
-  // Solid header
-  solidHeader: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9,
-    justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 12, overflow: 'hidden',
-  },
-  solidHeaderLine: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: 1, backgroundColor: BORDER_S,
-  },
-  solidHeaderTitle: { color: '#fff', fontSize: 14, fontWeight: '900', letterSpacing: 3 },
-
-  // Top Controls
-  topControls: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingBottom: 12,
-  },
-  iconBtn: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderWidth: 1, borderColor: `${NEON_CYAN}30`,
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  // Hero
-  heroSection: { alignItems: 'center', marginBottom: 24, paddingTop: 10 },
-  orbContainer: {
-    width: AVATAR_SIZE + 20, height: AVATAR_SIZE + 20,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 20,
-  },
-  orbRing: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: (AVATAR_SIZE + 20) / 2,
-    opacity: 0.65,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    overflow: 'hidden',
-  },
-  avatarRing: {
-    width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2,
-    padding: 3, backgroundColor: '#030712',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
-    overflow: 'hidden',
-  },
-  avatar: { width: '100%', height: '100%', borderRadius: AVATAR_SIZE / 2 },
-  verifiedBadge: {
-    position: 'absolute', bottom: 6, right: 6,
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#030712',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: NEON_GREEN,
-  },
-  heroName: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: 0.5, marginBottom: 6 },
-  heroRole: { fontSize: 11, fontWeight: '900', letterSpacing: 3, marginBottom: 14 },
-  ratingPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1, borderColor: BORDER_S,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 100,
-  },
-  ratingNum: { color: GOLD, fontSize: 13, fontWeight: '900', marginLeft: 4 },
-  ratingMissions: { color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: '600' },
-
-  // Stats
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  statCard: {
-    flex: 1, alignItems: 'center', paddingVertical: 16, paddingHorizontal: 8,
-    borderRadius: 18, borderWidth: 1, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  statIconWrap: {
-    width: 36, height: 36, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
-  },
-  statValue: { fontSize: 14, fontWeight: '900', marginBottom: 4 },
-  statLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 8, fontWeight: '800', letterSpacing: 1.5 },
-
-  // NeonCard
-  neonWrapper: { position: 'relative', borderRadius: 22 },
-  cTL: { position: 'absolute', top: 0, left: 0, width: 16, height: 16, borderTopWidth: 2, borderLeftWidth: 2, borderTopLeftRadius: 6, zIndex: 2 },
-  cTR: { position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderTopWidth: 2, borderRightWidth: 2, borderTopRightRadius: 6, zIndex: 2 },
-  cBL: { position: 'absolute', bottom: 0, left: 0, width: 16, height: 16, borderBottomWidth: 2, borderLeftWidth: 2, borderBottomLeftRadius: 6, zIndex: 2 },
-  cBR: { position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, borderBottomWidth: 2, borderRightWidth: 2, borderBottomRightRadius: 6, zIndex: 2 },
-  neonInner: { borderRadius: 22, padding: 18, overflow: 'hidden' },
-
-  // Section Header
-  secHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 16 },
-  secHeaderText: { fontSize: 10, fontWeight: '900', letterSpacing: 2.5 },
-  secHeaderLine: { flex: 1, height: 1 },
-
-  // Bio
-  bioText: { color: 'rgba(255,255,255,0.65)', fontSize: 14, lineHeight: 24, fontWeight: '400' },
-
-  // Reviews
-  reviewCount: { fontSize: 9, fontWeight: '800', letterSpacing: 1.5 },
-  reviewItem: { paddingVertical: 14 },
-  reviewDivider: { borderBottomWidth: 1, borderBottomColor: BORDER_S },
-  reviewTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  reviewAvatarWrap: {
-    width: 36, height: 36, borderRadius: 12, marginRight: 10,
-    backgroundColor: `${GOLD}15`,
-    borderWidth: 1, borderColor: `${GOLD}30`,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  reviewAvatarLetter: { color: GOLD, fontSize: 13, fontWeight: '900' },
-  reviewerName: { color: '#fff', fontSize: 13, fontWeight: '800', marginBottom: 3 },
-  reviewDate: { color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: '600' },
-  reviewStarRow: { flexDirection: 'row', gap: 2 },
-  reviewComment: { color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
-  noReviewsBox: { alignItems: 'center', paddingVertical: 20 },
-  noReviewsText: { color: 'rgba(255,255,255,0.2)', fontSize: 13 },
-
-  // Portfolio
-  portfolioThumb: {
-    width: SCREEN_WIDTH * 0.38, height: 110,
-    borderRadius: 14, overflow: 'hidden',
-    borderWidth: 1, borderColor: `${NEON_PINK}30`,
-  },
-  viewAllText: { fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
-
-  // Dock
-  dock: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingTop: 14, overflow: 'hidden',
-  },
-  dockLine: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: 1, backgroundColor: BORDER_S,
-  },
-  dockRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, paddingHorizontal: 16,
-  },
-  dockIconBtn: {
-    width: 50, height: 50, borderRadius: 14,
-    borderWidth: 1, borderColor: BORDER_S,
-    alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  ctaBtn: {
-    flex: 1, height: 50, borderRadius: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 9, overflow: 'hidden',
-  },
-  ctaShine: {
-    position: 'absolute', top: 0, left: 0, right: '60%', bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  ctaText: { color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 1.5 },
+  root: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24 },
+  loadingText: { color: C.muted, fontSize: 13, fontWeight: '800' },
+  emptyTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
+  emptyAction: { marginTop: 8, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(0,245,255,0.12)' },
+  emptyActionText: { color: C.cyan, fontSize: 12, fontWeight: '900' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border },
+  headerButton: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', backgroundColor: 'rgba(4,9,26,0.78)' },
+  headerCopy: { flex: 1, alignItems: 'center' },
+  headerEyebrow: { color: C.dim, fontSize: 9, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
+  headerTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
+  scroll: { paddingHorizontal: 16, paddingTop: 16 },
+  heroCard: { overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', padding: 15, marginBottom: 12, backgroundColor: C.surface },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  avatarShell: { width: 82, height: 82, borderRadius: 24, padding: 3, borderWidth: 2, borderColor: 'rgba(0,245,255,0.74)', backgroundColor: 'rgba(0,245,255,0.09)' },
+  avatar: { width: '100%', height: '100%', borderRadius: 20 },
+  avatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(0,245,255,0.11)' },
+  avatarFallbackText: { color: C.cyan, fontSize: 24, fontWeight: '900' },
+  availabilityDot: { position: 'absolute', bottom: 0, right: 0, width: 15, height: 15, borderRadius: 999, borderWidth: 2, borderColor: '#071024', backgroundColor: C.green },
+  availabilityDotBusy: { backgroundColor: C.dim },
+  heroCopy: { flex: 1, minWidth: 0 },
+  heroBadgeRow: { flexDirection: 'row', marginBottom: 7 },
+  verificationPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,232,135,0.24)', backgroundColor: 'rgba(0,232,135,0.08)' },
+  verificationPillPending: { borderColor: 'rgba(255,176,0,0.24)', backgroundColor: 'rgba(255,176,0,0.08)' },
+  verificationText: { color: C.green, fontSize: 8, fontWeight: '900', letterSpacing: 0.6 },
+  verificationTextPending: { color: C.amber },
+  workerName: { color: C.text, fontSize: 22, fontWeight: '900', marginBottom: 3 },
+  workerCategory: { color: C.cyan, fontSize: 10, fontWeight: '900', letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 8 },
+  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  locationText: { flex: 1, color: C.muted, fontSize: 11, fontWeight: '700' },
+  heroDivider: { height: 1, marginVertical: 14, backgroundColor: 'rgba(255,255,255,0.08)' },
+  heroBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  ratingBlock: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 },
+  ratingStars: { flexDirection: 'row', gap: 2 },
+  ratingText: { color: C.amber, fontSize: 12, fontWeight: '900' },
+  ratingMeta: { color: C.dim, fontSize: 10, fontWeight: '700' },
+  availabilityPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(0,232,135,0.08)', borderWidth: 1, borderColor: 'rgba(0,232,135,0.20)' },
+  availabilityPillBusy: { backgroundColor: 'rgba(110,119,140,0.08)', borderColor: 'rgba(110,119,140,0.2)' },
+  availabilityMiniDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.green },
+  availabilityLabel: { color: C.green, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  availabilityLabelBusy: { color: C.dim },
+  statsStrip: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 13, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, marginBottom: 12 },
+  metric: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' },
+  metricDivider: { width: 1, marginVertical: 5, backgroundColor: 'rgba(255,255,255,0.08)' },
+  metricValue: { maxWidth: '100%', color: C.text, fontSize: 14, fontWeight: '900', marginTop: 7, paddingHorizontal: 4 },
+  metricLabel: { color: C.dim, fontSize: 8, fontWeight: '900', letterSpacing: 0.9, marginTop: 4 },
+  sectionCard: { padding: 15, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, marginBottom: 12 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 13 },
+  sectionIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  sectionLine: { flex: 1, height: 1 },
+  sectionCount: { color: C.dim, fontSize: 9, fontWeight: '900' },
+  bioText: { color: C.muted, fontSize: 13, lineHeight: 20, fontWeight: '600' },
+  skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  skillPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,245,255,0.16)', backgroundColor: 'rgba(0,245,255,0.05)' },
+  skillText: { color: C.muted, fontSize: 11, fontWeight: '800' },
+  reviewsLoader: { paddingVertical: 16 },
+  emptyReviews: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
+  emptySectionText: { color: C.dim, fontSize: 12, lineHeight: 18, fontWeight: '700' },
+  reviewItem: { paddingVertical: 10 },
+  reviewDivider: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  reviewAvatar: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,176,0,0.2)', backgroundColor: 'rgba(255,176,0,0.08)' },
+  reviewAvatarImage: { width: '100%', height: '100%' },
+  reviewAvatarText: { color: C.amber, fontSize: 12, fontWeight: '900' },
+  reviewCopy: { flex: 1 },
+  reviewerName: { color: C.text, fontSize: 12, fontWeight: '900', marginBottom: 3 },
+  reviewDate: { color: C.dim, fontSize: 10, fontWeight: '700' },
+  reviewRating: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,176,0,0.08)' },
+  reviewRatingText: { color: C.amber, fontSize: 11, fontWeight: '900' },
+  reviewComment: { color: C.muted, fontSize: 12, lineHeight: 18, fontWeight: '600', marginTop: 8 },
+  dock: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 12, overflow: 'hidden' },
+  dockLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: C.border },
+  dockRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 16 },
+  bookingDockRow: { justifyContent: 'center' },
+  dockButton: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', backgroundColor: 'rgba(0,245,255,0.07)' },
+  bookingDockButton: { width: 68 },
+  primaryAction: { flex: 1, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, overflow: 'hidden', borderRadius: 15 },
+  primaryActionText: { color: '#001018', fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
 });

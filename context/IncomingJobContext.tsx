@@ -13,6 +13,7 @@ interface IncomingJobContextType {
   setIsInstantOnline: (val: boolean) => void;
   isScheduledOnline: boolean;
   setIsScheduledOnline: (val: boolean) => void;
+  availabilityHydrated: boolean;
   /** Legacy support or computed master state */
   isOnline: boolean;
   /** Jobs that arrived via socket but were dismissed from the modal without accepting */
@@ -26,11 +27,14 @@ interface IncomingJobContextType {
 const IncomingJobContext = createContext<IncomingJobContextType | undefined>(undefined);
 
 export function IncomingJobProvider({ children }: { children: React.ReactNode }) {
-  const { role, user, token } = useAuth();
+  const { role, user, token, updateUser } = useAuth();
   const router = useRouter();
 
-  const [isInstantOnline, setIsInstantOnline] = useState(true);
-  const [isScheduledOnline, setIsScheduledOnline] = useState(true);
+  const [isInstantOnline, setInstantOnlineState] = useState(false);
+  const [isScheduledOnline, setScheduledOnlineState] = useState(false);
+  const [availabilityHydrated, setAvailabilityHydrated] = useState(false);
+  const instantOnlineRef = React.useRef(false);
+  const scheduledOnlineRef = React.useRef(false);
 
   const [acceptingJobId, setAcceptingJobId] = useState<string | null>(null);
 
@@ -47,6 +51,98 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   // Payment notification state
   const [paidBooking, setPaidBooking] = useState<any>(null);
   const [showPaidModal, setShowPaidModal] = useState(false);
+  const workerId = user?._id;
+  const savedMasterAvailability = (user as any)?.isAvailable;
+  const savedInstantAvailability = (user as any)?.isInstantAvailable;
+  const savedScheduledAvailability = (user as any)?.isScheduledAvailable;
+
+  const isJobTypeEnabled = useCallback((job: any) =>
+    job?.urgency === 'instant' ? instantOnlineRef.current : scheduledOnlineRef.current, []);
+
+  useEffect(() => {
+    if (role !== 'worker' || !workerId) {
+      instantOnlineRef.current = false;
+      scheduledOnlineRef.current = false;
+      setInstantOnlineState(false);
+      setScheduledOnlineState(false);
+      setAvailabilityHydrated(false);
+      return;
+    }
+
+    const masterAvailability = savedMasterAvailability !== false;
+    const instantAvailability = savedInstantAvailability !== undefined
+      ? Boolean(savedInstantAvailability)
+      : masterAvailability;
+    const scheduledAvailability = savedScheduledAvailability !== undefined
+      ? Boolean(savedScheduledAvailability)
+      : masterAvailability;
+
+    instantOnlineRef.current = instantAvailability;
+    scheduledOnlineRef.current = scheduledAvailability;
+    setInstantOnlineState(instantAvailability);
+    setScheduledOnlineState(scheduledAvailability);
+    setAvailabilityHydrated(true);
+  }, [
+    role,
+    savedInstantAvailability,
+    savedMasterAvailability,
+    savedScheduledAvailability,
+    workerId,
+  ]);
+
+  const updateJobAvailability = useCallback(async (jobType: 'instant' | 'scheduled', enabled: boolean) => {
+    if (role !== 'worker' || !user?._id) return;
+
+    const previousInstant = instantOnlineRef.current;
+    const previousScheduled = scheduledOnlineRef.current;
+    const nextInstant = jobType === 'instant' ? enabled : previousInstant;
+    const nextScheduled = jobType === 'scheduled' ? enabled : previousScheduled;
+
+    instantOnlineRef.current = nextInstant;
+    scheduledOnlineRef.current = nextScheduled;
+    setInstantOnlineState(nextInstant);
+    setScheduledOnlineState(nextScheduled);
+
+    try {
+      const response = await api.patch(`/workers/${user._id}`, {
+        isInstantAvailable: nextInstant,
+        isScheduledAvailable: nextScheduled,
+      });
+      await updateUser({ ...user, ...(response.data.data || {}) });
+    } catch (error: any) {
+      instantOnlineRef.current = previousInstant;
+      scheduledOnlineRef.current = previousScheduled;
+      setInstantOnlineState(previousInstant);
+      setScheduledOnlineState(previousScheduled);
+      Toast.show({
+        type: 'error',
+        text1: 'Availability not updated',
+        text2: error.response?.data?.message || 'Please check your connection and try again.',
+      });
+    }
+  }, [role, updateUser, user]);
+
+  const setIsInstantOnline = useCallback((enabled: boolean) => {
+    void updateJobAvailability('instant', enabled);
+  }, [updateJobAvailability]);
+
+  const setIsScheduledOnline = useCallback((enabled: boolean) => {
+    void updateJobAvailability('scheduled', enabled);
+  }, [updateJobAvailability]);
+
+  useEffect(() => {
+    if (!availabilityHydrated) return;
+    const keepEnabledJobs = (job: any) =>
+      job?.urgency === 'instant' ? isInstantOnline : isScheduledOnline;
+
+    setIncomingJobsQueue(prevQueue => {
+      const nextQueue = prevQueue.filter(keepEnabledJobs);
+      incomingJobsQueueRef.current = nextQueue;
+      if (nextQueue.length === 0) setShowModal(false);
+      return nextQueue;
+    });
+    setDismissedJobs(prev => prev.filter(keepEnabledJobs));
+  }, [availabilityHydrated, isInstantOnline, isScheduledOnline]);
 
   // Only subscribe when the logged-in user is authenticated
   useEffect(() => {
@@ -55,19 +151,29 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     // --- WORKER ONLY: New Job Notifications ---
     let unsubscribeNewJob = () => { };
     if (role === 'worker') {
-      unsubscribeNewJob = socketService.on('job:new', (newJob: any) => {
+      unsubscribeNewJob = socketService.on('job:new', async (newJob: any) => {
         console.log('📩 [IncomingJobContext] Real-time Job Received:', newJob);
 
+        let jobSignal = newJob;
+        if (newJob?._id && !newJob?.signalMeta) {
+          try {
+            const response = await api.get(`/jobs/${newJob._id}`);
+            jobSignal = response.data.data || newJob;
+          } catch (error) {
+            console.warn('Could not hydrate expanded job signal:', error);
+          }
+        }
+
         // Filter by preference
-        const isEnabled = newJob.urgency === 'instant' ? isInstantOnline : isScheduledOnline;
+        const isEnabled = availabilityHydrated && isJobTypeEnabled(jobSignal);
 
         if (isEnabled) {
           setIncomingJobsQueue(prevQueue => {
             // Avoid adding duplicates
-            if (prevQueue.some(job => job._id === newJob._id)) {
+            if (prevQueue.some(job => job._id === jobSignal._id)) {
               return prevQueue;
             }
-            const next = [...prevQueue, newJob];
+            const next = [...prevQueue, jobSignal];
             incomingJobsQueueRef.current = next;
             return next;
           });
@@ -175,7 +281,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       unsubscribeCancelled();
       unsubscribePaid();
     };
-  }, [role, token, isInstantOnline, isScheduledOnline]);
+  }, [availabilityHydrated, isJobTypeEnabled, role, router, token]);
 
   const addToDismissed = useCallback((jobs: any[]) => {
     if (jobs.length === 0) return;
@@ -273,6 +379,26 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     setDismissedJobs(prev => prev.filter(j => j._id !== jobId));
   }, []);
 
+  const handleCounterOfferJob = useCallback((job: any) => {
+    if (!job) return;
+
+    const remaining = incomingJobsQueueRef.current.filter(item => item._id !== job._id);
+    addToDismissed(remaining);
+    clearDismissedJob(job._id);
+    incomingJobsQueueRef.current = [];
+    setIncomingJobsQueue([]);
+    setShowModal(false);
+    router.push({
+      pathname: '/bid-submission' as any,
+      params: {
+        jobId: job._id,
+        title: job.category,
+        urgency: job.urgency,
+        responseMode: 'counter',
+      },
+    });
+  }, [addToDismissed, clearDismissedJob, router]);
+
   const acceptDismissedJob = useCallback(async (job: any) => {
     if (!job) return;
     clearDismissedJob(job._id);
@@ -315,6 +441,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       setIsInstantOnline,
       isScheduledOnline,
       setIsScheduledOnline,
+      availabilityHydrated,
       isOnline: isInstantOnline || isScheduledOnline,
       dismissedJobs,
       clearDismissedJob,
@@ -326,6 +453,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         visible={showModal && incomingJobsQueue.length > 0}
         jobs={incomingJobsQueue.map(job => ({ ...job, hourlyRate: (user as any)?.hourlyRate }))}
         onAccept={handleAcceptJob}
+        onCounterOffer={handleCounterOfferJob}
         onReject={handleRejectJob}
         onClose={handleCloseModal}
         acceptingJobId={acceptingJobId}

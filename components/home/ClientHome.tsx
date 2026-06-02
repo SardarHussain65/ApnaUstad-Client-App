@@ -26,26 +26,22 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import { Zap, CheckCircle, ChevronRight, Search } from 'lucide-react-native';
+import { ChevronRight, Search, CreditCard, Clock, CheckCircle2, Star, Briefcase } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useCategories, useMyBookings, useMyJobPosts } from '../../hooks';
+import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
 import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
-import { CosmicCircle } from './CosmicCircle';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
-import { HomeSkeletonLoader } from './HomeSkeletonLoader';
+import { useShimmerTranslateX, CategoriesSkeleton, DashboardSkeleton, ListSkeleton } from './HomeSkeletonLoader';
 import { ClientToast, ToastState } from './ClientToast';
 import { RecentBookingCard } from './RecentBookingCard';
-import { ClientActiveMissionCard } from './ClientActiveMissionCard';
 import { ActiveBiddingBanner } from './ActiveBiddingBanner';
-import { useAuth } from '../../context/AuthContext';
-import { Booking, JobPost } from '../../hooks';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -53,6 +49,14 @@ const GRID_GAP = 12;
 const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
 const INITIAL_CATEGORY_LIMIT = 9;
 const RECENT_BOOKINGS_LIMIT = 3;
+const EMPTY_HOME_STATS = {
+  total: 0,
+  active: 0,
+  completed: 0,
+  successRate: 0,
+  successRateLabel: '100%',
+  totalSpent: 0,
+};
 
 // ─── CategoryCard ─────────────────────────────────────────────────────────────
 // Extracted so React keeps a stable identity across parent re-renders.
@@ -99,17 +103,10 @@ const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => 
     </Animated.View>
   );
 });
+CategoryCard.displayName = 'CategoryCard';
 
-// ─── StatChip ─────────────────────────────────────────────────────────────────
 
-const StatChip = React.memo(
-  ({ value, label }: { value: number | string; label: string }) => (
-    <View style={styles.statChip}>
-      <Text style={styles.statVal}>{value}</Text>
-      <Text style={styles.statLab}>{label}</Text>
-    </View>
-  )
-);
+
 
 // ─── EmptyServiceState ────────────────────────────────────────────────────────
 
@@ -133,10 +130,10 @@ export function ClientHome() {
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useAuth();
 
   // Responsive grid dimensions
   const numColumns = windowWidth > 600 ? 4 : 3;
+  const translateX = useShimmerTranslateX();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllServices, setShowAllServices] = useState(false);
@@ -157,20 +154,16 @@ export function ClientHome() {
   } = useCategories();
 
   const {
-    data: bookings = [],
-    isLoading: bookingsLoading,
-    error: bookingsError,
-    refetch: refetchBookings,
-  } = useMyBookings();
+    data: homeSummary,
+    isLoading: homeSummaryLoading,
+    error: homeSummaryError,
+    refetch: refetchHomeSummary,
+  } = useClientHomeSummary();
 
   const {
     data: jobPosts = [],
-    isLoading: jobsLoading,
     refetch: refetchJobs,
   } = useMyJobPosts();
-
-  // Show skeleton only on the very first load, not during pull-to-refresh
-  const isInitialLoading = (categoriesLoading || bookingsLoading || jobsLoading) && !isRefreshing;
 
   // ── Toast helpers ────────────────────────────────────────────────────────
 
@@ -187,22 +180,22 @@ export function ClientHome() {
 
   useEffect(() => {
     if (categoriesError) showToast('Could not load services. Pull down to retry.');
-  }, [categoriesError]);
+  }, [categoriesError, showToast]);
 
   useEffect(() => {
-    if (bookingsError) showToast('Could not load your bookings. Pull down to retry.');
-  }, [bookingsError]);
+    if (homeSummaryError) showToast('Could not load your activity. Pull down to retry.');
+  }, [homeSummaryError, showToast]);
 
   // ── Pull-to-refresh ──────────────────────────────────────────────────────
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refetchCategories(), refetchBookings(), refetchJobs()]);
+      await Promise.all([refetchCategories(), refetchHomeSummary(), refetchJobs()]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetchCategories, refetchBookings, refetchJobs]);
+  }, [refetchCategories, refetchHomeSummary, refetchJobs]);
 
   // ── Derived data ─────────────────────────────────────────────────────────
 
@@ -217,16 +210,13 @@ export function ClientHome() {
     return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
   }, [filteredCategories, showAllServices, searchQuery]);
 
-  const recentBookings = useMemo<Booking[]>(
-    () =>
-      [...bookings]
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
-        .slice(0, RECENT_BOOKINGS_LIMIT),
-    [bookings]
-  );
+  const stats = homeSummary?.stats ?? EMPTY_HOME_STATS;
+  const recentBookings: Booking[] = homeSummary?.recentBookings ?? [];
+  const successPercent = stats.total > 0 ? Math.round(stats.successRate * 100) : 0;
+  const completedSummary = `${stats.completed}/${stats.total || 0} completed`;
+  const activeSummary = stats.active > 0
+    ? `${stats.active} active service${stats.active > 1 ? 's' : ''}`
+    : 'No active services';
 
   const activeMissions = useMemo<JobPost[]>(
     () =>
@@ -235,28 +225,7 @@ export function ClientHome() {
     [jobPosts]
   );
 
-  const activeInstantJob = useMemo<JobPost | undefined>(
-    () => activeMissions.find(job => job.urgency === 'instant'),
-    [activeMissions]
-  );
-
-  const stats = useMemo(() => {
-    const completed = bookings.filter(b => b.status === 'completed').length;
-    const active = bookings.filter(b =>
-      ['accepted', 'ongoing'].includes(b.status)
-    ).length;
-    const total = bookings.length;
-    const successRate = total > 0 ? completed / total : 0;
-
-    return {
-      total,
-      active,
-      completed,
-      successRate,
-      successRateLabel: total > 0 ? `${Math.round(successRate * 100)}%` : '—',
-      rating: (user as any)?.rating ?? 0,
-    };
-  }, [bookings, user]);
+  const activeSearchJob = activeMissions[0];
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -285,10 +254,6 @@ export function ClientHome() {
     },
     [router]
   );
-
-  const handlePostJob = useCallback(() => {
-    router.push('/job-creation' as any);
-  }, [router]);
 
   const handleViewAllBookings = useCallback(() => {
     router.push('/(tabs)/bookings' as any);
@@ -325,43 +290,40 @@ export function ClientHome() {
       >
         <HomeHeader />
 
-        {isInitialLoading ? (
-          <HomeSkeletonLoader />
-        ) : (
-          <>
-   
-
-          {/* ── Services Section ── */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, Typography.threeD]}>
-                  Services
-                </Text>
-                <Text style={styles.sectionSub}>
-                  What do you need help with?
-                </Text>
-              </View>
-
-              {!searchQuery && categories.length > INITIAL_CATEGORY_LIMIT && (
-                <TouchableOpacity
-                  onPress={handleToggleServices}
-                  hitSlop={styles.hitSlop}
-                >
-                  <Text style={styles.viewAll}>
-                    {showAllServices ? 'SHOW LESS' : 'VIEW ALL'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+        {/* ── Services Section ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, Typography.threeD]}>
+                Services
+              </Text>
+              <Text style={styles.sectionSub}>
+                What do you need help with?
+              </Text>
             </View>
 
-            <SearchBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search services..."
-              variant="section"
-            />
+            {!searchQuery && categories.length > INITIAL_CATEGORY_LIMIT && (
+              <TouchableOpacity
+                onPress={handleToggleServices}
+                hitSlop={styles.hitSlop}
+              >
+                <Text style={styles.viewAll}>
+                  {showAllServices ? 'SHOW LESS' : 'VIEW ALL'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search services..."
+            variant="section"
+          />
+
+          {categoriesLoading && !isRefreshing ? (
+            <CategoriesSkeleton translateX={translateX} numColumns={numColumns} />
+          ) : (
             <View style={styles.categoriesGrid}>
               {displayedCategories.length > 0 ? (
                 displayedCategories.map((cat, index) => (
@@ -376,73 +338,108 @@ export function ClientHome() {
                 <EmptyServiceState isSearching={!!searchQuery.trim()} />
               )}
             </View>
-          </View>
+          )}
+        </View>
 
-          {/* ── Activity Dashboard ── */}
-          <Animated.View
-            entering={FadeInDown.delay(150).duration(700)}
-            style={styles.dashboardSection}
-          >
-            <Text style={[styles.sectionTitle, Typography.threeD, styles.dashboardLabel]}>
-              Your Activity
-            </Text>
+        {/* ── Activity Dashboard ── */}
+        <Animated.View
+          entering={FadeInDown.delay(150).duration(700)}
+          style={styles.dashboardSection}
+        >
+          <Text style={[styles.sectionTitle, Typography.threeD, styles.dashboardLabel]}>
+            Your Activity
+          </Text>
 
+          {homeSummaryLoading && !isRefreshing ? (
+            <DashboardSkeleton translateX={translateX} />
+          ) : (
             <GlassCard
-              intensity={50}
+              intensity={42}
               glowColor={Colors.cyan}
-              style={styles.dashboardCard}
+              gradient={['rgba(0,245,255,0.16)', 'rgba(191,90,242,0.12)', 'rgba(5,5,16,0.98)']}
+              padding={0}
+              style={styles.activityDashboardCard}
+              contentStyle={styles.activityDashboardContent}
             >
-              {/* Row layout: circle on left, stats on right */}
-              <View style={styles.dashboardContent}>
-                <CosmicCircle
-                  value={stats.successRate}
-                  label={stats.successRateLabel}
-                  subLabel="SUCCESS RATE"
-                  size={150}
-                />
+              <View style={styles.activityGlowOne} />
+              <View style={styles.activityGlowTwo} />
 
-                <View style={styles.insightStats}>
-                  <StatChip value={stats.total} label="Total Jobs" />
-                  <StatChip value={stats.active} label="Active" />
-                  <StatChip value={stats.completed} label="Completed" />
+              <View style={styles.activityTopRow}>
+                <View style={styles.spentCluster}>
+                  <View style={styles.heroIconBox}>
+                    <CreditCard size={22} color={Colors.cyan} strokeWidth={2.5} />
+                  </View>
+                  <View style={styles.heroTextContainer}>
+                    <Text style={styles.heroLabel}>Total Spent</Text>
+                    <Text style={[styles.heroValue, Typography.threeD]}>
+                      Rs. {stats.totalSpent.toLocaleString()}
+                    </Text>
+                    <Text style={styles.heroSubText}>{activeSummary}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.successBadge}>
+                  <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
+                  <View>
+                    <Text style={styles.successPercent}>{successPercent}%</Text>
+                    <Text style={styles.successLabel}>Success</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.progressBlock}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressTitle}>Completion rate</Text>
+                  <Text style={styles.progressValue}>{completedSummary}</Text>
+                </View>
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${successPercent}%` }]} />
+                </View>
+              </View>
+
+              <View style={styles.activityStatsRow}>
+                <View style={styles.activityStatTile}>
+                  <View style={[styles.statIconBubble, { backgroundColor: 'rgba(0,245,255,0.1)' }]}>
+                    <Clock size={14} color={Colors.cyan} />
+                  </View>
+                  <Text style={styles.subStatVal}>{stats.active}</Text>
+                  <Text style={styles.subStatLab}>Active</Text>
+                </View>
+
+                <View style={styles.activityStatTile}>
+                  <View style={[styles.statIconBubble, { backgroundColor: 'rgba(0,255,127,0.1)' }]}>
+                    <CheckCircle2 size={14} color={Colors.green} />
+                  </View>
+                  <Text style={styles.subStatVal}>{stats.completed}</Text>
+                  <Text style={styles.subStatLab}>Completed</Text>
+                </View>
+
+                <View style={styles.activityStatTile}>
+                  <View style={[styles.statIconBubble, { backgroundColor: 'rgba(191,90,242,0.12)' }]}>
+                    <Briefcase size={14} color={Colors.purple} />
+                  </View>
+                  <Text style={styles.subStatVal}>{stats.total}</Text>
+                  <Text style={styles.subStatLab}>Total Jobs</Text>
                 </View>
               </View>
             </GlassCard>
-          </Animated.View>
-
-          {/* ── Active Missions (Missions awaiting bids or review) ── */}
-          {activeMissions.length > 0 && (
-            <Animated.View
-              entering={FadeInDown.delay(200).duration(700)}
-              style={styles.section}
-            >
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text style={[styles.sectionTitle, Typography.threeD]}>
-                    Active Missions
-                  </Text>
-                  <Text style={styles.sectionSub}>Bids received for your scheduled jobs</Text>
-                </View>
-              </View>
-
-              {activeMissions.map((job, index) => (
-                <ClientActiveMissionCard
-                  key={job._id}
-                  job={job}
-                  index={index}
-                  onPress={(j) => {
-                    if (j.urgency === 'instant' && ['open', 'reviewing'].includes(j.status)) {
-                      router.push({ pathname: '/finding-worker', params: { jobId: j._id } });
-                    } else {
-                      router.push({ pathname: '/job-details', params: { id: j._id } });
-                    }
-                  }}
-                />
-              ))}
-            </Animated.View>
           )}
+        </Animated.View>
 
-          {/* ── Recent Bookings ── */}
+        {/* ── Recent Bookings ── */}
+        {homeSummaryLoading && !isRefreshing ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>
+                  Recent Bookings
+                </Text>
+                <Text style={styles.sectionSub}>Your latest activity</Text>
+              </View>
+            </View>
+            <ListSkeleton translateX={translateX} count={2} height={70} />
+          </View>
+        ) : (
           <Animated.View
             entering={FadeInDown.delay(220).duration(700)}
             style={styles.section}
@@ -455,7 +452,7 @@ export function ClientHome() {
                 <Text style={styles.sectionSub}>Your latest activity</Text>
               </View>
 
-              {bookings.length > RECENT_BOOKINGS_LIMIT && (
+              {stats.total > RECENT_BOOKINGS_LIMIT && (
                 <TouchableOpacity
                   onPress={handleViewAllBookings}
                   hitSlop={styles.hitSlop}
@@ -483,15 +480,15 @@ export function ClientHome() {
               </View>
             )}
           </Animated.View>
-
-          <View style={{ height: activeInstantJob ? 180 : 120 }} />
-          </>
         )}
+
+        <View style={{ height: activeSearchJob ? 190 : 120 }} />
       </ScrollView>
 
-      {activeInstantJob && (
+      {activeSearchJob && (
         <ActiveBiddingBanner
-          job={activeInstantJob}
+          job={activeSearchJob}
+          activeCount={activeMissions.length}
           onPress={handleResumeRadar}
         />
       )}
@@ -657,44 +654,175 @@ const styles = StyleSheet.create({
   dashboardLabel: {
     marginBottom: Spacing.m,
   },
-  dashboardCard: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    borderRadius: 28,
+  activityDashboardCard: {
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(0,245,255,0.2)',
+    marginBottom: Spacing.m,
   },
-  // Row layout: CosmicCircle on left, stats on right
-  dashboardContent: {
+  activityDashboardContent: {
+    position: 'relative',
+    overflow: 'hidden',
+    padding: 16,
+  },
+  activityGlowOne: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    top: -72,
+    right: -45,
+    backgroundColor: 'rgba(0,245,255,0.14)',
+  },
+  activityGlowTwo: {
+    position: 'absolute',
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    bottom: -70,
+    left: -42,
+    backgroundColor: 'rgba(191,90,242,0.15)',
+  },
+  activityTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 12,
+    marginBottom: 16,
   },
-  insightStats: {
+  spentCluster: {
     flex: 1,
-    gap: 10,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  statChip: {
-    backgroundColor: 'rgba(0,245,255,0.07)',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+  heroIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0, 245, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,245,255,0.24)',
+  },
+  heroTextContainer: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+  },
+  heroLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  heroValue: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#fff',
+    marginTop: 2,
+  },
+  heroSubText: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  successBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: 'rgba(250,204,21,0.12)',
+    paddingVertical: 8,
+    paddingHorizontal: 11,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
-    alignItems: 'center',
+    borderColor: 'rgba(250,204,21,0.3)',
   },
-  statVal: {
-    fontSize: 20,
+  successPercent: {
+    color: '#facc15',
+    fontSize: 14,
     fontWeight: '900',
-    color: Colors.cyan,
-    letterSpacing: 0.5,
   },
-  statLab: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    marginTop: 3,
+  successLabel: {
+    color: 'rgba(250,204,21,0.76)',
+    fontSize: 8,
+    fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  progressBlock: {
+    padding: 12,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 11,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 9,
+  },
+  progressTitle: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  progressValue: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.green,
+  },
+  activityStatsRow: {
+    flexDirection: 'row',
+    gap: 9,
+  },
+  activityStatTile: {
+    flex: 1,
+    minHeight: 82,
+    borderRadius: 18,
+    padding: 11,
+    backgroundColor: 'rgba(6,8,24,0.62)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+  },
+  statIconBubble: {
+    width: 28,
+    height: 28,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 7,
+  },
+  subStatVal: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  subStatLab: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+    marginTop: 2,
   },
 
   // ── Recent bookings empty state

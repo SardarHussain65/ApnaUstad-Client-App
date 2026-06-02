@@ -127,6 +127,60 @@ export function HomeSkeletonLoader(_props: HomeSkeletonLoaderProps) {
   );
 }
 
+// ─── Modular Sub-Skeletons ───────────────────────────────────────────────────
+
+interface CategoriesSkeletonProps {
+  translateX: RNAnimated.AnimatedInterpolation<string | number>;
+  numColumns?: number;
+}
+
+export function CategoriesSkeleton({ translateX, numColumns = 3 }: CategoriesSkeletonProps) {
+  return (
+    <View style={skStyles.grid}>
+      {Array.from({ length: numColumns * 2 }).map((_, i) => (
+        <View key={i} style={skStyles.categoryCell}>
+          <SkeletonBox width={50} height={50} borderRadius={16} translateX={translateX} />
+          <SkeletonBox
+            width="70%"
+            height={10}
+            borderRadius={5}
+            style={{ marginTop: 8 }}
+            translateX={translateX}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+interface DashboardSkeletonProps {
+  translateX: RNAnimated.AnimatedInterpolation<string | number>;
+}
+
+export function DashboardSkeleton({ translateX }: DashboardSkeletonProps) {
+  return (
+    <View style={skStyles.dashCard}>
+      <SkeletonBox width="100%" height={150} borderRadius={24} translateX={translateX} />
+    </View>
+  );
+}
+
+interface ListSkeletonProps {
+  translateX: RNAnimated.AnimatedInterpolation<string | number>;
+  count?: number;
+  height?: number;
+}
+
+export function ListSkeleton({ translateX, count = 2, height = 100 }: ListSkeletonProps) {
+  return (
+    <View style={skStyles.listContainer}>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonBox key={i} width="100%" height={height} borderRadius={20} translateX={translateX} />
+      ))}
+    </View>
+  );
+}
+
 const skStyles = StyleSheet.create({
   container: { flex: 1 },
   base: {
@@ -185,5 +239,9 @@ const skStyles = StyleSheet.create({
   dashCard: {
     paddingHorizontal: Spacing.l,
     marginTop: 24,
+  },
+  listContainer: {
+    paddingHorizontal: Spacing.l,
+    gap: 12,
   },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Alert, StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import * as Location from 'expo-location';
-import { Briefcase, ShieldCheck, Radio } from 'lucide-react-native';
+import { ChevronRight, ShieldCheck, Radio, Hourglass } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useIncomingJob } from '../../context/IncomingJobContext';
@@ -13,13 +13,13 @@ import api from '../../services/api';
 import { WorkerStatusCard } from './WorkerStatusCard';
 import { WorkerStatsCard } from './WorkerStatsCard';
 import { WorkerAlertJobCard } from './WorkerAlertJobCard';
-import { WorkerSkeletonLoader } from './WorkerSkeletonLoader';
-import { WorkerActiveMissionCard } from './WorkerActiveMissionCard';
-import { WorkerPendingBidCard } from './WorkerPendingBidCard';
+import { IncomingJobModal } from './IncomingJobModal';
+import { SkeletonBox, useShimmerTranslateX } from './HomeSkeletonLoader';
+import { RecentBookingCard } from './RecentBookingCard';
 import { Booking } from '../../hooks/queries/useData';
-import { Bid } from '../../hooks/queries/useMessagesAndJobs';
-import { useUpdateBookingStatusMutation, useWithdrawBidMutation } from '../../hooks/mutations/useMutations';
 import { socketService } from '../../services/socketService';
+import { WorkerPendingBidCard } from './WorkerPendingBidCard';
+import { useWorkerBids, useWithdrawBidMutation, Bid } from '../../hooks';
 
 type WorkerCoordinates = {
   latitude: number;
@@ -34,29 +34,40 @@ export function WorkerHome() {
     setIsInstantOnline,
     isScheduledOnline,
     setIsScheduledOnline,
-    isOnline,
     dismissedJobs,
     clearDismissedJob,
     acceptDismissedJob,
   } = useIncomingJob();
 
   // ─── State ───────────────────────────────────────────────────────────────────
-  const [activeBookings, setActiveBookings] = useState<Booking[]>([]);
-  const [pendingBids, setPendingBids] = useState<Bid[]>([]);
+  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [missedJobs, setMissedJobs] = useState<any[]>([]);
-  const [stats, setStats] = useState({ revenue: 0, rating: 0, missions: 0, successRate: 1 });
-  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    revenue: 0,
+    rating: 0,
+    missions: 0,
+    completed: 0,
+    successRate: 0,
+    activeCount: 0,
+  });
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [missedJobsLoading, setMissedJobsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [workerCoordinates, setWorkerCoordinates] = useState<WorkerCoordinates | null>(null);
-  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
-  const [withdrawingBidId, setWithdrawingBidId] = useState<string | null>(null);
   const [acceptingAlertJobId, setAcceptingAlertJobId] = useState<string | null>(null);
   const [showAllSignals, setShowAllSignals] = useState(false);
-  const [showAllPendingBids, setShowAllPendingBids] = useState(false);
+  const [selectedSignalJob, setSelectedSignalJob] = useState<any | null>(null);
+  const [showAllBids, setShowAllBids] = useState(false);
+  const [withdrawingBidId, setWithdrawingBidId] = useState<string | null>(null);
+
+  const { data: workerBids, isLoading: bidsLoading, refetch: refetchBids } = useWorkerBids();
+  const { mutate: withdrawBid } = useWithdrawBidMutation();
+
+  const pendingBids = useMemo(() => {
+    return workerBids?.filter((bid) => bid.status === 'pending') || [];
+  }, [workerBids]);
 
   const insets = useSafeAreaInsets();
-  const { mutate: updateBookingStatus } = useUpdateBookingStatusMutation();
-  const { mutate: withdrawBid } = useWithdrawBidMutation();
+  const translateX = useShimmerTranslateX();
 
   // ─── Location ────────────────────────────────────────────────────────────────
   const getSavedCoordinates = useCallback((): WorkerCoordinates | null => {
@@ -87,50 +98,51 @@ export function WorkerHome() {
     return getSavedCoordinates();
   }, [getSavedCoordinates]);
 
-  // ─── Sync Status ─────────────────────────────────────────────────────────────
-  const syncStatus = useCallback(async (online: boolean, coordinates?: WorkerCoordinates | null) => {
+  // ─── Sync Location ───────────────────────────────────────────────────────────
+  const syncWorkerLocation = useCallback(async (coordinates?: WorkerCoordinates | null) => {
     try {
       if (!user?._id) return;
-      const payload: any = { isAvailable: online };
+      const payload: any = {};
       if (coordinates) {
         payload.longitude = coordinates.longitude;
         payload.latitude = coordinates.latitude;
       }
+      if (Object.keys(payload).length === 0) return;
       await api.patch(`/workers/${user._id}`, payload);
     } catch (error) {
-      console.error('❌ Error syncing status:', error);
+      console.error('❌ Error syncing worker location:', error);
     }
   }, [user?._id]);
 
   // ─── Data Fetchers ────────────────────────────────────────────────────────────
 
-  /** Section 1: Active Missions — accepted/ongoing bookings only */
-  const fetchActiveBookings = useCallback(async () => {
+  /** Worker dashboard stats and the single recent-bookings work surface. */
+  const fetchWorkerSummary = useCallback(async (showLoading = true) => {
+    if (showLoading) setSummaryLoading(true);
     try {
-      const response = await api.get('/bookings/worker-bookings', { params: { limit: 50 } });
-      const allBookings: Booking[] = response.data.data || [];
-      const completed = allBookings.filter((b: any) => b.status === 'completed');
-      const active = allBookings
-        .filter((b) => ['accepted', 'ongoing'].includes(b.status))
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+      const response = await api.get('/bookings/worker-home-summary', { params: { recentLimit: 3 } });
+      const summary = response.data.data || {};
+      const recent: Booking[] = summary.recentBookings || [];
 
-      const totalRevenue = completed.reduce((sum: number, b: any) => sum + (b.workerEarning || 0), 0);
-      const successRate = allBookings.length > 0 ? completed.length / allBookings.length : 1;
-
-      setActiveBookings(active);
+      setRecentBookings(recent);
       setStats({
-        revenue: (user as any)?.totalEarnings || totalRevenue,
-        missions: (user as any)?.totalJobs || allBookings.length,
-        rating: (user as any)?.rating || 0,
-        successRate,
+        revenue: Number(summary.stats?.revenue || (user as any)?.totalEarnings || 0),
+        missions: Number(summary.stats?.missions || 0),
+        completed: Number(summary.stats?.completed || 0),
+        rating: Number(summary.stats?.rating || (user as any)?.rating || 0),
+        successRate: Number(summary.stats?.successRate || 0),
+        activeCount: Number(summary.stats?.activeCount || 0),
       });
     } catch (error) {
-      console.error('Error fetching active bookings:', error);
+      console.error('Error fetching worker home summary:', error);
+    } finally {
+      if (showLoading) setSummaryLoading(false);
     }
   }, [user]);
 
   /** Section 2: Recent Signals — jobs posted while offline (API), merged with dismissed (context) */
-  const fetchMissedJobs = useCallback(async () => {
+  const fetchMissedJobs = useCallback(async (showLoading = true) => {
+    if (showLoading) setMissedJobsLoading(true);
     try {
       const response = await api.get('/jobs/missed');
       if (response.data.success) {
@@ -138,18 +150,8 @@ export function WorkerHome() {
       }
     } catch (error) {
       console.error('Error fetching missed jobs:', error);
-    }
-  }, []);
-
-  /** Section 3: Open Missions — pending bids the worker has submitted */
-  const fetchPendingBids = useCallback(async () => {
-    try {
-      const response = await api.get('/jobs/my-bids', { params: { status: 'pending', limit: 20 } });
-      if (response.data.success) {
-        setPendingBids((response.data.data || []).filter((bid: Bid) => bid.jobPost));
-      }
-    } catch (error) {
-      console.error('Error fetching pending bids:', error);
+    } finally {
+      if (showLoading) setMissedJobsLoading(false);
     }
   }, []);
 
@@ -160,43 +162,54 @@ export function WorkerHome() {
     const merged: any[] = [];
     // Dismissed first (worker already saw these in modal — highest priority)
     for (const job of dismissedJobs) {
+      if (job.urgency === 'instant' ? !isInstantOnline : !isScheduledOnline) continue;
       if (!seen.has(job._id)) { seen.add(job._id); merged.push({ ...job, _signalSource: 'dismissed' }); }
     }
     // Missed while offline (API)
     for (const job of missedJobs) {
+      if (job.urgency === 'instant' ? !isInstantOnline : !isScheduledOnline) continue;
       if (!seen.has(job._id)) { seen.add(job._id); merged.push({ ...job, _signalSource: 'missed' }); }
     }
     return merged;
-  }, [dismissedJobs, missedJobs]);
+  }, [dismissedJobs, isInstantOnline, isScheduledOnline, missedJobs]);
 
   // ─── Refresh Helpers ──────────────────────────────────────────────────────────
   const refreshWorkerHome = useCallback(async () => {
-    setIsLoading(true);
+    setSummaryLoading(true);
+    setMissedJobsLoading(true);
     const coordinates = await resolveWorkerLocation();
-    setWorkerCoordinates(coordinates);
+    syncWorkerLocation(coordinates);
     await Promise.all([
-      syncStatus(isOnline, coordinates),
-      fetchActiveBookings(),
-      fetchMissedJobs(),
-      fetchPendingBids(),
+      fetchWorkerSummary(true),
+      fetchMissedJobs(true),
+      refetchBids(),
     ]);
-    setIsLoading(false);
-  }, [isOnline, resolveWorkerLocation, syncStatus, fetchActiveBookings, fetchMissedJobs, fetchPendingBids]);
+  }, [resolveWorkerLocation, syncWorkerLocation, fetchWorkerSummary, fetchMissedJobs, refetchBids]);
 
   const refreshWorkerActivity = useCallback(async () => {
-    await Promise.all([fetchActiveBookings(), fetchMissedJobs(), fetchPendingBids()]);
-  }, [fetchActiveBookings, fetchMissedJobs, fetchPendingBids]);
+    await Promise.all([
+      fetchWorkerSummary(false),
+      fetchMissedJobs(false),
+      refetchBids(),
+    ]);
+  }, [fetchWorkerSummary, fetchMissedJobs, refetchBids]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await refreshWorkerHome();
+    const coordinates = await resolveWorkerLocation();
+    await Promise.all([
+      syncWorkerLocation(coordinates),
+      fetchWorkerSummary(false),
+      fetchMissedJobs(false),
+      refetchBids(),
+    ]);
     setIsRefreshing(false);
-  }, [refreshWorkerHome]);
+  }, [resolveWorkerLocation, syncWorkerLocation, fetchWorkerSummary, fetchMissedJobs, refetchBids]);
 
   // ─── Effects ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (token) refreshWorkerHome();
-  }, [token, isInstantOnline, isScheduledOnline, user?._id]);
+  }, [token, refreshWorkerHome]);
 
   useEffect(() => {
     if (!token) return;
@@ -208,39 +221,31 @@ export function WorkerHome() {
     return () => unsubs.forEach((u) => u());
   }, [token, refreshWorkerActivity]);
 
-  // ─── Section 1 Handlers ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedSignalJob) return;
+    const isEnabled = selectedSignalJob.urgency === 'instant'
+      ? isInstantOnline
+      : isScheduledOnline;
+    if (!isEnabled) setSelectedSignalJob(null);
+  }, [isInstantOnline, isScheduledOnline, selectedSignalJob]);
+
+  // ─── Booking Handlers ─────────────────────────────────────────────────────────
   const handleBookingDetails = useCallback((booking: Booking) => {
     router.push({ pathname: '/transaction-details' as any, params: { id: booking._id } });
   }, [router]);
 
-  const handleCancelBooking = useCallback((booking: Booking) => {
-    Alert.alert(
-      'Cancel this mission?',
-      'The client will be notified and this mission will leave your active list.',
-      [
-        { text: 'Keep Mission', style: 'cancel' },
-        {
-          text: 'Cancel Mission',
-          style: 'destructive',
-          onPress: () => {
-            setCancellingBookingId(booking._id);
-            updateBookingStatus(
-              { bookingId: booking._id, status: 'cancelled', cancelReason: 'Cancelled by worker from home screen' },
-              { onSuccess: refreshWorkerActivity, onSettled: () => setCancellingBookingId(null) }
-            );
-          },
-        },
-      ]
-    );
-  }, [refreshWorkerActivity, updateBookingStatus]);
+  // ─── Signal Handlers ──────────────────────────────────────────────────────────
+  const handleOpenSignalDetails = useCallback((job: any) => {
+    setSelectedSignalJob(job);
+  }, []);
 
-  // ─── Section 2 Handlers ───────────────────────────────────────────────────────
   const handleAcceptSignalJob = useCallback(async (job: any) => {
     setAcceptingAlertJobId(job._id);
     try {
       await acceptDismissedJob(job);
       // Also remove from missedJobs list if it was from API
       setMissedJobs(prev => prev.filter(j => j._id !== job._id));
+      setSelectedSignalJob(null);
     } finally {
       setAcceptingAlertJobId(null);
     }
@@ -249,24 +254,41 @@ export function WorkerHome() {
   const handleDismissSignalJob = useCallback((jobId: string) => {
     clearDismissedJob(jobId);
     setMissedJobs(prev => prev.filter(j => j._id !== jobId));
+    setSelectedSignalJob((prev: any | null) => prev?._id === jobId ? null : prev);
   }, [clearDismissedJob]);
 
-  // ─── Section 3 Handlers ───────────────────────────────────────────────────────
-  const handlePendingBidDetails = useCallback((bid: Bid) => {
-    const jobId = typeof bid.jobPost === 'string' ? bid.jobPost : bid.jobPost?._id;
-    if (!jobId) {
-      Alert.alert('Details unavailable', 'This mission request is no longer available.');
-      return;
-    }
-    router.push({ pathname: '/pending-bid-details' as any, params: { id: jobId, pendingBidId: bid._id } });
+  const handleCounterOfferSignalJob = useCallback((job: any) => {
+    clearDismissedJob(job._id);
+    setMissedJobs(prev => prev.filter(item => item._id !== job._id));
+    setSelectedSignalJob(null);
+    router.push({
+      pathname: '/bid-submission' as any,
+      params: {
+        jobId: job._id,
+        title: job.category,
+        urgency: job.urgency,
+        responseMode: 'counter',
+      },
+    });
+  }, [clearDismissedJob, router]);
+
+  // ─── Bid Handlers ────────────────────────────────────────────────────────────
+  const handleBidDetails = useCallback((bid: Bid) => {
+    router.push({
+      pathname: '/pending-bid-details' as any,
+      params: {
+        id: typeof bid.jobPost === 'object' ? bid.jobPost?._id : bid.jobPost,
+        pendingBidId: bid._id,
+      },
+    });
   }, [router]);
 
   const handleWithdrawBid = useCallback((bid: Bid) => {
     Alert.alert(
-      'Withdraw mission interest?',
-      'The client will no longer see your response for this job.',
+      'Withdraw Bid',
+      'Are you sure you want to withdraw your bid for this job?',
       [
-        { text: 'Keep Waiting', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Withdraw',
           style: 'destructive',
@@ -274,13 +296,23 @@ export function WorkerHome() {
             setWithdrawingBidId(bid._id);
             withdrawBid(
               { bidId: bid._id },
-              { onSuccess: refreshWorkerActivity, onSettled: () => setWithdrawingBidId(null) }
+              {
+                onSuccess: () => {
+                  refetchBids();
+                  setWithdrawingBidId(null);
+                },
+                onError: (error) => {
+                  console.error('Error withdrawing bid:', error);
+                  setWithdrawingBidId(null);
+                  Alert.alert('Error', 'Failed to withdraw the bid. Please try again.');
+                },
+              }
             );
           },
         },
       ]
     );
-  }, [refreshWorkerActivity, withdrawBid]);
+  }, [withdrawBid, refetchBids]);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -299,131 +331,176 @@ export function WorkerHome() {
       >
         <HomeHeader />
 
-        {isLoading && !isRefreshing ? (
-          <WorkerSkeletonLoader />
-        ) : (
-          <>
-            {/* ── Stats Dashboard ── */}
-            <View style={styles.dashboardSection}>
-              <WorkerStatusCard
-                isInstantOnline={isInstantOnline}
-                onToggleInstant={setIsInstantOnline}
-                isScheduledOnline={isScheduledOnline}
-                onToggleScheduled={setIsScheduledOnline}
-              />
-              <WorkerStatsCard stats={stats} />
+        {/* ── Stats Dashboard ── */}
+        <View style={styles.dashboardSection}>
+          <WorkerStatusCard
+            isInstantOnline={isInstantOnline}
+            onToggleInstant={setIsInstantOnline}
+            isScheduledOnline={isScheduledOnline}
+            onToggleScheduled={setIsScheduledOnline}
+          />
+          {summaryLoading && !isRefreshing ? (
+            <View style={{ marginTop: 16 }}>
+              <SkeletonBox width="100%" height={140} borderRadius={24} translateX={translateX} />
             </View>
+          ) : (
+            <WorkerStatsCard stats={stats} />
+          )}
+        </View>
 
-            {/* ── Section 1: Active Missions (accepted/ongoing bookings) ── */}
-            {activeBookings.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleRow}>
-                    <ShieldCheck color={Colors.green} size={24} />
-                    <Text style={[styles.sectionTitle, Typography.threeD]}>Active Missions</Text>
-                  </View>
-                  {activeBookings.length > 3 ? (
-                    <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
-                      <Text style={styles.seeAll}>VIEW ALL ({activeBookings.length})</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text style={styles.sectionMeta}>{activeBookings.length} LIVE</Text>
-                  )}
-                </View>
-
-                <View style={styles.agendaList}>
-                  {activeBookings.slice(0, 3).map((booking, index) => (
-                    <WorkerActiveMissionCard
-                      key={booking._id}
-                      booking={booking}
-                      index={index}
-                      onDetails={handleBookingDetails}
-                      onCancel={handleCancelBooking}
-                      isCancelling={cancellingBookingId === booking._id}
-                    />
-                  ))}
-                </View>
+        {/* ── Section 1: Recent Signals (dismissed + missed-while-offline) ── */}
+        {missedJobsLoading && !isRefreshing ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Radio color="#FF8C00" size={22} />
+                <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Recent Signals</Text>
               </View>
-            )}
-
-            {/* ── Section 2: Recent Signals (dismissed + missed-while-offline) ── */}
-            {recentSignals.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleRow}>
-                    <Radio color="#FF8C00" size={22} />
-                    <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Recent Signals</Text>
-                  </View>
-                  {recentSignals.length > 3 ? (
-                    <TouchableOpacity onPress={() => setShowAllSignals(!showAllSignals)}>
-                      <Text style={[styles.seeAll, { color: '#FF8C00' }]}>
-                        {showAllSignals ? 'SHOW LESS' : `VIEW ALL (${recentSignals.length})`}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <Text style={[styles.sectionMeta, { color: '#FF8C00' }]}>{recentSignals.length} MISSED</Text>
-                  )}
-                </View>
-
-                <View style={styles.agendaList}>
-                  {recentSignals.slice(0, showAllSignals ? undefined : 3).map((job, index) => (
-                    <WorkerAlertJobCard
-                      key={job._id}
-                      job={job}
-                      index={index}
-                      onAccept={handleAcceptSignalJob}
-                      onDismiss={handleDismissSignalJob}
-                      isAccepting={acceptingAlertJobId === job._id}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* ── Section 3: Open Missions (pending bids submitted by worker) ── */}
+            </View>
+            <View style={styles.agendaList}>
+              <SkeletonBox width="100%" height={100} borderRadius={24} translateX={translateX} />
+            </View>
+          </View>
+        ) : (
+          recentSignals.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                  <View style={styles.sectionTitleRow}>
-                    <Briefcase color={Colors.cyan} size={24} />
-                    <Text style={[styles.sectionTitle, Typography.threeD]}>Open Missions</Text>
-                  </View>
-                  {pendingBids.length > 3 ? (
-                    <TouchableOpacity onPress={() => setShowAllPendingBids(!showAllPendingBids)}>
-                      <Text style={styles.seeAll}>
-                        {showAllPendingBids ? 'SHOW LESS' : `VIEW ALL (${pendingBids.length})`}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity onPress={handleRefresh}>
-                      <Text style={styles.seeAll}>REFRESH</Text>
-                    </TouchableOpacity>
-                  )}
+                <View style={styles.sectionTitleRow}>
+                  <Radio color="#FF8C00" size={22} />
+                  <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Recent Signals</Text>
                 </View>
+                {recentSignals.length > 3 ? (
+                  <TouchableOpacity onPress={() => setShowAllSignals(!showAllSignals)}>
+                    <Text style={[styles.seeAll, { color: '#FF8C00' }]}>
+                      {showAllSignals ? 'SHOW LESS' : `VIEW ALL (${recentSignals.length})`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.sectionMeta, { color: '#FF8C00' }]}>{recentSignals.length} MISSED</Text>
+                )}
+              </View>
 
-                <View style={styles.agendaList}>
-                  {pendingBids.slice(0, showAllPendingBids ? undefined : 3).map((bid, index) => (
-                    <WorkerPendingBidCard
+              <View style={styles.agendaList}>
+                {recentSignals.slice(0, showAllSignals ? undefined : 3).map((job, index) => (
+                  <WorkerAlertJobCard
+                    key={job._id}
+                    job={job}
+                    index={index}
+                    onAccept={handleOpenSignalDetails}
+                    onDismiss={handleDismissSignalJob}
+                    isAccepting={acceptingAlertJobId === job._id}
+                  />
+                ))}
+              </View>
+            </View>
+          )
+        )}
+
+
+        {/* ── Section 2: Recent Bookings ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <View style={styles.sectionTitleRow}>
+                <ShieldCheck color={Colors.cyan} size={24} />
+                <Text style={[styles.sectionTitle, Typography.threeD]}>Recent Bookings</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Your latest confirmed and pending work</Text>
+            </View>
+            {stats.missions > 3 ? (
+              <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')} style={styles.seeAllRow}>
+                <Text style={styles.seeAll}>SEE ALL</Text>
+                <ChevronRight size={13} color={Colors.cyan} strokeWidth={2.6} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={handleRefresh}>
+                <Text style={styles.seeAll}>REFRESH</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.recentBookingList}>
+            {summaryLoading && !isRefreshing ? (
+              <>
+                <SkeletonBox width="100%" height={170} borderRadius={24} translateX={translateX} />
+                <SkeletonBox width="100%" height={170} borderRadius={24} translateX={translateX} />
+              </>
+            ) : recentBookings.length > 0 ? (
+              recentBookings.map((booking) => (
+                <RecentBookingCard
+                  key={booking._id}
+                  booking={booking}
+                  onPress={() => handleBookingDetails(booking)}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No bookings yet.{'\n'}Accepted missions will appear here.</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* ── Section: Your Active Bids ── */}
+        {bidsLoading && !isRefreshing ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Hourglass color={Colors.worker} size={22} />
+                <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>Active Bids</Text>
+              </View>
+            </View>
+            <View style={styles.agendaList}>
+              <SkeletonBox width="100%" height={170} borderRadius={24} translateX={translateX} />
+            </View>
+          </View>
+        ) : (
+          pendingBids.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Hourglass color={Colors.worker} size={22} />
+                  <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>Active Bids</Text>
+                </View>
+                {pendingBids.length > 3 ? (
+                  <TouchableOpacity onPress={() => setShowAllBids(!showAllBids)}>
+                    <Text style={[styles.seeAll, { color: Colors.worker }]}>
+                      {showAllBids ? 'SHOW LESS' : `VIEW ALL (${pendingBids.length})`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.sectionMeta, { color: Colors.worker }]}>{pendingBids.length} ACTIVE</Text>
+                )}
+              </View>
+
+              <View style={styles.agendaList}>
+                {pendingBids.slice(0, showAllBids ? undefined : 3).map((bid, index) => (
+                  <WorkerPendingBidCard
                     key={bid._id}
                     bid={bid}
                     index={index}
-                    onDetails={handlePendingBidDetails}
+                    onDetails={handleBidDetails}
                     onWithdraw={handleWithdrawBid}
                     isWithdrawing={withdrawingBidId === bid._id}
                   />
                 ))}
-
-                {pendingBids.length === 0 && (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>No bids submitted yet.{'\n'}Browse nearby jobs and submit a bid to start!</Text>
-                  </View>
-                )}
               </View>
             </View>
-          </>
+          )
         )}
+
 
         <View style={{ height: 120 }} />
       </ScrollView>
+      <IncomingJobModal
+        visible={Boolean(selectedSignalJob)}
+        jobs={selectedSignalJob ? [selectedSignalJob] : []}
+        onAccept={handleAcceptSignalJob}
+        onCounterOffer={handleCounterOfferSignalJob}
+        onReject={handleDismissSignalJob}
+        onClose={() => setSelectedSignalJob(null)}
+        acceptingJobId={acceptingAlertJobId}
+      />
     </BackgroundWrapper>
   );
 }
@@ -458,6 +535,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#fff',
   },
+  sectionSubtitle: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
   sectionMeta: {
     color: Colors.green,
     fontWeight: '900',
@@ -471,8 +554,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     fontSize: 11,
   },
+  seeAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   agendaList: {
     gap: 12,
+  },
+  recentBookingList: {
+    marginHorizontal: -Spacing.l,
   },
   emptyState: {
     padding: 40,

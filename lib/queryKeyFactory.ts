@@ -24,6 +24,7 @@ export const queryKeys = {
     all: ['bookings'] as const,
     list: () => [...queryKeys.bookings.all, 'list'] as const,
     myBookings: () => [...queryKeys.bookings.all, 'my-bookings'] as const,
+    homeSummary: () => [...queryKeys.bookings.all, 'home-summary'] as const,
     detail: (id: string) => [...queryKeys.bookings.all, 'detail', id] as const,
     byWorker: () => [...queryKeys.bookings.all, 'worker-bookings'] as const,
   },
@@ -79,6 +80,8 @@ export const queryKeys = {
     all: ['wallet'] as const,
     balance: () => [...queryKeys.wallet.all, 'balance'] as const,
     transactions: () => [...queryKeys.wallet.all, 'transactions'] as const,
+    topUps: () => [...queryKeys.wallet.all, 'top-ups'] as const,
+    paymentMethods: () => [...queryKeys.wallet.all, 'payment-methods'] as const,
   },
 
   // Help Center

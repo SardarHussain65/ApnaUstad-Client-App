@@ -1,882 +1,1065 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
-  Animated,
-  Dimensions,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Colors, Typography, Spacing } from '../constants/Theme';
-import { GlassCard } from '../components/home/GlassCard';
-import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import AnimatedRN, { FadeInDown, FadeInUp, SlideInLeft, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ChevronLeft,
-  MapPin,
-  Clock,
-  Calendar,
-  Shield,
   Banknote,
-  AlertCircle,
-  Trash2,
-  Zap,
-  Target,
-  User,
+  BriefcaseBusiness,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Eye,
   FileText,
+  Hourglass,
+  Image as ImageIcon,
+  MapPin,
+  Radio,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+  Zap,
 } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { useWorkerBids, useJobDetails } from '../hooks';
+
+import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { GlassCard } from '../components/home/GlassCard';
+import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/Theme';
+import { useJobDetails, useWorkerBids } from '../hooks';
 import { useWithdrawBidMutation } from '../hooks/mutations/useMutations';
+import { useAuth } from '../context/AuthContext';
+import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const P = {
+  surface: 'rgba(8, 10, 30, 0.9)',
+  surfaceStrong: 'rgba(8, 10, 30, 0.97)',
+  border: 'rgba(255,255,255,0.1)',
+  borderStrong: 'rgba(0,245,255,0.26)',
+  cyanMuted: 'rgba(0,245,255,0.1)',
+  orangeMuted: 'rgba(255,140,0,0.12)',
+  greenMuted: 'rgba(0,255,127,0.1)',
+  redMuted: 'rgba(255,59,48,0.1)',
+  textMuted: '#9BA3B4',
+  textDim: '#646B7E',
+};
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const NEON_CYAN = '#00F5FF';
-const NEON_AMBER = '#FFB800';
-const NEON_RED = '#FF3B30';
-const NEON_GREEN = '#39FF14';
-const DEEP_BG = '#030712';
-const CARD_BG = 'rgba(255,255,255,0.03)';
-const BORDER_GLOW = 'rgba(0,245,255,0.18)';
-const BORDER_SOFT = 'rgba(255,255,255,0.07)';
+const compactUrls = (urls: (string | undefined | null)[]) =>
+  Array.from(new Set(urls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0)));
 
-// ─── Reusable Neon Border Card ─────────────────────────────────────────────────
-function NeonCard({
-  children,
-  accentColor = NEON_CYAN,
-  style,
+const initialsFor = (name?: string) => {
+  if (!name?.trim()) return 'CL';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('');
+};
+
+const formatDate = (value?: string) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'Today';
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const formatMoney = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString()}`;
+
+const formatSubmittedAt = (value?: string) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'Recently submitted';
+
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutes < 1) return 'Submitted just now';
+  if (minutes < 60) return `Submitted ${minutes}m ago`;
+  if (minutes < 24 * 60) return `Submitted ${Math.floor(minutes / 60)}h ago`;
+  return `Submitted ${formatDate(value)}`;
+};
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  color = Colors.cyan,
 }: {
-  children: React.ReactNode;
-  accentColor?: string;
-  style?: object;
+  icon: React.ComponentType<any>;
+  title: string;
+  subtitle?: string;
+  color?: string;
 }) {
-  const glowAnim = useRef(new Animated.Value(0.4)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2200, useNativeDriver: true }),
-        Animated.timing(glowAnim, { toValue: 0.4, duration: 2200, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
   return (
-    <View style={[styles.neonCardWrapper, style]}>
-      {/* Corner Accents */}
-      <View style={[styles.cornerTL, { borderColor: accentColor }]} />
-      <View style={[styles.cornerTR, { borderColor: accentColor }]} />
-      <View style={[styles.cornerBL, { borderColor: accentColor }]} />
-      <View style={[styles.cornerBR, { borderColor: accentColor }]} />
-
-      {/* Glow border */}
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          {
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: accentColor,
-            opacity: glowAnim,
-          },
-        ]}
-      />
-
-      {/* Content */}
-      <View style={[styles.neonCardInner, { backgroundColor: `${accentColor}08` }]}>
-        {children}
+    <View style={styles.sectionHeading}>
+      <View style={[styles.sectionIcon, { backgroundColor: `${color}14`, borderColor: `${color}30` }]}>
+        <Icon size={15} color={color} strokeWidth={2.4} />
+      </View>
+      <View style={styles.sectionHeadingCopy}>
+        <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
+        {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
       </View>
     </View>
   );
 }
 
-// ─── Glowing Label Badge ───────────────────────────────────────────────────────
-function GlowBadge({ label, color }: { label: string; color: string }) {
-  return (
-    <View style={[styles.glowBadge, { backgroundColor: `${color}15`, borderColor: `${color}40` }]}>
-      <View style={[styles.badgeDot, { backgroundColor: color }]} />
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
-    </View>
-  );
-}
-
-// ─── Stat Pill ────────────────────────────────────────────────────────────────
-function StatPill({
+function DetailPill({
   icon: Icon,
   label,
   value,
-  color,
+  color = Colors.cyan,
 }: {
-  icon: any;
+  icon: React.ComponentType<any>;
   label: string;
   value: string;
-  color: string;
+  color?: string;
 }) {
   return (
-    <View style={[styles.statPill, { borderColor: `${color}25` }]}>
-      <LinearGradient
-        colors={[`${color}20`, 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
-      <View style={[styles.statIconWrap, { backgroundColor: `${color}20` }]}>
-        <Icon size={16} color={color} />
+    <View style={styles.detailPill}>
+      <View style={[styles.detailPillIcon, { backgroundColor: `${color}12` }]}>
+        <Icon size={14} color={color} strokeWidth={2.4} />
       </View>
-      <View>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <View style={styles.detailPillCopy}>
+        <Text style={styles.detailPillLabel}>{label}</Text>
+        <Text style={styles.detailPillValue} numberOfLines={1}>{value}</Text>
       </View>
     </View>
   );
 }
 
-// ─── Section Header ────────────────────────────────────────────────────────────
-function SectionHeader({ icon: Icon, title, color }: { icon: any; title: string; color: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <Icon size={14} color={color} />
-      <Text style={[styles.sectionHeaderText, { color }]}>{title}</Text>
-      <View style={[styles.sectionLine, { backgroundColor: `${color}40` }]} />
-    </View>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PendingBidDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; pendingBidId?: string }>();
-
-  const { data: bids, isLoading: isLoadingBids } = useWorkerBids();
-  const bid = bids?.find(b => b._id === params.pendingBidId);
-  const { data: job, isLoading: isLoadingJob } = useJobDetails(
-    params.id || (typeof bid?.jobPost === 'string' ? bid.jobPost : bid?.jobPost?._id)
-  );
+  const { data: bids, isLoading: isLoadingBids, refetch: refetchBids } = useWorkerBids();
+  const bid = bids?.find(item => item._id === params.pendingBidId);
+  const bidJob = bid?.jobPost && typeof bid.jobPost === 'object' ? bid.jobPost : null;
+  const jobId = params.id || (typeof bid?.jobPost === 'string' ? bid.jobPost : bidJob?._id);
+  const { data: job, isLoading: isLoadingJob } = useJobDetails(jobId);
   const { mutate: withdrawBid, isPending: isWithdrawing } = useWithdrawBidMutation();
+  const { user } = useAuth();
+  const workerPerson = bid?.worker && typeof bid.worker === 'object' ? bid.worker : null;
 
-  // ── Loading State ──────────────────────────────────────────────────────────
-  if (isLoadingBids || isLoadingJob || (!job && !bid)) {
+  const displayJob = job || bidJob;
+  const meta = bid?.cardMeta;
+  const customer = displayJob?.customer && typeof displayJob.customer === 'object' ? displayJob.customer : null;
+  const clientMeta = meta?.counterParty || displayJob?.clientMeta || customer;
+
+  const media = useMemo(() => {
+    const images = Array.isArray(meta?.media?.images)
+      ? meta.media.images
+      : Array.isArray(displayJob?.media?.images)
+        ? displayJob.media.images
+        : compactUrls([displayJob?.imageUrl, ...(displayJob?.imageUrls || [])]);
+    const videos = Array.isArray(meta?.media?.videos)
+      ? meta.media.videos
+      : Array.isArray(displayJob?.media?.videos)
+        ? displayJob.media.videos
+        : compactUrls([displayJob?.videoUrl, ...(displayJob?.videoUrls || [])]);
+    const audios = Array.isArray(meta?.media?.audios)
+      ? meta.media.audios
+      : Array.isArray(displayJob?.media?.audios)
+        ? displayJob.media.audios
+        : compactUrls(displayJob?.audioUrls || []);
+
+    return buildJobEvidenceItems({ images, videos, audios });
+  }, [
+    displayJob?.imageUrl,
+    displayJob?.imageUrls,
+    displayJob?.media?.images,
+    displayJob?.media?.audios,
+    displayJob?.media?.videos,
+    displayJob?.audioUrls,
+    displayJob?.videoUrl,
+    displayJob?.videoUrls,
+    meta?.media?.images,
+    meta?.media?.audios,
+    meta?.media?.videos,
+  ]);
+
+  if (isLoadingBids || (jobId && isLoadingJob)) {
     return (
       <BackgroundWrapper>
         <View style={styles.centeredFill}>
-          {/* Pulse rings */}
-          <View style={styles.pulseOuter}>
-            <View style={styles.pulseInner}>
-              <Zap size={28} color={NEON_CYAN} />
-            </View>
+          <View style={styles.loadingIcon}>
+            <Hourglass size={26} color={Colors.worker} strokeWidth={2.2} />
           </View>
-          <Text style={styles.loadingText}>FETCHING MISSION DATA</Text>
-          <Text style={styles.loadingSubText}>Please stand by…</Text>
+          <ActivityIndicator color={Colors.cyan} />
+          <Text style={styles.loadingText}>Loading proposal details</Text>
         </View>
       </BackgroundWrapper>
     );
   }
 
-  const displayJob = job || (typeof bid?.jobPost === 'object' ? bid.jobPost : null);
-
-  // ── Error State ────────────────────────────────────────────────────────────
   if (!displayJob) {
     return (
       <BackgroundWrapper>
-        <View style={[styles.centeredFill, { padding: 28 }]}>
-          <View style={styles.errorIconRing}>
-            <AlertCircle size={36} color={NEON_RED} />
+        <View style={[styles.centeredFill, styles.emptyState]}>
+          <View style={styles.emptyIcon}>
+            <FileText size={27} color={Colors.worker} strokeWidth={2.1} />
           </View>
-          <Text style={styles.errorTitle}>MISSION ABORTED</Text>
-          <Text style={styles.errorBody}>
-            This mission has been cancelled or assigned to another operative.
-          </Text>
-          <TouchableOpacity style={styles.outlineBtn} onPress={() => router.back()}>
-            <ChevronLeft size={16} color={NEON_CYAN} />
-            <Text style={styles.outlineBtnText}>RETURN TO BASE</Text>
+          <Text style={styles.emptyTitle}>Proposal unavailable</Text>
+          <Text style={styles.emptyText}>This job may have been closed or assigned to another Ustad.</Text>
+          <TouchableOpacity style={styles.backHomeButton} onPress={() => router.back()} activeOpacity={0.82}>
+            <ChevronLeft size={17} color="#001014" strokeWidth={2.8} />
+            <Text style={styles.backHomeText}>Go back</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
     );
   }
 
+  const isInstant = (meta?.missionKind || displayJob.urgency) === 'instant';
+  const MissionIcon = isInstant ? Zap : CalendarDays;
+  const title = meta?.title || displayJob.category || 'Service mission';
+  const description = meta?.description || displayJob.description || 'No additional job details were provided.';
+  const missionKindLabel = meta?.missionKindLabel || (isInstant ? 'Instant visit' : 'Scheduled visit');
+  const dateLabel = meta?.schedule?.dateLabel || formatDate(displayJob.scheduledDate);
+  const timeLabel = meta?.schedule?.timeLabel || displayJob.scheduledTime || 'ASAP';
+  const locationLabel = meta?.location?.address || displayJob.address || 'Service location not shared';
+  const quoteText = meta?.financial?.amountText || formatMoney(bid?.proposedPrice || displayJob.amount);
+  const clientName = clientMeta?.fullName || 'Client';
+  const clientImage = clientMeta?.profileImage || '';
+  const clientJobs = Number((clientMeta as any)?.completedJobs || (clientMeta as any)?.totalJobs || 0);
+  const clientId = clientMeta?._id || customer?._id;
+  const submittedText = formatSubmittedAt(meta?.submittedAt || bid?.createdAt);
+  const estimatedTime = Number(bid?.estimatedDays || 0) > 0
+    ? `${bid?.estimatedDays} day${bid?.estimatedDays === 1 ? '' : 's'}`
+    : 'Flexible';
   const handleWithdraw = () => {
-    if (!bid) return;
-    withdrawBid({ bidId: bid._id }, { onSuccess: () => router.back() });
+    if (!bid || isWithdrawing) return;
+
+    Alert.alert(
+      'Withdraw proposal?',
+      'Your offer will be removed from this job. The client will no longer be able to accept it.',
+      [
+        { text: 'Keep proposal', style: 'cancel' },
+        {
+          text: 'Withdraw',
+          style: 'destructive',
+          onPress: () => {
+            withdrawBid(
+              { bidId: bid._id },
+              {
+                onSuccess: () => {
+                  refetchBids();
+                  router.back();
+                },
+                onError: () => Alert.alert('Unable to withdraw', 'Please try again in a moment.'),
+              }
+            );
+          },
+        },
+      ]
+    );
   };
 
-  const jobAddress = displayJob.address || 'Location unavailable';
-  const scheduledDate = displayJob.scheduledDate
-    ? new Date(displayJob.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : 'Today';
+  const openClientProfile = () => {
+    if (!clientId) return;
+    router.push({ pathname: '/client-details' as any, params: { id: String(clientId) } });
+  };
 
   return (
     <BackgroundWrapper>
-      {/* Ambient background gradients */}
-      <LinearGradient
-        colors={['rgba(0,245,255,0.06)', 'transparent', 'rgba(255,184,0,0.04)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
-
-      <View style={{ flex: 1 }}>
-
-        {/* ── Fixed Header ──────────────────────────────────────────────── */}
-        <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
-          <View style={[styles.topBarBorder]} />
-
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft color={NEON_CYAN} size={22} />
+      <View style={styles.root}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
+            <ChevronLeft size={22} color={Colors.text} strokeWidth={2.5} />
           </TouchableOpacity>
 
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topBarLabel}>PROPOSAL SENT</Text>
-            <GlowBadge label="PENDING REVIEW" color={NEON_AMBER} />
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerEyebrow}>Active Bid</Text>
+            <Text style={styles.headerTitle}>Proposal Details</Text>
           </View>
 
-          {/* Spacer */}
-          <View style={{ width: 44 }} />
+          <View style={styles.headerSpacer} />
         </View>
 
-        {/* ── Scrollable Body ────────────────────────────────────────────── */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingTop: insets.top + 100,
-            paddingBottom: 140,
-            paddingHorizontal: 16,
-          }}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 126 }]}
         >
-
-          {/* ── Hero Category Banner ─────────────────────────────────────── */}
-          <AnimatedRN.View entering={FadeInUp.delay(100).duration(700)}>
-            <LinearGradient
-              colors={['rgba(0,245,255,0.12)', 'rgba(0,245,255,0.03)', 'transparent']}
-              style={styles.heroBanner}
+          <Animated.View entering={FadeInDown.duration(460)}>
+            <GlassCard
+              padding={0}
+              intensity={50}
+              hasGlow
+              glowColor={Colors.worker}
+              style={styles.heroCard}
+              contentStyle={styles.heroContent}
             >
-              <View style={[styles.heroBannerAccent, { backgroundColor: NEON_CYAN }]} />
-              <Text style={styles.heroCategory}>{displayJob.category?.toUpperCase()}</Text>
-              <Text style={styles.heroSub}>ACTIVE PROPOSAL — AWAITING CLIENT DECISION</Text>
-            </LinearGradient>
-          </AnimatedRN.View>
+              <LinearGradient
+                colors={['rgba(255,140,0,0.2)', 'rgba(8,10,30,0.94)', 'rgba(0,245,255,0.1)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.heroAccent} />
 
-          {/* ── Stats Row ─────────────────────────────────────────────────── */}
-          <AnimatedRN.View entering={SlideInLeft.delay(200).duration(600)} style={styles.statsRow}>
-            <StatPill icon={Clock} label="TIME" value={displayJob.scheduledTime || 'ASAP'} color={NEON_CYAN} />
-            <StatPill icon={Calendar} label="DATE" value={scheduledDate} color={NEON_AMBER} />
-          </AnimatedRN.View>
-
-          {/* ── Location ──────────────────────────────────────────────────── */}
-          <AnimatedRN.View entering={FadeInUp.delay(300).duration(600)}>
-            <NeonCard accentColor={NEON_CYAN} style={{ marginBottom: 16 }}>
-              <SectionHeader icon={MapPin} title="DEPLOYMENT LOCATION" color={NEON_CYAN} />
-              <View style={styles.locationRow}>
-                <View style={[styles.locationDot, { backgroundColor: NEON_CYAN }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.locationPrimary}>{jobAddress.split(',')[0]}</Text>
-                  <Text style={styles.locationSecondary}>{jobAddress}</Text>
+              <View style={styles.heroTopRow}>
+                <View style={styles.pendingBadge}>
+                  <Hourglass size={12} color={Colors.worker} strokeWidth={2.4} />
+                  <Text style={styles.pendingBadgeText}>Awaiting client</Text>
+                </View>
+                <View style={styles.submittedBadge}>
+                  <Radio size={11} color={Colors.cyan} strokeWidth={2.4} />
+                  <Text style={styles.submittedBadgeText}>{submittedText}</Text>
                 </View>
               </View>
-            </NeonCard>
-          </AnimatedRN.View>
 
-          {/* ── Target Client ─────────────────────────────────────────────── */}
-          {displayJob.customer && (
-            <AnimatedRN.View entering={FadeInUp.delay(400).duration(600)}>
-              <NeonCard accentColor={NEON_AMBER} style={{ marginBottom: 16 }}>
-                <SectionHeader icon={User} title="TARGET CLIENT" color={NEON_AMBER} />
+              <View style={styles.heroTitleRow}>
+                <View style={styles.heroIcon}>
+                  <BriefcaseBusiness size={24} color={Colors.cyan} strokeWidth={2.2} />
+                </View>
+                <View style={styles.heroTitleCopy}>
+                  <Text style={styles.heroLabel}>Proposal sent</Text>
+                  <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{title}</Text>
+                  <Text style={styles.heroDescription} numberOfLines={3}>{description}</Text>
+                </View>
+              </View>
+
+              <View style={styles.heroBottomRow}>
+                <View>
+                  <Text style={styles.heroValueLabel}>Your quoted value</Text>
+                  <Text style={styles.heroValue}>{quoteText}</Text>
+                </View>
+                <View style={styles.heroStatusNote}>
+                  <ShieldCheck size={14} color={Colors.green} strokeWidth={2.5} />
+                  <Text style={styles.heroStatusText}>Offer active</Text>
+                </View>
+              </View>
+            </GlassCard>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
+            <SectionHeader
+              icon={Clock3}
+              title="Visit Overview"
+              subtitle="The timing and service location shared by the client."
+            />
+            <View style={styles.detailGrid}>
+              <DetailPill icon={MissionIcon} label="Visit type" value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
+              <DetailPill icon={CalendarDays} label="Date" value={dateLabel} />
+              <DetailPill icon={Clock3} label="Time" value={timeLabel} color={Colors.worker} />
+            </View>
+             <GlassCard padding={14} intensity={35} style={styles.locationCard}>
+              <View style={styles.locationRow}>
+                <View style={styles.locationIcon}>
+                  <MapPin size={17} color={Colors.green} strokeWidth={2.5} />
+                </View>
+                <View style={styles.locationCopy}>
+                  <Text style={styles.locationLabel}>Service location</Text>
+                  <Text style={styles.locationValue}>{locationLabel}</Text>
+                </View>
+              </View>
+            </GlassCard>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(140).duration(460)} style={styles.section}>
+            <SectionHeader
+              icon={UserRound}
+              title="Client"
+              subtitle="Review who requested the service before the client responds."
+              color={Colors.worker}
+            />
+            <TouchableOpacity onPress={openClientProfile} disabled={!clientId} activeOpacity={0.84}>
+              <GlassCard
+                padding={14}
+                intensity={38}
+                hasGlow
+                glowColor={Colors.worker}
+                gradient={['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.06)']}
+              >
                 <View style={styles.clientRow}>
-                  <View style={styles.clientAvatarWrap}>
-                    <Image
-                      source={{
-                        uri:
-                          (displayJob.customer as any)?.profileImage ||
-                          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop',
-                      }}
-                      style={styles.clientAvatar}
-                    />
-                    <View style={styles.onlineDot} />
+                  <View style={styles.avatarShell}>
+                    {clientImage ? (
+                      <Image source={{ uri: clientImage }} style={styles.avatarImage} />
+                    ) : (
+                      <LinearGradient colors={['rgba(255,140,0,0.28)', 'rgba(0,245,255,0.18)']} style={styles.avatarFallback}>
+                        <Text style={styles.avatarText}>{initialsFor(clientName)}</Text>
+                      </LinearGradient>
+                    )}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.clientName}>
-                      {(displayJob.customer as any)?.fullName || 'Anonymous User'}
-                    </Text>
-                    <View style={styles.verifiedRow}>
-                      <Shield size={11} color={NEON_GREEN} />
-                      <Text style={[styles.verifiedText, { color: NEON_GREEN }]}>
-                        IDENTITY VERIFIED
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={[styles.clientCodeBadge]}>
-                    <Text style={styles.clientCodeText}>VIP</Text>
-                  </View>
-                </View>
-              </NeonCard>
-            </AnimatedRN.View>
-          )}
-
-          {/* ── Your Proposal ─────────────────────────────────────────────── */}
-          {bid && (
-            <AnimatedRN.View entering={FadeInUp.delay(500).duration(600)}>
-              <NeonCard accentColor={NEON_CYAN} style={{ marginBottom: 16 }}>
-                <SectionHeader icon={FileText} title="YOUR PROPOSAL" color={NEON_CYAN} />
-
-                {/* Price + Days */}
-                <View style={styles.proposalMetaRow}>
-                  <View style={styles.proposalMetaBlock}>
-                    <View style={styles.proposalMetaIcon}>
-                      <Banknote size={18} color={NEON_GREEN} />
-                    </View>
-                    <Text style={styles.proposalMetaLabel}>PROPOSED PRICE</Text>
-                    <Text style={[styles.proposalMetaValue, { color: NEON_GREEN }]}>
-                      PKR {bid.proposedPrice}
+                  <View style={styles.clientCopy}>
+                    <Text style={styles.clientRole}>Service client</Text>
+                    <Text style={[styles.clientName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
+                    <Text style={styles.clientHistory}>
+                      {clientJobs > 0 ? `${clientJobs} completed service request${clientJobs === 1 ? '' : 's'}` : 'New ApnaUstad client'}
                     </Text>
                   </View>
-
-                  <View style={styles.proposalMetaDivider} />
-
-                  <View style={styles.proposalMetaBlock}>
-                    <View style={styles.proposalMetaIcon}>
-                      <Clock size={18} color={NEON_AMBER} />
+                  {clientId ? (
+                    <View style={styles.profileCue}>
+                      <Eye size={14} color={Colors.cyan} strokeWidth={2.4} />
+                      <ChevronRight size={15} color={Colors.cyan} strokeWidth={2.6} />
                     </View>
-                    <Text style={styles.proposalMetaLabel}>ESTIMATED TIME</Text>
-                    <Text style={[styles.proposalMetaValue, { color: NEON_AMBER }]}>
-                      {bid.estimatedDays} DAY{bid.estimatedDays !== 1 ? 'S' : ''}
-                    </Text>
+                  ) : null}
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {media.length > 0 ? (
+            <Animated.View entering={FadeInDown.delay(210).duration(460)} style={styles.section}>
+              <SectionHeader
+                icon={ImageIcon}
+                title="Work Evidence"
+                subtitle={`${media.length} attachment${media.length === 1 ? '' : 's'} added by the client.`}
+                color={Colors.purple}
+              />
+              <JobEvidenceGallery items={media} />
+            </Animated.View>
+          ) : null}
+
+          <Animated.View entering={FadeInDown.delay(280).duration(460)} style={styles.section}>
+            <SectionHeader
+              icon={FileText}
+              title="Your Proposal"
+              subtitle="This is the offer currently visible to the client."
+              color={Colors.green}
+            />
+            <GlassCard padding={0} intensity={38} style={styles.proposalCard}>
+              <View style={styles.proposalStats}>
+                <View style={styles.proposalStat}>
+                  <View style={[styles.proposalIcon, { backgroundColor: P.greenMuted }]}>
+                    <Banknote size={18} color={Colors.green} strokeWidth={2.4} />
                   </View>
+                  <Text style={styles.proposalLabel}>Your quote</Text>
+                  <Text style={[styles.proposalValue, { color: Colors.green }]}>{quoteText}</Text>
                 </View>
-
-                {/* Separator */}
-                <View style={styles.thinDivider} />
-
-                {/* Message */}
-                <Text style={styles.msgLabel}>MESSAGE TO CLIENT</Text>
-                <View style={styles.msgBox}>
-                  <Text style={styles.msgText}>
-                    {bid.message || 'No additional message provided.'}
-                  </Text>
+                <View style={styles.proposalDivider} />
+                <View style={styles.proposalStat}>
+                  <View style={[styles.proposalIcon, { backgroundColor: P.orangeMuted }]}>
+                    <Clock3 size={18} color={Colors.worker} strokeWidth={2.4} />
+                  </View>
+                  <Text style={styles.proposalLabel}>Estimated time</Text>
+                  <Text style={[styles.proposalValue, { color: Colors.worker }]}>{estimatedTime}</Text>
                 </View>
-              </NeonCard>
-            </AnimatedRN.View>
-          )}
+              </View>
 
+              <View style={styles.messageArea}>
+                <Text style={styles.messageLabel}>Message to client</Text>
+                <Text style={styles.messageText}>{bid?.message || 'No additional message was included with this proposal.'}</Text>
+              </View>
+            </GlassCard>
+          </Animated.View>
         </ScrollView>
 
-        {/* ── Bottom Action Dock ─────────────────────────────────────────── */}
-        <AnimatedRN.View
-          entering={FadeInDown.delay(600).duration(600)}
-          style={[styles.dock, { paddingBottom: insets.bottom + 16 }]}
-        >
-          <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
-          <View style={styles.dockTopBorder} />
-
-          <TouchableOpacity
-            style={[styles.withdrawBtn, isWithdrawing && { opacity: 0.6 }]}
-            onPress={handleWithdraw}
-            disabled={isWithdrawing}
-            activeOpacity={0.8}
-          >
+        {bid ? (
+          <View style={[styles.bottomDock, { paddingBottom: insets.bottom + 12 }]}>
             <LinearGradient
-              colors={['rgba(255,59,48,0.18)', 'rgba(255,59,48,0.06)']}
-              style={StyleSheet.absoluteFillObject}
+              colors={['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)']}
+              style={StyleSheet.absoluteFill}
             />
-            {isWithdrawing ? (
-              <ActivityIndicator color={NEON_RED} />
-            ) : (
-              <View style={styles.withdrawInner}>
-                <View style={[styles.withdrawIconWrap]}>
-                  <Trash2 size={18} color={NEON_RED} />
-                </View>
-                <View>
-                  <Text style={styles.withdrawTitle}>WITHDRAW PROPOSAL</Text>
-                  <Text style={styles.withdrawSub}>This action cannot be undone</Text>
-                </View>
-              </View>
-            )}
-          </TouchableOpacity>
-        </AnimatedRN.View>
-
+            <TouchableOpacity
+              style={[styles.withdrawButton, isWithdrawing && styles.buttonDisabled]}
+              onPress={handleWithdraw}
+              disabled={isWithdrawing}
+              activeOpacity={0.82}
+            >
+              {isWithdrawing ? (
+                <ActivityIndicator color={Colors.error} />
+              ) : (
+                <>
+                  <View style={styles.withdrawIcon}>
+                    <Trash2 size={17} color={Colors.error} strokeWidth={2.5} />
+                  </View>
+                  <View style={styles.withdrawCopy}>
+                    <Text style={styles.withdrawTitle}>Withdraw proposal</Text>
+                    <Text style={styles.withdrawSubtitle}>Remove your offer from this job</Text>
+                  </View>
+                  <ChevronRight size={18} color={Colors.error} strokeWidth={2.6} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
     </BackgroundWrapper>
   );
 }
 
-// ─── Stylesheet ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-
-  // Utilities
+  root: {
+    flex: 1,
+  },
   centeredFill: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Loading
-  pulseOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 1,
-    borderColor: `${NEON_CYAN}40`,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    gap: 12,
   },
-  pulseInner: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: `${NEON_CYAN}18`,
-    borderWidth: 1,
-    borderColor: `${NEON_CYAN}60`,
+  loadingIcon: {
+    width: 62,
+    height: 62,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  loadingText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 3,
-    marginBottom: 6,
-  },
-  loadingSubText: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-
-  // Error
-  errorIconRing: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: `${NEON_RED}15`,
+    backgroundColor: P.orangeMuted,
     borderWidth: 1,
-    borderColor: `${NEON_RED}40`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  errorTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 3,
-    marginBottom: 12,
-  },
-  errorBody: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-  outlineBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: `${NEON_CYAN}50`,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    gap: 8,
-    backgroundColor: `${NEON_CYAN}08`,
-  },
-  outlineBtnText: {
-    color: NEON_CYAN,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 2,
-  },
-
-  // Top Bar
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    zIndex: 20,
-    overflow: 'hidden',
-  },
-  topBarBorder: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: BORDER_SOFT,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${NEON_CYAN}35`,
-    backgroundColor: `${NEON_CYAN}0D`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topBarCenter: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  topBarLabel: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 3,
-  },
-
-  // Glow Badge
-  glowBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    gap: 5,
-  },
-  badgeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-
-  // Hero Banner
-  heroBanner: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: BORDER_SOFT,
-  },
-  heroBannerAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    borderRadius: 2,
-  },
-  heroCategory: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 1,
-    lineHeight: 32,
-    marginBottom: 8,
-  },
-  heroSub: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-
-  // Stats Row
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  statPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    gap: 10,
-    overflow: 'hidden',
-    backgroundColor: CARD_BG,
-  },
-  statIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statLabel: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 3,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-
-  // NeonCard
-  neonCardWrapper: {
-    position: 'relative',
-    borderRadius: 20,
-  },
-  cornerTL: {
-    position: 'absolute', top: 0, left: 0,
-    width: 16, height: 16,
-    borderTopWidth: 2, borderLeftWidth: 2,
-    borderTopLeftRadius: 6,
-    zIndex: 2,
-  },
-  cornerTR: {
-    position: 'absolute', top: 0, right: 0,
-    width: 16, height: 16,
-    borderTopWidth: 2, borderRightWidth: 2,
-    borderTopRightRadius: 6,
-    zIndex: 2,
-  },
-  cornerBL: {
-    position: 'absolute', bottom: 0, left: 0,
-    width: 16, height: 16,
-    borderBottomWidth: 2, borderLeftWidth: 2,
-    borderBottomLeftRadius: 6,
-    zIndex: 2,
-  },
-  cornerBR: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 16, height: 16,
-    borderBottomWidth: 2, borderRightWidth: 2,
-    borderBottomRightRadius: 6,
-    zIndex: 2,
-  },
-  neonCardInner: {
-    borderRadius: 20,
-    padding: 18,
-    overflow: 'hidden',
-  },
-
-  // Section Header
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginBottom: 14,
-  },
-  sectionHeaderText: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 2.5,
-  },
-  sectionLine: {
-    flex: 1,
-    height: 1,
-  },
-
-  // Location
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  locationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  locationPrimary: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '800',
+    borderColor: 'rgba(255,140,0,0.32)',
     marginBottom: 4,
   },
-  locationSecondary: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 18,
+  loadingText: {
+    color: P.textMuted,
+    fontSize: 13,
+    fontWeight: '800',
   },
-
-  // Client
-  clientRow: {
+  emptyState: {
+    paddingHorizontal: 34,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: P.orangeMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.3)',
+  },
+  emptyTitle: {
+    color: Colors.text,
+    fontSize: 22,
+    fontWeight: '900',
+    marginTop: 6,
+  },
+  emptyText: {
+    color: P.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  backHomeButton: {
+    minHeight: 48,
+    marginTop: 10,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.cyan,
+  },
+  backHomeText: {
+    color: '#001014',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.m,
+    paddingBottom: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(5,5,16,0.74)',
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: 'rgba(255,255,255,0.055)',
+  },
+  headerCopy: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerEyebrow: {
+    color: Colors.worker,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    color: Colors.text,
+    fontSize: 19,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.m,
+    paddingTop: Spacing.m,
+  },
+  heroCard: {
+    borderRadius: BorderRadius.xl,
+    marginBottom: Spacing.l,
+  },
+  heroContent: {
+    padding: 16,
+    overflow: 'hidden',
+  },
+  heroAccent: {
+    position: 'absolute',
+    top: 16,
+    bottom: 16,
+    left: 0,
+    width: 3,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: Colors.worker,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.34)',
+    backgroundColor: P.orangeMuted,
+  },
+  pendingBadgeText: {
+    color: Colors.worker,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  submittedBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 5,
+  },
+  submittedBadgeText: {
+    flexShrink: 1,
+    color: Colors.cyan,
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  heroTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  clientAvatarWrap: {
-    position: 'relative',
-  },
-  clientAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: `${NEON_AMBER}50`,
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: NEON_GREEN,
-    borderWidth: 1.5,
-    borderColor: DEEP_BG,
-  },
-  clientName: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 5,
-  },
-  verifiedRow: {
-    flexDirection: 'row',
+  heroIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 19,
     alignItems: 'center',
-    gap: 4,
-  },
-  verifiedText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  clientCodeBadge: {
+    justifyContent: 'center',
+    backgroundColor: P.cyanMuted,
     borderWidth: 1,
-    borderColor: `${NEON_AMBER}40`,
-    backgroundColor: `${NEON_AMBER}12`,
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    borderColor: P.borderStrong,
   },
-  clientCodeText: {
-    color: NEON_AMBER,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-
-  // Proposal
-  proposalMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-  },
-  proposalMetaBlock: {
+  heroTitleCopy: {
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
+    minWidth: 0,
   },
-  proposalMetaIcon: {
-    marginBottom: 8,
-  },
-  proposalMetaLabel: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginBottom: 6,
-  },
-  proposalMetaValue: {
-    fontSize: 20,
+  heroLabel: {
+    color: Colors.cyan,
+    fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  proposalMetaDivider: {
-    width: 1,
-    backgroundColor: BORDER_SOFT,
-    marginVertical: 8,
+  heroTitle: {
+    color: Colors.text,
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: 3,
   },
-  thinDivider: {
-    height: 1,
-    backgroundColor: BORDER_SOFT,
-    marginVertical: 16,
-  },
-  msgLabel: {
-    color: 'rgba(255,255,255,0.35)',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 10,
-  },
-  msgBox: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12,
-    padding: 14,
-    borderLeftWidth: 2,
-    borderLeftColor: `${NEON_CYAN}50`,
-  },
-  msgText: {
-    color: 'rgba(255,255,255,0.75)',
+  heroDescription: {
+    color: P.textMuted,
     fontSize: 13,
-    lineHeight: 22,
-    fontStyle: 'italic',
+    lineHeight: 18,
+    fontWeight: '600',
+    marginTop: 6,
   },
-
-  // Dock
-  dock: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 16,
-    paddingHorizontal: 16,
-    overflow: 'hidden',
+  heroBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    marginTop: 16,
+    paddingTop: 14,
   },
-  dockTopBorder: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: BORDER_SOFT,
+  heroValueLabel: {
+    color: P.textDim,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
-  withdrawBtn: {
-    borderWidth: 1,
-    borderColor: `${NEON_RED}40`,
-    borderRadius: 18,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
+  heroValue: {
+    color: Colors.green,
+    fontSize: 23,
+    fontWeight: '900',
+    marginTop: 4,
   },
-  withdrawInner: {
+  heroStatusNote: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-  },
-  withdrawIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: `${NEON_RED}15`,
+    gap: 5,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
-    borderColor: `${NEON_RED}35`,
+    borderColor: 'rgba(0,255,127,0.25)',
+    backgroundColor: P.greenMuted,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  heroStatusText: {
+    color: Colors.green,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  section: {
+    marginBottom: Spacing.l,
+  },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginBottom: 11,
+  },
+  sectionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
-  withdrawTitle: {
-    color: NEON_RED,
-    fontSize: 14,
+  sectionHeadingCopy: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 13,
     fontWeight: '900',
-    letterSpacing: 2,
-    marginBottom: 2,
+    textTransform: 'uppercase',
   },
-  withdrawSub: {
-    color: `${NEON_RED}70`,
+  sectionSubtitle: {
+    color: P.textDim,
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.5,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  detailGrid: {
+    flexDirection: 'row',
+    gap: 7,
+    marginBottom: 9,
+  },
+  detailPill: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 76,
+    justifyContent: 'center',
+    borderRadius: BorderRadius.l,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: 'rgba(8,10,30,0.72)',
+    padding: 9,
+  },
+  detailPillIcon: {
+    width: 27,
+    height: 27,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 7,
+  },
+  detailPillCopy: {
+    minWidth: 0,
+  },
+  detailPillLabel: {
+    color: P.textDim,
+    fontSize: 8,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  detailPillValue: {
+    color: Colors.text,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 3,
+  },
+  locationCard: {
+    borderRadius: BorderRadius.l,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  locationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: P.greenMuted,
+  },
+  locationCopy: {
+    flex: 1,
+  },
+  locationLabel: {
+    color: P.textDim,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  locationValue: {
+    color: Colors.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  clientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  avatarShell: {
+    width: 56,
+    height: 56,
+    borderRadius: 19,
+    padding: 3,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,140,0,0.52)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 15,
+  },
+  avatarFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+  },
+  avatarText: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  clientCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  clientRole: {
+    color: Colors.worker,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  clientName: {
+    color: Colors.text,
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  clientHistory: {
+    color: P.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  profileCue: {
+    height: 36,
+    minWidth: 45,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: P.borderStrong,
+    backgroundColor: P.cyanMuted,
+  },
+  mediaRail: {
+    gap: 10,
+  },
+  mediaCard: {
+    height: 188,
+    overflow: 'hidden',
+    borderRadius: BorderRadius.l,
+    borderWidth: 1,
+    borderColor: 'rgba(191,90,242,0.34)',
+    backgroundColor: P.surfaceStrong,
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoCard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(191,90,242,0.1)',
+  },
+  videoTitle: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  videoHint: {
+    color: P.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  mediaFooter: {
+    position: 'absolute',
+    left: 10,
+    right: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mediaIndex: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  mediaTypeBadge: {
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(0,0,0,0.46)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  mediaTypeText: {
+    color: Colors.text,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  proposalCard: {
+    borderRadius: BorderRadius.xl,
+  },
+  proposalStats: {
+    flexDirection: 'row',
+    padding: 14,
+  },
+  proposalStat: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  proposalIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 7,
+  },
+  proposalLabel: {
+    color: P.textDim,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  proposalValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  proposalDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 4,
+  },
+  messageArea: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+  },
+  messageLabel: {
+    color: Colors.cyan,
+    fontSize: 9,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  messageText: {
+    color: P.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '600',
+    marginTop: 7,
+  },
+  bottomDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: Spacing.m,
+    paddingTop: 24,
+  },
+  withdrawButton: {
+    minHeight: 66,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    overflow: 'hidden',
+    borderRadius: BorderRadius.l,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.34)',
+    backgroundColor: 'rgba(28,8,18,0.96)',
+    paddingHorizontal: 14,
+    shadowColor: Colors.error,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
+    ...Shadows.bevel,
+  },
+  buttonDisabled: {
+    opacity: 0.64,
+  },
+  withdrawIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: P.redMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.25)',
+  },
+  withdrawCopy: {
+    flex: 1,
+  },
+  withdrawTitle: {
+    color: Colors.error,
+    fontSize: 14,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  withdrawSubtitle: {
+    color: 'rgba(255,59,48,0.65)',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3,
   },
 });

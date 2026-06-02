@@ -1,6 +1,16 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  Pressable,
+  Platform,
+} from 'react-native';
+import {
+  BadgeCheck,
   User,
   Shield,
   Bell,
@@ -8,7 +18,11 @@ import {
   LogOut,
   ChevronRight,
   Star,
-  Edit2
+  CircleDollarSign,
+  Clock3,
+  MapPin,
+  Camera,
+  Settings,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -16,475 +30,410 @@ import Animated, {
   FadeInRight,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   interpolate,
-  withRepeat,
-  withTiming,
-  Easing
+  withSpring,
+  useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { Colors, Spacing, Shadows, BorderRadius } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
-import { GlassCard } from '../../components/home/GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useBookings, useWorker } from '../../hooks';
+import { useMyBookings, useWorkerBookings, useWorker, useUpdateProfileMutation } from '../../hooks';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { BlurView } from 'expo-blur';
+import api from '../../services/api';
+import { getOptimizedImageUrl } from '../../constants/Config';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = 240;
 
+// ─── Stats Row ─────────────────────────────────────────────────────────────────
+function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number; successRate: number }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(320).springify()} style={styles.statsCard}>
+      <LinearGradient colors={['rgba(255,255,255,0.04)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNum, { color: '#00F5FF' }]}>{jobs}</Text>
+        <Text style={styles.statLbl}>Jobs</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNum, { color: '#FFD60A' }]}>
+          {rating > 0 ? rating.toFixed(1) : '—'}
+        </Text>
+        <Text style={styles.statLbl}>Rating</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNum, { color: '#34C759' }]}>{successRate}%</Text>
+        <Text style={styles.statLbl}>Success</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ─── Client Stats Row ──────────────────────────────────────────────────────────
+function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing: number; completed: number }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(320).springify()} style={styles.statsCard}>
+      <LinearGradient colors={['rgba(255,255,255,0.04)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNum, { color: '#00F5FF' }]}>{total}</Text>
+        <Text style={styles.statLbl}>Bookings</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNum, { color: '#FF9F0A' }]}>{ongoing}</Text>
+        <Text style={styles.statLbl}>Ongoing</Text>
+      </View>
+      <View style={styles.statDivider} />
+      <View style={styles.statItem}>
+        <Text style={[styles.statNum, { color: '#34C759' }]}>{completed}</Text>
+        <Text style={styles.statLbl}>Completed</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ─── Menu Item ─────────────────────────────────────────────────────────────────
+function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { icon: any; label: string; sublabel?: string; delay: number; accent: string; onPress?: () => void }) {
+  const scale = useSharedValue(1);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View entering={FadeInRight.delay(delay).springify()} style={anim}>
+      <Pressable style={styles.menuItem} onPress={onPress}
+        onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}>
+        {Platform.OS === 'ios'
+          ? <BlurView intensity={16} tint="dark" style={StyleSheet.absoluteFill} />
+          : <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(12,12,32,0.85)' }]} />}
+        <View style={[styles.menuAccentBar, { backgroundColor: accent }]} />
+        <View style={styles.menuLeft}>
+          <View style={[styles.menuIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}30` }]}>
+            <Icon size={17} color={accent} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuLabel}>{label}</Text>
+            {sublabel ? <Text style={styles.menuSub}>{sublabel}</Text> : null}
+          </View>
+        </View>
+        <ChevronRight size={15} color="rgba(255,255,255,0.2)" />
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileTab() {
   const { logout, role, user } = useAuth();
   const router = useRouter();
   const scrollY = useSharedValue(0);
 
-  // React Query hooks
-  const { data: bookings = [], isLoading: bookingsLoading } = useBookings();
-  const { data: workerProfile, isLoading: workerLoading } = useWorker(
-    role === 'worker' ? user?._id : undefined
-  );
+  const isWorker = role === 'worker';
+  const clientBookingsQuery = useMyBookings({ enabled: !isWorker });
+  const workerBookingsQuery = useWorkerBookings({ enabled: isWorker });
+  const bookingsQuery = isWorker ? workerBookingsQuery : clientBookingsQuery;
+  const bookings = bookingsQuery.data || [];
 
-  const isLoading = bookingsLoading || workerLoading;
+  const { data: workerProfile } = useWorker(role === 'worker' ? user?._id : undefined);
+  const { mutateAsync: updateProfile } = useUpdateProfileMutation();
 
-  // Compute stats from fetched data
-  const stats = React.useMemo(() => ({
-    jobs: bookings.length,
-    rating: role === 'worker'
-      ? (workerProfile?.rating || (user as any)?.rating || 0)
-      : ((user as any)?.rating || 0)
-  }), [bookings, workerProfile, role, user]);
+  const [verificationStatus, setVerificationStatus] = useState<string>('Verify identity');
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/role-selection');
-  };
+  useEffect(() => {
+    if (isWorker) {
+      api.get('/workers/verification/status')
+        .then(res => {
+          const details = res.data?.data;
+          if (details) {
+            if (details.status === 'approved') setVerificationStatus('Verified');
+            else if (details.status === 'pending') setVerificationStatus('Pending review');
+            else if (details.status === 'rejected') setVerificationStatus('Rejected (Action required)');
+          } else if (workerProfile?.isVerified) {
+            setVerificationStatus('Verified');
+          } else {
+            setVerificationStatus('Verify identity');
+          }
+        })
+        .catch(() => {
+          setVerificationStatus(workerProfile?.isVerified ? 'Verified' : 'Verify identity');
+        });
+    }
+  }, [isWorker, workerProfile]);
 
-  const headerStyle = useAnimatedStyle(() => {
+  const stats = React.useMemo(() => {
+    const completed = bookings.filter(b => b.status === 'completed').length;
+    const jobs = role === 'worker'
+      ? Number((workerProfile as any)?.totalJobs || bookings.length)
+      : bookings.length;
     return {
-      transform: [
-        { translateY: interpolate(scrollY.value, [-100, 0], [40, 0], 'clamp') },
-        { scale: interpolate(scrollY.value, [-100, 0], [1.2, 1], 'clamp') },
-      ],
+      jobs,
+      rating: Number(workerProfile?.rating || (user as any)?.rating || 0),
+      successRate: jobs > 0 ? Math.round((Math.max(completed, Number((workerProfile as any)?.completedJobs || 0)) / jobs) * 100) : 0,
     };
-  });
+  }, [bookings, workerProfile, role, user]);
+
+  const skills: string[] = (workerProfile as any)?.skills || [];
+
+  const clientStats = React.useMemo(() => {
+    const completed = bookings.filter(b => b.status === 'completed').length;
+    const ongoing = bookings.filter(b => ['pending', 'accepted', 'in_progress'].includes(b.status)).length;
+    return {
+      total: bookings.length,
+      ongoing,
+      completed,
+    };
+  }, [bookings]);
+
+  const rawAvatarUri = workerProfile?.profileImage || user?.profileImage;
+  const avatarUri = rawAvatarUri
+    ? getOptimizedImageUrl(rawAvatarUri, 180, 180)
+    : 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=300&auto=format&fit=crop';
+
+  const scrollHandler = useAnimatedScrollHandler(e => { scrollY.value = e.contentOffset.y; });
+
+  const heroStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, HEADER_HEIGHT * 0.6], [1, 0], 'clamp'),
+    transform: [{ translateY: interpolate(scrollY.value, [0, HEADER_HEIGHT], [0, -HEADER_HEIGHT * 0.4], 'clamp') }],
+  }));
+
+  const avatarParallax = useAnimatedStyle(() => ({
+    transform: [{ translateY: interpolate(scrollY.value, [0, HEADER_HEIGHT], [0, -30], 'clamp') }],
+  }));
+
+  const handleLogout = async () => { await logout(); router.replace('/role-selection'); };
 
   return (
     <BackgroundWrapper>
-      <Animated.ScrollView
-        showsVerticalScrollIndicator={false}
-        onScroll={(e) => {
-          scrollY.value = e.nativeEvent.contentOffset.y;
-        }}
-        scrollEventThrottle={16}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Professional Organic Curved Header */}
-        <Animated.View style={[styles.headerBg, headerStyle]}>
-          <LinearGradient
-            colors={[Colors.primary, Colors.secondary, 'transparent']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-          />
-          {/* <View style={styles.svgContainer}>
-            <Svg height="100" width={width} viewBox={`0 0 ${width} 100`} style={styles.svgCurve}>
-              <Path
-                d={`M0 0 Q${width / 2} 120 ${width} 0`}
-                fill={Colors.secondary}
-                opacity={0.3}
-              />
-              <Path
-                d={`M0 0 Q${width / 2} 80 ${width} 0`}
-                fill={Colors.primary}
-              />
-            </Svg>
-          </View> */}
+      {/* Hero gradient */}
+
+
+      <Animated.ScrollView showsVerticalScrollIndicator={false} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={styles.scroll}>
+
+        {/* ── Avatar Block ── */}
+        <Animated.View style={[styles.avatarSection, avatarParallax]}>
+          <View style={styles.avatarWrap}>
+            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            <TouchableOpacity style={styles.cameraBtn} onPress={() => router.push('/profile/personal-info')}>
+              <LinearGradient colors={['#BF5AF2', '#00F5FF']} style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]} />
+              <Camera size={12} color="#fff" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View entering={FadeInUp.delay(180).springify()} style={styles.nameBlock}>
+            <View style={styles.nameRow}>
+              <Text style={styles.userName}>{workerProfile?.fullName || user?.fullName || 'User'}</Text>
+              {isWorker && (workerProfile?.isVerified || (workerProfile?.rating ?? 0) >= 4.5) && (
+                <BadgeCheck size={20} color="#00F5FF" strokeWidth={2.5} style={{ marginLeft: 5 }} />
+              )}
+            </View>
+            <Text style={styles.userSub}>{workerProfile?.email || user?.email || user?.phone || ''}</Text>
+
+            <View style={styles.badgesRow}>
+              <LinearGradient
+                colors={isWorker ? ['#FF8C00', '#FF5E00'] : ['#00F5FF', '#007AFF']}
+                style={styles.rolePill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Text style={styles.rolePillText}>{isWorker ? '⚡ Elite Ustad' : '💎 Platinum Client'}</Text>
+              </LinearGradient>
+            </View>
+          </Animated.View>
         </Animated.View>
 
-        {/* Profile Content */}
-        <View style={styles.mainContent}>
-          <Animated.View entering={FadeInUp.delay(200).duration(800)} style={styles.profileHeader}>
-            <View style={styles.avatarWrapper}>
-              <LinearGradient
-                colors={[Colors.primary, Colors.secondary]}
-                style={styles.avatarGlow}
-              />
-              <Image
-                source={{ uri: workerProfile?.profileImage || user?.profileImage || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop' }}
-                style={styles.avatar}
-              />
-              <TouchableOpacity style={styles.editBtn}>
-                <Edit2 size={14} color="#fff" />
-              </TouchableOpacity>
-            </View>
+        {/* ── Content ── */}
+        <View style={styles.card}>
 
-            <Text style={[styles.userName, Typography.threeD]}>{workerProfile?.fullName || user?.fullName || 'User'}</Text>
-            <Text style={styles.userEmail}>{workerProfile?.email || workerProfile?.phone || user?.email || 'No contact'}</Text>
+          {/* Stats */}
+          {isWorker ? (
+            <StatsRow jobs={stats.jobs} rating={stats.rating} successRate={stats.successRate} />
+          ) : (
+            <ClientStatsRow total={clientStats.total} ongoing={clientStats.ongoing} completed={clientStats.completed} />
+          )}
 
-            <View style={styles.badgeRow}>
-              <View style={[styles.roleBadge, { backgroundColor: role === 'worker' ? Colors.orange : Colors.primary }]}>
-                <Text style={styles.badgeText}>{role === 'worker' ? 'ELITE USTAD' : 'PLATINUM CLIENT'}</Text>
-              </View>
-            </View>
-          </Animated.View>
+          {/* Worker Details */}
+          {isWorker && workerProfile && (
+            <Animated.View entering={FadeInDown.delay(420)} style={styles.workerSummary}>
 
-          {/* 3D Stats Row */}
-          <Animated.View entering={FadeInDown.delay(400)} style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statVal, Typography.threeD]}>{stats.jobs}</Text>
-              <Text style={styles.statLabel}>Jobs</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statVal, Typography.threeD]}>{stats.rating?.toFixed(1) || '0'}</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statVal, Typography.threeD]}>{workerProfile?.category || role === 'worker' ? 'Worker' : 'Client'}</Text>
-              <Text style={styles.statLabel}>Category</Text>
-            </View>
-          </Animated.View>
-
-          {/* Worker Details Card */}
-          {role === 'worker' && workerProfile && (
-            <Animated.View entering={FadeInUp.delay(450)} style={styles.workerDetailsCard}>
-              <GlassCard intensity={20} style={{ padding: Spacing.l, borderRadius: 20 }}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Hourly Rate</Text>
-                  <Text style={[styles.detailValue, Typography.threeD]}>Rs. {workerProfile?.hourlyRate || '0'}</Text>
-                </View>
-                <View style={[styles.detailRow, { marginTop: 12 }]}>
-                  <Text style={styles.detailLabel}>Experience</Text>
-                  <Text style={[styles.detailValue, Typography.threeD]}>{workerProfile?.experience || '0'} years</Text>
-                </View>
-                <View style={[styles.detailRow, { marginTop: 12 }]}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <Text style={[styles.detailValue, { color: workerProfile?.isAvailable ? Colors.success : '#ff9500' }, Typography.threeD]}>
-                    {workerProfile?.isAvailable ? '🟢 Available' : '🔴 Offline'}
-                  </Text>
-                </View>
-                {workerProfile?.bio && (
-                  <View style={[styles.detailRow, { marginTop: 12 }]}>
-                    <Text style={styles.bioLabel}>Bio</Text>
-                    <Text style={styles.bioText}>{workerProfile.bio}</Text>
+              {/* Key stats: rate · exp · location */}
+              <View style={styles.workerMetaRow}>
+                {!!workerProfile.hourlyRate && (
+                  <View style={styles.workerMetaItem}>
+                    <CircleDollarSign size={13} color="#34C759" strokeWidth={2.3} />
+                    <Text style={styles.workerMetaText}>Rs. {workerProfile.hourlyRate}/hr</Text>
                   </View>
                 )}
-              </GlassCard>
+                {!!workerProfile.experience && (
+                  <View style={styles.workerMetaItem}>
+                    <Clock3 size={13} color="#FF9F0A" strokeWidth={2.3} />
+                    <Text style={styles.workerMetaText}>{workerProfile.experience} yrs exp</Text>
+                  </View>
+                )}
+                {!!(workerProfile.city || workerProfile.address) && (
+                  <View style={styles.workerMetaItem}>
+                    <MapPin size={13} color="#BF5AF2" strokeWidth={2.3} />
+                    <Text style={styles.workerMetaText} numberOfLines={1}>
+                      {workerProfile.city || workerProfile.address}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Bio */}
+              {!!workerProfile.bio && (
+                <Text style={styles.workerBio} numberOfLines={3}>{workerProfile.bio}</Text>
+              )}
+
+              {/* Skills */}
+              {skills.length > 0 && (
+                <View style={styles.skillsRow}>
+                  {skills.slice(0, 5).map((s, i) => (
+                    <View key={i} style={styles.skillChip}>
+                      <Text style={styles.skillChipText}>{s}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </Animated.View>
           )}
 
-          {/* Settings Menu with Compact Vibrant Cards */}
+          {/* Account */}
           <View style={styles.menuSection}>
-            <Text style={[styles.sectionTitle, Typography.threeD]}>Account Settings</Text>
-            <MenuItem
-              icon={User}
-              label="Personal Information"
-              delay={500}
-              gradient={['#00F5FF30', '#00F5FF10']}
-              onPress={() => router.push('/profile/personal-info')}
-            />
-            <MenuItem
-              icon={Shield}
-              label="Security"
-              delay={600}
-              gradient={['#BF5AF230', '#BF5AF210']}
-              onPress={() => router.push('/profile/security')}
-            />
-            <MenuItem
-              icon={Bell}
-              label="Notifications"
-              delay={700}
-              gradient={['#FF9F0A30', '#FF9F0A10']}
-              onPress={() => router.push('/profile/notifications')}
-            />
+            <Text style={styles.sectionLabel}>Account</Text>
+            <MenuItem icon={User} label="Personal Information" sublabel="Name, phone & photo" delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
+            {isWorker && (
+              <MenuItem
+                icon={BadgeCheck}
+                label="Identity Verification"
+                sublabel={verificationStatus}
+                delay={670}
+                accent={
+                  verificationStatus === 'Verified'
+                    ? '#34C759'
+                    : verificationStatus === 'Pending review'
+                    ? '#FF9F0A'
+                    : verificationStatus.includes('Rejected')
+                    ? '#FF3B30'
+                    : '#00F5FF'
+                }
+                onPress={() => router.push('/profile/identity-verification')}
+              />
+            )}
+            <MenuItem icon={Shield} label="Security" sublabel="Password & login" delay={700} accent="#BF5AF2" onPress={() => router.push('/profile/security')} />
+            <MenuItem icon={Bell} label="Notifications" sublabel="Alerts & preferences" delay={730} accent="#FF9F0A" onPress={() => router.push('/profile/notifications')} />
           </View>
 
+          {/* Support */}
           <View style={styles.menuSection}>
-            <Text style={[styles.sectionTitle, Typography.threeD]}>Support</Text>
-            <MenuItem
-              icon={HelpCircle}
-              label="Help Center"
-              delay={800}
-              gradient={['#64D2FF20', '#64D2FF05']}
-              onPress={() => router.push('/profile/help-center')}
-            />
-            <MenuItem icon={Star} label="Rate ApnaUstad" delay={900} gradient={['#FFD60A20', '#FFD60A05']} />
+            <Text style={styles.sectionLabel}>Support</Text>
+            <MenuItem icon={HelpCircle} label="Help Center" sublabel="FAQs & articles" delay={760} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
+            <MenuItem icon={Star} label="Rate ApnaUstad" sublabel="Share your feedback" delay={790} accent="#FFD60A" />
+            <MenuItem icon={Settings} label="App Settings" delay={820} accent="#8E8E93" />
           </View>
 
-          <Animated.View entering={FadeInDown.delay(1100)}>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <LogOut size={20} color={Colors.error} />
-              <Text style={styles.logoutText}>Log Out Account</Text>
-            </TouchableOpacity>
+          {/* Logout */}
+          <Animated.View entering={FadeInDown.delay(820)}>
+            <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+              <LogOut size={16} color="#FF3B30" strokeWidth={2.3} />
+              <Text style={styles.logoutText}>Sign Out</Text>
+            </Pressable>
           </Animated.View>
 
-          <Text style={styles.versionText}>Version 2.4.0 (Alpha Build)</Text>
+          <Text style={styles.version}>ApnaUstad v2.4.0</Text>
         </View>
       </Animated.ScrollView>
     </BackgroundWrapper>
   );
 }
 
-function MenuItem({ icon: Icon, label, delay, gradient, onPress }: { icon: any, label: string, delay: number, gradient?: [string, string, ...string[]], onPress?: () => void }) {
-  const shimmer = useSharedValue(0);
-
-  useEffect(() => {
-    shimmer.value = withRepeat(
-      withTiming(1, { duration: 1500, easing: Easing.bezier(0.4, 0, 0.2, 1) }),
-      -1,
-      true
-    );
-  }, []);
-
-  const iconStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(shimmer.value, [0, 0.5, 1], [0.6, 1, 0.6]),
-    transform: [{ scale: interpolate(shimmer.value, [0, 0.5, 1], [0.95, 1.05, 0.95]) }],
-  }));
-
-  return (
-    <Animated.View entering={FadeInRight.delay(delay).springify()}>
-      <GlassCard
-        style={styles.menuItem}
-        onPress={onPress}
-        gradient={gradient}
-        padding={Spacing.m}
-        intensity={20}
-        hasGlow
-        glowColor="rgba(255,255,255,0.05)"
-      >
-        <View style={styles.menuRow}>
-          <View style={styles.menuPrefix}>
-            <Animated.View style={[styles.iconBox, iconStyle]}>
-              <Icon size={18} color={gradient ? 'rgba(255,255,255,0.9)' : Colors.primary} strokeWidth={2.5} />
-            </Animated.View>
-            <Text style={[styles.menuLabel, Typography.threeD]}>{label}</Text>
-          </View>
-          <ChevronRight size={18} color={Colors.textDim} />
-        </View>
-      </GlassCard>
-    </Animated.View>
-  );
-}
-
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 100,
+  scroll: { paddingBottom: 48 },
+
+  // Hero
+  heroBg: { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT, overflow: 'hidden' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5,5,16,0.4)' },
+
+  // Avatar
+  avatarSection: { alignItems: 'center', paddingTop: 52, paddingBottom: 20 },
+  avatarWrap: { position: 'relative', width: 120, height: 120, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)' },
+  cameraBtn: {
+    position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    borderWidth: 2, borderColor: 'rgba(5,5,16,0.95)', ...Shadows.glow,
   },
-  headerBg: {
-    height: 320,
-    width: width,
-    position: 'absolute',
-    top: 0,
-  },
-  svgContainer: {
-    position: 'absolute',
-    bottom: -1,
-    left: 0,
-    right: 0,
-    height: 60,
-    transform: [{ rotate: '180deg' }],
-  },
-  svgCurve: {
-    position: 'absolute',
-    bottom: 0,
-  },
-  mainContent: {
-    marginTop: 140,
-    paddingHorizontal: Spacing.l,
-    backgroundColor: 'transparent',
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  avatarWrapper: {
-    position: 'relative',
-    padding: 2,
-    marginBottom: 16,
-    ...Shadows.depth,
-  },
-  avatarGlow: {
-    position: 'absolute',
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 60,
-    opacity: 0.5,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  editBtn: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    backgroundColor: Colors.secondary,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: Colors.background,
-    ...Shadows.glow,
-  },
+
+  // Name
+  nameBlock: { alignItems: 'center', paddingHorizontal: 24 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   userName: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 4,
+    fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
+    textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
   },
-  userEmail: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '600',
-    marginBottom: 16,
+  userSub: { fontSize: 13, color: 'rgba(255,255,255,0.48)', fontWeight: '500', marginBottom: 12 },
+  badgesRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  rolePill: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, ...Shadows.glow },
+  rolePillText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+
+
+  // Main card
+  card: {
+    marginHorizontal: 14, marginTop: 10, borderRadius: 26, overflow: 'hidden',
+    backgroundColor: 'rgba(8,10,28,0.92)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8, ...Shadows.depth,
   },
-  badgeRow: {
-    flexDirection: 'row',
+
+
+
+  // Stats
+  statsCard: {
+    flexDirection: 'row', alignItems: 'center', borderRadius: 18, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', paddingVertical: 16,
+    marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  roleBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    ...Shadows.glow,
+  statItem: { flex: 1, alignItems: 'center', gap: 3 },
+  statNum: { fontSize: 22, fontWeight: '900', letterSpacing: -0.8 },
+  statLbl: { color: 'rgba(255,255,255,0.38)', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  statDivider: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.1)' },
+
+  // Worker details
+  workerSummary: {
+    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    padding: 13, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  badgeText: {
-    color: '#000',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.5,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 24,
-    paddingVertical: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: Spacing.xl,
-    ...Shadows.depth,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statVal: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  statLabel: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statDivider: {
-    width: 1,
-    height: '60%',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignSelf: 'center',
-  },
-  menuSection: {
-    marginBottom: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.4)',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: Spacing.m,
-    marginLeft: 4,
-  },
+  workerMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 10 },
+  workerMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  workerMetaText: { color: 'rgba(255,255,255,0.72)', fontSize: 12, fontWeight: '600' },
+  workerBio: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '500', lineHeight: 18, marginBottom: 10 },
+  skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  skillChip: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,245,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(0,245,255,0.07)' },
+  skillChipText: { color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: '700' },
+
+
+
+  // Section label
+  sectionLabel: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 },
+
+  // Menu
+  menuSection: { marginBottom: 18 },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 8, // Reduced from 12
-    marginBottom: 8, // Reduced from 10
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 14, marginBottom: 8, overflow: 'hidden', borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)', paddingHorizontal: 12, paddingVertical: 12, position: 'relative',
   },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  menuPrefix: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12, // Reduced from 16
-  },
-  iconBox: {
-    width: 36, // Reduced from 44
-    height: 36, // Reduced from 44
-    borderRadius: 10, // Adjusted
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuLabel: {
-    color: '#fff',
-    fontSize: 14, // Reduced from 16
-    fontWeight: '700',
-  },
+  menuAccentBar: { position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingLeft: 8 },
+  menuIconBox: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  menuLabel: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  menuSub: { color: 'rgba(255,255,255,0.36)', fontSize: 11, fontWeight: '500', marginTop: 1 },
+
+  // Logout
   logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 18,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 59, 48, 0.3)',
-    backgroundColor: 'rgba(255, 59, 48, 0.05)',
-    marginTop: Spacing.m,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
+    paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,59,48,0.25)',
+    backgroundColor: 'rgba(255,59,48,0.06)', marginBottom: 20,
   },
-  logoutText: {
-    color: '#FF3B30',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  versionText: {
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 12,
-    marginTop: Spacing.xl,
-    fontWeight: '600',
-  },
-  workerDetailsCard: {
-    marginBottom: Spacing.xl,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  detailLabel: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  detailValue: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  bioLabel: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  bioText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-  }
+  logoutText: { color: '#FF3B30', fontSize: 14, fontWeight: '800' },
+
+  // Version
+  version: { textAlign: 'center', color: 'rgba(255,255,255,0.18)', fontSize: 11, fontWeight: '600', paddingBottom: 10 },
 });

@@ -9,40 +9,107 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Image,
-  Dimensions
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Send, MoreVertical, ShieldCheck, CheckCheck } from 'lucide-react-native';
-import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
+import {
+  CheckCheck,
+  ChevronLeft,
+  MessageCircle,
+  Mic,
+  MoreVertical,
+  PauseCircle,
+  PlayCircle,
+  Send,
+  ShieldCheck,
+  Square,
+  Trash2,
+  Volume2,
+} from 'lucide-react-native';
+import { Colors, Shadows } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
-import { useMessages, useSendMessageMutation, type Message } from '../hooks';
-import Animated, { FadeIn, FadeInRight, FadeInLeft } from 'react-native-reanimated';
+import { useBookingDetails, useMessages, useSendMessageMutation, type Message } from '../hooks';
+import Animated, { FadeInRight, FadeInLeft } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
+import Toast from 'react-native-toast-message';
+import api from '../services/api';
 
-const { width } = Dimensions.get('window');
+const formatSeconds = (seconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+  return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
+};
+
+function VoiceMessageBubble({ item }: { item: Message }) {
+  const player = useAudioPlayer(item.audioUrl || null);
+  const status = useAudioPlayerStatus(player);
+  const togglePlayback = async () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    if (status.didJustFinish || (status.duration > 0 && status.currentTime >= status.duration)) {
+      await player.seekTo(0);
+    }
+    player.play();
+  };
+
+  return (
+    <TouchableOpacity style={styles.voiceBubble} onPress={togglePlayback} activeOpacity={0.8}>
+      <View style={styles.voicePlay}>
+        {status.playing ? <PauseCircle size={30} color={Colors.cyan} /> : <PlayCircle size={30} color={Colors.cyan} />}
+      </View>
+      <View style={styles.voiceCopy}>
+        <View style={styles.voiceTitleRow}>
+          <Volume2 size={13} color={Colors.cyan} strokeWidth={2.4} />
+          <Text style={styles.voiceTitle}>Voice message</Text>
+        </View>
+        <Text style={styles.voiceDuration}>
+          {formatSeconds(status.currentTime)} / {formatSeconds(status.duration || item.audioDurationSeconds || 0)}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
-  const { bookingId, recipientName, recipientId } = useLocalSearchParams<{
+  const { bookingId, recipientName } = useLocalSearchParams<{
     bookingId: string;
     recipientName: string;
-    recipientId: string;
   }>();
 
   const [inputText, setInputText] = useState('');
   const [localMessages, setLocalMessages] = useState<Message[]>([]);
-  const flatListRef = useRef<FlatList>(null);
+  const [voiceUri, setVoiceUri] = useState<string | null>(null);
+  const [voiceDurationMillis, setVoiceDurationMillis] = useState(0);
+  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+  const flatListRef = useRef<FlatList<any>>(null);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 250);
 
   // React Query hooks
-  const { data: messages = [], isLoading, refetch: refetchMessages } = useMessages(bookingId);
+  const { data: messages = [], isLoading } = useMessages(bookingId);
+  const { data: booking, isLoading: isLoadingBooking } = useBookingDetails(bookingId);
   const { mutate: sendMessage, isPending: isSending } = useSendMessageMutation();
+  const isCommunicationLocked = booking?.status === 'completed' || booking?.status === 'cancelled';
+  const canSendMessages = Boolean(booking) && !isCommunicationLocked;
+  const isRecording = recorderState.isRecording;
+  const isComposerBusy = isSending || isUploadingVoice;
 
   // Combine and deduplicate messages (prefer local for instant feedback, then official from server)
   const allMessages = React.useMemo(() => {
@@ -59,7 +126,7 @@ export default function ChatScreen() {
   useEffect(() => {
     // Listen for real-time messages
     const unsubscribe = socketService.on('chat:receive', (newMessage: Message) => {
-      if (newMessage.sender !== user?._id) {
+      if (newMessage.booking === bookingId && newMessage.sender !== user?._id) {
         setLocalMessages(prev => [newMessage, ...prev]);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -69,7 +136,7 @@ export default function ChatScreen() {
   }, [bookingId, user?._id]);
 
   const handleSendMessage = () => {
-    if (!inputText.trim() || isSending) return;
+    if (!inputText.trim() || isComposerBusy || !canSendMessages) return;
 
     const content = inputText.trim();
 
@@ -103,6 +170,122 @@ export default function ChatScreen() {
     );
   };
 
+  const startVoiceRecording = async () => {
+    if (!canSendMessages || isComposerBusy || isRecording) return;
+
+    try {
+      const permission = await requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Microphone access needed', 'Allow microphone access to send a voice message.');
+        return;
+      }
+
+      setVoiceUri(null);
+      setVoiceDurationMillis(0);
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Could not start recording', text2: 'Please try again.' });
+    }
+  };
+
+  const stopVoiceRecording = async () => {
+    if (!isRecording) return;
+
+    try {
+      const recordedDuration = recorderState.durationMillis;
+      await recorder.stop();
+      await setAudioModeAsync({ allowsRecording: false });
+      if (!recorder.uri || recordedDuration < 500) {
+        setVoiceUri(null);
+        setVoiceDurationMillis(0);
+        Toast.show({ type: 'info', text1: 'Voice note was too short', text2: 'Hold your thought for a moment longer and record again.' });
+        return;
+      }
+      setVoiceUri(recorder.uri);
+      setVoiceDurationMillis(recordedDuration);
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Could not finish recording', text2: 'Please try again.' });
+    }
+  };
+
+  const discardVoiceRecording = async () => {
+    if (isRecording) {
+      await recorder.stop();
+      await setAudioModeAsync({ allowsRecording: false });
+    }
+    setVoiceUri(null);
+    setVoiceDurationMillis(0);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const sendVoiceMessage = async () => {
+    if (!voiceUri || !bookingId || isComposerBusy || !canSendMessages) return;
+
+    setIsUploadingVoice(true);
+    try {
+      const extension = voiceUri.split('.').pop()?.toLowerCase() || 'm4a';
+      const mimeType = extension === 'webm' ? 'audio/webm' : extension === 'aac' ? 'audio/aac' : 'audio/m4a';
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: voiceUri,
+        name: `voice-message-${Date.now()}.${extension}`,
+        type: mimeType,
+      } as any);
+      const uploadResponse = await api.post(`/messages/${bookingId}/upload-audio`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const audioUrl = uploadResponse.data.data.audioUrl as string;
+      const durationSeconds = Math.max(1, Math.round(voiceDurationMillis / 1000));
+      const tempId = `voice-${Date.now()}`;
+      const optimisticMsg: Message = {
+        _id: tempId,
+        sender: user?._id || 'anonymous',
+        senderModel: role === 'worker' ? 'Worker' : 'User',
+        content: 'Voice message',
+        messageType: 'audio',
+        audioUrl,
+        audioDurationSeconds: durationSeconds,
+        createdAt: new Date().toISOString(),
+      };
+
+      setLocalMessages(prev => [optimisticMsg, ...prev]);
+      setVoiceUri(null);
+      setVoiceDurationMillis(0);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      sendMessage(
+        {
+          bookingId: bookingId as string,
+          message: 'Voice message',
+          messageType: 'audio',
+          audioUrl,
+          audioDurationSeconds: durationSeconds,
+        },
+        {
+          onSuccess: data => setLocalMessages(prev => prev.map(item => item._id === tempId ? data : item)),
+          onError: () => setLocalMessages(prev => prev.filter(item => item._id !== tempId)),
+        }
+      );
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Voice message not sent',
+        text2: error.response?.data?.message || 'Please check your connection and try again.',
+      });
+    } finally {
+      setIsUploadingVoice(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isRecording && recorderState.durationMillis >= 120000) {
+      void stopVoiceRecording();
+    }
+  }, [isRecording, recorderState.durationMillis]);
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMe = item.sender === user?._id;
 
@@ -121,7 +304,11 @@ export default function ChatScreen() {
             isMe ? styles.myBubble : styles.theirBubble
           ]}
         >
-          <Text style={styles.messageContent}>{item.content}</Text>
+          {item.messageType === 'audio' && item.audioUrl ? (
+            <VoiceMessageBubble item={item} />
+          ) : (
+            <Text style={styles.messageContent}>{item.content}</Text>
+          )}
           <View style={styles.messageFooter}>
             <Text style={styles.timeText}>
               {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -152,8 +339,10 @@ export default function ChatScreen() {
             <View style={styles.userMeta}>
               <Text style={styles.userName}>{recipientName || 'Mission Partner'}</Text>
               <View style={styles.statusRow}>
-                <View style={styles.activeDot} />
-                <Text style={styles.statusText}>SECURE LINE ACTIVE</Text>
+                <View style={[styles.activeDot, !canSendMessages && styles.inactiveDot]} />
+                <Text style={[styles.statusText, !canSendMessages && styles.inactiveStatusText]}>
+                  {isLoadingBooking ? 'CHECKING ACCESS' : canSendMessages ? 'SECURE LINE ACTIVE' : 'CHAT HISTORY ONLY'}
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -171,50 +360,111 @@ export default function ChatScreen() {
             </View>
           ) : (
             <FlatList
-              ref={flatListRef}
-              data={allMessages}
-              renderItem={renderMessage}
-              keyExtractor={(item, index) => `${item._id}-${index}`}
-              inverted
-              contentContainerStyle={styles.messageList}
-              showsVerticalScrollIndicator={false}
+              {...({
+                ref: flatListRef,
+                data: allMessages,
+                renderItem: renderMessage,
+                keyExtractor: (item: any, index: number) => `${item._id}-${index}`,
+                inverted: true,
+                contentContainerStyle: styles.messageList,
+                showsVerticalScrollIndicator: false,
+                ListEmptyComponent: (
+                  <View style={styles.emptyChat}>
+                    <View style={styles.emptyChatIcon}><MessageCircle size={24} color={Colors.cyan} /></View>
+                    <Text style={styles.emptyChatTitle}>Secure conversation ready</Text>
+                    <Text style={styles.emptyChatText}>Send a message or a voice note while this booking is active.</Text>
+                  </View>
+                ),
+              } as any)}
             />
           )}
         </View>
 
         {/* Input */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
-            <GlassCard intensity={60} style={styles.inputGlass} padding={0}>
-              <View style={styles.inputInner}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Type a message..."
-                  placeholderTextColor="rgba(255,255,255,0.4)"
-                  value={inputText}
-                  onChangeText={setInputText}
-                  multiline
-                  maxLength={500}
-                />
-                <TouchableOpacity
-                  style={[styles.sendBtn, !inputText.trim() && { opacity: 0.5 }]}
-                  onPress={handleSendMessage}
-                  disabled={!inputText.trim() || isSending}
-                >
-                  <Send size={20} color="#000" />
-                </TouchableOpacity>
-              </View>
-            </GlassCard>
-
-            <View style={styles.securitySeal}>
-              <ShieldCheck size={10} color="rgba(255,255,255,0.3)" />
-              <Text style={styles.securityTxt}>END-TO-END ENCRYPTED</Text>
+        {!canSendMessages ? (
+          <View style={[styles.lockedContainer, { paddingBottom: insets.bottom + 12 }]}>
+            <ShieldCheck size={16} color={Colors.textMuted} />
+            <View style={styles.lockedCopy}>
+              <Text style={styles.lockedTitle}>{isLoadingBooking ? 'CHECKING CHAT ACCESS' : 'CHAT CLOSED'}</Text>
+              <Text style={styles.lockedText}>
+                {isLoadingBooking
+                  ? 'Confirming the current booking status.'
+                  : 'This booking has ended. Previous messages remain available as history.'}
+              </Text>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
+              <GlassCard intensity={60} style={styles.inputGlass} padding={0}>
+                {isRecording || voiceUri ? (
+                  <View style={styles.voiceComposer}>
+                    <TouchableOpacity style={styles.discardVoiceBtn} onPress={discardVoiceRecording} activeOpacity={0.78}>
+                      <Trash2 size={18} color="#FF453A" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                    <View style={styles.recordingCopy}>
+                      <View style={styles.recordingTitleRow}>
+                        <View style={[styles.recordingDot, !isRecording && styles.voiceReadyDot]} />
+                        <Text style={styles.recordingTitle}>{isRecording ? 'Recording voice note' : 'Voice note ready'}</Text>
+                      </View>
+                      <Text style={styles.recordingDuration}>
+                        {formatSeconds((isRecording ? recorderState.durationMillis : voiceDurationMillis) / 1000)}
+                      </Text>
+                    </View>
+                    {isRecording ? (
+                      <TouchableOpacity style={styles.stopRecordingBtn} onPress={stopVoiceRecording} activeOpacity={0.78}>
+                        <Square size={17} color="#FFFFFF" fill="#FFFFFF" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.sendBtn, isUploadingVoice && styles.composerDisabled]}
+                        onPress={sendVoiceMessage}
+                        disabled={isUploadingVoice}
+                        activeOpacity={0.78}
+                      >
+                        {isUploadingVoice ? <ActivityIndicator size="small" color="#001014" /> : <Send size={20} color="#001014" />}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <View style={styles.inputInner}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Type a message..."
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      value={inputText}
+                      onChangeText={setInputText}
+                      multiline
+                      maxLength={500}
+                    />
+                    {inputText.trim() ? (
+                      <TouchableOpacity
+                        style={[styles.sendBtn, isComposerBusy && styles.composerDisabled]}
+                        onPress={handleSendMessage}
+                        disabled={isComposerBusy}
+                        activeOpacity={0.78}
+                      >
+                        <Send size={20} color="#001014" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity style={styles.micBtn} onPress={startVoiceRecording} disabled={isComposerBusy} activeOpacity={0.78}>
+                        <Mic size={20} color={Colors.cyan} strokeWidth={2.5} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </GlassCard>
+
+              <View style={styles.securitySeal}>
+                <ShieldCheck size={10} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.securityTxt}>BOOKING CHAT PROTECTED</Text>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        )}
       </SafeAreaView>
     </BackgroundWrapper>
   );
@@ -294,11 +544,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success,
     marginRight: 6,
   },
+  inactiveDot: {
+    backgroundColor: Colors.textMuted,
+  },
   statusText: {
     fontSize: 8,
     color: Colors.success,
     fontWeight: '900',
     letterSpacing: 0.5,
+  },
+  inactiveStatusText: {
+    color: Colors.textMuted,
   },
   headerAction: {
     width: 40,
@@ -313,6 +569,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyChat: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 26,
+    paddingVertical: 40,
+    transform: [{ scaleY: -1 }],
+  },
+  emptyChatIcon: {
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,245,255,0.28)',
+    backgroundColor: 'rgba(0,245,255,0.09)',
+    marginBottom: 14,
+  },
+  emptyChatTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  emptyChatText: {
+    maxWidth: 280,
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 7,
   },
   messageList: {
     paddingHorizontal: 20,
@@ -351,6 +639,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     fontWeight: '500',
+  },
+  voiceBubble: {
+    minWidth: 185,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 2,
+  },
+  voicePlay: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,245,255,0.08)',
+  },
+  voiceCopy: {
+    flex: 1,
+  },
+  voiceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  voiceTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  voiceDuration: {
+    color: 'rgba(255,255,255,0.52)',
+    fontSize: 10,
+    fontWeight: '800',
+    marginTop: 5,
   },
   messageFooter: {
     flexDirection: 'row',
@@ -394,6 +716,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadows.glow,
   },
+  micBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(0,245,255,0.28)',
+    backgroundColor: 'rgba(0,245,255,0.08)',
+  },
+  voiceComposer: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 6,
+  },
+  discardVoiceBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,69,58,0.1)',
+  },
+  recordingCopy: {
+    flex: 1,
+  },
+  recordingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  recordingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF453A',
+  },
+  voiceReadyDot: {
+    backgroundColor: '#00FF7F',
+  },
+  recordingTitle: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  recordingDuration: {
+    color: Colors.cyan,
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 5,
+  },
+  stopRecordingBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: '#FF453A',
+    ...Shadows.glow,
+  },
+  composerDisabled: {
+    opacity: 0.56,
+  },
   securitySeal: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,5 +794,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '900',
     letterSpacing: 1,
-  }
+  },
+  lockedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(7,10,24,0.88)',
+  },
+  lockedCopy: {
+    flex: 1,
+  },
+  lockedTitle: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  lockedText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
 });

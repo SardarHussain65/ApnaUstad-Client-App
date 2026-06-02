@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Shield, Lock, HelpCircle, ChevronRight } from 'lucide-react-native';
+import { Shield, Lock, HelpCircle, ChevronRight, Eye } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -42,6 +42,12 @@ export default function SecurityScreen() {
             label="Change Password" 
             onPress={() => router.push('/profile/change-password')} 
             delay={300} 
+          />
+          <SecurityItem 
+            icon={Eye} 
+            label="Policies & Terms" 
+            onPress={() => router.push('/profile/privacy')} 
+            delay={350} 
           />
           <SecurityItem 
             icon={HelpCircle} 
@@ -92,6 +98,9 @@ const styles = StyleSheet.create({
   shieldIconWrapper: {
     width: 100,
     height: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
   iconGlow: {
     position: 'absolute',

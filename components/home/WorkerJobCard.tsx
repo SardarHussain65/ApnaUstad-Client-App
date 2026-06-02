@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { GlassCard } from './GlassCard';
 import { Colors, Typography } from '../../constants/Theme';
+import { useAuth } from '../../context/AuthContext';
 import { Zap, Calendar, MapPin, ChevronRight, Clock, Banknote } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { calculateDistance, formatDistanceKm } from '../../utils/mapUtils';
@@ -28,6 +29,8 @@ const getTimeAgo = (dateString: string) => {
 };
 
 export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinates }: WorkerJobCardProps) => {
+  const { user } = useAuth();
+  const workerLoc = (user as any)?.address || (user as any)?.city || '';
   const distance = useMemo(() => {
     if (workerCoordinates && job.location?.coordinates) {
       const dist = calculateDistance(workerCoordinates, {

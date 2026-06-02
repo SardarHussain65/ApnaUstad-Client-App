@@ -8,6 +8,9 @@ export interface Message {
   sender: string;
   senderModel: 'User' | 'Worker';
   content: string;
+  messageType?: 'text' | 'audio';
+  audioUrl?: string;
+  audioDurationSeconds?: number;
   booking?: string;
   readAt?: string;
   createdAt: string;
@@ -39,6 +42,102 @@ export interface Job {
   scheduledTime?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
+  audioUrls?: string[];
+  media?: {
+    images: string[];
+    videos: string[];
+    audios?: string[];
+    coverUrl?: string;
+    totalCount?: number;
+    hasVideo?: boolean;
+    hasAudio?: boolean;
+  };
+  clientMeta?: {
+    _id?: string;
+    fullName: string;
+    profileImage?: string;
+    phone?: string;
+    rating?: number | null;
+    totalReviews?: number;
+    totalJobs?: number;
+    completedJobs?: number;
+  };
+  signalMeta?: {
+    title?: string;
+    description?: string;
+    missionKindLabel?: string;
+    evidenceCount?: number;
+    hasMedia?: boolean;
+    amount?: number;
+    amountText?: string;
+    clientBudget?: number;
+    clientBudgetText?: string;
+    estimatedCommission?: number;
+    estimatedCommissionText?: string;
+    estimatedNetEarning?: number;
+    estimatedNetEarningText?: string;
+    requiredWalletBalance?: number;
+    walletBalance?: number;
+    walletTotalBalance?: number;
+    walletReservedBalance?: number;
+    isWalletEligible?: boolean;
+    distanceMeters?: number | null;
+    distanceText?: string;
+    expiresAt?: string;
+    responseWindowSeconds?: number;
+    schedule?: {
+      dateLabel?: string;
+      dayLabel?: string;
+      fullDateLabel?: string;
+      timeLabel?: string;
+    };
+    location?: {
+      address?: string;
+    };
+  };
+  detailMeta?: {
+    statusInfo?: {
+      value: string;
+      label: string;
+      tone: string;
+      accentColor: string;
+    };
+    missionKind?: 'instant' | 'scheduled';
+    missionKindLabel?: string;
+    schedule?: {
+      dateLabel?: string;
+      dayLabel?: string;
+      fullDateLabel?: string;
+      timeLabel?: string;
+    };
+    location?: {
+      address?: string;
+    };
+    financial?: {
+      label: string;
+      amount: number;
+      amountText?: string;
+      currency: string;
+    };
+    bidSummary?: {
+      total: number;
+      pending: number;
+      hasAcceptedBid: boolean;
+    };
+    media?: {
+      images: string[];
+      videos: string[];
+      audios?: string[];
+      coverUrl?: string;
+      totalCount?: number;
+      hasVideo?: boolean;
+      hasAudio?: boolean;
+    };
+  };
+  bidCount?: number;
+  pendingBidCount?: number;
   location?: string | {
     type: 'Point';
     coordinates: number[];
@@ -56,7 +155,18 @@ export interface Bid {
     fullName?: string;
     profileImage?: string;
     averageRating?: number;
+    rating?: number;
+    totalReviews?: number;
+    totalJobs?: number;
     hourlyRate?: number;
+    category?: string;
+    experience?: number;
+    city?: string;
+    address?: string;
+    bio?: string;
+    skills?: string[];
+    isVerified?: boolean;
+    isAvailable?: boolean;
   };
   jobId?: string;
   workerId?: string;
@@ -66,6 +176,55 @@ export interface Bid {
   proposedPrice?: number;
   estimatedDays?: number;
   status: 'pending' | 'accepted' | 'rejected';
+  cardMeta?: {
+    source: 'worker_bid';
+    title: string;
+    description?: string;
+    missionKind?: 'instant' | 'scheduled';
+    missionKindLabel?: string;
+    primaryImageUrl?: string;
+    media?: {
+      images: string[];
+      videos: string[];
+      audios?: string[];
+      coverUrl?: string;
+      totalCount?: number;
+      hasVideo?: boolean;
+      hasAudio?: boolean;
+    };
+    statusInfo?: {
+      value: string;
+      label: string;
+      tone: string;
+      accentColor: string;
+    };
+    schedule?: {
+      dateLabel?: string;
+      dayLabel?: string;
+      fullDateLabel?: string;
+      timeLabel?: string;
+    };
+    location?: {
+      address?: string;
+    };
+    counterParty?: {
+      _id?: string;
+      fullName: string;
+      profileImage?: string;
+      phone?: string;
+      roleLabel: string;
+      totalJobs?: number;
+      completedJobs?: number;
+    };
+    financial?: {
+      label: string;
+      amount: number;
+      amountText?: string;
+      currency: string;
+    };
+    actionLabel?: string;
+    submittedAt?: string;
+  };
   createdAt: string;
   updatedAt?: string;
 }

@@ -5,6 +5,7 @@ import { BASE_URL } from '../constants/Config';
 
 const api = axios.create({
   baseURL: BASE_URL + '/api/v1',
+  timeout: 15000, // 15 seconds request timeout limit
   headers: {
     'Content-Type': 'application/json',
   },
@@ -67,7 +68,7 @@ api.interceptors.response.use(
       try {
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         const role = await AsyncStorage.getItem('user_role');
-        
+
         if (!refreshToken || refreshToken.trim() === '') {
            console.log('No refresh token found in storage, cannot refresh', { 
              hasToken: !!refreshToken, 
@@ -117,9 +118,48 @@ api.interceptors.response.use(
         // Refresh failed, logout user
         console.log('Token refresh failed:', refreshError?.message);
         await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
-        
+
         // Dispatch logout event for AuthContext to react
         DeviceEventEmitter.emit('auth:logout');
+      }
+    }
+
+    if (error.response?.status === 402) {
+      console.log('--- 402 Insufficient Balance detected ---');
+      try {
+        const { router } = require('expo-router');
+        const Toast = require('react-native-toast-message').default;
+
+        Toast.show({
+          type: 'error',
+          text1: 'Insufficient Wallet Balance',
+          text2: error.response?.data?.message || 'Please recharge your wallet (minimum Rs. 500 required) to continue.',
+          duration: 4000,
+        });
+
+        // Redirect to wallet tab
+        router.push('/(tabs)/wallet');
+      } catch (navError) {
+        console.error('Error navigating or showing toast for 402:', navError);
+      }
+    }
+
+    // Network / Offline Error and Timeout handling
+    if (!error.response) {
+      try {
+        const Toast = require('react-native-toast-message').default;
+        const isTimeout = error.code === 'ECONNABORTED';
+        
+        Toast.show({
+          type: 'error',
+          text1: isTimeout ? 'Request Timeout' : 'Connection Failed',
+          text2: isTimeout 
+            ? 'The server took too long to respond. Please retry.' 
+            : 'Please check your internet connection and try again.',
+          visibilityTime: 4000,
+        });
+      } catch (toastError) {
+        console.error('Failed to show offline/timeout Toast:', toastError);
       }
     }
 

@@ -10,23 +10,31 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { Shield, Radio, ChevronRight } from 'lucide-react-native';
+import { Shield, Radio, ChevronRight, Calendar, Zap } from 'lucide-react-native';
 import { Colors, Shadows, Spacing } from '../../constants/Theme';
 import { JobPost } from '../../hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ActiveBiddingBannerProps {
   job: JobPost;
+  activeCount?: number;
   onPress: (jobId: string) => void;
 }
 
-export function ActiveBiddingBanner({ job, onPress }: ActiveBiddingBannerProps) {
+export function ActiveBiddingBanner({ job, activeCount = 1, onPress }: ActiveBiddingBannerProps) {
   const insets = useSafeAreaInsets();
   const pulse = useSharedValue(1);
+  const isInstant = job.urgency === 'instant';
+  const proposalCount = job.pendingBidCount ?? job.bidCount ?? 0;
+  const statusText = proposalCount > 0
+    ? `${proposalCount} PROPOSAL${proposalCount === 1 ? '' : 'S'} READY`
+    : isInstant
+      ? 'LIVE SEARCH'
+      : 'SCHEDULED SEARCH';
 
   useEffect(() => {
     pulse.value = withRepeat(withTiming(1.5, { duration: 1500 }), -1, true);
-  }, []);
+  }, [pulse]);
 
   const ringStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
@@ -59,7 +67,6 @@ export function ActiveBiddingBanner({ job, onPress }: ActiveBiddingBannerProps) 
         <View style={[styles.borderGlow, { borderColor: Colors.cyan + '40' }]} />
 
         <View style={styles.content}>
-          {/* Radar Animation Box */}
           <View style={styles.radarBox}>
             <Animated.View style={[styles.pulseRing, ringStyle]} />
             <Shield color={Colors.cyan} size={18} strokeWidth={2.5} />
@@ -68,15 +75,22 @@ export function ActiveBiddingBanner({ job, onPress }: ActiveBiddingBannerProps) 
           <View style={styles.textStack}>
             <View style={styles.statusRow}>
               <Radio size={12} color={Colors.cyan} />
-              <Text style={styles.statusText}>RADAR ACTIVE</Text>
+              <Text style={styles.statusText}>{statusText}</Text>
             </View>
             <Text style={styles.title} numberOfLines={1}>
-              {job.category || 'Mission'} — Scanning Local Dimensions...
+              {job.category || 'Service request'} - Finding nearby Ustads
             </Text>
+            <View style={styles.metaRow}>
+              {isInstant ? <Zap size={11} color={Colors.pink} /> : <Calendar size={11} color={Colors.orange} />}
+              <Text style={[styles.metaText, { color: isInstant ? Colors.pink : Colors.orange }]}>
+                {isInstant ? 'Instant request' : 'Scheduled request'}
+              </Text>
+              {activeCount > 1 && <Text style={styles.countText}>- {activeCount} searches active</Text>}
+            </View>
           </View>
 
           <View style={styles.actionBtn}>
-            <Text style={styles.actionText}>RESUME</Text>
+            <Text style={styles.actionText}>{proposalCount > 0 ? 'REVIEW' : 'RESUME'}</Text>
             <ChevronRight size={14} color="#000" strokeWidth={3} />
           </View>
         </View>
@@ -146,6 +160,21 @@ const styles = StyleSheet.create({
   title: {
     color: '#fff',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  metaText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  countText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 10,
     fontWeight: '700',
   },
   actionBtn: {

@@ -28,6 +28,8 @@ export interface Worker {
   totalBookings?: number;
   experience?: number;
   isAvailable?: boolean;
+  isInstantAvailable?: boolean;
+  isScheduledAvailable?: boolean;
   bio?: string;
   totalJobs?: number;
   totalEarnings?: number;
@@ -42,12 +44,94 @@ export interface BookingPerson {
   fullName: string;
   profileImage?: string;
   address?: string;
+  city?: string;
   phone?: string;
   email?: string;
+  category?: string;
+  rating?: number;
+  totalReviews?: number;
+  totalJobs?: number;
+  hourlyRate?: number;
+  experience?: number;
+  isVerified?: boolean;
+  isAvailable?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface MissionCardMeta {
+  source: 'booking' | 'job_post';
+  title: string;
+  description?: string;
+  missionKind?: 'instant' | 'scheduled';
+  missionKindLabel?: string;
+  primaryImageUrl?: string;
+  media?: {
+    images: string[];
+    videos: string[];
+    audios?: string[];
+    coverUrl?: string;
+    totalCount?: number;
+    hasVideo?: boolean;
+    hasAudio?: boolean;
+  };
+  statusInfo?: {
+    value: string;
+    label: string;
+    tone: string;
+    accentColor: string;
+    actionLabel?: string;
+  };
+  schedule?: {
+    dateLabel: string;
+    dayLabel?: string;
+    fullDateLabel?: string;
+    timeLabel: string;
+  };
+  location?: {
+    address: string;
+  };
+  actionLabel?: string;
+  counterParty?: {
+    _id?: string;
+    fullName: string;
+    phone?: string;
+    email?: string;
+    profileImage?: string;
+    roleLabel: string;
+    category?: string;
+    address?: string;
+    city?: string;
+    rating?: number;
+    totalReviews?: number;
+    totalJobs?: number;
+    hourlyRate?: number;
+    experience?: number;
+    isVerified?: boolean;
+    isAvailable?: boolean;
+    isActive?: boolean;
+    joinedAt?: string;
+  };
+  financial?: {
+    label: string;
+    amount: number;
+    currency: string;
+    subtotal?: number;
+    platformFee?: number;
+    workerEarning?: number;
+    totalAmount?: number;
+    amountText?: string;
+  };
+  bidSummary?: {
+    total: number;
+    pending: number;
+    hasAcceptedBid: boolean;
+  };
 }
 
 export interface Booking {
   _id: string;
+  jobPost?: string | { _id?: string } | null;
   customer: BookingPerson;
   worker: BookingPerson;
   category: string;
@@ -71,15 +155,32 @@ export interface Booking {
   paymentMethod: 'cash';
   isReviewed: boolean;
   imageUrls?: string[];
+  videoUrls?: string[];
+  audioUrls?: string[];
   cancelReason?: string;
   cancelledBy?: 'customer' | 'worker' | 'admin';
+  cardMeta?: MissionCardMeta;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface ClientHomeStats {
+  total: number;
+  active: number;
+  completed: number;
+  successRate: number;
+  successRateLabel: string;
+  totalSpent: number;
+}
+
+export interface ClientHomeSummary {
+  stats: ClientHomeStats;
+  recentBookings: Booking[];
+}
+
 export interface JobPost {
   _id: string;
-  customer: string;
+  customer: string | BookingPerson;
   category: string;
   description: string;
   urgency: 'instant' | 'scheduled';
@@ -88,6 +189,72 @@ export interface JobPost {
   address: string;
   status: 'open' | 'assigned' | 'closed' | 'cancelled' | 'reviewing';
   imageUrl?: string;
+  imageUrls?: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
+  audioUrls?: string[];
+  media?: {
+    images: string[];
+    videos: string[];
+    audios?: string[];
+    coverUrl?: string;
+    totalCount?: number;
+    hasVideo?: boolean;
+    hasAudio?: boolean;
+  };
+  clientMeta?: {
+    _id?: string;
+    fullName: string;
+    profileImage?: string;
+    phone?: string;
+    rating?: number | null;
+    totalReviews?: number;
+    totalJobs?: number;
+    completedJobs?: number;
+  };
+  signalMeta?: {
+    title?: string;
+    description?: string;
+    missionKind?: 'instant' | 'scheduled';
+    missionKindLabel?: string;
+    evidenceCount?: number;
+    hasMedia?: boolean;
+    amount?: number;
+    amountText?: string;
+    clientBudget?: number;
+    clientBudgetText?: string;
+    estimatedCommission?: number;
+    estimatedCommissionText?: string;
+    estimatedNetEarning?: number;
+    estimatedNetEarningText?: string;
+    requiredWalletBalance?: number;
+    walletBalance?: number;
+    isWalletEligible?: boolean;
+    distanceMeters?: number | null;
+    distanceText?: string;
+    expiresAt?: string;
+    responseWindowSeconds?: number;
+    schedule?: {
+      dateLabel?: string;
+      dayLabel?: string;
+      fullDateLabel?: string;
+      timeLabel?: string;
+    };
+    location?: {
+      address?: string;
+    };
+  };
+  amount?: number;
+  bidCount?: number;
+  pendingBidCount?: number;
+  acceptedBid?: {
+    _id: string;
+    proposedPrice: number;
+    message?: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    worker?: Worker | null;
+  } | null;
+  cardMeta?: MissionCardMeta;
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
@@ -254,6 +421,23 @@ const fetchMyBookings = async (): Promise<Booking[]> => {
   return response.data.data || [];
 };
 
+const fetchClientHomeSummary = async (): Promise<ClientHomeSummary> => {
+  const response = await api.get('/bookings/home-summary', {
+    params: { recentLimit: 3 },
+  });
+  return response.data.data || {
+    stats: {
+      total: 0,
+      active: 0,
+      completed: 0,
+      successRate: 0,
+      successRateLabel: '100%',
+      totalSpent: 0,
+    },
+    recentBookings: [],
+  };
+};
+
 const fetchWorkerBookings = async (): Promise<Booking[]> => {
   const response = await api.get('/bookings/worker-bookings');
   return response.data.data || [];
@@ -376,6 +560,16 @@ export function useMyBookings(options?: Omit<UseQueryOptions<Booking[]>, 'queryK
   return useQuery<Booking[]>({
     queryKey: queryKeys.bookings.myBookings(),
     queryFn: fetchMyBookings,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useClientHomeSummary(options?: Omit<UseQueryOptions<ClientHomeSummary>, 'queryKey' | 'queryFn'>) {
+  return useQuery<ClientHomeSummary>({
+    queryKey: queryKeys.bookings.homeSummary(),
+    queryFn: fetchClientHomeSummary,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     ...options,

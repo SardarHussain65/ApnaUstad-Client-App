@@ -21,7 +21,7 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow ApnaUstad to access your photos to provide visual evidence for missions.",
         "NSCameraUsageDescription": "Allow ApnaUstad to access your camera to capture mission evidence.",
-        "NSMicrophoneUsageDescription": "Allow ApnaUstad to access your microphone for recording mission videos."
+        "NSMicrophoneUsageDescription": "Allow ApnaUstad to access your microphone for recording mission videos and voice notes."
       }
     },
     "android": {
@@ -73,7 +73,9 @@
           "cameraPermission": "Allow ApnaUstad to access your camera to capture mission evidence."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "expo-audio",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

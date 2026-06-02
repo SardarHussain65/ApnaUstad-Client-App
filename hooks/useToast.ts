@@ -20,7 +20,7 @@ export function useToast() {
       position: options?.position || 'top',
       text1: title,
       text2: message,
-      duration: options?.duration || 3000,
+      visibilityTime: options?.duration || 3000,
       topOffset: 60,
       bottomOffset: 40,
     });

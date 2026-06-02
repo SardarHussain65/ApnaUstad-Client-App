@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
-import api from '../services/api';
 import { getPushToken } from '../services/notificationService';
 import { BASE_URL } from '../constants/Config';
 
@@ -26,6 +25,8 @@ export interface WorkerProfile extends UserProfile {
   averageRating: number;
   hourlyRate: number;
   isAvailable: boolean;
+  isInstantAvailable?: boolean;
+  isScheduledAvailable?: boolean;
   totalBookings: number;
 }
 
@@ -215,4 +216,3 @@ export function useAuth() {
   }
   return context;
 }
-

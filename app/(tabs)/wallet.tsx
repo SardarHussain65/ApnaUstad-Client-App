@@ -1,398 +1,302 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Share, Platform, View, Text } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
+import { Colors, Typography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
-import { GlassCard } from '../../components/home/GlassCard';
-import Animated, { FadeInDown, FadeInRight, LinearTransition, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowUpRight, ArrowDownRight, Wallet, History, CreditCard, ChevronRight, Download } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
-import { CosmicCircle } from '../../components/home/CosmicCircle';
-import { useRouter } from 'expo-router';
-import { useBookings } from '../../hooks';
+import {
+  useMyPayments,
+  useWorkerWallet,
+  useWalletTransactions,
+  useWalletPaymentMethods,
+  useWalletTopUps,
+  useCreateWalletTopUpMutation,
+  useToast,
+  useUserWallet,
+} from '../../hooks';
 
-const FILTERS = ['All', 'Income', 'Expense'] as const;
+// Subcomponents & Shimmer Skeletons
+import { ClientWalletView } from '../../components/wallet/ClientWalletView';
+import { WorkerWalletView } from '../../components/wallet/WorkerWalletView';
+import { RechargeModal } from '../../components/wallet/RechargeModal';
+import { Skeleton, useShimmerTranslateX } from '../../components/ui/Skeleton';
+
+// ─── Types & Constants ────────────────────────────────────────────────────────
+const FILTERS = ['All', 'Paid', 'Payable', 'Pending', 'Refund'] as const;
 type FilterType = typeof FILTERS[number];
 
-export default function WalletTab() {
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { role, user } = useAuth();
-  const [activeFilter, setActiveFilter] = useState<FilterType>('All');
-  
-  // React Query hook
-  const { data: bookings = [], isLoading } = useBookings();
+// ─── Wallet Skeleton ──────────────────────────────────────────────────────────
+interface WalletSkeletonProps {
+  isWorker: boolean;
+  insets: any;
+}
 
-  // Compute financial data from bookings
-  const financialData = React.useMemo(() => {
-    const completed = bookings.filter((b: any) => b.status === 'completed');
-    const balance = completed.reduce((sum: number, b: any) => sum + (b.finalPrice || b.totalAmount || (b.jobPost?.budget || 0)), 0);
-    
-    const transactions = completed.map((b: any) => ({
-      id: b._id,
-      title: b.category || b.jobPost?.category || 'Mission Secured',
-      date: new Date(b.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      amount: b.finalPrice || b.totalAmount || b.jobPost?.budget || 0,
-      type: 'Income' as const,
-      icon: ArrowUpRight
-    }));
-
-    return { balance, transactions };
-  }, [bookings]);
-
-  // Filter transactions based on active filter
-  const filteredTransactions = financialData.transactions.filter(t => {
-    if (activeFilter === 'All') return true;
-    return t.type === activeFilter;
-  });
+function WalletSkeleton({ isWorker, insets }: WalletSkeletonProps) {
+  const translateX = useShimmerTranslateX();
 
   return (
-    <BackgroundWrapper>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.m }]}
-      >
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>Wallet & Earnings</Text>
-          <Text style={styles.headerSubtitle}>Track your finances securely</Text>
-        </View>
+    <View style={{ gap: 16, padding: 16, paddingTop: insets.top + 16 }}>
+      {/* Static Header shown immediately while content shimmers load */}
+      <View style={{ marginBottom: 8 }}>
+        <Text style={[{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: 0.5 }, Typography.threeD]}>
+          Wallet & History
+        </Text>
+        <Text style={{ fontSize: 13, color: Colors.textMuted, fontWeight: '600', marginTop: 4 }}>
+          {isWorker
+            ? 'Manage earnings, top-ups, and commission logs'
+            : 'View credit balance and payment history'}
+        </Text>
+      </View>
 
-        {/* Main Balance Card */}
-        <Animated.View entering={FadeInDown.duration(800)} style={styles.balanceSection}>
-          <GlassCard style={styles.balanceCard} intensity={40} glowColor={Colors.cyan}>
-            <View style={styles.balanceContent}>
-              <View style={styles.balanceTextGroup}>
-                <Text style={styles.balanceLabel}>TOTAL EARNINGS</Text>
-                <Text style={[styles.balanceAmount, Typography.threeD]}>Rs. {financialData.balance.toLocaleString()}</Text>
-                <Text style={styles.balanceSubtext}>Based on completed missions</Text>
-              </View>
-              {/* Replacing generic icon with a mini glowing orb effect */}
-              <View style={styles.orbContainer}>
-                 <CosmicCircle value={0.8} size={90} label="" subLabel="" />
-                 <Wallet size={32} color="#fff" style={styles.orbIcon} />
-              </View>
-            </View>
+      {/* Hero card shimmer */}
+      <Skeleton width="100%" height={140} borderRadius={24} translateX={translateX} />
 
-            <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.actionButton}>
-                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(30,144,255,0.2)' }]}>
-                  <Download size={20} color={Colors.cyan} />
-                </View>
-                <Text style={styles.actionText}>Withdraw</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.actionButton}>
-                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(255,20,147,0.2)' }]}>
-                  <CreditCard size={20} color="#FF1493" />
-                </View>
-                <Text style={styles.actionText}>Top Up</Text>
-              </TouchableOpacity>
+      {/* Metric chips row shimmer */}
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Skeleton width="48%" height={72} borderRadius={16} translateX={translateX} />
+        <Skeleton width="48%" height={72} borderRadius={16} translateX={translateX} />
+      </View>
 
-              <TouchableOpacity style={styles.actionButton}>
-                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(255,140,0,0.2)' }]}>
-                  <History size={20} color={Colors.orange} />
-                </View>
-                <Text style={styles.actionText}>History</Text>
-              </TouchableOpacity>
-            </View>
-          </GlassCard>
-        </Animated.View>
-
-        {/* Transactions Section */}
-        <View style={styles.transactionsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, Typography.threeD]}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Filter Pills */}
-          <View style={styles.filterRow}>
-            {FILTERS.map((filter) => {
-              const isActive = activeFilter === filter;
-              return (
-                <TouchableOpacity
-                  key={filter}
-                  onPress={() => setActiveFilter(filter)}
-                  style={[styles.filterPill, isActive && styles.activeFilterPill]}
-                >
-                  <Text style={[styles.filterText, isActive && styles.activeFilterText]}>{filter}</Text>
-                </TouchableOpacity>
-              )
-            })}
-          </View>
-
-          {/* Transactions List */}
-          <View style={styles.transactionList}>
-            {isLoading ? (
-               <ActivityIndicator color={Colors.cyan} style={{ marginTop: 20 }} />
-            ) : (
-              <>
-                {filteredTransactions.map((item, index) => {
-                  const isIncome = item.amount > 0;
-                  const accentColor = isIncome ? Colors.success : Colors.error;
-                  const IconComponent = item.icon;
-
-                  return (
-                    <Animated.View
-                      key={item.id}
-                      entering={FadeInRight.delay(index * 100).duration(500)}
-                      layout={Layout.springify()}
-                    >
-                      <GlassCard 
-                        intensity={20} 
-                        style={styles.transactionCard}
-                        onPress={() => router.push({
-                          pathname: '/transaction-details',
-                          params: { id: item.id }
-                        })}
-                      >
-                        <View style={styles.txRow}>
-                          <View style={[styles.txIconBox, { backgroundColor: accentColor + '20', borderColor: accentColor + '40' }]}>
-                            <IconComponent size={20} color={accentColor} />
-                          </View>
-                          
-                          <View style={styles.txInfo}>
-                            <Text style={[styles.txTitle, Typography.threeD]}>{item.title}</Text>
-                            <Text style={styles.txDate}>{item.date}</Text>
-                          </View>
-
-                          <View style={styles.txAmountGroup}>
-                            <Text style={[styles.txAmount, { color: accentColor }]}>
-                              {isIncome ? '+' : ''}{item.amount.toLocaleString()}
-                            </Text>
-                            <Text style={styles.txCurrency}>PKR</Text>
-                          </View>
-                        </View>
-                      </GlassCard>
-                    </Animated.View>
-                  )
-                })}
-                
-                {filteredTransactions.length === 0 && (
-                  <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
-                    <Text style={styles.emptyTitle}>No Transactions</Text>
-                    <Text style={styles.emptySub}>No mission activity detected in this sector.</Text>
-                  </Animated.View>
-                )}
-              </>
-            )}
-          </View>
-        </View>
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
-    </BackgroundWrapper>
+      {/* History ledger rows shimmer */}
+      {[1, 2, 3].map((i) => (
+        <Skeleton key={i} width="100%" height={72} borderRadius={18} translateX={translateX} />
+      ))}
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: Spacing.l,
-    paddingBottom: 40,
-  },
-  header: {
-    marginBottom: Spacing.xl,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  balanceSection: {
-    marginBottom: Spacing.xl,
-  },
-  balanceCard: {
-    padding: 24,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  balanceContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  balanceTextGroup: {
-    flex: 1,
-  },
-  balanceLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 8,
-  },
-  balanceAmount: {
-    fontSize: 38,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 4,
-    flexWrap: 'nowrap',
-    letterSpacing: -1,
-  },
-  balanceSubtext: {
-    fontSize: 12,
-    color: Colors.success,
-    fontWeight: '700',
-  },
-  orbContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    height: 90,
-  },
-  orbIcon: {
-    position: 'absolute',
-    opacity: 0.9,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
-  actionButton: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  actionText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  transactionsSection: {
-    flex: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.m,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#fff',
-  },
-  seeAll: {
-    color: Colors.cyan,
-    fontWeight: '800',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: Spacing.l,
-  },
-  filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  activeFilterPill: {
-    backgroundColor: 'rgba(30,144,255,0.2)',
-    borderColor: Colors.cyan + '80',
-  },
-  filterText: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  activeFilterText: {
-    color: '#fff',
-    fontWeight: '900',
-  },
-  transactionList: {
-    gap: 12,
-  },
-  transactionCard: {
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  txRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  txIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    marginRight: 14,
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  txDate: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: '600',
-  },
-  txAmountGroup: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  txAmount: {
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 2,
-  },
-  txCurrency: {
-    fontSize: 10,
-    color: Colors.textMuted,
-    fontWeight: '700',
-  },
-  emptyContainer: {
-    padding: 30,
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-  emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-  }
-});
+// ─── Main Container Component ──────────────────────────────────────────────────
+export default function WalletTab() {
+  const { role } = useAuth();
+  const toast = useToast();
+  const insets = useSafeAreaInsets();
+  const isWorker = role === 'worker';
+
+  // 1. Client View states
+  const [activeFilter, setActiveFilter] = useState<FilterType>('All');
+  const [isClientRefreshing, setIsClientRefreshing] = useState(false);
+
+  const { data: paymentsData, isLoading: isPaymentsLoading, refetch: refetchPayments } = useMyPayments();
+
+  // Fetch customer credit UserWallet
+  const { data: userWalletData, isLoading: isUserWalletLoading, refetch: refetchUserWallet } = useUserWallet(1, 50, {
+    enabled: !isWorker,
+  });
+
+  const payments = paymentsData?.payments ?? [];
+  const summary = paymentsData?.summary ?? { total: 0, paid: 0, payable: 0, pending: 0, cancelled: 0, currency: 'PKR' };
+
+  const walletBalance = userWalletData?.wallet?.balance ?? 0;
+  const walletTransactions = userWalletData?.transactions ?? [];
+
+  const handleClientRefresh = useCallback(async () => {
+    setIsClientRefreshing(true);
+    try {
+      await Promise.all([
+        refetchPayments(),
+        refetchUserWallet(),
+      ]);
+    } finally {
+      setIsClientRefreshing(false);
+    }
+  }, [refetchPayments, refetchUserWallet]);
+
+  // 2. Worker View states
+  const [workerTab, setWorkerTab] = useState<'wallet' | 'topups' | 'earnings'>('wallet');
+  const [isWorkerRefreshing, setIsWorkerRefreshing] = useState(false);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [rechargeAmount, setRechargeAmount] = useState('');
+  const [selectedMethodKey, setSelectedMethodKey] = useState<any | null>(null);
+  const [proofImageUri, setProofImageUri] = useState<string | null>(null);
+  const [isSubmittingRecharge, setIsSubmittingRecharge] = useState(false);
+
+  const { data: wallet, isLoading: isWalletLoading, refetch: refetchWallet } = useWorkerWallet({
+    enabled: isWorker,
+  });
+  const { data: transactionsData, isLoading: isTransactionsLoading, refetch: refetchTransactions } = useWalletTransactions(1, 50, {
+    enabled: isWorker,
+  });
+  const { data: paymentMethods = [], isLoading: areMethodsLoading, refetch: refetchPaymentMethods } = useWalletPaymentMethods({
+    enabled: isWorker,
+  });
+  const { data: topUpsData, isLoading: areTopUpsLoading, refetch: refetchTopUps } = useWalletTopUps(1, 50, {
+    enabled: isWorker,
+  });
+
+  const transactions = transactionsData?.transactions ?? [];
+  const topUps = useMemo(() => topUpsData?.requests ?? [], [topUpsData?.requests]);
+  const topUpMutation = useCreateWalletTopUpMutation();
+
+  const selectedMethod = useMemo(
+    () => paymentMethods.find((method) => method.method === selectedMethodKey) || paymentMethods[0],
+    [paymentMethods, selectedMethodKey]
+  );
+  const selectedMethodIsConfigured = selectedMethod ? selectedMethod.isConfigured !== false : false;
+
+  const totalEarnings = (summary.paid || 0) + (summary.payable || 0);
+
+  const handleWorkerRefresh = useCallback(async () => {
+    setIsWorkerRefreshing(true);
+    try {
+      await Promise.all([
+        refetchWallet(),
+        refetchTransactions(),
+        refetchPayments(),
+        refetchPaymentMethods(),
+        refetchTopUps(),
+      ]);
+    } finally {
+      setIsWorkerRefreshing(false);
+    }
+  }, [refetchWallet, refetchTransactions, refetchPayments, refetchPaymentMethods, refetchTopUps]);
+
+  const handleCopy = async (label: string, value?: string) => {
+    if (!value) return;
+    await Clipboard.setStringAsync(value);
+    toast.success('Copied', `${label} copied to clipboard.`);
+  };
+
+  const handlePickProofImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      toast.error('Permission Required', 'Please allow photo access to upload your payment proof.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setProofImageUri(result.assets[0].uri);
+    }
+  };
+
+  const resetTopUpForm = () => {
+    setRechargeAmount('');
+    setSelectedMethodKey(null);
+    setProofImageUri(null);
+  };
+
+  const handleConfirmRecharge = async () => {
+    const amountVal = parseFloat(rechargeAmount);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      toast.error('Invalid Amount', 'Please enter a positive amount to top up.');
+      return;
+    }
+    if (!selectedMethod) {
+      toast.error('No Payment Method', 'Payment methods are not configured yet. Please contact support.');
+      return;
+    }
+    if (!selectedMethodIsConfigured) {
+      toast.error('Payment Details Missing', `${selectedMethod.label} payment details are not configured yet. Please contact support.`);
+      return;
+    }
+    if (!proofImageUri) {
+      toast.error('Proof Required', 'Please upload your payment screenshot or slip.');
+      return;
+    }
+
+    setIsSubmittingRecharge(true);
+    try {
+      const formData = new FormData();
+      formData.append('amount', String(amountVal));
+      formData.append('method', selectedMethod.method);
+
+      const filename = proofImageUri.split('/').pop() || 'payment-proof.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+      formData.append('proof', {
+        uri: Platform.OS === 'ios' ? proofImageUri.replace('file://', '') : proofImageUri,
+        name: filename,
+        type,
+      } as any);
+
+      await topUpMutation.mutateAsync(formData);
+      toast.success('Submitted', 'Top-up proof uploaded successfully. Approvals take up to 24 hours.');
+      setShowRechargeModal(false);
+      resetTopUpForm();
+    } catch (err: any) {
+      toast.error('Top-Up Failed', err.response?.data?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsSubmittingRecharge(false);
+    }
+  };
+
+  const handleShareStatement = async () => {
+    const availableBalance = wallet?.availableBalance ?? wallet?.balance ?? 0;
+    const lines = [
+      'ApnaUstad Worker Wallet Statement',
+      `Available Balance: Rs. ${availableBalance.toLocaleString()}`,
+      `Held for Active Jobs: Rs. ${(wallet?.reservedBalance ?? 0).toLocaleString()}`,
+      `Total Earnings: Rs. ${totalEarnings.toLocaleString()}`,
+      `Ready to Collect: Rs. ${summary.payable.toLocaleString()}`,
+      `Total Recharged: Rs. ${wallet?.totalRecharged?.toLocaleString() ?? '0'}`,
+      `Commission Deducted: Rs. ${wallet?.totalCommissionDeducted?.toLocaleString() ?? '0'}`,
+      '',
+      ...transactions.slice(0, 20).map((tx) => {
+        const sign = ['recharge', 'refund'].includes(tx.type) ? '+' : '-';
+        return `${new Date(tx.createdAt).toLocaleDateString()} | ${tx.description} | ${sign}Rs. ${tx.amount.toLocaleString()} | Bal Rs. ${tx.balanceAfter.toLocaleString()}`;
+      }),
+    ];
+    await Share.share({ message: lines.join('\n') });
+  };
+
+  // Determine full page loading state
+  const isClientLoading = (isPaymentsLoading || isUserWalletLoading) && !isClientRefreshing;
+  const isWorkerLoading = (isWalletLoading || isTransactionsLoading || areMethodsLoading || areTopUpsLoading) && !isWorkerRefreshing;
+
+  const showSkeleton = isWorker ? isWorkerLoading : isClientLoading;
+
+  return (
+    <BackgroundWrapper>
+      {showSkeleton ? (
+        <WalletSkeleton isWorker={isWorker} insets={insets} />
+      ) : isWorker ? (
+        <>
+          <WorkerWalletView
+            wallet={wallet ?? null}
+            transactions={transactions}
+            topUps={topUps}
+            payments={payments}
+            summary={summary}
+            workerTab={workerTab}
+            onTabChange={setWorkerTab}
+            refreshing={isWorkerRefreshing}
+            onRefresh={handleWorkerRefresh}
+            onOpenRecharge={() => setShowRechargeModal(true)}
+          />
+          <RechargeModal
+            visible={showRechargeModal}
+            onDismiss={() => { setShowRechargeModal(false); resetTopUpForm(); }}
+            amount={rechargeAmount}
+            onAmountChange={setRechargeAmount}
+            paymentMethods={paymentMethods}
+            selectedMethodKey={selectedMethodKey}
+            onSelectMethod={setSelectedMethodKey}
+            proofImageUri={proofImageUri}
+            onPickProofImage={handlePickProofImage}
+            isSubmitting={isSubmittingRecharge}
+            onConfirm={handleConfirmRecharge}
+            onCopy={handleCopy}
+          />
+        </>
+      ) : (
+        <ClientWalletView
+          payments={payments}
+          summary={summary}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          refreshing={isClientRefreshing}
+          onRefresh={handleClientRefresh}
+          walletBalance={walletBalance}
+          walletTransactions={walletTransactions}
+        />
+      )}
+    </BackgroundWrapper>
+  );
+}
