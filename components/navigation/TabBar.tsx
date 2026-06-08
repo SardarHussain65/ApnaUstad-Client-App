@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { Home, ClipboardList, Wallet, User } from 'lucide-react-native';
 import { Colors, Animation } from '../../constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const TAB_BAR_WIDTH = width - 40; 
@@ -19,6 +20,7 @@ const TAB_WIDTH = TAB_BAR_WIDTH / 4;
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const translateX = useSharedValue(state.index * TAB_WIDTH);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     translateX.value = withSpring(state.index * TAB_WIDTH, {
@@ -45,8 +47,12 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     }
   };
 
+  const bottomMargin = Platform.OS === 'ios'
+    ? (insets.bottom > 0 ? insets.bottom : 16)
+    : (insets.bottom > 0 ? insets.bottom + 12 : 16);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { bottom: bottomMargin }]}>
       <BlurView intensity={60} tint="dark" style={styles.blurContainer}>
         {/* Active Indicator (Glowing Pill) */}
         <Animated.View style={[styles.activeIndicator, indicatorStyle]} />
@@ -140,7 +146,6 @@ function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPres
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 34 : 16,
     left: 20,
     right: 20,
     height: 68,

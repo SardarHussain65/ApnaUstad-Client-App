@@ -38,7 +38,7 @@ import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
-import { useShimmerTranslateX, CategoriesSkeleton, DashboardSkeleton, ListSkeleton } from './HomeSkeletonLoader';
+import { useShimmerTranslateX, CategoriesSkeleton, DashboardSkeleton, ListSkeleton, BookingCardSkeleton } from './HomeSkeletonLoader';
 import { ClientToast, ToastState } from './ClientToast';
 import { RecentBookingCard } from './RecentBookingCard';
 import { ActiveBiddingBanner } from './ActiveBiddingBanner';
@@ -437,7 +437,8 @@ export function ClientHome() {
                 <Text style={styles.sectionSub}>Your latest activity</Text>
               </View>
             </View>
-            <ListSkeleton translateX={translateX} count={2} height={70} />
+            <BookingCardSkeleton translateX={translateX} />
+            <BookingCardSkeleton translateX={translateX} />
           </View>
         ) : (
           <Animated.View

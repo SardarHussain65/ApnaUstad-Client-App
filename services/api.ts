@@ -144,6 +144,17 @@ api.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 423 && error.response?.data?.code === 'ACCOUNT_DEACTIVATED') {
+      console.log('--- Account deactivation detected ---');
+      try {
+        DeviceEventEmitter.emit('auth:account-deactivated', error.response?.data?.data || {});
+        const { router } = require('expo-router');
+        router.replace('/account-deactivated');
+      } catch (navError) {
+        console.error('Error handling account deactivation:', navError);
+      }
+    }
+
     // Network / Offline Error and Timeout handling
     if (!error.response) {
       try {

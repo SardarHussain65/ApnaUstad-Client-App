@@ -15,7 +15,7 @@ export const queryKeys = {
   workers: {
     all: ['workers'] as const,
     list: () => [...queryKeys.workers.all] as const,
-    detail: (id: string) => [...queryKeys.workers.all, 'detail', id] as const,
+    detail: (id: string, category?: string) => [...queryKeys.workers.all, 'detail', id, category || ''] as const,
     byCategory: (category: string) => [...queryKeys.workers.all, 'category', category] as const,
   },
 

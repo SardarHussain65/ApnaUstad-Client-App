@@ -419,6 +419,13 @@ export default function RegisterDetailsScreen() {
                       ))}
                     </ScrollView>
 
+                    <View style={[styles.categoryInfoBox, { borderColor: accentColor + '35', backgroundColor: accentColor + '10' }]}>
+                      <Briefcase size={14} color={accentColor} />
+                      <Text style={styles.categoryInfoText}>
+                        Your first category is free. After registration, go to Profile &gt; Skills & Categories to request more services. Extra categories require details, wallet balance, admin review, and automatic monthly fee deduction on approval.
+                      </Text>
+                    </View>
+
                     <Text style={styles.label}>SKILLS (COMMA-SEPARATED)</Text>
                     <View style={styles.inputWrapper}>
                       <View style={styles.iconContainer}><PenTool size={18} color={accentColor} /></View>
@@ -699,6 +706,23 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: 'rgba(255,255,255,0.4)',
     letterSpacing: 1,
+  },
+  categoryInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  categoryInfoText: {
+    flex: 1,
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 16,
+    marginLeft: 9,
   },
   rowInputs: {
     flexDirection: 'row',

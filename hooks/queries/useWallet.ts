@@ -10,12 +10,14 @@ export interface WorkerWallet {
   availableBalance?: number;
   totalRecharged: number;
   totalCommissionDeducted: number;
+  totalSubscriptionDeducted?: number;
   isActive: boolean;
   lastRechargedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   requiredBalance?: number;
   platformFeePercentage?: number;
+  additionalCategoryMonthlyFee?: number;
   commissionEnabled?: boolean;
   isEligibleForNewJobs?: boolean;
 }
@@ -24,7 +26,7 @@ export interface WalletTransaction {
   _id: string;
   wallet: string;
   worker: string;
-  type: 'recharge' | 'commission_deduction' | 'refund' | 'adjustment';
+  type: 'recharge' | 'commission_deduction' | 'specialty_subscription' | 'refund' | 'adjustment';
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
@@ -36,7 +38,7 @@ export interface WalletTransaction {
   };
   performedBy: {
     actor: string;
-    actorType: 'worker' | 'admin';
+    actorType: 'worker' | 'admin' | 'system';
   };
   createdAt: string;
   updatedAt: string;

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-  Dimensions,
   Pressable,
   Platform,
 } from 'react-native';
@@ -23,6 +22,7 @@ import {
   MapPin,
   Camera,
   Settings,
+  Layers3,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -36,7 +36,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors, Spacing, Shadows, BorderRadius } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMyBookings, useWorkerBookings, useWorker, useUpdateProfileMutation } from '../../hooks';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
@@ -44,8 +44,21 @@ import { BlurView } from 'expo-blur';
 import api from '../../services/api';
 import { getOptimizedImageUrl } from '../../constants/Config';
 
-const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 240;
+
+type ProfileSpecialty = {
+  _id: string;
+  categoryId: { _id: string; name: string; color?: string } | string;
+  priority: number;
+  tier?: 'primary' | 'additional';
+  skills?: string[];
+  hourlyRate: number;
+  experience: number;
+  bio?: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  subscriptionStatus: 'free' | 'pending_activation' | 'active' | 'payment_due' | 'expired';
+  isActive: boolean;
+};
 
 // ─── Stats Row ─────────────────────────────────────────────────────────────────
 function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number; successRate: number }) {
@@ -139,6 +152,24 @@ export default function ProfileTab() {
   const { mutateAsync: updateProfile } = useUpdateProfileMutation();
 
   const [verificationStatus, setVerificationStatus] = useState<string>('Verify identity');
+  const [specialties, setSpecialties] = useState<ProfileSpecialty[]>([]);
+
+  const loadWorkerSpecialties = useCallback(async () => {
+    if (!isWorker) {
+      setSpecialties([]);
+      return;
+    }
+    try {
+      const response = await api.get('/workers/specialties');
+      setSpecialties(response.data?.data?.specialties || []);
+    } catch {
+      setSpecialties([]);
+    }
+  }, [isWorker]);
+
+  useFocusEffect(useCallback(() => {
+    loadWorkerSpecialties();
+  }, [loadWorkerSpecialties]));
 
   useEffect(() => {
     if (isWorker) {
@@ -173,7 +204,11 @@ export default function ProfileTab() {
     };
   }, [bookings, workerProfile, role, user]);
 
-  const skills: string[] = (workerProfile as any)?.skills || [];
+  const activeSpecialties = React.useMemo(() => (
+    specialties
+      .filter(specialty => specialty.approvalStatus === 'approved' && specialty.isActive)
+      .sort((left, right) => left.priority - right.priority)
+  ), [specialties]);
 
   const clientStats = React.useMemo(() => {
     const completed = bookings.filter(b => b.status === 'completed').length;
@@ -252,44 +287,87 @@ export default function ProfileTab() {
           {/* Worker Details */}
           {isWorker && workerProfile && (
             <Animated.View entering={FadeInDown.delay(420)} style={styles.workerSummary}>
-
-              {/* Key stats: rate · exp · location */}
-              <View style={styles.workerMetaRow}>
-                {!!workerProfile.hourlyRate && (
-                  <View style={styles.workerMetaItem}>
-                    <CircleDollarSign size={13} color="#34C759" strokeWidth={2.3} />
-                    <Text style={styles.workerMetaText}>Rs. {workerProfile.hourlyRate}/hr</Text>
-                  </View>
-                )}
-                {!!workerProfile.experience && (
-                  <View style={styles.workerMetaItem}>
-                    <Clock3 size={13} color="#FF9F0A" strokeWidth={2.3} />
-                    <Text style={styles.workerMetaText}>{workerProfile.experience} yrs exp</Text>
-                  </View>
-                )}
-                {!!(workerProfile.city || workerProfile.address) && (
-                  <View style={styles.workerMetaItem}>
-                    <MapPin size={13} color="#BF5AF2" strokeWidth={2.3} />
-                    <Text style={styles.workerMetaText} numberOfLines={1}>
-                      {workerProfile.city || workerProfile.address}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Bio */}
-              {!!workerProfile.bio && (
-                <Text style={styles.workerBio} numberOfLines={3}>{workerProfile.bio}</Text>
+              {!!(workerProfile.city || workerProfile.address) && (
+                <View style={styles.locationPill}>
+                  <MapPin size={13} color="#BF5AF2" strokeWidth={2.3} />
+                  <Text style={styles.locationPillText} numberOfLines={1}>
+                    {workerProfile.city || workerProfile.address}
+                  </Text>
+                </View>
               )}
 
-              {/* Skills */}
-              {skills.length > 0 && (
-                <View style={styles.skillsRow}>
-                  {skills.slice(0, 5).map((s, i) => (
-                    <View key={i} style={styles.skillChip}>
-                      <Text style={styles.skillChipText}>{s}</Text>
-                    </View>
-                  ))}
+              {activeSpecialties.length > 0 && (
+                <View style={styles.serviceCategoriesBox}>
+                  <View style={styles.serviceCategoriesHeader}>
+                    <Layers3 size={14} color="#FF8C00" strokeWidth={2.4} />
+                    <Text style={styles.serviceCategoriesTitle}>Active service categories</Text>
+                  </View>
+                  <View style={styles.serviceCategoryStack}>
+                    {activeSpecialties.map((specialty) => {
+                      const category = typeof specialty.categoryId === 'string' ? null : specialty.categoryId;
+                      const color = category?.color || (specialty.priority === 1 ? '#00F5FF' : '#FF8C00');
+                      const specialtySkills = Array.isArray(specialty.skills) ? specialty.skills : [];
+                      const visibleSkills = specialtySkills.slice(0, 3);
+                      const remainingSkillCount = Math.max(specialtySkills.length - visibleSkills.length, 0);
+                      return (
+                        <View key={specialty._id} style={[styles.serviceCategoryCard, { borderColor: `${color}45` }]}>
+                          <LinearGradient
+                            colors={[`${color}18`, 'rgba(255,255,255,0.025)', 'rgba(8,10,28,0.9)']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={StyleSheet.absoluteFillObject}
+                          />
+                          <View style={[styles.serviceCardGlow, { backgroundColor: `${color}25` }]} />
+                          <View style={[styles.serviceCardRail, { backgroundColor: color }]} />
+
+                          <View style={styles.serviceCategoryTop}>
+                            <View style={[styles.serviceCategoryIcon, { backgroundColor: `${color}20`, borderColor: `${color}55` }]}>
+                              <Layers3 size={18} color={color} strokeWidth={2.6} />
+                            </View>
+                            <View style={styles.serviceCategoryTitleBlock}>
+                              <Text style={[styles.serviceCategoryName, { color }]} numberOfLines={1}>
+                                {category?.name || (specialty.priority === 1 ? workerProfile.category : 'Category')}
+                              </Text>
+                              <Text style={styles.serviceCategoryTier}>{specialty.priority === 1 ? 'Main specialization' : 'Approved extra service'}</Text>
+                            </View>
+                            <View style={[styles.servicePriorityBadge, { borderColor: `${color}55`, backgroundColor: `${color}16` }]}>
+                              <Text style={[styles.servicePriorityText, { color }]}>#{specialty.priority}</Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.serviceCompactMetaRow}>
+                            <View style={styles.serviceCompactMetaPill}>
+                              <CircleDollarSign size={12} color="#34C759" strokeWidth={2.4} />
+                              <Text style={styles.serviceCompactMetaText}>
+                                Rs. {Number(specialty.hourlyRate || 0).toLocaleString('en-PK')}/hr
+                              </Text>
+                            </View>
+                            <View style={styles.serviceCompactMetaPill}>
+                              <Clock3 size={12} color="#FF9F0A" strokeWidth={2.4} />
+                              <Text style={styles.serviceCompactMetaText}>{Number(specialty.experience || 0)} yrs exp</Text>
+                            </View>
+                          </View>
+
+                          {!!specialty.bio && <Text style={styles.serviceCategoryBio} numberOfLines={1}>{specialty.bio}</Text>}
+
+                          {visibleSkills.length > 0 && (
+                            <View style={styles.serviceSkillRow}>
+                              {visibleSkills.map((skill, index) => (
+                                <View key={`${skill}-${index}`} style={[styles.serviceSkillChip, { borderColor: `${color}35` }]}>
+                                  <Text style={[styles.serviceSkillText, { color }]}>{skill}</Text>
+                                </View>
+                              ))}
+                              {remainingSkillCount > 0 && (
+                                <View style={[styles.serviceSkillChip, { borderColor: `${color}28` }]}>
+                                  <Text style={[styles.serviceSkillText, { color }]}>+{remainingSkillCount}</Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
               )}
             </Animated.View>
@@ -299,6 +377,9 @@ export default function ProfileTab() {
           <View style={styles.menuSection}>
             <Text style={styles.sectionLabel}>Account</Text>
             <MenuItem icon={User} label="Personal Information" sublabel="Name, phone & photo" delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
+            {isWorker && (
+              <MenuItem icon={Layers3} label="Skills & Categories" sublabel="Priorities, requests & renewals" delay={655} accent="#FF8C00" onPress={() => router.push('/profile/specialties' as any)} />
+            )}
             {isWorker && (
               <MenuItem
                 icon={BadgeCheck}
@@ -400,16 +481,82 @@ const styles = StyleSheet.create({
     borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
     padding: 13, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.02)',
   },
-  workerMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 10 },
-  workerMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  workerMetaText: { color: 'rgba(255,255,255,0.72)', fontSize: 12, fontWeight: '600' },
-  workerBio: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '500', lineHeight: 18, marginBottom: 10 },
-  skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  skillChip: { borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,245,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, backgroundColor: 'rgba(0,245,255,0.07)' },
-  skillChipText: { color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: '700' },
-
-
-
+  locationPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(191,90,242,0.24)',
+    backgroundColor: 'rgba(191,90,242,0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 13,
+  },
+  locationPillText: { color: 'rgba(255,255,255,0.72)', fontSize: 12, fontWeight: '700' },
+  serviceCategoriesBox: { marginTop: 0 },
+  serviceCategoriesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  serviceCategoriesTitle: { color: '#fff', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7 },
+  serviceCategoryStack: { gap: 8 },
+  serviceCategoryCard: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: 'rgba(8,10,28,0.92)',
+    paddingVertical: 11,
+    paddingRight: 11,
+    paddingLeft: 14,
+  },
+  serviceCardGlow: {
+    position: 'absolute',
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    top: -42,
+    right: -30,
+    opacity: 0.55,
+  },
+  serviceCardRail: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, borderRadius: 3 },
+  serviceCategoryTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  serviceCategoryIcon: { width: 34, height: 34, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  serviceCategoryTitleBlock: { flex: 1, minWidth: 0 },
+  serviceCategoryName: { fontSize: 13, fontWeight: '900', letterSpacing: -0.1 },
+  serviceCategoryTier: { color: 'rgba(255,255,255,0.44)', fontSize: 8, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.55, marginTop: 2 },
+  servicePriorityBadge: {
+    minWidth: 30,
+    height: 24,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 7,
+  },
+  servicePriorityText: { fontSize: 10, fontWeight: '900' },
+  serviceCompactMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 9 },
+  serviceCompactMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  serviceCompactMetaText: { color: 'rgba(255,255,255,0.76)', fontSize: 10, fontWeight: '800' },
+  serviceCategoryBio: { color: 'rgba(255,255,255,0.58)', fontSize: 10.5, fontWeight: '600', lineHeight: 15, marginTop: 8 },
+  serviceSkillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 8 },
+  serviceSkillChip: {
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0,245,255,0.065)',
+  },
+  serviceSkillText: { fontSize: 9, fontWeight: '900' },
   // Section label
   sectionLabel: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 },
 

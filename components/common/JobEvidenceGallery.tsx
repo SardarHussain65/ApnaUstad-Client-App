@@ -191,10 +191,11 @@ export function JobEvidenceGallery({
       decelerationRate="fast"
     >
       {items.map((item, index) => {
-        const props = { key: `${item.type}-${item.url}-${index}`, item, index, width: resolvedCardWidth };
-        if (item.type === 'video') return <VideoCard {...props} />;
-        if (item.type === 'audio') return <AudioCard {...props} />;
-        return <ImageCard {...props} />;
+        const key = `${item.type}-${item.url}-${index}`;
+        const cardProps = { item, index, width: resolvedCardWidth };
+        if (item.type === 'video') return <VideoCard key={key} {...cardProps} />;
+        if (item.type === 'audio') return <AudioCard key={key} {...cardProps} />;
+        return <ImageCard key={key} {...cardProps} />;
       })}
     </ScrollView>
   );

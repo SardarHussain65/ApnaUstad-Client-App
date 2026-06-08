@@ -24,6 +24,8 @@ export interface Worker {
   rating?: number;
   isVerified?: boolean;
   isActive?: boolean;
+  deactivationReason?: string;
+  deactivatedAt?: string | null;
   profileImage?: string;
   totalBookings?: number;
   experience?: number;
@@ -37,6 +39,16 @@ export interface Worker {
   skills?: string[];
   city?: string;
   address?: string;
+  matchedSpecialtyProfile?: {
+    categoryId?: string;
+    category: string;
+    priority: number;
+    tier: 'primary' | 'additional';
+    skills: string[];
+    hourlyRate: number;
+    experience: number;
+    bio: string;
+  };
 }
 
 export interface BookingPerson {
@@ -382,6 +394,9 @@ export interface ProfileData {
   experience?: number;
   skills?: string[];
   isAvailable?: boolean;
+  isActive?: boolean;
+  deactivationReason?: string;
+  deactivatedAt?: string | null;
   bio?: string;
 }
 
@@ -391,8 +406,10 @@ const fetchCategories = async (): Promise<Category[]> => {
   return response.data.data;
 };
 
-const fetchWorker = async (id: string): Promise<Worker> => {
-  const response = await api.get(`/users/workers/${id}`);
+const fetchWorker = async (id: string, category?: string): Promise<Worker> => {
+  const response = await api.get(`/users/workers/${id}`, {
+    params: { category },
+  });
   return response.data.data;
 };
 
@@ -514,10 +531,16 @@ export function useCategories(options?: Omit<UseQueryOptions<Category[]>, 'query
   });
 }
 
-export function useWorker(id: string | undefined, options?: Omit<UseQueryOptions<Worker>, 'queryKey' | 'queryFn'>) {
+export function useWorker(
+  id: string | undefined,
+  categoryOrOptions?: string | Omit<UseQueryOptions<Worker>, 'queryKey' | 'queryFn'>,
+  maybeOptions?: Omit<UseQueryOptions<Worker>, 'queryKey' | 'queryFn'>
+) {
+  const category = typeof categoryOrOptions === 'string' ? categoryOrOptions : undefined;
+  const options = typeof categoryOrOptions === 'string' ? maybeOptions : categoryOrOptions;
   return useQuery<Worker>({
-    queryKey: queryKeys.workers.detail(id || ''),
-    queryFn: () => fetchWorker(id!),
+    queryKey: queryKeys.workers.detail(id || '', category),
+    queryFn: () => fetchWorker(id!, category),
     enabled: !!id,
     staleTime: 1000 * 60 * 10, // 10 minutes
     gcTime: 1000 * 60 * 30,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   Platform,
   Image,
   ActivityIndicator,
-  Pressable,
   KeyboardAvoidingView,
 } from 'react-native';
 import {
@@ -19,16 +18,11 @@ import {
   MapPin,
   Camera,
   Check,
-  Tag,
-  X,
-  FileText,
-  CircleDollarSign,
-  Clock3,
   Building2,
   ChevronLeft,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -60,11 +54,6 @@ export default function PersonalInfoScreen() {
 
   // ── Worker-only fields ─────────────────────────────────────────
   const [city, setCity] = useState('');
-  const [bio, setBio] = useState('');
-  const [hourlyRate, setHourlyRate] = useState('');
-  const [experience, setExperience] = useState('');
-  const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState('');
 
   useEffect(() => {
     const source = profileData || (user as any);
@@ -76,10 +65,6 @@ export default function PersonalInfoScreen() {
     setProfileImage(source.profileImage || null);
     if (isWorker) {
       setCity(source.city || '');
-      setBio(source.bio || '');
-      setHourlyRate(source.hourlyRate ? String(source.hourlyRate) : '');
-      setExperience(source.experience ? String(source.experience) : '');
-      setSkills(Array.isArray(source.skills) ? source.skills : []);
     }
   }, [profileData, user, isWorker]);
 
@@ -109,15 +94,6 @@ export default function PersonalInfoScreen() {
     return data.data?.imageUrl || '';
   };
 
-  const addSkill = () => {
-    const trimmed = skillInput.trim();
-    if (!trimmed || skills.includes(trimmed) || skills.length >= 10) return;
-    setSkills(prev => [...prev, trimmed]);
-    setSkillInput('');
-  };
-
-  const removeSkill = (skill: string) => setSkills(prev => prev.filter(s => s !== skill));
-
   const handleSave = async () => {
     if (!userId || !role) return;
     if (!name.trim() || !phone.trim()) {
@@ -143,10 +119,6 @@ export default function PersonalInfoScreen() {
 
       if (isWorker) {
         payload.city = city.trim();
-        payload.bio = bio.trim();
-        if (hourlyRate) payload.hourlyRate = parseFloat(hourlyRate) || 0;
-        if (experience) payload.experience = parseInt(experience, 10) || 0;
-        payload.skills = skills;
       }
 
       const updated = await updateProfile({ role, id: userId, data: payload });
@@ -217,90 +189,17 @@ export default function PersonalInfoScreen() {
           <FormField label="Phone Number" value={phone} onChangeText={setPhone} icon={Phone} delay={280} keyboardType="phone-pad" placeholder="+92 300 0000000" />
           <FormField label="Home Address" value={address} onChangeText={setAddress} icon={MapPin} delay={320} placeholder="Street, area, city" multiline />
 
-          {/* ── Section: Worker Professional Info ── */}
+          {/* ── Section: Worker Service Location ── */}
           {isWorker && (
             <>
-              <SectionHeading label="Professional Details" delay={380} />
+              <SectionHeading label="Service Location" delay={380} />
 
               <FormField label="City" value={city} onChangeText={setCity} icon={Building2} delay={400} placeholder="e.g. Lahore, Karachi, Islamabad" />
-              <FormField label="Hourly Rate (Rs.)" value={hourlyRate} onChangeText={setHourlyRate} icon={CircleDollarSign} delay={440} keyboardType="numeric" placeholder="e.g. 500" />
-              <FormField label="Experience (Years)" value={experience} onChangeText={setExperience} icon={Clock3} delay={480} keyboardType="numeric" placeholder="e.g. 3" />
-
-              {/* Bio */}
-              <Animated.View entering={FadeInDown.delay(520).springify()} style={styles.fieldWrap}>
-                <View style={styles.fieldLabelRow}>
-                  <FileText size={13} color={Colors.primary} strokeWidth={2.5} />
-                  <Text style={styles.fieldLabel}>Professional Bio</Text>
-                </View>
-                <View style={styles.bioInputCard}>
-                  <LinearGradient colors={['rgba(255,255,255,0.04)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
-                  <TextInput
-                    style={styles.bioInput}
-                    value={bio}
-                    onChangeText={setBio}
-                    placeholder="Describe your expertise, work quality, and what makes you stand out..."
-                    placeholderTextColor="rgba(255,255,255,0.28)"
-                    multiline
-                    numberOfLines={4}
-                    selectionColor={Colors.primary}
-                    maxLength={400}
-                    textAlignVertical="top"
-                  />
-                  <Text style={styles.bioCharCount}>{bio.length}/400</Text>
-                </View>
-              </Animated.View>
-
-              {/* Skills */}
-              <Animated.View entering={FadeInDown.delay(580).springify()} style={styles.fieldWrap}>
-                <View style={styles.fieldLabelRow}>
-                  <Tag size={13} color={Colors.primary} strokeWidth={2.5} />
-                  <Text style={styles.fieldLabel}>Skills & Expertise</Text>
-                </View>
-                <View style={styles.skillInputRow}>
-                  <View style={styles.skillInputCard}>
-                    <LinearGradient colors={['rgba(255,255,255,0.04)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
-                    <TextInput
-                      style={styles.skillInput}
-                      value={skillInput}
-                      onChangeText={setSkillInput}
-                      placeholder="e.g. Electrical Wiring"
-                      placeholderTextColor="rgba(255,255,255,0.28)"
-                      selectionColor={Colors.primary}
-                      onSubmitEditing={addSkill}
-                      returnKeyType="done"
-                    />
-                  </View>
-                  <TouchableOpacity style={styles.skillAddBtn} onPress={addSkill} disabled={!skillInput.trim()}>
-                    <LinearGradient
-                      colors={skillInput.trim() ? [Colors.primary, Colors.secondary] : ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                      style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
-                    />
-                    <Text style={[styles.skillAddBtnText, { color: skillInput.trim() ? '#000' : 'rgba(255,255,255,0.3)' }]}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {skills.length > 0 && (
-                  <View style={styles.skillsChips}>
-                    {skills.map((skill, i) => (
-                      <Animated.View key={skill} entering={FadeInDown.delay(i * 40)} style={styles.skillChip}>
-                        <LinearGradient colors={['rgba(0,245,255,0.18)', 'rgba(191,90,242,0.12)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 20 }]} />
-                        <Text style={styles.skillChipText}>{skill}</Text>
-                        <TouchableOpacity style={styles.skillChipRemove} onPress={() => removeSkill(skill)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                          <X size={11} color="rgba(255,255,255,0.6)" strokeWidth={2.5} />
-                        </TouchableOpacity>
-                      </Animated.View>
-                    ))}
-                  </View>
-                )}
-                {skills.length === 0 && (
-                  <Text style={styles.skillsHint}>Add up to 10 skills. Press "Add" or hit Return after each.</Text>
-                )}
-              </Animated.View>
             </>
           )}
 
           {/* Save Button */}
-          <Animated.View entering={FadeInDown.delay(isWorker ? 660 : 420)} style={styles.footer}>
+          <Animated.View entering={FadeInDown.delay(isWorker ? 460 : 420)} style={styles.footer}>
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isLoading}>
               <LinearGradient
                 colors={isLoading ? ['rgba(0,245,255,0.4)', 'rgba(191,90,242,0.4)'] : [Colors.primary, Colors.secondary]}
@@ -407,23 +306,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden', backgroundColor: 'rgba(8,10,30,0.7)',
   },
   input: { color: '#fff', fontSize: 15, fontWeight: '600', paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
-
-  // Bio
-  bioInputCard: { borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', backgroundColor: 'rgba(8,10,30,0.7)', padding: 14 },
-  bioInput: { color: '#fff', fontSize: 14, fontWeight: '500', lineHeight: 21, minHeight: 90 },
-  bioCharCount: { color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: '700', textAlign: 'right', marginTop: 8 },
-
-  // Skills
-  skillInputRow: { flexDirection: 'row', gap: 10 },
-  skillInputCard: { flex: 1, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', backgroundColor: 'rgba(8,10,30,0.7)' },
-  skillInput: { color: '#fff', fontSize: 14, fontWeight: '600', paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 13 : 11 },
-  skillAddBtn: { width: 70, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  skillAddBtnText: { fontSize: 13, fontWeight: '900' },
-  skillsChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  skillChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,245,255,0.25)', paddingHorizontal: 11, paddingVertical: 6, overflow: 'hidden' },
-  skillChipText: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700' },
-  skillChipRemove: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  skillsHint: { color: 'rgba(255,255,255,0.28)', fontSize: 11, fontWeight: '600', marginTop: 10 },
 
   // Footer / Save
   footer: { marginTop: 32 },

@@ -14,7 +14,14 @@ import { WorkerStatusCard } from './WorkerStatusCard';
 import { WorkerStatsCard } from './WorkerStatsCard';
 import { WorkerAlertJobCard } from './WorkerAlertJobCard';
 import { IncomingJobModal } from './IncomingJobModal';
-import { SkeletonBox, useShimmerTranslateX } from './HomeSkeletonLoader';
+import {
+  SkeletonBox,
+  useShimmerTranslateX,
+  BookingCardSkeleton,
+  WorkerStatsCardSkeleton,
+  WorkerAlertJobCardSkeleton,
+  WorkerPendingBidCardSkeleton,
+} from './HomeSkeletonLoader';
 import { RecentBookingCard } from './RecentBookingCard';
 import { Booking } from '../../hooks/queries/useData';
 import { socketService } from '../../services/socketService';
@@ -340,9 +347,7 @@ export function WorkerHome() {
             onToggleScheduled={setIsScheduledOnline}
           />
           {summaryLoading && !isRefreshing ? (
-            <View style={{ marginTop: 16 }}>
-              <SkeletonBox width="100%" height={140} borderRadius={24} translateX={translateX} />
-            </View>
+            <WorkerStatsCardSkeleton translateX={translateX} />
           ) : (
             <WorkerStatsCard stats={stats} />
           )}
@@ -358,7 +363,7 @@ export function WorkerHome() {
               </View>
             </View>
             <View style={styles.agendaList}>
-              <SkeletonBox width="100%" height={100} borderRadius={24} translateX={translateX} />
+              <WorkerAlertJobCardSkeleton translateX={translateX} />
             </View>
           </View>
         ) : (
@@ -422,8 +427,8 @@ export function WorkerHome() {
           <View style={styles.recentBookingList}>
             {summaryLoading && !isRefreshing ? (
               <>
-                <SkeletonBox width="100%" height={170} borderRadius={24} translateX={translateX} />
-                <SkeletonBox width="100%" height={170} borderRadius={24} translateX={translateX} />
+                <BookingCardSkeleton translateX={translateX} />
+                <BookingCardSkeleton translateX={translateX} />
               </>
             ) : recentBookings.length > 0 ? (
               recentBookings.map((booking) => (
@@ -451,7 +456,7 @@ export function WorkerHome() {
               </View>
             </View>
             <View style={styles.agendaList}>
-              <SkeletonBox width="100%" height={170} borderRadius={24} translateX={translateX} />
+              <WorkerPendingBidCardSkeleton translateX={translateX} />
             </View>
           </View>
         ) : (

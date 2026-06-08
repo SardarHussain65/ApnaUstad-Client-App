@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { AppState, DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
 import { getPushToken } from '../services/notificationService';
@@ -18,6 +18,9 @@ export interface UserProfile {
     type: string;
     coordinates: [number, number];
   };
+  isActive?: boolean;
+  deactivationReason?: string;
+  deactivatedAt?: string | null;
 }
 
 export interface WorkerProfile extends UserProfile {
@@ -30,15 +33,24 @@ export interface WorkerProfile extends UserProfile {
   totalBookings: number;
 }
 
+export interface AccountStatus {
+  isActive: boolean;
+  deactivationReason?: string;
+  deactivatedAt?: string | null;
+}
+
 interface AuthContextType {
   role: UserRole;
   user: UserProfile | WorkerProfile | null;
   token: string | null;
   refreshToken: string | null;
   isLoading: boolean;
+  accountStatus: AccountStatus | null;
   setAuth: (token: string, refreshToken: string, role: UserRole, user: any) => Promise<void>;
   setRole: (role: UserRole) => void;
   updateUser: (user: any) => Promise<void>;
+  updateAccountStatus: (status: AccountStatus) => Promise<void>;
+  refreshAccountStatus: () => Promise<AccountStatus | null>;
   logout: () => Promise<void>;
 }
 
@@ -49,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<UserProfile | WorkerProfile | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
   const [refreshToken, setRefreshTokenState] = useState<string | null>(null);
+  const [accountStatus, setAccountStatusState] = useState<AccountStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Guard flag to prevent logout() from being called recursively.
@@ -59,9 +72,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Keep a ref to the current token so logout() can read it synchronously
   // without going through AsyncStorage (which may already be cleared).
   const tokenRef = useRef<string | null>(null);
+  const roleRef = useRef<UserRole>(null);
   useEffect(() => {
     tokenRef.current = token;
   }, [token]);
+  useEffect(() => {
+    roleRef.current = role;
+  }, [role]);
+
+  const buildAccountStatus = (source: any): AccountStatus => ({
+    isActive: source?.isActive !== false,
+    deactivationReason: source?.deactivationReason || '',
+    deactivatedAt: source?.deactivatedAt || null,
+  });
+
+  const updateAccountStatus = useCallback(async (status: AccountStatus) => {
+    setAccountStatusState(status);
+    setUserState((current) => {
+      if (!current) return current;
+      const next = {
+        ...current,
+        isActive: status.isActive,
+        deactivationReason: status.deactivationReason || '',
+        deactivatedAt: status.deactivatedAt || null,
+      };
+      AsyncStorage.setItem('user_data', JSON.stringify(next)).catch((error) => {
+        console.error('Error saving account status:', error);
+      });
+      return next;
+    });
+  }, []);
+
+  const refreshAccountStatus = useCallback(async () => {
+    const currentToken = tokenRef.current;
+    const currentRole = roleRef.current;
+    if (!currentToken || !currentRole) return null;
+
+    try {
+      const endpoint = currentRole === 'worker' ? '/workers/me/status' : '/users/me/status';
+      const response = await fetch(`${BASE_URL}/api/v1${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+        },
+      });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      const status = buildAccountStatus(payload.data || payload);
+      await updateAccountStatus(status);
+      return status;
+    } catch (error) {
+      console.warn('Could not refresh account status:', error);
+      return null;
+    }
+  }, [updateAccountStatus]);
 
   useEffect(() => {
     const loadAuth = async () => {
@@ -79,7 +142,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           socketService.connect(savedToken);
         }
         if (savedRefreshToken) setRefreshTokenState(savedRefreshToken);
-        if (savedUser) setUserState(JSON.parse(savedUser));
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          setUserState(parsedUser);
+          setAccountStatusState(buildAccountStatus(parsedUser));
+        }
       } catch (error) {
         console.error('Error loading auth state:', error);
       } finally {
@@ -99,6 +166,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('auth:account-deactivated', (status: AccountStatus) => {
+      updateAccountStatus({
+        isActive: false,
+        deactivationReason: status?.deactivationReason || 'Account deactivated by admin. Please contact support for details.',
+        deactivatedAt: status?.deactivatedAt || null,
+      });
+    });
+
+    return () => subscription.remove();
+  }, [updateAccountStatus]);
+
+  useEffect(() => {
+    if (!token || !role) return;
+    refreshAccountStatus();
+  }, [token, role, refreshAccountStatus]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshAccountStatus();
+      }
+    });
+    return () => subscription.remove();
+  }, [refreshAccountStatus]);
 
   const setAuth = async (token: string, refreshToken: string, role: UserRole, user: any) => {
     try {
@@ -132,6 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRefreshTokenState(refreshToken);
       setRoleState(role);
       setUserState(user);
+      setAccountStatusState(user ? buildAccountStatus(user) : null);
 
       socketService.connect(token);
       console.log('Auth state saved successfully');
@@ -147,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = async (user: any) => {
     try {
       setUserState(user);
+      setAccountStatusState(buildAccountStatus(user));
       await AsyncStorage.setItem('user_data', JSON.stringify(user));
     } catch (error) {
       console.error('Error updating user data:', error);
@@ -188,6 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRefreshTokenState(null);
       setRoleState(null);
       setUserState(null);
+      setAccountStatusState(null);
       socketService.disconnect();
       await Promise.all([
         AsyncStorage.removeItem('user_token'),
@@ -203,7 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, user, token, refreshToken, isLoading, setAuth, setRole: setRoleState, updateUser, logout }}>
+    <AuthContext.Provider value={{ role, user, token, refreshToken, isLoading, accountStatus, setAuth, setRole: setRoleState, updateUser, updateAccountStatus, refreshAccountStatus, logout }}>
       {children}
     </AuthContext.Provider>
   );
