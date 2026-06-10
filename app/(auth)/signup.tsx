@@ -18,6 +18,7 @@ import { InputField } from '../../components/InputField';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
 import { AuthProgress } from '../../components/auth/AuthProgress';
+import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -196,6 +197,11 @@ export default function SignupScreen() {
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
+
+            {/* Google Sign-Up — clients only */}
+            {!isWorker && (
+              <GoogleSignInButton accentColor={accentColor} />
+            )}
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>

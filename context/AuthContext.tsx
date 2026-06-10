@@ -73,12 +73,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // without going through AsyncStorage (which may already be cleared).
   const tokenRef = useRef<string | null>(null);
   const roleRef = useRef<UserRole>(null);
+  const lastRefreshedRef = useRef<number>(0);
+  const accountStatusRef = useRef<AccountStatus | null>(null);
+
   useEffect(() => {
     tokenRef.current = token;
   }, [token]);
   useEffect(() => {
     roleRef.current = role;
   }, [role]);
+  useEffect(() => {
+    accountStatusRef.current = accountStatus;
+  }, [accountStatus]);
 
   const buildAccountStatus = (source: any): AccountStatus => ({
     isActive: source?.isActive !== false,
@@ -107,6 +113,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const currentToken = tokenRef.current;
     const currentRole = roleRef.current;
     if (!currentToken || !currentRole) return null;
+
+    // Rate-limit network requests to once every 20 seconds to prevent infinite backend call loops
+    const now = Date.now();
+    if (now - lastRefreshedRef.current < 20000) {
+      return accountStatusRef.current;
+    }
+    lastRefreshedRef.current = now;
 
     try {
       const endpoint = currentRole === 'worker' ? '/workers/me/status' : '/users/me/status';
@@ -181,11 +194,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!token || !role) return;
+    console.log('[AuthContext Debug] useEffect [token, role] triggered. token:', token ? 'exists' : 'null', 'role:', role);
     refreshAccountStatus();
-  }, [token, role, refreshAccountStatus]);
+  }, [token, role]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
+      console.log('[AuthContext Debug] AppState change detected:', state);
       if (state === 'active') {
         refreshAccountStatus();
       }
