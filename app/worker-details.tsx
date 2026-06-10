@@ -71,14 +71,16 @@ export default function WorkerDetailsScreen() {
     bidId?: string | string[];
     jobId?: string | string[];
     bookingId?: string | string[];
+    category?: string | string[];
   }>();
   const workerId = firstParam(params.id);
   const bidId = firstParam(params.bidId);
   const jobId = firstParam(params.jobId);
   const bookingId = firstParam(params.bookingId);
+  const selectedCategory = firstParam(params.category);
   const [isAccepting, setIsAccepting] = useState(false);
 
-  const { data: worker, isLoading } = useWorker(workerId);
+  const { data: worker, isLoading } = useWorker(workerId, selectedCategory);
   const { data: reviews = [], isLoading: isLoadingReviews } = useWorkerReviews(workerId);
   const { data: contextBooking } = useBookingDetails(bookingId);
 

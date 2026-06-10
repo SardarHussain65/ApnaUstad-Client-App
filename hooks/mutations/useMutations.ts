@@ -142,6 +142,7 @@ interface SupportRequestPayload {
   name?: string;
   email?: string;
   userId?: string;
+  metadata?: Record<string, any>;
 }
 
 // Mutation Functions

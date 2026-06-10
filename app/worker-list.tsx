@@ -452,6 +452,7 @@ export default function WorkerListScreen() {
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
         workerId={selectedWorkerId}
+        category={category}
         themeColor={themeColor}
         onDeploy={handleHire}
       />

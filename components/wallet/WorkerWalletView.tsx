@@ -30,7 +30,7 @@ import { WorkerWallet } from '../../hooks';
 // ─── Constants & Types ────────────────────────────────────────────────────────
 interface WalletTransaction {
   _id: string;
-  type: 'recharge' | 'commission_deduction' | 'refund' | 'adjustment';
+  type: 'recharge' | 'commission_deduction' | 'specialty_subscription' | 'refund' | 'adjustment';
   amount: number;
   balanceAfter: number;
   description: string;
@@ -78,6 +78,7 @@ interface WorkerWalletViewProps {
 const TX_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
   recharge: { color: Colors.success, icon: ArrowDownLeft, label: 'Recharge' },
   commission_deduction: { color: '#FF8C00', icon: ArrowUpRight, label: 'Commission' },
+  specialty_subscription: { color: '#BF5AF2', icon: ArrowUpRight, label: 'Category Renewal' },
   refund: { color: '#00B8FF', icon: RefreshCw, label: 'Refund' },
   adjustment: { color: Colors.cyan, icon: Info, label: 'Adjustment' },
 };
@@ -330,6 +331,20 @@ export function WorkerWalletView({
             {formatMoney(wallet?.totalCommissionDeducted)}
           </Text>
           <Text style={styles.chipLabel}>Commissions Taken</Text>
+        </GlassCard>
+
+        <GlassCard
+          intensity={24}
+          padding={12}
+          style={[styles.chipCard, { borderColor: '#BF5AF248' }]}
+          glowColor="#BF5AF2"
+          gradient={cardGradient('#BF5AF2', '#00B8FF')}
+        >
+          <View style={[styles.chipDot, { backgroundColor: '#BF5AF2' }]} />
+          <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+            {formatMoney(wallet?.totalSubscriptionDeducted)}
+          </Text>
+          <Text style={styles.chipLabel}>Category Renewals</Text>
         </GlassCard>
       </Animated.View>
 

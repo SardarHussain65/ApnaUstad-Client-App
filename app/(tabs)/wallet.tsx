@@ -237,6 +237,7 @@ export default function WalletTab() {
       `Ready to Collect: Rs. ${summary.payable.toLocaleString()}`,
       `Total Recharged: Rs. ${wallet?.totalRecharged?.toLocaleString() ?? '0'}`,
       `Commission Deducted: Rs. ${wallet?.totalCommissionDeducted?.toLocaleString() ?? '0'}`,
+      `Category Renewals: Rs. ${wallet?.totalSubscriptionDeducted?.toLocaleString() ?? '0'}`,
       '',
       ...transactions.slice(0, 20).map((tx) => {
         const sign = ['recharge', 'refund'].includes(tx.type) ? '+' : '-';

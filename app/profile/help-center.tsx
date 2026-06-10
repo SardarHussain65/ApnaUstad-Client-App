@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { HelpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
@@ -14,6 +15,7 @@ import api from '../../services/api';
 
 export default function HelpCenterScreen() {
   const { user } = useAuth();
+  const params = useLocalSearchParams<{ subject?: string; reason?: string; source?: string }>();
   const { success, error: showError } = useToast();
   const { mutateAsync: createRequest, isPending } = useCreateSupportRequestMutation();
 
@@ -32,6 +34,15 @@ export default function HelpCenterScreen() {
     return 'We will contact you using your account details.';
   }, [user?.email, user?.phone]);
 
+  useEffect(() => {
+    if (params.subject) {
+      setSubject(String(params.subject));
+    }
+    if (params.reason) {
+      setMessage(`Hello admin, my account is deactivated and I need help reviewing it.\n\nReason shown in app: ${String(params.reason)}`);
+    }
+  }, [params.reason, params.subject]);
+
   const handleSubmit = async () => {
     if (!subject.trim() || !message.trim()) {
       showError('Missing details', 'Please fill in the subject and your message.');
@@ -45,6 +56,14 @@ export default function HelpCenterScreen() {
         name: (user as any)?.fullName || (user as any)?.name,
         email: user?.email,
         userId: user?._id,
+        ...(params.source === 'account_deactivation'
+          ? {
+            metadata: {
+              source: 'account_deactivation',
+              deactivationReason: params.reason || '',
+            },
+          }
+          : {}),
       });
       success('Sent', 'Your request has been sent to support.');
       setSubject('');

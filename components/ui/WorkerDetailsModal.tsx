@@ -10,6 +10,7 @@ interface WorkerDetailsModalProps {
   visible: boolean;
   onClose: () => void;
   workerId: string | null;
+  category?: string;
   themeColor?: string;
   onDeploy?: (worker: any) => void;
 }
@@ -18,10 +19,11 @@ export function WorkerDetailsModal({
   visible,
   onClose,
   workerId,
+  category,
   themeColor = Colors.cyan,
   onDeploy,
 }: WorkerDetailsModalProps) {
-  const { data: worker, isLoading } = useWorker(workerId || undefined);
+  const { data: worker, isLoading } = useWorker(workerId || undefined, category);
   const [imageError, setImageError] = React.useState(false);
 
   if (!visible) return null;

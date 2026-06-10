@@ -1,0 +1,655 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ArrowDown,
+  ArrowUp,
+  AlertTriangle,
+  ChevronLeft,
+  Clock3,
+  Layers3,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  Wallet,
+} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { BeautifulModal } from '../../components/ui';
+import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/Theme';
+import api from '../../services/api';
+
+type Category = {
+  _id: string;
+  name: string;
+  color?: string;
+  description?: string;
+  additionalCategoryMonthlyFee?: number;
+  additionalCategoryGraceDays?: number;
+};
+
+type Specialty = {
+  _id: string;
+  categoryId: Category;
+  priority: number;
+  tier: 'primary' | 'additional';
+  skills: string[];
+  hourlyRate: number;
+  experience: number;
+  bio?: string;
+  isActive: boolean;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  subscriptionStatus: 'free' | 'pending_activation' | 'active' | 'payment_due' | 'expired';
+  monthlyFeeSnapshot: number;
+  autoRenew: boolean;
+  nextBillingAt?: string | null;
+  graceEndsAt?: string | null;
+};
+
+type SpecialtyResponse = {
+  specialties: Specialty[];
+  maxSpecialties: number;
+  freeSpecialtyLimit: number;
+  additionalCategoryMonthlyFee: number;
+};
+
+type WalletSnapshot = {
+  balance?: number;
+  availableBalance?: number;
+  additionalCategoryMonthlyFee?: number;
+};
+
+const statusColor = (specialty: Specialty) => {
+  if (specialty.approvalStatus === 'pending') return Colors.yellow;
+  if (specialty.approvalStatus === 'rejected' || specialty.subscriptionStatus === 'expired') return Colors.error;
+  if (specialty.subscriptionStatus === 'payment_due') return Colors.worker;
+  return Colors.success;
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-PK', { day: 'numeric', month: 'short' });
+};
+
+const getErrorMessage = (error: any) => error?.response?.data?.message || error?.message || 'Please try again.';
+const formatPKR = (value: number) => `Rs. ${Math.max(0, Number(value || 0)).toLocaleString('en-PK')}`;
+const isWalletBalanceError = (error: any) => error?.response?.status === 402 || error?.response?.data?.requiredBalance !== undefined;
+
+export default function SpecialtiesScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [data, setData] = useState<SpecialtyResponse>({ specialties: [], maxSpecialties: 5, freeSpecialtyLimit: 1, additionalCategoryMonthlyFee: 500 });
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [walletAvailableBalance, setWalletAvailableBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [workingKey, setWorkingKey] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
+  const [rechargePromptVisible, setRechargePromptVisible] = useState(false);
+  const [rechargeActionLabel, setRechargeActionLabel] = useState('request another category');
+  const [draftCategoryId, setDraftCategoryId] = useState('');
+  const [draftSkills, setDraftSkills] = useState('');
+  const [draftRate, setDraftRate] = useState('');
+  const [draftExperience, setDraftExperience] = useState('');
+  const [draftBio, setDraftBio] = useState('');
+
+  const load = useCallback(async (refresh = false) => {
+    refresh ? setRefreshing(true) : setLoading(true);
+    try {
+      const [specialtyResponse, categoryResponse, walletResponse] = await Promise.all([
+        api.get('/workers/specialties'),
+        api.get('/users/categories'),
+        api.get('/wallet/my-wallet'),
+      ]);
+      const specialtyData = specialtyResponse.data.data || {};
+      const walletData: WalletSnapshot = walletResponse.data.data || {};
+      setData({
+        specialties: specialtyData.specialties || [],
+        maxSpecialties: specialtyData.maxSpecialties || 5,
+        freeSpecialtyLimit: specialtyData.freeSpecialtyLimit || 1,
+        additionalCategoryMonthlyFee: Number(specialtyData.additionalCategoryMonthlyFee ?? walletData.additionalCategoryMonthlyFee ?? 500),
+      });
+      setCategories(categoryResponse.data.data || []);
+      setWalletAvailableBalance(Math.max(0, Number(walletData.availableBalance ?? walletData.balance ?? 0)));
+    } catch (error) {
+      Alert.alert('Could not load specialties', getErrorMessage(error));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    load();
+  }, [load]));
+
+  const specialties = useMemo(
+    () => [...data.specialties].sort((left, right) => left.priority - right.priority),
+    [data.specialties]
+  );
+  const selectedIds = useMemo(() => new Set(specialties.map(item => item.categoryId._id)), [specialties]);
+  const availableCategories = categories.filter(category => !selectedIds.has(category._id));
+  const draftCategory = availableCategories.find(category => category._id === draftCategoryId);
+  const additionalCategoryMonthlyFee = Math.max(0, Number(data.additionalCategoryMonthlyFee ?? 500));
+  const walletShortfall = Math.max(0, additionalCategoryMonthlyFee - walletAvailableBalance);
+
+  const showRechargePrompt = (actionLabel = 'request another category') => {
+    setRechargeActionLabel(actionLabel);
+    setRechargePromptVisible(true);
+  };
+
+  const runAction = async (key: string, action: () => Promise<any>, successMessage: string) => {
+    setWorkingKey(key);
+    try {
+      await action();
+      await load(true);
+      Alert.alert('Done', successMessage);
+      return true;
+    } catch (error) {
+      const actionError: any = error;
+      if (isWalletBalanceError(actionError)) {
+        const requiredBalance = Number(actionError?.response?.data?.requiredBalance);
+        const currentBalance = Number(actionError?.response?.data?.currentBalance);
+        if (Number.isFinite(requiredBalance) && requiredBalance >= 0) {
+          setData(current => ({ ...current, additionalCategoryMonthlyFee: requiredBalance }));
+        }
+        if (Number.isFinite(currentBalance) && currentBalance >= 0) {
+          setWalletAvailableBalance(currentBalance);
+        }
+        showRechargePrompt(key.startsWith('activate-') ? 'activate this category' : 'continue');
+        return false;
+      }
+      Alert.alert('Unable to continue', getErrorMessage(actionError));
+      return false;
+    } finally {
+      setWorkingKey('');
+    }
+  };
+
+  const resetDraft = () => {
+    setDraftCategoryId('');
+    setDraftSkills('');
+    setDraftRate('');
+    setDraftExperience('');
+    setDraftBio('');
+  };
+
+  const isWalletReadyForAdditionalCategory = () => additionalCategoryMonthlyFee <= 0 || walletAvailableBalance >= additionalCategoryMonthlyFee;
+
+  const openAddCategory = () => {
+    if (showPicker) {
+      setShowPicker(false);
+      return;
+    }
+    if (!isWalletReadyForAdditionalCategory()) {
+      showRechargePrompt();
+      return;
+    }
+    setShowPicker(true);
+  };
+
+  const requestCategory = () => {
+    const skills = draftSkills.split(',').map(skill => skill.trim()).filter(Boolean);
+    const hourlyRate = Number(draftRate);
+    const experience = Number(draftExperience);
+    if (!draftCategoryId || skills.length === 0 || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
+      Alert.alert('Complete category details', 'Select a category and add skills, hourly rate, experience, and a short description.');
+      return;
+    }
+    if (!isWalletReadyForAdditionalCategory()) {
+      showRechargePrompt();
+      return;
+    }
+
+    runAction(
+      'request-category',
+      () => api.post('/workers/specialties/requests', {
+        categoryId: draftCategoryId,
+        skills,
+        hourlyRate,
+        experience,
+        bio: draftBio.trim(),
+      }),
+      'Your category request and professional details were sent to admin for review. If approved, the monthly fee will be deducted automatically and the category will become active.'
+    ).then((success) => {
+      if (success) {
+        resetDraft();
+        setShowPicker(false);
+      }
+    });
+  };
+
+  const activate = (specialty: Specialty) => {
+    const fee = specialty.priority > data.freeSpecialtyLimit ? additionalCategoryMonthlyFee : 0;
+    if (fee > 0 && walletAvailableBalance < fee) {
+      showRechargePrompt('activate this category');
+      return;
+    }
+    Alert.alert(
+      'Activate additional specialty?',
+      `${formatPKR(fee)} will be deducted from your wallet now for the next full month. The same amount will be deducted monthly while auto-renew is enabled.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Activate & Pay',
+          onPress: () => runAction(
+            `activate-${specialty._id}`,
+            () => api.patch(`/workers/specialties/${specialty.categoryId._id}/activate`),
+            'Your specialty is active and can receive matching jobs.'
+          ),
+        },
+      ]
+    );
+  };
+
+  const move = (index: number, offset: number) => {
+    const nextIndex = index + offset;
+    if (nextIndex < 0 || nextIndex >= specialties.length) return;
+    const next = [...specialties];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    runAction(
+      'reorder',
+      () => api.patch('/workers/specialties/priorities', { categoryIds: next.map(item => item.categoryId._id) }),
+      'Your category priorities were updated.'
+    );
+  };
+
+  const remove = (specialty: Specialty) => Alert.alert(
+    'Remove specialty?',
+    `Remove ${specialty.categoryId.name} from your worker profile?`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => runAction(
+          `remove-${specialty._id}`,
+          () => api.delete(`/workers/specialties/${specialty.categoryId._id}`),
+          'The specialty was removed from your profile.'
+        ),
+      },
+    ]
+  );
+
+  return (
+    <BackgroundWrapper>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={Colors.primary} />}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
+            <ChevronLeft size={22} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Skills & Categories</Text>
+          <View style={styles.headerCounter}><Text style={styles.headerCounterText}>{specialties.length}/{data.maxSpecialties}</Text></View>
+        </View>
+
+        <Animated.View entering={FadeInDown.delay(80)} style={styles.hero}>
+          <LinearGradient colors={['rgba(0,245,255,0.18)', 'rgba(191,90,242,0.10)']} style={StyleSheet.absoluteFillObject} />
+          <View style={styles.heroIcon}><Layers3 size={23} color={Colors.primary} /></View>
+          <Text style={styles.heroTitle}>Grow your service reach</Text>
+          <Text style={styles.heroText}>Your first approved category is free. Additional categories need their own skills, rate, experience, admin review, and {formatPKR(additionalCategoryMonthlyFee)} available in your wallet. After approval, the fee is deducted automatically.</Text>
+        </Animated.View>
+
+        {loading ? (
+          <View style={styles.loading}><ActivityIndicator color={Colors.primary} /><Text style={styles.loadingText}>Loading categories...</Text></View>
+        ) : (
+          <>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Your Categories</Text>
+              {specialties.length < data.maxSpecialties && (
+                <TouchableOpacity style={styles.addButton} onPress={openAddCategory}>
+                  <Plus size={15} color="#000" strokeWidth={3} />
+                  <Text style={styles.addButtonText}>Add category</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {showPicker && (
+              <Animated.View entering={FadeInDown.duration(220)} style={styles.picker}>
+                <Text style={styles.pickerTitle}>Request another category</Text>
+                <Text style={styles.pickerText}>Add your professional details for this service. No money is deducted now; after admin approval, the monthly fee is deducted automatically and the category becomes active.</Text>
+                <View style={styles.categoryChips}>
+                  {availableCategories.map(category => (
+                    <TouchableOpacity
+                      key={category._id}
+                      style={[
+                        styles.categoryChip,
+                        { borderColor: `${category.color || Colors.primary}55` },
+                        draftCategoryId === category._id && { backgroundColor: `${category.color || Colors.primary}22`, borderColor: category.color || Colors.primary }
+                      ]}
+                      disabled={!!workingKey}
+                      onPress={() => setDraftCategoryId(category._id)}
+                    >
+                      <Plus size={13} color={category.color || Colors.primary} />
+                      <Text style={styles.categoryChipText}>{category.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {availableCategories.length === 0 && <Text style={styles.emptyText}>No more categories are available.</Text>}
+                </View>
+                {availableCategories.length > 0 && (
+                  <>
+                    <Text style={styles.formLabel}>Skills for this category</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Repair, installation, maintenance"
+                      placeholderTextColor="rgba(255,255,255,0.28)"
+                      value={draftSkills}
+                      onChangeText={setDraftSkills}
+                    />
+                    <View style={styles.formRow}>
+                      <View style={styles.formHalf}>
+                        <Text style={styles.formLabel}>Rate / hour</Text>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="500"
+                          placeholderTextColor="rgba(255,255,255,0.28)"
+                          keyboardType="numeric"
+                          value={draftRate}
+                          onChangeText={setDraftRate}
+                        />
+                      </View>
+                      <View style={styles.formHalf}>
+                        <Text style={styles.formLabel}>Experience</Text>
+                        <TextInput
+                          style={styles.input}
+                          placeholder="3"
+                          placeholderTextColor="rgba(255,255,255,0.28)"
+                          keyboardType="numeric"
+                          value={draftExperience}
+                          onChangeText={setDraftExperience}
+                        />
+                      </View>
+                    </View>
+                    <Text style={styles.formLabel}>Description</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      placeholder="Describe your work quality, tools, and service experience..."
+                      placeholderTextColor="rgba(255,255,255,0.28)"
+                      value={draftBio}
+                      onChangeText={setDraftBio}
+                      multiline
+                    />
+                    <View style={styles.feeBox}>
+                      <Wallet size={14} color={Colors.worker} />
+                      <Text style={styles.feeText}>
+                        {draftCategory
+                          ? `Monthly fee after approval: ${formatPKR(additionalCategoryMonthlyFee)}. Available wallet: ${formatPKR(walletAvailableBalance)}.`
+                          : `Select a category to continue. Monthly fee: ${formatPKR(additionalCategoryMonthlyFee)}.`}
+                      </Text>
+                    </View>
+                    <TouchableOpacity disabled={!!workingKey} style={styles.submitButton} onPress={requestCategory}>
+                      {workingKey === 'request-category' ? <ActivityIndicator size="small" color="#000" /> : <Plus size={15} color="#000" strokeWidth={3} />}
+                      <Text style={styles.submitButtonText}>Send for admin review</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </Animated.View>
+            )}
+
+            {specialties.map((specialty, index) => {
+              const color = statusColor(specialty);
+              const isPaid = specialty.priority > data.freeSpecialtyLimit;
+              const specialtyFee = isPaid ? additionalCategoryMonthlyFee : 0;
+              const canActivate = specialty.approvalStatus === 'approved'
+                && isPaid
+                && ['pending_activation', 'expired'].includes(specialty.subscriptionStatus);
+              const showRenew = isPaid && ['active', 'payment_due'].includes(specialty.subscriptionStatus);
+              return (
+                <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, { borderColor: `${color}45` }]}>
+                  <View style={styles.cardTop}>
+                    <View style={[styles.priorityBadge, { backgroundColor: `${color}20`, borderColor: `${color}55` }]}>
+                      <Text style={[styles.priorityText, { color }]}>#{specialty.priority}</Text>
+                    </View>
+                    <View style={styles.cardMain}>
+                      <Text style={styles.cardTitle}>{specialty.categoryId.name}</Text>
+                      <Text style={styles.tierText}>{specialty.tier} category</Text>
+                    </View>
+                    <View style={styles.orderButtons}>
+                      <TouchableOpacity disabled={index === 0 || !!workingKey} style={styles.orderButton} onPress={() => move(index, -1)}><ArrowUp size={14} color={index === 0 ? Colors.textDim : Colors.textMuted} /></TouchableOpacity>
+                      <TouchableOpacity disabled={index === specialties.length - 1 || !!workingKey} style={styles.orderButton} onPress={() => move(index, 1)}><ArrowDown size={14} color={index === specialties.length - 1 ? Colors.textDim : Colors.textMuted} /></TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.statusRow}>
+                    <View style={[styles.statusDot, { backgroundColor: color }]} />
+                    <Text style={[styles.statusText, { color }]}>
+                      {specialty.approvalStatus === 'pending' ? 'Waiting for admin approval' : specialty.approvalStatus === 'rejected' ? 'Request rejected' : specialty.subscriptionStatus.replace(/_/g, ' ')}
+                    </Text>
+                  </View>
+
+                  <View style={styles.metaRow}>
+                    {isPaid ? <Wallet size={13} color={Colors.worker} /> : <ShieldCheck size={13} color={Colors.success} />}
+                    <Text style={styles.metaText}>{isPaid ? `${formatPKR(specialtyFee)} / month` : 'Included free'}</Text>
+                    {specialty.nextBillingAt ? <><Clock3 size={13} color={Colors.textMuted} /><Text style={styles.metaText}>Renews {formatDate(specialty.nextBillingAt)}</Text></> : null}
+                  </View>
+
+                  <View style={styles.profileBox}>
+                    <View style={styles.profileStats}>
+                      <Text style={styles.profileStat}>Rs. {Number(specialty.hourlyRate || 0).toLocaleString('en-PK')}/hr</Text>
+                      <Text style={styles.profileStat}>{Number(specialty.experience || 0)} yrs exp</Text>
+                    </View>
+                    {(specialty.skills || []).length > 0 && (
+                      <View style={styles.skillsWrap}>
+                        {specialty.skills.slice(0, 5).map(skill => (
+                          <Text key={skill} style={styles.skillPill}>#{skill}</Text>
+                        ))}
+                      </View>
+                    )}
+                    {!!specialty.bio && <Text style={styles.bioText} numberOfLines={2}>{specialty.bio}</Text>}
+                  </View>
+
+                  <View style={styles.cardActions}>
+                    {canActivate && (
+                      <TouchableOpacity disabled={!!workingKey} style={styles.activateButton} onPress={() => activate(specialty)}>
+                        {workingKey === `activate-${specialty._id}` ? <ActivityIndicator size="small" color="#000" /> : <Wallet size={15} color="#000" />}
+                        <Text style={styles.activateText}>{specialty.subscriptionStatus === 'expired' ? 'Reactivate & Pay' : 'Activate & Pay'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    {showRenew && (
+                      <View style={styles.renewWrap}>
+                        <Text style={styles.renewLabel}>Auto-renew</Text>
+                        <Switch
+                          value={specialty.autoRenew}
+                          disabled={!!workingKey}
+                          onValueChange={(autoRenew) => {
+                            void runAction(
+                              `renew-${specialty._id}`,
+                              () => api.patch(`/workers/specialties/${specialty.categoryId._id}/auto-renew`, { autoRenew }),
+                              autoRenew ? 'Automatic renewal is enabled.' : 'Automatic renewal is disabled.'
+                            );
+                          }}
+                          trackColor={{ false: Colors.surfaceLight, true: 'rgba(52,199,89,0.5)' }}
+                          thumbColor={specialty.autoRenew ? Colors.success : Colors.textMuted}
+                        />
+                      </View>
+                    )}
+                    {specialty.priority > 1 && (
+                      <TouchableOpacity style={styles.removeButton} disabled={!!workingKey} onPress={() => remove(specialty)}>
+                        <Trash2 size={15} color={Colors.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </Animated.View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
+
+      <BeautifulModal
+        visible={rechargePromptVisible}
+        onClose={() => setRechargePromptVisible(false)}
+        title="Wallet Recharge Needed"
+        height={470}
+        glowColor={Colors.worker}
+        icon={<Wallet size={32} color={Colors.worker} strokeWidth={2.4} />}
+      >
+        <View style={styles.rechargeModalBody}>
+          <View style={styles.rechargeIconRing}>
+            <AlertTriangle size={22} color={Colors.worker} strokeWidth={2.4} />
+          </View>
+          <Text style={styles.rechargeTitle}>Add balance before you continue</Text>
+          <Text style={styles.rechargeMessage}>
+            To {rechargeActionLabel}, your wallet needs at least {formatPKR(additionalCategoryMonthlyFee)} available. Recharge now, then come back and request the category for admin review. If approved, it will activate automatically.
+          </Text>
+
+          <View style={styles.walletSummaryCard}>
+            <View style={styles.walletSummaryRow}>
+              <Text style={styles.walletSummaryLabel}>Required balance</Text>
+              <Text style={styles.walletSummaryValue}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
+            </View>
+            <View style={styles.walletSummaryDivider} />
+            <View style={styles.walletSummaryRow}>
+              <Text style={styles.walletSummaryLabel}>Available balance</Text>
+              <Text style={styles.walletSummaryValue}>{formatPKR(walletAvailableBalance)}</Text>
+            </View>
+            <View style={styles.walletSummaryDivider} />
+            <View style={styles.walletSummaryRow}>
+              <Text style={styles.walletSummaryLabel}>Need to recharge</Text>
+              <Text style={[styles.walletSummaryValue, styles.shortfallText]}>{formatPKR(walletShortfall)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.rechargeActions}>
+            <TouchableOpacity style={styles.rechargeSecondaryButton} onPress={() => setRechargePromptVisible(false)}>
+              <Text style={styles.rechargeSecondaryText}>Maybe later</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.rechargePrimaryButton}
+              onPress={() => {
+                setRechargePromptVisible(false);
+                router.push('/(tabs)/wallet' as any);
+              }}
+            >
+              <LinearGradient colors={[Colors.worker, '#FF5E00']} style={styles.rechargePrimaryGradient}>
+                <Wallet size={16} color="#160900" strokeWidth={2.6} />
+                <Text style={styles.rechargePrimaryText}>Recharge Wallet</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </BeautifulModal>
+    </BackgroundWrapper>
+  );
+}
+
+const styles = StyleSheet.create({
+  content: { paddingHorizontal: Spacing.l, paddingBottom: 60 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 18 },
+  iconButton: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  headerCounter: { minWidth: 40, height: 30, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,245,255,0.10)', borderWidth: 1, borderColor: 'rgba(0,245,255,0.25)' },
+  headerCounterText: { color: Colors.primary, fontSize: 12, fontWeight: '900' },
+  hero: { overflow: 'hidden', borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: 'rgba(0,245,255,0.24)', padding: 18, marginBottom: 24, ...Shadows.card },
+  heroIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: 'rgba(0,245,255,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  heroTitle: { color: '#fff', fontSize: 20, fontWeight: '900' },
+  heroText: { color: Colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: 6 },
+  loading: { alignItems: 'center', paddingVertical: 50, gap: 10 },
+  loadingText: { color: Colors.textMuted, fontSize: 13 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  sectionTitle: { color: '#fff', fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  addButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: Colors.primary },
+  addButtonText: { color: '#000', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  picker: { borderRadius: 18, borderWidth: 1, borderColor: 'rgba(191,90,242,0.35)', backgroundColor: 'rgba(15,15,36,0.94)', padding: 15, marginBottom: 14 },
+  pickerTitle: { color: '#fff', fontSize: 15, fontWeight: '900' },
+  pickerText: { color: Colors.textMuted, fontSize: 12, marginTop: 3, marginBottom: 12 },
+  categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 18, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.04)' },
+  categoryChipText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  formLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 7 },
+  formRow: { flexDirection: 'row', gap: 10 },
+  formHalf: { flex: 1 },
+  input: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, fontWeight: '700' },
+  textArea: { minHeight: 92, textAlignVertical: 'top' },
+  feeBox: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.24)', backgroundColor: 'rgba(255,140,0,0.08)', padding: 12, marginTop: 13 },
+  feeText: { flex: 1, color: Colors.textMuted, fontSize: 12, fontWeight: '700', lineHeight: 17 },
+  submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 14, backgroundColor: Colors.primary, paddingVertical: 12, marginTop: 13 },
+  submitButtonText: { color: '#000', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  emptyText: { color: Colors.textMuted, fontSize: 12 },
+  card: { borderRadius: 18, borderWidth: 1, backgroundColor: 'rgba(10,10,31,0.92)', padding: 15, marginBottom: 12 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  priorityBadge: { width: 38, height: 38, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  priorityText: { fontSize: 13, fontWeight: '900' },
+  cardMain: { flex: 1 },
+  cardTitle: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  tierText: { color: Colors.textMuted, fontSize: 11, fontWeight: '700', marginTop: 2, textTransform: 'uppercase' },
+  orderButtons: { flexDirection: 'row', gap: 5 },
+  orderButton: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 13 },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 10 },
+  metaText: { color: Colors.textMuted, fontSize: 11, fontWeight: '700', marginRight: 4 },
+  profileBox: { borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.035)', padding: 12, marginTop: 12 },
+  profileStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  profileStat: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 9 },
+  skillPill: { color: Colors.primary, fontSize: 11, fontWeight: '800', borderWidth: 1, borderColor: 'rgba(0,245,255,0.22)', backgroundColor: 'rgba(0,245,255,0.07)', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },
+  bioText: { color: Colors.textMuted, fontSize: 12, fontWeight: '600', lineHeight: 17, marginTop: 9 },
+  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 13 },
+  activateButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: Colors.primary },
+  activateText: { color: '#000', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  renewWrap: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  renewLabel: { color: Colors.textMuted, fontSize: 11, fontWeight: '700' },
+  removeButton: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,59,48,0.12)' },
+  rechargeModalBody: { alignItems: 'center', width: '100%', gap: 12 },
+  rechargeIconRing: {
+    width: 54,
+    height: 54,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,140,0,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.35)',
+    marginBottom: 2,
+  },
+  rechargeTitle: { color: '#fff', fontSize: 18, fontWeight: '900', textAlign: 'center' },
+  rechargeMessage: { color: Colors.textMuted, fontSize: 13, fontWeight: '600', lineHeight: 19, textAlign: 'center' },
+  walletSummaryCard: {
+    width: '100%',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.24)',
+    backgroundColor: 'rgba(255,140,0,0.08)',
+    padding: 14,
+    marginTop: 4,
+  },
+  walletSummaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  walletSummaryLabel: { flex: 1, color: Colors.textMuted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  walletSummaryValue: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  shortfallText: { color: Colors.worker },
+  walletSummaryDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 10 },
+  rechargeActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 },
+  rechargeSecondaryButton: {
+    flex: 0.85,
+    minHeight: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  rechargeSecondaryText: { color: Colors.textMuted, fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  rechargePrimaryButton: { flex: 1.15, minHeight: 46, borderRadius: 14, overflow: 'hidden' },
+  rechargePrimaryGradient: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  rechargePrimaryText: { color: '#160900', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+});
