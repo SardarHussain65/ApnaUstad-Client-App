@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Eye, ShieldAlert, FileText } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -8,6 +9,7 @@ import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../consta
 import api from '../../services/api';
 
 export default function PrivacyScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>('privacy');
   const [loading, setLoading] = useState(false);
   const [dynamicContent, setDynamicContent] = useState<{ privacy?: string; terms?: string }>({});
@@ -36,35 +38,8 @@ export default function PrivacyScreen() {
   }, []);
 
   // Default default fallback paragraphs matching production app rules
-  const localPrivacy = `1. Introduction
-Welcome to ApnaUstad! Your privacy is critically important to us. This Privacy Policy details how we collect, handle, secure, and utilize your personal information.
-
-2. Information Collection
-We collect registration details, including your full name, email, verified phone number, and location address. For Workers, we also maintain category specialties, professional bios, skills arrays, and hourly rates to enable matching.
-
-3. How We Use Data
-Your details are exclusively used to calculate profile completeness, process on-demand service requests, and facilitate direct communications between clients and workers for successful bookings.
-
-4. Zero Third-Party Sharing
-We maintain a strict zero-sharing database policy. ApnaUstad does not sell, barter, or trade personal data to external advertisers or marketers.
-
-5. Data Security
-All credentials and booking histories are encrypted using industry-standard TLS protocols.`;
-
-  const localTerms = `1. Agreement of Terms
-By downloading and logging into the ApnaUstad platform, you explicitly agree to adhere to these Terms & Conditions. If you disagree, please uninstall the app.
-
-2. Scope of Service
-ApnaUstad functions as an interactive on-demand marketplace connecting independent professional workers (Ustads) with clients seeking services. ApnaUstad does not directly employ the service workers.
-
-3. Account Authenticity
-All users must register verified credentials. Creating duplicate, misleading, or fraudulent listings is strictly prohibited and subject to immediate account suspension.
-
-4. Booking & Cancellation Policies
-Clients agree to compensate workers for requested tasks at the rates displayed. Worker availability toggles determine live discovery status. Cancellations must adhere to platform booking rules.
-
-5. Limitation of Liability
-ApnaUstad is not liable for individual actions, work quality, disputes, or liabilities arising directly between clients and workers during service execution.`;
+  const localPrivacy = t('privacy.localPrivacy');
+  const localTerms = t('privacy.localTerms');
 
   const policyText = activeTab === 'privacy' 
     ? (dynamicContent.privacy || localPrivacy) 
@@ -76,7 +51,7 @@ ApnaUstad is not liable for individual actions, work quality, disputes, or liabi
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader title="Policies & Terms" />
+        <ProfileHeader title={t('privacy.title')} />
 
         <View style={styles.headerSection}>
           <View style={styles.iconWrap}>
@@ -84,8 +59,8 @@ ApnaUstad is not liable for individual actions, work quality, disputes, or liabi
               <Eye size={28} color={Colors.primary} />
             </View>
           </View>
-          <Text style={[styles.title, Typography.threeD]}>Legal & Privacy</Text>
-          <Text style={styles.subtitle}>Read our official guidelines. Content is synced with ApnaUstad's official server database.</Text>
+          <Text style={[styles.title, Typography.threeD]}>{t('privacy.legalTitle')}</Text>
+          <Text style={styles.subtitle}>{t('privacy.legalSubtitle')}</Text>
         </View>
 
         {/* Tab Selector */}
@@ -95,14 +70,14 @@ ApnaUstad is not liable for individual actions, work quality, disputes, or liabi
             onPress={() => setActiveTab('privacy')}
           >
             <ShieldAlert size={14} color={activeTab === 'privacy' ? '#000' : 'rgba(255,255,255,0.48)'} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'privacy' && styles.activeTabText]}>Privacy Policy</Text>
+            <Text style={[styles.tabText, activeTab === 'privacy' && styles.activeTabText]}>{t('privacy.privacyTab')}</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tabBtn, activeTab === 'terms' && styles.activeTabBtn]} 
             onPress={() => setActiveTab('terms')}
           >
             <FileText size={14} color={activeTab === 'terms' ? '#000' : 'rgba(255,255,255,0.48)'} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'terms' && styles.activeTabText]}>Terms & Conditions</Text>
+            <Text style={[styles.tabText, activeTab === 'terms' && styles.activeTabText]}>{t('privacy.termsTab')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -111,12 +86,12 @@ ApnaUstad is not liable for individual actions, work quality, disputes, or liabi
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.loadingText}>Fetching live document...</Text>
+              <Text style={styles.loadingText}>{t('privacy.loadingText')}</Text>
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
               {policyText.split('\n\n').map((paragraph, index) => {
-                const isHeading = paragraph.match(/^\d+\.\s/);
+                const isHeading = paragraph.match(/^\d+\.\s/) || paragraph.match(/^[۱۲۳۴۵]\.\s/);
                 return (
                   <Text 
                     key={index} 
@@ -133,7 +108,7 @@ ApnaUstad is not liable for individual actions, work quality, disputes, or liabi
           )}
         </GlassCard>
 
-        <Text style={styles.footerNote}>Last Updated: May 2026 · ApnaUstad Platform</Text>
+        <Text style={styles.footerNote}>{t('privacy.footerNote')}</Text>
       </ScrollView>
     </BackgroundWrapper>
   );

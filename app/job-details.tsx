@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { useTranslation } from 'react-i18next';
 import {
   Banknote,
   BriefcaseBusiness,
@@ -202,6 +203,7 @@ function PrimaryAction({
 }
 
 export default function JobDetailsScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; bookingId?: string; mode?: string; pendingBidId?: string }>();
@@ -213,30 +215,30 @@ export default function JobDetailsScreen() {
 
   const { mutate: cancelJob, isPending: isCancelling } = useCancelJobMutation({
     onSuccess: () => {
-      Toast.show({ type: 'success', text1: 'Request cancelled', text2: 'The job post has been closed.' });
+      Toast.show({ type: 'success', text1: t('jobDetails.toastRequestCancelled'), text2: t('jobDetails.toastJobClosed') });
       router.replace('/(tabs)' as any);
     },
     onError: (error: any) => {
       Toast.show({
         type: 'error',
-        text1: 'Unable to cancel',
-        text2: error.response?.data?.message || 'Please try again in a moment.',
+        text1: t('jobDetails.toastUnableCancel'),
+        text2: error.response?.data?.message || t('jobDetails.toastTryAgain'),
       });
     },
   });
 
   const { mutate: acceptInstantJob, isPending: isAccepting } = useAcceptInstantJobMutation({
     onSuccess: () => {
-      Toast.show({ type: 'success', text1: 'Interest sent', text2: 'The client can now review your response.' });
+      Toast.show({ type: 'success', text1: t('jobDetails.toastInterestSent'), text2: t('jobDetails.toastClientReview') });
       router.replace('/(tabs)' as any);
     },
     onError: (error: any) => {
       if (error.response?.status === 402) {
-        Toast.show({ type: 'error', text1: 'Top-up required', text2: error.response?.data?.message || 'Recharge your wallet to continue.' });
+        Toast.show({ type: 'error', text1: t('wallet.topUpNeeded'), text2: error.response?.data?.message || t('jobDetails.toastRechargeWallet') });
         router.push('/(tabs)/wallet' as any);
         return;
       }
-      Toast.show({ type: 'error', text1: 'Unable to respond', text2: error.response?.data?.message || 'Please try again.' });
+      Toast.show({ type: 'error', text1: t('jobDetails.toastUnableRespond'), text2: error.response?.data?.message || t('jobDetails.toastPleaseTryAgain') });
     },
   });
 
@@ -270,7 +272,7 @@ export default function JobDetailsScreen() {
             <BriefcaseBusiness size={27} color={Colors.cyan} strokeWidth={2.2} />
           </View>
           <ActivityIndicator color={Colors.cyan} />
-          <Text style={styles.loadingText}>Loading request details</Text>
+          <Text style={styles.loadingText}>{t('jobDetails.loading')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -283,34 +285,62 @@ export default function JobDetailsScreen() {
           <View style={styles.emptyIcon}>
             <FileText size={28} color={Colors.worker} strokeWidth={2.2} />
           </View>
-          <Text style={styles.emptyTitle}>Request unavailable</Text>
-          <Text style={styles.emptyText}>This job request may have been removed or is no longer accessible.</Text>
+          <Text style={styles.emptyTitle}>{t('jobDetails.unavailable')}</Text>
+          <Text style={styles.emptyText}>{t('jobDetails.unavailableDesc')}</Text>
           <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()} activeOpacity={0.82}>
             <ChevronLeft size={17} color="#001014" strokeWidth={2.8} />
-            <Text style={styles.goBackText}>Go back</Text>
+            <Text style={styles.goBackText}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
     );
   }
 
+  const getStatusInfo = (statusKey: string) => {
+    const configs: Record<string, { label: string; description: string }> = {
+      open: {
+        label: t('jobDetails.statusOpen', { defaultValue: 'Open request' }),
+        description: t('jobDetails.statusOpenDesc', { defaultValue: 'Visible to matching Ustads nearby.' }),
+      },
+      reviewing: {
+        label: t('jobDetails.statusReviewing', { defaultValue: 'Reviewing proposals' }),
+        description: t('jobDetails.statusReviewingDesc', { defaultValue: 'The client is comparing available offers.' }),
+      },
+      assigned: {
+        label: t('jobDetails.statusAssigned', { defaultValue: 'Ustad assigned' }),
+        description: t('jobDetails.statusAssignedDesc', { defaultValue: 'This request has moved into the booking flow.' }),
+      },
+      closed: {
+        label: t('jobDetails.statusClosed', { defaultValue: 'Closed' }),
+        description: t('jobDetails.statusClosedDesc', { defaultValue: 'This request is no longer accepting responses.' }),
+      },
+      cancelled: {
+        label: t('jobDetails.statusCancelled', { defaultValue: 'Cancelled' }),
+        description: t('jobDetails.statusCancelledDesc', { defaultValue: 'This request was cancelled and no further action is required.' }),
+      },
+    };
+    return configs[statusKey] || configs.open;
+  };
+
   const detailMeta = job.detailMeta;
   const baseStatus = STATUS_CONFIG[job.status] || STATUS_CONFIG.open;
+  const trans = getStatusInfo(job.status);
   const status = {
     ...baseStatus,
-    label: detailMeta?.statusInfo?.label || baseStatus.label,
+    label: detailMeta?.statusInfo?.label || trans.label,
+    description: trans.description,
     color: detailMeta?.statusInfo?.accentColor || baseStatus.color,
   };
   const StatusIcon = status.Icon;
   const isInstant = (detailMeta?.missionKind || job.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
-  const title = job.category || 'Service request';
-  const description = job.description || 'No additional details were provided.';
+  const title = job.category || t('jobDetails.defaultTitle');
+  const description = job.description || t('jobDetails.defaultDescription');
   const amountText = detailMeta?.financial?.amountText || formatMoney(job.amount);
-  const dateLabel = detailMeta?.schedule?.dateLabel || formatDate(job.scheduledDate);
-  const timeLabel = detailMeta?.schedule?.timeLabel || job.scheduledTime || 'ASAP';
-  const missionKindLabel = detailMeta?.missionKindLabel || (isInstant ? 'Instant visit' : 'Scheduled visit');
-  const locationLabel = detailMeta?.location?.address || job.address || 'Service location not shared';
+  const dateLabel = detailMeta?.schedule?.dateLabel || (job.scheduledDate ? formatDate(job.scheduledDate) : t('transactionDetails.today'));
+  const timeLabel = detailMeta?.schedule?.timeLabel || job.scheduledTime || t('transactionDetails.asap');
+  const missionKindLabel = detailMeta?.missionKindLabel || (isInstant ? t('transactionDetails.instantVisit') : t('transactionDetails.scheduledVisit'));
+  const locationLabel = detailMeta?.location?.address || job.address || t('jobDetails.noLocation');
   const workerObj = job.worker && typeof job.worker === 'object' ? job.worker : null;
   const workerLoc = (workerObj as any)?.address || (workerObj as any)?.city || '';
   const bidSummary = detailMeta?.bidSummary || {
@@ -320,7 +350,7 @@ export default function JobDetailsScreen() {
   };
   const client = job.clientMeta || (typeof job.customer === 'object' ? job.customer : null);
   const clientId = client?._id;
-  const clientName = client?.fullName || 'Client';
+  const clientName = client?.fullName || t('jobDetails.client');
   const clientImage = client?.profileImage || '';
   const clientJobs = Number((client as any)?.completedJobs || (client as any)?.totalJobs || 0);
   const requiredBalance = wallet?.requiredBalance ?? job.signalMeta?.requiredWalletBalance ?? 500;
@@ -330,16 +360,16 @@ export default function JobDetailsScreen() {
   const showDock = canWorkerRespond || canClientManage;
 
   const shareRequest = () => {
-    Share.share({ message: `${title} service request - ${status.label} - ${amountText}\n${locationLabel}` });
+    Share.share({ message: `${title} ${t('jobDetails.defaultTitle').toLowerCase()} - ${status.label} - ${amountText}\n${locationLabel}` });
   };
 
   const handleCancel = () => {
     Alert.alert(
-      'Cancel request?',
-      'Matching workers will no longer be able to respond to this job.',
+      t('jobDetails.cancelConfirmTitle'),
+      t('jobDetails.cancelConfirmDesc'),
       [
-        { text: 'Keep request', style: 'cancel' },
-        { text: 'Cancel request', style: 'destructive', onPress: () => cancelJob({ jobId: job._id }) },
+        { text: t('jobDetails.cancelConfirmKeep'), style: 'cancel' },
+        { text: t('jobDetails.cancelConfirmCancel'), style: 'destructive', onPress: () => cancelJob({ jobId: job._id }) },
       ]
     );
   };
@@ -348,8 +378,8 @@ export default function JobDetailsScreen() {
     if (isWalletBlocked) {
       Toast.show({
         type: 'error',
-        text1: 'Top-up required',
-        text2: `Keep at least Rs. ${requiredBalance.toLocaleString()} in your wallet before responding.`,
+        text1: t('wallet.topUpNeeded'),
+        text2: t('jobDetails.walletRequiredDesc', { amount: requiredBalance.toLocaleString() }),
       });
       router.push('/(tabs)/wallet' as any);
       return;
@@ -380,8 +410,8 @@ export default function JobDetailsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>Service Request</Text>
-            <Text style={styles.headerTitle}>Job Details</Text>
+            <Text style={styles.headerEyebrow}>{t('jobDetails.defaultTitle')}</Text>
+            <Text style={styles.headerTitle}>{t('jobDetails.title')}</Text>
           </View>
 
           <TouchableOpacity style={styles.headerButton} onPress={shareRequest} activeOpacity={0.8}>
@@ -440,11 +470,11 @@ export default function JobDetailsScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
-            <SectionHeader icon={Clock3} title="Visit Overview" subtitle="When and where the service is requested." />
+            <SectionHeader icon={Clock3} title={t('jobDetails.visitOverview')} subtitle={t('jobDetails.visitOverviewDesc')} />
             <View style={styles.detailGrid}>
-              <DetailTile icon={MissionIcon} label="Visit type" value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
-              <DetailTile icon={CalendarDays} label="Date" value={dateLabel} />
-              <DetailTile icon={Clock3} label="Time" value={timeLabel} color={Colors.worker} />
+              <DetailTile icon={MissionIcon} label={t('jobDetails.visitTypeLabel')} value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
+              <DetailTile icon={CalendarDays} label={t('transactionDetails.date')} value={dateLabel} />
+              <DetailTile icon={Clock3} label={t('transactionDetails.time')} value={timeLabel} color={Colors.worker} />
             </View>
 
             <GlassCard padding={14} intensity={35} style={styles.locationCard}>
@@ -454,7 +484,7 @@ export default function JobDetailsScreen() {
                     <MapPin size={18} color={Colors.green} strokeWidth={2.5} />
                   </View>
                   <View style={styles.locationCopy}>
-                    <Text style={styles.locationLabel}>Service location</Text>
+                    <Text style={styles.locationLabel}>{t('transactionDetails.serviceLocation')}</Text>
                     <Text style={styles.locationValue}>{locationLabel}</Text>
                   </View>
                 </View>
@@ -464,7 +494,7 @@ export default function JobDetailsScreen() {
                       <MapPin size={18} color={Colors.cyan} strokeWidth={2.5} />
                     </View>
                     <View style={styles.locationCopy}>
-                      <Text style={styles.locationLabel}>Worker location</Text>
+                      <Text style={styles.locationLabel}>{t('jobDetails.workerLocationLabel')}</Text>
                       <Text style={styles.locationValue}>{workerLoc}</Text>
                     </View>
                   </View>
@@ -477,8 +507,8 @@ export default function JobDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(140).duration(460)} style={styles.section}>
               <SectionHeader
                 icon={ImageIcon}
-                title="Work Evidence"
-                subtitle={`${media.length} attachment${media.length === 1 ? '' : 's'} included with this request.`}
+                title={t('jobDetails.evidenceTitle')}
+                subtitle={t('jobDetails.attachmentsCount', { count: media.length })}
                 color={Colors.purple}
               />
               <JobEvidenceGallery items={media} />
@@ -489,8 +519,8 @@ export default function JobDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(210).duration(460)} style={styles.section}>
               <SectionHeader
                 icon={UserRound}
-                title="Client"
-                subtitle="Review the service requester before responding."
+                title={t('jobDetails.client')}
+                subtitle={t('jobDetails.clientDesc')}
                 color={Colors.worker}
               />
               <TouchableOpacity onPress={openClientProfile} disabled={!clientId} activeOpacity={0.84}>
@@ -512,10 +542,10 @@ export default function JobDetailsScreen() {
                       )}
                     </View>
                     <View style={styles.clientCopy}>
-                      <Text style={styles.clientRole}>Service client</Text>
+                      <Text style={styles.clientRole}>{t('jobDetails.serviceClientLabel')}</Text>
                       <Text style={[styles.clientName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
                       <Text style={styles.clientHistory}>
-                        {clientJobs > 0 ? `${clientJobs} completed service request${clientJobs === 1 ? '' : 's'}` : 'New ApnaUstad client'}
+                        {clientJobs > 0 ? t('jobDetails.clientJobsCount', { count: clientJobs }) : t('jobDetails.newClient')}
                       </Text>
                     </View>
                     {clientId ? (
@@ -532,8 +562,8 @@ export default function JobDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(210).duration(460)} style={styles.section}>
               <SectionHeader
                 icon={Send}
-                title="Proposal Activity"
-                subtitle="A quick view of worker interest for this request."
+                title={t('jobDetails.activityTitle')}
+                subtitle={t('jobDetails.activitySub')}
                 color={Colors.worker}
               />
               <GlassCard
@@ -546,19 +576,19 @@ export default function JobDetailsScreen() {
                 <View style={styles.activityStats}>
                   <View style={styles.activityStat}>
                     <Text style={styles.activityValue}>{bidSummary.total}</Text>
-                    <Text style={styles.activityLabel}>Total proposals</Text>
+                    <Text style={styles.activityLabel}>{t('jobDetails.totalProposals')}</Text>
                   </View>
                   <View style={styles.activityDivider} />
                   <View style={styles.activityStat}>
                     <Text style={[styles.activityValue, { color: Colors.worker }]}>{bidSummary.pending}</Text>
-                    <Text style={styles.activityLabel}>Awaiting review</Text>
+                    <Text style={styles.activityLabel}>{t('jobDetails.awaitingReview')}</Text>
                   </View>
                   <View style={styles.activityDivider} />
                   <View style={styles.activityStat}>
                     <Text style={[styles.activityValue, { color: bidSummary.hasAcceptedBid ? Colors.green : P.textMuted }]}>
-                      {bidSummary.hasAcceptedBid ? 'Yes' : 'No'}
+                      {bidSummary.hasAcceptedBid ? t('common.yes') : t('common.no')}
                     </Text>
-                    <Text style={styles.activityLabel}>Assigned</Text>
+                    <Text style={styles.activityLabel}>{t('jobDetails.assignedLabel')}</Text>
                   </View>
                 </View>
               </GlassCard>
@@ -568,8 +598,8 @@ export default function JobDetailsScreen() {
           <Animated.View entering={FadeInDown.delay(280).duration(460)} style={styles.section}>
             <SectionHeader
               icon={FileText}
-              title="Job Brief"
-              subtitle="The complete description provided for this request."
+              title={t('jobDetails.briefTitle')}
+              subtitle={t('jobDetails.briefSub')}
               color={Colors.green}
             />
             <GlassCard padding={14} intensity={34} style={styles.briefCard}>
@@ -597,6 +627,7 @@ export default function JobDetailsScreen() {
 
         {showDock ? (
           <View style={[styles.bottomDock, { paddingBottom: insets.bottom + 12 }]}>
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
             <LinearGradient
               colors={['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)']}
               style={StyleSheet.absoluteFill}
@@ -610,13 +641,13 @@ export default function JobDetailsScreen() {
                   <View style={styles.primaryActionWrap}>
                     <PrimaryAction
                       icon={isWalletBlocked ? WalletCards : isInstant ? Zap : Send}
-                      label={isWalletBlocked ? 'Top up wallet' : isInstant ? 'Accept offer' : 'Create proposal'}
+                      label={isWalletBlocked ? t('wallet.topUpWallet') : isInstant ? t('jobDetails.acceptOfferBtn') : t('jobDetails.createProposalBtn')}
                       onPress={handleWorkerResponse}
                       loading={isAccepting}
                       colors={isWalletBlocked ? [Colors.worker, '#FF5E00'] : [Colors.cyan, '#007AFF']}
                     />
                     <Text style={styles.walletHint}>
-                      {isWalletBlocked ? `Wallet requires Rs. ${requiredBalance.toLocaleString()}` : 'Wallet eligibility confirmed by the server'}
+                      {isWalletBlocked ? t('jobDetails.walletRequiresAmount', { amount: requiredBalance.toLocaleString() }) : t('jobDetails.walletEligibilityOk')}
                     </Text>
                   </View>
                 </>
@@ -632,7 +663,7 @@ export default function JobDetailsScreen() {
                   </TouchableOpacity>
                   <PrimaryAction
                     icon={Eye}
-                    label={bidSummary.total > 0 ? `View proposals (${bidSummary.total})` : 'View proposals'}
+                    label={bidSummary.total > 0 ? t('jobDetails.viewProposalsCount', { count: bidSummary.total }) : t('jobDetails.viewProposals')}
                     onPress={() => router.push({ pathname: '/bids-list', params: { jobId: job._id } })}
                   />
                 </>

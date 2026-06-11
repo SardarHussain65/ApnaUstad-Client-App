@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -72,15 +73,16 @@ const initialsFor = (name?: string) => {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 };
 
-const formatSince = (value?: string) => {
+const formatSince = (value?: string, t?: any) => {
   const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return 'Recently joined';
-  return `Member since ${date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+  if (!date || Number.isNaN(date.getTime())) return t ? t('clientDetails.recentlyJoined') : 'Recently joined';
+  return t ? t('clientDetails.memberSince', { date: date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) }) : `Member since ${date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
 };
 
 export default function ClientDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string | string[]; bookingId?: string | string[] }>();
   const clientId = firstParam(params.id);
   const bookingId = firstParam(params.bookingId);
@@ -97,7 +99,7 @@ export default function ClientDetailsScreen() {
         const response = await api.get(`/users/public/${clientId}`);
         if (mounted) setClient(response.data.data);
       } catch (requestError: any) {
-        if (mounted) setError(requestError?.response?.data?.message || 'Unable to load this client profile.');
+        if (mounted) setError(requestError?.response?.data?.message || t('clientDetails.profileUnavailable'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -106,14 +108,14 @@ export default function ClientDetailsScreen() {
     if (clientId) {
       fetchClient();
     } else {
-      setError('Client profile is unavailable.');
+      setError(t('clientDetails.profileUnavailable'));
       setIsLoading(false);
     }
 
     return () => {
       mounted = false;
     };
-  }, [clientId]);
+  }, [clientId, t]);
 
   const stats: ClientStats = {
     totalBookings: Number(client?.stats?.totalBookings || 0),
@@ -131,7 +133,7 @@ export default function ClientDetailsScreen() {
 
   const callClient = async () => {
     if (!clientPhone) {
-      Alert.alert('Phone unavailable', 'This client has not shared a contact number.');
+      Alert.alert(t('clientDetails.phoneUnavailable'), t('clientDetails.noPhoneNumber'));
       return;
     }
     await Linking.openURL(`tel:${clientPhone}`);
@@ -150,7 +152,7 @@ export default function ClientDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.center}>
           <ActivityIndicator color={C.cyan} />
-          <Text style={styles.loadingText}>Loading client profile</Text>
+          <Text style={styles.loadingText}>{t('clientDetails.loadingProfile')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -160,10 +162,10 @@ export default function ClientDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.center}>
-          <Text style={styles.emptyTitle}>Client profile unavailable</Text>
+          <Text style={styles.emptyTitle}>{t('clientDetails.profileUnavailable')}</Text>
           <Text style={styles.emptyText}>{error}</Text>
           <TouchableOpacity style={styles.emptyAction} onPress={() => router.back()}>
-            <Text style={styles.emptyActionText}>GO BACK</Text>
+            <Text style={styles.emptyActionText}>{t('common.back').toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -178,8 +180,8 @@ export default function ClientDetailsScreen() {
             <ChevronLeft color={C.text} size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>CLIENT PROFILE</Text>
-            <Text style={styles.headerTitle}>Service Requester</Text>
+            <Text style={styles.headerEyebrow}>{t('clientDetails.title').toUpperCase()}</Text>
+            <Text style={styles.headerTitle}>{t('clientDetails.serviceRequester')}</Text>
           </View>
           {canContactClient ? (
             <TouchableOpacity onPress={callClient} style={styles.headerButton} activeOpacity={0.8}>
@@ -217,13 +219,13 @@ export default function ClientDetailsScreen() {
                 <View style={[styles.accountPill, !isActive && styles.accountPillInactive]}>
                   <ShieldCheck size={12} color={isActive ? C.green : C.dim} />
                   <Text style={[styles.accountPillText, !isActive && styles.accountPillTextInactive]}>
-                    {isActive ? 'ACTIVE CLIENT' : 'INACTIVE ACCOUNT'}
+                    {isActive ? t('clientDetails.activeClient').toUpperCase() : t('clientDetails.inactiveAccount').toUpperCase()}
                   </Text>
                 </View>
                 <Text style={styles.name}>{client.fullName || 'Client'}</Text>
                 <View style={styles.locationLine}>
                   <MapPin size={13} color={C.pink} />
-                  <Text style={styles.locationText} numberOfLines={1}>{client.city || client.address || 'Location not added'}</Text>
+                  <Text style={styles.locationText} numberOfLines={1}>{client.city || client.address || t('clientDetails.locationNotAdded')}</Text>
                 </View>
               </View>
             </View>
@@ -232,42 +234,42 @@ export default function ClientDetailsScreen() {
 
             <View style={styles.joinedRow}>
               <CalendarDays size={14} color={C.cyan} />
-              <Text style={styles.joinedText}>{formatSince(client.createdAt)}</Text>
+              <Text style={styles.joinedText}>{formatSince(client.createdAt, t)}</Text>
             </View>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(80).duration(520)} style={styles.statsStrip}>
-            <Metric icon={BriefcaseBusiness} value={String(stats.totalBookings)} label="BOOKINGS" color={C.cyan} />
+            <Metric icon={BriefcaseBusiness} value={String(stats.totalBookings)} label={t('clientDetails.bookings')} color={C.cyan} />
             <View style={styles.metricDivider} />
-            <Metric icon={CheckCircle2} value={String(stats.completedBookings)} label="COMPLETED" color={C.green} />
+            <Metric icon={CheckCircle2} value={String(stats.completedBookings)} label={t('clientDetails.completed')} color={C.green} />
             <View style={styles.metricDivider} />
             <Metric
               icon={ShieldCheck}
-              value={stats.reliabilityRate === null ? 'New' : `${stats.reliabilityRate}%`}
-              label="RELIABILITY"
+              value={stats.reliabilityRate === null ? t('common.new') : `${stats.reliabilityRate}%`}
+              label={t('clientDetails.reliability')}
               color={C.amber}
             />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(140).duration(520)} style={styles.sectionCard}>
-            <SectionTitle icon={UserRound} title="CLIENT ACTIVITY" color={C.cyan} />
+            <SectionTitle icon={UserRound} title={t('clientDetails.clientActivity')} color={C.cyan} />
             <View style={styles.activityGrid}>
-              <ActivityTile icon={Clock3} value={String(stats.activeBookings)} label="ACTIVE REQUESTS" color={C.amber} />
-              <ActivityTile icon={XCircle} value={String(stats.cancelledBookings)} label="CANCELLATIONS" color={C.pink} />
+              <ActivityTile icon={Clock3} value={String(stats.activeBookings)} label={t('clientDetails.activeRequests')} color={C.amber} />
+              <ActivityTile icon={XCircle} value={String(stats.cancelledBookings)} label={t('clientDetails.cancellations')} color={C.pink} />
             </View>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(200).duration(520)} style={styles.sectionCard}>
-            <SectionTitle icon={ShieldCheck} title="CONTACT & LOCATION" color={C.green} />
+            <SectionTitle icon={ShieldCheck} title={t('clientDetails.contactLocation')} color={C.green} />
             <InfoRow
               icon={Phone}
-              label="Phone"
-              value={canContactClient ? clientPhone || 'Not available' : bookingId ? 'Hidden after mission closure' : 'Available after assignment'}
+              label={t('clientDetails.phone')}
+              value={canContactClient ? clientPhone || t('clientDetails.notAvailable') : bookingId ? t('clientDetails.hiddenClosed') : t('clientDetails.availableAssigned')}
               color={C.green}
               onPress={clientPhone ? callClient : undefined}
             />
             <View style={styles.infoDivider} />
-            <InfoRow icon={MapPin} label="Service address" value={client.address || client.city || 'Not provided'} color={C.pink} />
+            <InfoRow icon={MapPin} label={t('clientDetails.serviceAddress')} value={client.address || client.city || t('clientDetails.notProvided')} color={C.pink} />
           </Animated.View>
         </ScrollView>
 
@@ -277,12 +279,12 @@ export default function ClientDetailsScreen() {
             <View style={styles.dockLine} />
             <TouchableOpacity style={styles.secondaryAction} onPress={callClient} activeOpacity={0.8}>
               <Phone size={19} color={C.green} />
-              <Text style={styles.secondaryActionText}>CALL</Text>
+              <Text style={styles.secondaryActionText}>{t('clientDetails.call')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryAction} onPress={openChat} activeOpacity={0.86}>
               <LinearGradient colors={[C.cyan, C.blue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
               <MessageSquare size={19} color="#001018" />
-              <Text style={styles.primaryActionText}>MESSAGE CLIENT</Text>
+              <Text style={styles.primaryActionText}>{t('clientDetails.messageClient')}</Text>
             </TouchableOpacity>
           </View>
         )}

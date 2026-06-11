@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { useRouter, useSegments } from "expo-router";
+import '../i18n';
 import { QueryClient, QueryClientProvider, DefaultOptions } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";

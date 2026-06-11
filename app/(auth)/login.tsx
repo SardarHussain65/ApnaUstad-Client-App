@@ -25,9 +25,11 @@ import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
 import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role: urlRole } = useLocalSearchParams<{ role?: string }>();
   const { setAuth } = useAuth();
   const isWorker = urlRole === 'worker';
@@ -123,13 +125,13 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title="Secure sign in" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('auth.secureSignIn')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
-              eyebrow={`${roleLabel} access`}
-              title="Welcome"
-              highlight="back"
-              description={`Sign in to manage your ${isWorker ? 'work, bookings, and earnings' : 'service requests and bookings'}.`}
+              eyebrow={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+              title={t('home.client.welcomeBack')}
+              highlight=""
+              description={isWorker ? t('auth.workerDesc') : t('auth.clientDesc')}
             />
 
             <GlassCard
@@ -164,7 +166,7 @@ export default function LoginScreen() {
                   ? <Mail size={18} color={accentColor} />
                   : <Phone size={18} color={accentColor} />}
                 keyboardType={loginType === 'email' ? 'email-address' : 'phone-pad'}
-                label={loginType === 'email' ? 'Email address' : 'Phone number'}
+                label={loginType === 'email' ? t('auth.email') : t('auth.phone')}
                 onChangeText={(value) => {
                   setIdentifier(value);
                   if (identifierError) setIdentifierError('');
@@ -179,12 +181,12 @@ export default function LoginScreen() {
                 autoComplete="password"
                 error={passwordError}
                 icon={<Lock size={18} color={accentColor} />}
-                label="Password"
+                label={t('auth.password')}
                 onChangeText={(value) => {
                   setPassword(value);
                   if (passwordError) setPasswordError('');
                 }}
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 rightIcon={
                   <TouchableOpacity
                     accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
@@ -208,14 +210,14 @@ export default function LoginScreen() {
                 })}
                 style={styles.forgotButton}
               >
-                <Text style={[styles.forgotText, { color: accentColor }]}>Forgot password?</Text>
+                <Text style={[styles.forgotText, { color: accentColor }]}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
 
               <AnimatedButton
                 isLoading={loginMutation.isPending}
                 onPress={handleLogin}
                 style={styles.submitButton}
-                title="Sign in securely"
+                title={t('auth.signInButton')}
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
@@ -226,7 +228,7 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>New to ApnaUstad?</Text>
+              <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.push({
@@ -234,7 +236,7 @@ export default function LoginScreen() {
                   params: { role: urlRole },
                 })}
               >
-                <Text style={[styles.footerLink, { color: accentColor }]}> Create an account</Text>
+                <Text style={[styles.footerLink, { color: accentColor }]}> {t('auth.signUp')}</Text>
               </TouchableOpacity>
             </View>
 

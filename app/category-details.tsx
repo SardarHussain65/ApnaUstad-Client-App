@@ -4,6 +4,7 @@ import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Zap, Calendar, Users, ArrowRight, Sparkles, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ export default function CategoryDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t } = useTranslation();
 
   // Dynamic Theme
   const themeColor = (params.color as string) || Colors.cyan;
@@ -99,12 +101,12 @@ export default function CategoryDetailsScreen() {
             <View style={[styles.glowingOrb, { shadowColor: themeColor, borderColor: themeColor + '60' }]}>
               <Sparkles color={themeColor} size={40} />
             </View>
-            <Text style={styles.heroSub}>SELECT METHOD</Text>
+            <Text style={styles.heroSub}>{t('categoryDetails.selectMethod')}</Text>
             <Text style={[styles.heroTitle, Typography.threeD]}>{title.toUpperCase()}</Text>
             {params.description ? (
               <Text style={styles.categoryDescription}>{params.description}</Text>
             ) : (
-              <Text style={styles.categoryDescription}>Choose how you want to book or connect with your Ustad.</Text>
+              <Text style={styles.categoryDescription}>{t('categoryDetails.selectMethodDesc')}</Text>
             )}
           </Animated.View>
 
@@ -125,11 +127,11 @@ export default function CategoryDetailsScreen() {
                   <FileText size={28} color={Colors.cyan} />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={[styles.optionTitle, { color: Colors.cyan }]} adjustsFontSizeToFit minimumFontScale={0.8}>POST A JOB</Text>
-                  <Text style={styles.optionSub}>GET BIDS NEARBY</Text>
+                  <Text style={[styles.optionTitle, { color: Colors.cyan }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.postJob')}</Text>
+                  <Text style={styles.optionSub}>{t('categoryDetails.getBids')}</Text>
                 </View>
                 <View style={[styles.deployHint, { backgroundColor: Colors.cyan, shadowColor: Colors.cyan }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>POST NOW</Text>
+                  <Text style={[styles.deployHintText, { color: '#000' }]}>{t('categoryDetails.postNow')}</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -149,11 +151,11 @@ export default function CategoryDetailsScreen() {
                   <Users size={28} color={Colors.worker} />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={[styles.optionTitle, { color: Colors.worker }]} adjustsFontSizeToFit minimumFontScale={0.8}>CHOOSE USTAD</Text>
-                  <Text style={styles.optionSub}>HIRE DIRECTLY</Text>
+                  <Text style={[styles.optionTitle, { color: Colors.worker }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.chooseUstad')}</Text>
+                  <Text style={styles.optionSub}>{t('categoryDetails.hireDirectly')}</Text>
                 </View>
                 <View style={[styles.deployHint, { backgroundColor: Colors.worker, shadowColor: Colors.worker }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>BROWSE</Text>
+                  <Text style={[styles.deployHintText, { color: '#000' }]}>{t('categoryDetails.browse')}</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>

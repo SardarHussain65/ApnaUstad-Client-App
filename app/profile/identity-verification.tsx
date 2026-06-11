@@ -27,6 +27,7 @@ import {
   HelpCircle,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -58,6 +59,7 @@ interface VerificationDetails {
 export default function IdentityVerificationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { success, error: showError } = useToast();
   const { user, role, updateUser } = useAuth();
   const isWorker = role === 'worker';
@@ -124,7 +126,7 @@ export default function IdentityVerificationScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showError('Permission denied', 'Media library access is required to upload documents.');
+        showError(t('wallet.permissionRequired'), t('wallet.photoPermission'));
         return;
       }
 
@@ -144,7 +146,7 @@ export default function IdentityVerificationScreen() {
         await Haptics.selectionAsync();
       }
     } catch (err: any) {
-      showError('Image selection error', 'Could not select photo.');
+      showError(t('common.error'), t('identityVerification.selectError', { defaultValue: 'Could not select photo.' }));
     }
   };
 
@@ -152,7 +154,7 @@ export default function IdentityVerificationScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        showError('Permission denied', 'Camera access is required to snap photos.');
+        showError(t('wallet.permissionRequired'), t('identityVerification.cameraPermission', { defaultValue: 'Camera access is required to snap photos.' }));
         return;
       }
 
@@ -172,7 +174,7 @@ export default function IdentityVerificationScreen() {
         await Haptics.selectionAsync();
       }
     } catch (err: any) {
-      showError('Camera error', 'Could not access device camera.');
+      showError(t('common.error'), t('identityVerification.cameraError', { defaultValue: 'Could not access device camera.' }));
     }
   };
 
@@ -191,7 +193,7 @@ export default function IdentityVerificationScreen() {
     
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || `Failed to upload CNIC ${side} image`);
+      throw new Error(err?.message || t('registerDetails.uploadError'));
     }
     const data = await response.json();
     return data.data?.imageUrl || '';
@@ -202,7 +204,7 @@ export default function IdentityVerificationScreen() {
     const rawDigits = cnicNumber.replace(/\D/g, '');
     if (rawDigits.length !== 13) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      showError('Invalid CNIC', 'Pakistani CNIC must be exactly 13 digits long.');
+      showError(t('identityVerification.invalidCnic'), t('identityVerification.cnicLengthError'));
       return;
     }
 
@@ -212,7 +214,7 @@ export default function IdentityVerificationScreen() {
 
       if (needsFrontUpload || needsBackUpload) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        showError('Missing documents', 'Both CNIC Front and CNIC Back side images are required.');
+        showError(t('identityVerification.missingDocs'), t('identityVerification.docsRequired'));
         return;
       }
     }
@@ -242,13 +244,13 @@ export default function IdentityVerificationScreen() {
       });
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      success('Submitted successfully', 'Your documents are uploaded and under admin audit.');
+      success(t('identityVerification.successTitle'), t('identityVerification.successDesc'));
       
       // Update UI state
       fetchStatus();
     } catch (err: any) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      showError('Submission failed', err?.response?.data?.message || err?.message || 'Could not upload credentials.');
+      showError(t('identityVerification.failedTitle'), err?.response?.data?.message || err?.message || t('registerDetails.uploadError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -268,7 +270,7 @@ export default function IdentityVerificationScreen() {
       <BackgroundWrapper>
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={Colors.primary} size="large" />
-          <Text style={styles.loadingText}>Fetching verification audit log...</Text>
+          <Text style={styles.loadingText}>{t('identityVerification.fetching')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -290,7 +292,7 @@ export default function IdentityVerificationScreen() {
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
               <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Identity Verification</Text>
+            <Text style={styles.headerTitle}>{t('identityVerification.title')}</Text>
             <View style={{ width: 40 }} />
           </Animated.View>
 
@@ -301,14 +303,12 @@ export default function IdentityVerificationScreen() {
               <View style={[styles.glowRing, { borderColor: '#34C759' }]}>
                 <BadgeCheck size={50} color="#34C759" strokeWidth={2.2} />
               </View>
-              <Text style={styles.statusTitle}>Verified Ustad</Text>
-              <Text style={styles.statusDesc}>
-                Excellent news! Your identity check is complete. Your profile now displays a trusted partner tick, boosting user bookings and platform privileges.
-              </Text>
+              <Text style={styles.statusTitle}>{t('identityVerification.verifiedUstad')}</Text>
+              <Text style={styles.statusDesc}>{t('identityVerification.verifiedDesc')}</Text>
               <View style={styles.cardInfo}>
                 <LinearGradient colors={['rgba(52,199,89,0.08)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLbl}>Verified CNIC</Text>
+                  <Text style={styles.infoLbl}>{t('identityVerification.verifiedCnic')}</Text>
                   <Text style={styles.infoVal}>{cnicNumber}</Text>
                 </View>
               </View>
@@ -320,14 +320,12 @@ export default function IdentityVerificationScreen() {
               <View style={[styles.glowRing, { borderColor: '#FF9F0A' }]}>
                 <Hourglass size={42} color="#FF9F0A" strokeWidth={2.2} style={styles.pulseAnim} />
               </View>
-              <Text style={styles.statusTitle}>Under Review</Text>
-              <Text style={styles.statusDesc}>
-                Your documents have been securely uploaded. Our compliance administrators are reviewing the inputs. Reviews usually conclude within 24 hours.
-              </Text>
+              <Text style={styles.statusTitle}>{t('identityVerification.underReview')}</Text>
+              <Text style={styles.statusDesc}>{t('identityVerification.reviewDesc')}</Text>
               <View style={styles.cardInfo}>
                 <LinearGradient colors={['rgba(255,159,10,0.08)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLbl}>Pending CNIC</Text>
+                  <Text style={styles.infoLbl}>{t('identityVerification.pendingCnic')}</Text>
                   <Text style={styles.infoVal}>{cnicNumber}</Text>
                 </View>
               </View>
@@ -339,24 +337,22 @@ export default function IdentityVerificationScreen() {
               <View style={[styles.glowRing, { borderColor: '#FF3B30' }]}>
                 <ShieldAlert size={46} color="#FF3B30" strokeWidth={2.2} />
               </View>
-              <Text style={[styles.statusTitle, { color: '#FF3B30' }]}>Review Rejected</Text>
-              <Text style={styles.statusDesc}>
-                The compliance team was unable to verify your identity with the provided documents.
-              </Text>
+              <Text style={[styles.statusTitle, { color: '#FF3B30' }]}>{t('identityVerification.rejected')}</Text>
+              <Text style={styles.statusDesc}>{t('identityVerification.rejectedDesc')}</Text>
               <View style={styles.rejectionCard}>
                 <LinearGradient colors={['rgba(255,59,48,0.12)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <AlertTriangle size={16} color="#FF3B30" strokeWidth={2.5} style={{ marginTop: 2 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.rejectionTitle}>Reason for Rejection</Text>
+                  <Text style={styles.rejectionTitle}>{t('identityVerification.reasonTitle')}</Text>
                   <Text style={styles.rejectionText}>
-                    {requestDetails?.rejectionReason || 'CNIC image was blurry or mismatched profile information.'}
+                    {requestDetails?.rejectionReason || t('identityVerification.defaultReason')}
                   </Text>
                 </View>
               </View>
               
               <TouchableOpacity style={styles.resubmitBtn} onPress={handleReset}>
                 <LinearGradient colors={[Colors.primary, Colors.secondary]} start={{ x:0, y:0 }} end={{ x:1, y:1 }} style={styles.resubmitGradient}>
-                  <Text style={styles.resubmitText}>Correct & Resubmit</Text>
+                  <Text style={styles.resubmitText}>{t('identityVerification.correctResubmit')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
@@ -365,14 +361,14 @@ export default function IdentityVerificationScreen() {
           {status === 'not_submitted' && (
             <Animated.View entering={FadeInUp.delay(100)} style={{ width: '100%' }}>
               <Text style={styles.formIntro}>
-                Upload clear photos of the front and back of your computer national identity card (CNIC) to verify your Ustad status.
+                {t('identityVerification.uploadIntro')}
               </Text>
 
               {/* Form Fields */}
               <View style={styles.fieldWrap}>
                 <View style={styles.fieldLabelRow}>
                   <FileText size={13} color={focused ? Colors.primary : 'rgba(255,255,255,0.5)'} strokeWidth={2.5} />
-                  <Text style={[styles.fieldLabel, focused && { color: Colors.primary }]}>CNIC Number (13 Digits)</Text>
+                  <Text style={[styles.fieldLabel, focused && { color: Colors.primary }]}>{t('identityVerification.cnicDigits')}</Text>
                 </View>
                 <View style={[styles.inputCard, focused && { borderColor: `${Colors.primary}60` }]}>
                   <LinearGradient
@@ -396,7 +392,7 @@ export default function IdentityVerificationScreen() {
 
               {/* Photo Upload Containers */}
               <DocumentUploadWidget
-                title="CNIC Front Side"
+                title={t('identityVerification.cnicFrontSide')}
                 localUri={frontLocalImage}
                 onlineUrl={frontOnlineUrl}
                 onSelectGallery={() => pickImage('front')}
@@ -405,7 +401,7 @@ export default function IdentityVerificationScreen() {
               />
 
               <DocumentUploadWidget
-                title="CNIC Back Side"
+                title={t('identityVerification.cnicBackSide')}
                 localUri={backLocalImage}
                 onlineUrl={backOnlineUrl}
                 onSelectGallery={() => pickImage('back')}
@@ -426,7 +422,7 @@ export default function IdentityVerificationScreen() {
                     ) : (
                       <>
                         <Check size={20} color="#000" strokeWidth={3} />
-                        <Text style={styles.saveText}>Submit for Verification</Text>
+                        <Text style={styles.saveText}>{t('identityVerification.submitBtn')}</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -439,7 +435,7 @@ export default function IdentityVerificationScreen() {
           <View style={styles.secureNotice}>
             <LinearGradient colors={['rgba(255,255,255,0.02)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]} />
             <Text style={styles.secureText}>
-              🔒 **Privacy Secured**: Your government documents are highly encrypted and solely utilized for partner validation compliance audits.
+              🔒 {t('identityVerification.privacySecured')}
             </Text>
           </View>
         </ScrollView>
@@ -459,6 +455,7 @@ interface DocumentUploadProps {
 }
 
 function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onSelectCamera, onClear }: DocumentUploadProps) {
+  const { t } = useTranslation();
   const displayUri = localUri || getOptimizedImageUrl(onlineUrl, 500, 300);
 
   return (
@@ -480,19 +477,19 @@ function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onS
             <ImageIcon size={28} color="rgba(255,255,255,0.3)" strokeWidth={1.5} />
           </View>
           
-          <Text style={styles.pickerNudge}>No document selected</Text>
+          <Text style={styles.pickerNudge}>{t('identityVerification.noDocument')}</Text>
           
           <View style={styles.pickerBtnRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={onSelectCamera}>
               <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)']} style={StyleSheet.absoluteFill} />
               <Camera size={14} color={Colors.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnTxt}>Camera</Text>
+              <Text style={styles.pickerBtnTxt}>{t('identityVerification.camera')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.pickerBtn} onPress={onSelectGallery}>
               <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)']} style={StyleSheet.absoluteFill} />
               <ImageIcon size={14} color={Colors.secondary} strokeWidth={2.5} style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnTxt}>Gallery</Text>
+              <Text style={styles.pickerBtnTxt}>{t('identityVerification.gallery')}</Text>
             </TouchableOpacity>
           </View>
         </View>

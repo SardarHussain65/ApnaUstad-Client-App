@@ -52,6 +52,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { AlertModal, ConfirmModal } from '../components/ui';
 import { useConfirmModal, useCreateJobMutation, useToast, useUploadJobImagesMutation } from '../hooks';
 import { addAlpha } from '../utils/colorUtils';
+import { useTranslation } from 'react-i18next';
 
 // Sub-components
 import { BudgetInput } from '../components/job-creation/BudgetInput';
@@ -130,6 +131,7 @@ function CollapsibleCard({
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function JobCreationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { success, error: showError } = useToast();
   const {
     visible: confirmVisible,
@@ -272,10 +274,10 @@ export default function JobCreationScreen() {
   const completedStepCount = [true, hasDescription, hasLocation].filter(Boolean).length;
   const completionPercentage = Math.round((completedStepCount / requiredStepCount) * 100);
   const submitLabel = targetWorkerId
-    ? 'Send Request to Ustad'
+    ? t('jobCreation.submitDirect')
     : isInstant
-      ? 'Find an Ustad Now'
-      : 'Post Scheduled Request';
+      ? t('jobCreation.submitInstant')
+      : t('jobCreation.submitScheduled');
 
   // ─── Auto-fetch location on mount ─────────────────────────────────────────
   useEffect(() => {
@@ -507,8 +509,8 @@ export default function JobCreationScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerEyebrow}>SERVICE REQUEST</Text>
-            <Text style={styles.headerTitle}>Create Request</Text>
+            <Text style={styles.headerEyebrow}>{t('jobCreation.urgent').toUpperCase()}</Text>
+            <Text style={styles.headerTitle}>{t('jobCreation.findUstad')}</Text>
           </View>
 
           {/* Live status indicator */}
@@ -597,11 +599,11 @@ export default function JobCreationScreen() {
 
             {/* ── Service Details (Required) ── */}
             <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.section}>
-              <SectionLabel icon={FileText} label="DESCRIBE THE WORK" badge="Required" />
+              <SectionLabel icon={FileText} label={t('jobCreation.describeNeed').toUpperCase()} badge="Required" />
               <GlassInput glowColor={description.trim().length >= 10 ? P.cyan : (description.trim().length > 0 ? P.error : undefined)}>
                 <TextInput
                   style={styles.textArea}
-                  placeholder="What needs to be fixed? Add useful details for the Ustad."
+                  placeholder={t('jobCreation.placeholder')}
                   placeholderTextColor={P.textMuted}
                   multiline
                   numberOfLines={5}

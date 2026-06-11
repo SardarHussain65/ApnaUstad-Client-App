@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MailCheck } from 'lucide-react-native';
 import { OtpInput } from 'react-native-otp-entry';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { AnimatedButton } from '../../components/AnimatedButton';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
@@ -29,6 +30,7 @@ const { width } = Dimensions.get('window');
 
 export default function VerifyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { fullName, email, phone, role } = useLocalSearchParams<{
     fullName: string;
     email: string;
@@ -55,7 +57,7 @@ export default function VerifyScreen() {
   const handleVerify = async () => {
     if (otp.length !== 6) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Code required', 'Enter the 6-digit verification code sent to your email.');
+      Alert.alert(t('verify.codeRequired'), t('verify.enterCode'));
       return;
     }
 
@@ -69,7 +71,7 @@ export default function VerifyScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Invalid code.');
+        throw new Error(data.message || t('verify.invalidCode'));
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -79,7 +81,7 @@ export default function VerifyScreen() {
       });
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Verification failed', error.message || 'The code is invalid or has expired.');
+      Alert.alert(t('verify.verificationFailed'), error.message || t('verify.invalidCode'));
     } finally {
       setIsVerifying(false);
     }
@@ -98,15 +100,15 @@ export default function VerifyScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend code.');
+        throw new Error(data.message || t('verify.unableResend'));
       }
 
       setResendCooldown(30);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Code sent', 'A fresh verification code has been sent to your email.');
+      Alert.alert(t('verify.codeSent'), t('verify.freshCode'));
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Unable to resend', error.message || 'Please try again in a moment.');
+      Alert.alert(t('verify.unableResend'), error.message || t('verify.tryAgain'));
     } finally {
       setIsResending(false);
     }
@@ -125,15 +127,15 @@ export default function VerifyScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title="Email verification" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('verify.title')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthProgress currentStep={2} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
               align="center"
-              description={`We sent a 6-digit code to ${email}. Enter it below to confirm your account.`}
-              highlight="your email"
+              description={t('verify.description', { email })}
+              highlight={t('verify.highlight')}
               icon={<MailCheck size={36} color={accentColor} strokeWidth={1.8} />}
-              title="Verify"
+              title={t('verify.verify')}
             />
 
             <GlassCard
@@ -142,7 +144,7 @@ export default function VerifyScreen() {
               style={styles.otpCard}
               gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
             >
-              <Text style={styles.otpLabel}>6-digit verification code</Text>
+              <Text style={styles.otpLabel}>{t('verify.otpLabel')}</Text>
               <OtpInput
                 numberOfDigits={6}
                 focusColor={accentColor}
@@ -166,13 +168,13 @@ export default function VerifyScreen() {
                 isLoading={isVerifying}
                 onPress={handleVerify}
                 style={styles.verifyButton}
-                title="Verify and continue"
+                title={t('verify.verifyBtn')}
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
 
             <View style={styles.resendRow}>
-              <Text style={styles.resendHint}>Did not receive the code?</Text>
+              <Text style={styles.resendHint}>{t('verify.resendHint')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 disabled={isResending || resendCooldown > 0}
@@ -184,12 +186,12 @@ export default function VerifyScreen() {
                     { color: resendCooldown > 0 ? Colors.textDim : accentColor },
                   ]}
                 >
-                  {isResending ? ' Sending...' : resendCooldown > 0 ? ` Resend in ${resendCooldown}s` : ' Resend now'}
+                  {isResending ? t('verify.sending') : resendCooldown > 0 ? t('verify.resendIn', { seconds: resendCooldown }) : t('verify.resendNow')}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            <SecurityNote accentColor={accentColor} text="Your verification code expires automatically for your security." />
+            <SecurityNote accentColor={accentColor} text={t('verify.securityNote')} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

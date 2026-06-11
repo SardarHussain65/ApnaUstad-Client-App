@@ -20,6 +20,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../home/GlassCard';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
@@ -75,25 +76,25 @@ interface WorkerWalletViewProps {
   onOpenRecharge: () => void;
 }
 
-const TX_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  recharge: { color: Colors.success, icon: ArrowDownLeft, label: 'Recharge' },
-  commission_deduction: { color: '#FF8C00', icon: ArrowUpRight, label: 'Commission' },
-  specialty_subscription: { color: '#BF5AF2', icon: ArrowUpRight, label: 'Category Renewal' },
-  refund: { color: '#00B8FF', icon: RefreshCw, label: 'Refund' },
-  adjustment: { color: Colors.cyan, icon: Info, label: 'Adjustment' },
+const TX_CONFIG: Record<string, { color: string; icon: any; labelKey: string }> = {
+  recharge: { color: Colors.success, icon: ArrowDownLeft, labelKey: 'wallet.recharge' },
+  commission_deduction: { color: '#FF8C00', icon: ArrowUpRight, labelKey: 'wallet.commission' },
+  specialty_subscription: { color: '#BF5AF2', icon: ArrowUpRight, labelKey: 'wallet.categoryRenewal' },
+  refund: { color: '#00B8FF', icon: RefreshCw, labelKey: 'wallet.refund' },
+  adjustment: { color: Colors.cyan, icon: Info, labelKey: 'wallet.adjustment' },
 };
 
-const TOPUP_STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: '#FFB020', icon: Clock, label: 'Pending' },
-  approved: { color: Colors.success, icon: CheckCircle2, label: 'Approved' },
-  rejected: { color: Colors.error, icon: XCircle, label: 'Rejected' },
+const TOPUP_STATUS_CONFIG: Record<string, { color: string; icon: any; labelKey: string }> = {
+  pending: { color: '#FFB020', icon: Clock, labelKey: 'wallet.pending' },
+  approved: { color: Colors.success, icon: CheckCircle2, labelKey: 'wallet.approved' },
+  rejected: { color: Colors.error, icon: XCircle, labelKey: 'wallet.rejected' },
 };
 
-const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  paid: { color: Colors.success, icon: CheckCircle2, label: 'Paid' },
-  payable: { color: '#00B8FF', icon: Clock, label: 'Payable' },
-  pending: { color: '#FF8C00', icon: AlertCircle, label: 'Pending' },
-  cancelled: { color: Colors.error, icon: XCircle, label: 'Cancelled' },
+const STATUS_CONFIG: Record<string, { color: string; icon: any; labelKey: string }> = {
+  paid: { color: Colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },
+  payable: { color: '#00B8FF', icon: Clock, labelKey: 'wallet.payable' },
+  pending: { color: '#FF8C00', icon: AlertCircle, labelKey: 'wallet.pending' },
+  cancelled: { color: Colors.error, icon: XCircle, labelKey: 'wallet.cancelled' },
 };
 
 const formatMoney = (value = 0) => `Rs. ${Number(value || 0).toLocaleString(undefined, {
@@ -138,6 +139,7 @@ export function WorkerWalletView({
 }: WorkerWalletViewProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const requiredBalance = wallet?.requiredBalance ?? 500;
   const availableBalance = wallet?.availableBalance ?? wallet?.balance ?? 0;
@@ -166,8 +168,8 @@ export function WorkerWalletView({
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, Typography.threeD]}>Wallet & History</Text>
-        <Text style={styles.headerSubtitle}>Manage earnings, top-ups, and commission logs</Text>
+        <Text style={[styles.headerTitle, Typography.threeD]}>{t('wallet.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('wallet.workerSub')}</Text>
       </View>
 
       {/* Low Balance Warning Banner */}
@@ -175,9 +177,9 @@ export function WorkerWalletView({
         <Animated.View entering={FadeInDown.duration(600)} style={styles.warningBanner}>
           <AlertCircle size={20} color={Colors.error} style={{ marginRight: 10 }} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.warningTitle}>Low Wallet Balance</Text>
+            <Text style={styles.warningTitle}>{t('wallet.lowWalletBalance')}</Text>
             <Text style={styles.warningSub}>
-              Your available balance is below Rs. {requiredBalance.toLocaleString()}. Please top up to accept jobs or post bids.
+              {t('wallet.lowBalanceWarning', { amount: requiredBalance.toLocaleString() })}
             </Text>
           </View>
         </Animated.View>
@@ -198,7 +200,7 @@ export function WorkerWalletView({
           <View style={styles.balanceHeaderRow}>
             <View style={styles.balanceEyebrowRow}>
               <Wallet size={14} color={Colors.cyan} strokeWidth={2.2} />
-              <Text style={styles.balanceEyebrow}>WORK WALLET</Text>
+              <Text style={styles.balanceEyebrow}>{t('wallet.workWallet').toUpperCase()}</Text>
             </View>
             <View style={[
               styles.balanceEligibilityPill,
@@ -206,14 +208,14 @@ export function WorkerWalletView({
             ]}>
               <View style={[styles.statusIndicator, { backgroundColor: isBalanceLow ? Colors.error : Colors.success }]} />
               <Text style={[styles.balanceEligibilityText, { color: isBalanceLow ? '#FF6B63' : Colors.success }]}>
-                {isBalanceLow ? 'TOP-UP NEEDED' : 'JOB READY'}
+                {isBalanceLow ? t('wallet.topUpNeeded') : t('wallet.jobReady')}
               </Text>
             </View>
           </View>
 
           <View style={[styles.balanceContent, styles.workerBalanceContent]}>
             <View style={styles.balanceTextGroup}>
-              <Text style={styles.balanceLabel}>AVAILABLE BALANCE</Text>
+              <Text style={styles.balanceLabel}>{t('wallet.availableBalance').toUpperCase()}</Text>
               <Text
                 style={[styles.balanceAmount, Typography.threeD, { color: isBalanceLow ? '#FF6B63' : '#fff' }]}
                 numberOfLines={1}
@@ -224,8 +226,8 @@ export function WorkerWalletView({
               </Text>
               <Text style={styles.balanceReserveText}>
                 {reservedBalance > 0
-                  ? `${formatMoney(reservedBalance)} held for active jobs`
-                  : `Minimum reserve ${formatMoney(requiredBalance)}`}
+                  ? `${formatMoney(reservedBalance)} ${t('wallet.heldActiveJobs')}`
+                  : `${t('wallet.minimumReserve')} ${formatMoney(requiredBalance)}`}
               </Text>
             </View>
             <View style={[styles.walletIconWrap, isBalanceLow && { borderColor: Colors.error + '40', backgroundColor: Colors.error + '08' }]}>
@@ -239,7 +241,7 @@ export function WorkerWalletView({
             onPress={onOpenRecharge}
           >
             <Plus size={18} color={isBalanceLow ? '#FF4F4F' : Colors.cyan} strokeWidth={2.5} style={{ marginRight: 6 }} />
-            <Text style={[styles.rechargeBtnText, { color: isBalanceLow ? '#FF4F4F' : Colors.cyan }]}>Top Up Wallet</Text>
+            <Text style={[styles.rechargeBtnText, { color: isBalanceLow ? '#FF4F4F' : Colors.cyan }]}>{t('wallet.topUpWallet')}</Text>
           </TouchableOpacity>
         </GlassCard>
       </Animated.View>
@@ -259,8 +261,8 @@ export function WorkerWalletView({
                 <Banknote size={22} color={Colors.success} strokeWidth={1.9} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.balanceEarningsLabel}>TOTAL EARNINGS</Text>
-                <Text style={styles.balanceEarningsSub}>Cash jobs and collectable income</Text>
+                <Text style={styles.balanceEarningsLabel}>{t('wallet.totalEarnings').toUpperCase()}</Text>
+                <Text style={styles.balanceEarningsSub}>{t('wallet.totalEarningsDesc')}</Text>
               </View>
             </View>
             <Text
@@ -276,21 +278,21 @@ export function WorkerWalletView({
           <View style={styles.balanceEarningsGrid}>
             <View style={styles.balanceEarningsMetric}>
               <View style={[styles.earningsMetricDot, { backgroundColor: Colors.success }]} />
-              <Text style={styles.balanceEarningsMiniLabel}>Received</Text>
+              <Text style={styles.balanceEarningsMiniLabel}>{t('wallet.received')}</Text>
               <Text style={styles.balanceEarningsMiniValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.paid)}
               </Text>
             </View>
             <View style={styles.balanceEarningsMetric}>
               <View style={[styles.earningsMetricDot, { backgroundColor: '#00B8FF' }]} />
-              <Text style={styles.balanceEarningsMiniLabel}>Ready</Text>
+              <Text style={styles.balanceEarningsMiniLabel}>{t('wallet.ready')}</Text>
               <Text style={styles.balanceEarningsMiniValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.payable)}
               </Text>
             </View>
             <View style={[styles.balanceEarningsMetric, styles.balanceEarningsMetricLast]}>
               <View style={[styles.earningsMetricDot, { backgroundColor: '#FFB020' }]} />
-              <Text style={styles.balanceEarningsMiniLabel}>Upcoming</Text>
+              <Text style={styles.balanceEarningsMiniLabel}>{t('wallet.upcoming')}</Text>
               <Text style={styles.balanceEarningsMiniValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.pending)}
               </Text>
@@ -301,8 +303,8 @@ export function WorkerWalletView({
 
       {/* Wallet Statistics Grid */}
       <View style={styles.walletStatsHeader}>
-        <Text style={styles.walletStatsTitle}>Wallet Activity</Text>
-        <Text style={styles.walletStatsCaption}>Verified credits and deductions</Text>
+        <Text style={styles.walletStatsTitle}>{t('wallet.walletActivity')}</Text>
+        <Text style={styles.walletStatsCaption}>{t('wallet.walletActivityDesc')}</Text>
       </View>
       <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.summaryRow}>
         <GlassCard
@@ -316,7 +318,7 @@ export function WorkerWalletView({
           <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
             {formatMoney(wallet?.totalRecharged)}
           </Text>
-          <Text style={styles.chipLabel}>Approved Top-Ups</Text>
+          <Text style={styles.chipLabel}>{t('wallet.approvedTopUps')}</Text>
         </GlassCard>
 
         <GlassCard
@@ -330,7 +332,7 @@ export function WorkerWalletView({
           <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
             {formatMoney(wallet?.totalCommissionDeducted)}
           </Text>
-          <Text style={styles.chipLabel}>Commissions Taken</Text>
+          <Text style={styles.chipLabel}>{t('wallet.commissionsTaken')}</Text>
         </GlassCard>
 
         <GlassCard
@@ -344,21 +346,21 @@ export function WorkerWalletView({
           <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
             {formatMoney(wallet?.totalSubscriptionDeducted)}
           </Text>
-          <Text style={styles.chipLabel}>Category Renewals</Text>
+          <Text style={styles.chipLabel}>{t('wallet.categoryRenewals')}</Text>
         </GlassCard>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.summaryRow}>
-        <SummaryChip label="Pending Proofs" value={topUpSummary.pending} color="#FFB020" />
-        <SummaryChip label="Rejected Proofs" value={topUpSummary.rejected} color={Colors.error} />
+        <SummaryChip label={t('wallet.pendingProofs')} value={topUpSummary.pending} color="#FFB020" />
+        <SummaryChip label={t('wallet.rejectedProofs')} value={topUpSummary.rejected} color={Colors.error} />
       </Animated.View>
 
       {/* Wallet & Earnings History Section */}
       <View style={styles.transactionsSection}>
         <View style={styles.walletRecordsHeader}>
           <View>
-            <Text style={styles.walletRecordsTitle}>Wallet Records</Text>
-            <Text style={styles.walletRecordsCaption}>Every credit and deduction in one place</Text>
+            <Text style={styles.walletRecordsTitle}>{t('wallet.walletRecords')}</Text>
+            <Text style={styles.walletRecordsCaption}>{t('wallet.walletRecordsDesc')}</Text>
           </View>
           <View style={styles.walletRecordsCount}>
             <Text style={styles.walletRecordsCountText}>
@@ -374,7 +376,7 @@ export function WorkerWalletView({
             onPress={() => onTabChange('wallet')}
           >
             <Text style={[styles.segmentText, workerTab === 'wallet' && styles.segmentTextActive]}>
-              Ledger
+              {t('wallet.tabLedger')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -382,7 +384,7 @@ export function WorkerWalletView({
             onPress={() => onTabChange('topups')}
           >
             <Text style={[styles.segmentText, workerTab === 'topups' && styles.segmentTextActive]}>
-              Top-Ups
+              {t('wallet.tabTopUps')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -390,7 +392,7 @@ export function WorkerWalletView({
             onPress={() => onTabChange('earnings')}
           >
             <Text style={[styles.segmentText, workerTab === 'earnings' && styles.segmentTextActive]}>
-              Earnings
+              {t('wallet.tabEarnings')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -453,8 +455,8 @@ export function WorkerWalletView({
               {transactions.length === 0 && (
                 <View style={styles.emptyContainer}>
                   <Wallet size={40} color={Colors.textMuted} strokeWidth={1.2} />
-                  <Text style={styles.emptyTitle}>No Transactions</Text>
-                  <Text style={styles.emptySub}>Your ledger account records will appear here.</Text>
+                  <Text style={styles.emptyTitle}>{t('wallet.emptyTitle')}</Text>
+                  <Text style={styles.emptySub}>{t('wallet.noLedgerDesc')}</Text>
                 </View>
               )}
             </>
@@ -495,13 +497,13 @@ export function WorkerWalletView({
 
                         <View style={styles.txInfo}>
                           <Text style={[styles.txTitle, Typography.threeD]} numberOfLines={1}>
-                            Top-Up Request ({req.method.toUpperCase()})
+                            {t('wallet.topUpRequest')} ({req.method.toUpperCase()})
                           </Text>
                           <View style={styles.txMeta}>
                             <Text style={styles.txDate}>{dateStr}</Text>
                             <View style={[styles.txStatusBadge, { backgroundColor: conf.color + '15' }]}>
                               <Text style={[styles.txStatusText, { color: conf.color }]}>
-                                {conf.label}
+                                {t('wallet.' + req.status)}
                               </Text>
                             </View>
                           </View>
@@ -522,8 +524,8 @@ export function WorkerWalletView({
               {topUps.length === 0 && (
                 <View style={styles.emptyContainer}>
                   <Wallet size={40} color={Colors.textMuted} strokeWidth={1.2} />
-                  <Text style={styles.emptyTitle}>No Top-Ups</Text>
-                  <Text style={styles.emptySub}>Your prepayment reload requests will display here.</Text>
+                  <Text style={styles.emptyTitle}>{t('wallet.emptyTitle')}</Text>
+                  <Text style={styles.emptySub}>{t('wallet.noTopUpsDesc')}</Text>
                 </View>
               )}
             </>
@@ -577,7 +579,7 @@ export function WorkerWalletView({
                             <Text style={styles.txDate}>{dateStr}</Text>
                             <View style={[styles.txStatusBadge, { backgroundColor: statusConf.color + '15' }]}>
                               <Text style={[styles.txStatusText, { color: statusConf.color }]}>
-                                {statusConf.label}
+                                {t('wallet.' + item.status.toLowerCase())}
                               </Text>
                             </View>
                           </View>
@@ -598,8 +600,8 @@ export function WorkerWalletView({
               {payments.length === 0 && (
                 <View style={styles.emptyContainer}>
                   <Wallet size={40} color={Colors.textMuted} strokeWidth={1.2} />
-                  <Text style={styles.emptyTitle}>No Earnings</Text>
-                  <Text style={styles.emptySub}>Your customer payout balances will display here.</Text>
+                  <Text style={styles.emptyTitle}>{t('wallet.noEarnings')}</Text>
+                  <Text style={styles.emptySub}>{t('wallet.noEarningsDesc')}</Text>
                 </View>
               )}
             </>

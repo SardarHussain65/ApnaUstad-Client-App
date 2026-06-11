@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Share, Platform, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,18 +36,19 @@ interface WalletSkeletonProps {
 
 function WalletSkeleton({ isWorker, insets }: WalletSkeletonProps) {
   const translateX = useShimmerTranslateX();
+  const { t } = useTranslation();
 
   return (
     <View style={{ gap: 16, padding: 16, paddingTop: insets.top + 16 }}>
       {/* Static Header shown immediately while content shimmers load */}
       <View style={{ marginBottom: 8 }}>
         <Text style={[{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: 0.5 }, Typography.threeD]}>
-          Wallet & History
+          {t('wallet.title')}
         </Text>
         <Text style={{ fontSize: 13, color: Colors.textMuted, fontWeight: '600', marginTop: 4 }}>
           {isWorker
-            ? 'Manage earnings, top-ups, and commission logs'
-            : 'View credit balance and payment history'}
+            ? t('wallet.workerSub')
+            : t('wallet.clientSub')}
         </Text>
       </View>
 
@@ -72,6 +74,7 @@ export default function WalletTab() {
   const { role } = useAuth();
   const toast = useToast();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const isWorker = role === 'worker';
 
   // 1. Client View states
@@ -155,13 +158,13 @@ export default function WalletTab() {
   const handleCopy = async (label: string, value?: string) => {
     if (!value) return;
     await Clipboard.setStringAsync(value);
-    toast.success('Copied', `${label} copied to clipboard.`);
+    toast.success(t('wallet.copied'), t('wallet.copiedDesc', { label }));
   };
 
   const handlePickProofImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      toast.error('Permission Required', 'Please allow photo access to upload your payment proof.');
+      toast.error(t('wallet.permissionRequired'), t('wallet.photoPermission'));
       return;
     }
 
@@ -185,19 +188,19 @@ export default function WalletTab() {
   const handleConfirmRecharge = async () => {
     const amountVal = parseFloat(rechargeAmount);
     if (isNaN(amountVal) || amountVal <= 0) {
-      toast.error('Invalid Amount', 'Please enter a positive amount to top up.');
+      toast.error(t('wallet.invalidAmount'), t('wallet.positiveAmount'));
       return;
     }
     if (!selectedMethod) {
-      toast.error('No Payment Method', 'Payment methods are not configured yet. Please contact support.');
+      toast.error(t('wallet.noMethod'), t('wallet.noMethodDesc'));
       return;
     }
     if (!selectedMethodIsConfigured) {
-      toast.error('Payment Details Missing', `${selectedMethod.label} payment details are not configured yet. Please contact support.`);
+      toast.error(t('wallet.detailsMissing'), t('wallet.detailsMissingDesc', { method: selectedMethod.label }));
       return;
     }
     if (!proofImageUri) {
-      toast.error('Proof Required', 'Please upload your payment screenshot or slip.');
+      toast.error(t('wallet.proofRequired'), t('wallet.proofRequiredDesc'));
       return;
     }
 
@@ -217,11 +220,11 @@ export default function WalletTab() {
       } as any);
 
       await topUpMutation.mutateAsync(formData);
-      toast.success('Submitted', 'Top-up proof uploaded successfully. Approvals take up to 24 hours.');
+      toast.success(t('wallet.submitted'), t('wallet.submittedDesc'));
       setShowRechargeModal(false);
       resetTopUpForm();
     } catch (err: any) {
-      toast.error('Top-Up Failed', err.response?.data?.message || 'Something went wrong. Please try again.');
+      toast.error(t('wallet.topUpFailed'), err.response?.data?.message || t('bidSubmission.tryAgain'));
     } finally {
       setIsSubmittingRecharge(false);
     }
@@ -231,13 +234,13 @@ export default function WalletTab() {
     const availableBalance = wallet?.availableBalance ?? wallet?.balance ?? 0;
     const lines = [
       'ApnaUstad Worker Wallet Statement',
-      `Available Balance: Rs. ${availableBalance.toLocaleString()}`,
-      `Held for Active Jobs: Rs. ${(wallet?.reservedBalance ?? 0).toLocaleString()}`,
-      `Total Earnings: Rs. ${totalEarnings.toLocaleString()}`,
-      `Ready to Collect: Rs. ${summary.payable.toLocaleString()}`,
-      `Total Recharged: Rs. ${wallet?.totalRecharged?.toLocaleString() ?? '0'}`,
-      `Commission Deducted: Rs. ${wallet?.totalCommissionDeducted?.toLocaleString() ?? '0'}`,
-      `Category Renewals: Rs. ${wallet?.totalSubscriptionDeducted?.toLocaleString() ?? '0'}`,
+      `${t('wallet.availableBalance')}: Rs. ${availableBalance.toLocaleString()}`,
+      `${t('wallet.heldActive')}: Rs. ${(wallet?.reservedBalance ?? 0).toLocaleString()}`,
+      `${t('wallet.totalEarnings')}: Rs. ${totalEarnings.toLocaleString()}`,
+      `${t('wallet.readyCollect')}: Rs. ${summary.payable.toLocaleString()}`,
+      `${t('wallet.totalRecharged')}: Rs. ${wallet?.totalRecharged?.toLocaleString() ?? '0'}`,
+      `${t('wallet.commissionDeducted')}: Rs. ${wallet?.totalCommissionDeducted?.toLocaleString() ?? '0'}`,
+      `${t('wallet.renewalsDeducted')}: Rs. ${wallet?.totalSubscriptionDeducted?.toLocaleString() ?? '0'}`,
       '',
       ...transactions.slice(0, 20).map((tx) => {
         const sign = ['recharge', 'refund'].includes(tx.type) ? '+' : '-';

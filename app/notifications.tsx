@@ -34,6 +34,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { Colors, Spacing, Typography } from '../constants/Theme';
@@ -42,16 +43,17 @@ import { socketService } from '../services/socketService';
 
 type FilterKey = 'all' | 'unread' | 'missions' | 'payments';
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'unread', label: 'Unread' },
-  { key: 'missions', label: 'Bookings' },
-  { key: 'payments', label: 'Payments' },
+const FILTERS: { key: FilterKey }[] = [
+  { key: 'all' },
+  { key: 'unread' },
+  { key: 'missions' },
+  { key: 'payments' },
 ];
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data, isLoading, isRefetching, refetch } = useNotifications();
   const { mutate: markRead, isPending: isMarkingRead } = useMarkNotificationReadMutation();
@@ -109,8 +111,8 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerText}>
-            <Text style={styles.headerEyebrow}>NOTIFICATIONS</Text>
-            <Text style={[styles.headerTitle, Typography.threeD]}>Notifications</Text>
+            <Text style={styles.headerEyebrow}>{t('notifications.eyebrow')}</Text>
+            <Text style={[styles.headerTitle, Typography.threeD]}>{t('notifications.title')}</Text>
           </View>
 
           <View style={styles.unreadPill}>
@@ -136,16 +138,18 @@ export default function NotificationsScreen() {
                 <Sparkles size={18} color={Colors.cyan} />
               </View>
               <View style={styles.summaryCopy}>
-                <Text style={styles.summaryTitle}>Booking updates</Text>
+                <Text style={styles.summaryTitle}>{t('notifications.updatesTitle')}</Text>
                 <Text style={styles.summaryText}>
-                  {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'} waiting` : 'Everything is up to date'}
+                  {unreadCount > 0
+                    ? (unreadCount === 1 ? t('notifications.waitingSingular') : t('notifications.waitingPlural', { count: unreadCount }))
+                    : t('notifications.upToDate')}
                 </Text>
               </View>
             </View>
             {unreadCount > 0 && (
               <TouchableOpacity disabled={isMarkingRead} onPress={markAllRead} style={styles.markAllBtn} activeOpacity={0.8}>
                 <CheckCircle2 size={13} color={Colors.cyan} />
-                <Text style={styles.markAllText}>READ</Text>
+                <Text style={styles.markAllText}>{t('notifications.readBtn')}</Text>
               </TouchableOpacity>
             )}
           </GlassCard>
@@ -169,7 +173,9 @@ export default function NotificationsScreen() {
                     style={StyleSheet.absoluteFill}
                   />
                 )}
-                <Text style={[styles.filterText, selected && styles.filterTextActive]}>{filter.label}</Text>
+                <Text style={[styles.filterText, selected && styles.filterTextActive]}>
+                  {t('notifications.' + filter.key)}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -178,7 +184,7 @@ export default function NotificationsScreen() {
         {isLoading ? (
           <View style={styles.loading}>
             <ActivityIndicator color={Colors.cyan} size="large" />
-            <Text style={styles.loadingText}>Loading notifications...</Text>
+            <Text style={styles.loadingText}>{t('notifications.loading')}</Text>
           </View>
         ) : (
           <ScrollView
@@ -208,8 +214,8 @@ export default function NotificationsScreen() {
                   <View style={styles.emptyIcon}>
                     <Bell size={34} color={Colors.cyan} />
                   </View>
-                  <Text style={styles.emptyTitle}>No Notifications</Text>
-                  <Text style={styles.emptyText}>Your activity is clear right now.</Text>
+                  <Text style={styles.emptyTitle}>{t('notifications.emptyTitle')}</Text>
+                  <Text style={styles.emptyText}>{t('notifications.emptyDesc')}</Text>
                 </GlassCard>
               </Animated.View>
             )}
@@ -224,6 +230,7 @@ function NotificationCard({ notification, onPress }: { notification: AppNotifica
   const Icon = getNotificationIcon(notification.type);
   const accent = notification.color || getNotificationColor(notification.type);
   const unread = !notification.isRead;
+  const { t } = useTranslation();
 
   return (
     <TouchableOpacity activeOpacity={0.88} onPress={onPress}>
@@ -248,8 +255,8 @@ function NotificationCard({ notification, onPress }: { notification: AppNotifica
 
         <View style={styles.notificationBody}>
           <View style={styles.notificationTop}>
-            <Text style={styles.typeLabel}>{getTypeLabel(notification.type)}</Text>
-            <Text style={styles.notificationTime}>{formatNotificationTime(notification.createdAt)}</Text>
+            <Text style={styles.typeLabel}>{getTypeLabel(notification.type, t)}</Text>
+            <Text style={styles.notificationTime}>{formatNotificationTime(notification.createdAt, t)}</Text>
           </View>
 
           <View style={styles.titleRow}>
@@ -261,11 +268,11 @@ function NotificationCard({ notification, onPress }: { notification: AppNotifica
 
           <View style={styles.footerRow}>
             <Text style={[styles.statusText, unread ? { color: accent } : null]}>
-              {unread ? 'NEW' : 'READ'}
+              {unread ? t('notifications.statusNew') : t('notifications.statusRead')}
             </Text>
             {notification.booking && (
               <View style={styles.openHint}>
-                <Text style={styles.openHintText}>OPEN</Text>
+                <Text style={styles.openHintText}>{t('notifications.hintOpen')}</Text>
                 <ChevronRight size={13} color={Colors.cyan} />
               </View>
             )}
@@ -319,6 +326,7 @@ function getNotificationIcon(type: AppNotification['type']) {
   }
 }
 
+// Function gets local colors
 function getNotificationColor(type: AppNotification['type']) {
   switch (type) {
     case 'booking_cancelled': return Colors.error;
@@ -331,26 +339,17 @@ function getNotificationColor(type: AppNotification['type']) {
   }
 }
 
-function getTypeLabel(type: AppNotification['type']) {
-  switch (type) {
-    case 'booking_accepted': return 'Booking accepted';
-    case 'booking_cancelled': return 'Booking cancelled';
-    case 'job_started': return 'Job started';
-    case 'job_completed': return 'Job completed';
-    case 'payment_received': return 'Payment';
-    case 'new_review': return 'Review';
-    case 'worker_verified': return 'Verified';
-    default: return 'General';
-  }
+function getTypeLabel(type: AppNotification['type'], t: any) {
+  return t(`notifications.types.${type}`) || t('notifications.types.general');
 }
 
-function formatNotificationTime(value: string) {
+function formatNotificationTime(value: string, t: any) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Recently';
+  if (Number.isNaN(date.getTime())) return t('notifications.recently');
 
   const diffMs = Date.now() - date.getTime();
   const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return 'Now';
+  if (minutes < 1) return t('notifications.now');
   if (minutes < 60) return `${minutes}m`;
 
   const hours = Math.floor(minutes / 60);

@@ -4,6 +4,8 @@ import { Banknote, Briefcase, CheckCircle2, Clock, Star } from 'lucide-react-nat
 import { GlassCard } from './GlassCard';
 import { Colors, BorderRadius, Typography } from '../../constants/Theme';
 
+import { useTranslation } from 'react-i18next';
+
 interface WorkerStatsCardProps {
   stats: {
     revenue: number;
@@ -16,13 +18,14 @@ interface WorkerStatsCardProps {
 }
 
 export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: WorkerStatsCardProps) {
+  const { t } = useTranslation();
   const activeJobs = stats.activeCount ?? 0;
   const completed = stats.completed ?? 0;
   const successPercent = stats.missions > 0 ? Math.round(stats.successRate * 100) : 0;
   const activeSummary = activeJobs > 0
-    ? `${activeJobs} active job${activeJobs > 1 ? 's' : ''}`
-    : 'Ready for new jobs';
-  const completedSummary = `${completed}/${stats.missions || 0} completed`;
+    ? `${activeJobs} ${t('home.client.active').toLowerCase()}`
+    : t('home.worker.readyWork');
+  const completedSummary = `${completed}/${stats.missions || 0} ${t('common.completed').toLowerCase()}`;
 
   return (
     <GlassCard
@@ -42,7 +45,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
             <Banknote size={23} color={Colors.green} strokeWidth={2.5} />
           </View>
           <View style={styles.heroTextContainer}>
-            <Text style={styles.heroLabel}>Total Earnings</Text>
+            <Text style={styles.heroLabel}>{t('home.worker.revenue')}</Text>
             <Text style={[styles.heroValue, Typography.threeD]}>
               Rs. {Number(stats.revenue || 0).toLocaleString()}
             </Text>
@@ -54,14 +57,14 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
           <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
           <View>
             <Text style={styles.ratingValue}>{Number(stats.rating || 0).toFixed(1)}</Text>
-            <Text style={styles.ratingLabel}>Rating</Text>
+            <Text style={styles.ratingLabel}>{t('home.worker.rating')}</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.progressBlock}>
         <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>Job success</Text>
+          <Text style={styles.progressTitle}>{t('home.client.completionRate')}</Text>
           <Text style={styles.progressValue}>{completedSummary}</Text>
         </View>
         <View style={styles.progressTrack}>
@@ -75,7 +78,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
             <Clock size={14} color={Colors.cyan} />
           </View>
           <Text style={styles.statValue}>{activeJobs}</Text>
-          <Text style={styles.statLabel}>Active</Text>
+          <Text style={styles.statLabel}>{t('home.client.active')}</Text>
         </View>
 
         <View style={styles.statTile}>
@@ -83,7 +86,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
             <CheckCircle2 size={14} color={Colors.green} />
           </View>
           <Text style={styles.statValue}>{completed}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
+          <Text style={styles.statLabel}>{t('home.client.completed')}</Text>
         </View>
 
         <View style={styles.statTile}>
@@ -91,7 +94,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
             <Briefcase size={14} color={Colors.purple} />
           </View>
           <Text style={styles.statValue}>{stats.missions}</Text>
-          <Text style={styles.statLabel}>Jobs</Text>
+          <Text style={styles.statLabel}>{t('profile.jobs')}</Text>
         </View>
       </View>
     </GlassCard>

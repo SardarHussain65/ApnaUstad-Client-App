@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { HelpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -14,6 +15,7 @@ import { useCreateSupportRequestMutation, useToast } from '../../hooks';
 import api from '../../services/api';
 
 export default function HelpCenterScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ subject?: string; reason?: string; source?: string }>();
   const { success, error: showError } = useToast();
@@ -29,23 +31,23 @@ export default function HelpCenterScreen() {
   const [submittingReplies, setSubmittingReplies] = useState<Record<string, boolean>>({});
 
   const contactText = useMemo(() => {
-    if (user?.phone) return `We will contact you on ${user.phone}.`;
-    if (user?.email) return `We will contact you on ${user.email}.`;
-    return 'We will contact you using your account details.';
-  }, [user?.email, user?.phone]);
+    if (user?.phone) return t('helpCenter.contactPhone', { phone: user.phone });
+    if (user?.email) return t('helpCenter.contactEmail', { email: user.email });
+    return t('helpCenter.contactDefault');
+  }, [user?.email, user?.phone, t]);
 
   useEffect(() => {
     if (params.subject) {
       setSubject(String(params.subject));
     }
     if (params.reason) {
-      setMessage(`Hello admin, my account is deactivated and I need help reviewing it.\n\nReason shown in app: ${String(params.reason)}`);
+      setMessage(t('helpCenter.deactivationMsg', { reason: String(params.reason) }));
     }
-  }, [params.reason, params.subject]);
+  }, [params.reason, params.subject, t]);
 
   const handleSubmit = async () => {
     if (!subject.trim() || !message.trim()) {
-      showError('Missing details', 'Please fill in the subject and your message.');
+      showError(t('helpCenter.missingDetails'), t('helpCenter.fillRequired'));
       return;
     }
 
@@ -65,12 +67,12 @@ export default function HelpCenterScreen() {
           }
           : {}),
       });
-      success('Sent', 'Your request has been sent to support.');
+      success(t('helpCenter.sentTitle'), t('helpCenter.sentDesc'));
       setSubject('');
       setMessage('');
       fetchMyRequests();
     } catch (err: any) {
-      showError('Failed to send', err?.message || 'Please try again later.');
+      showError(t('helpCenter.failedSend'), err?.message || t('helpCenter.tryAgainLater'));
     }
   };
 
@@ -100,15 +102,15 @@ export default function HelpCenterScreen() {
     try {
       const payload = {
         message: text.trim(),
-        authorName: (user as any)?.fullName || (user as any)?.name || 'User',
+        authorName: (user as any)?.fullName || (user as any)?.name || t('helpCenter.userName'),
         from: 'user'
       };
       await api.post(`/support/requests/${id}/reply`, payload);
-      success('Reply Sent', 'Your reply has been added.');
+      success(t('helpCenter.replySentTitle'), t('helpCenter.replySentDesc'));
       setTicketReplies(prev => ({ ...prev, [id]: '' }));
       fetchMyRequests();
     } catch (err: any) {
-      showError('Error', err?.message || 'Could not send reply.');
+      showError(t('common.error'), err?.message || t('helpCenter.replySendError'));
     } finally {
       setSubmittingReplies(prev => ({ ...prev, [id]: false }));
     }
@@ -133,7 +135,7 @@ export default function HelpCenterScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader title="Help Center" />
+        <ProfileHeader title={t('helpCenter.title')} />
 
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
           <View style={styles.iconWrap}>
@@ -142,25 +144,25 @@ export default function HelpCenterScreen() {
               <HelpCircle size={34} color={Colors.primary} />
             </View>
           </View>
-          <Text style={[styles.screenTitle, Typography.threeD]}>Need Help?</Text>
-          <Text style={styles.screenSubtitle}>Tell us your concern and our team will get back to you.</Text>
+          <Text style={[styles.screenTitle, Typography.threeD]}>{t('helpCenter.needHelp')}</Text>
+          <Text style={styles.screenSubtitle}>{t('helpCenter.needHelpDesc')}</Text>
         </Animated.View>
 
         {/* Create Request Form */}
         <Animated.View entering={FadeInDown.delay(300)} style={styles.formSection}>
           <InputField
-            label="Subject"
+            label={t('helpCenter.subjectLabel')}
             value={subject}
             onChangeText={setSubject}
-            placeholder="e.g. Issue with booking"
+            placeholder={t('helpCenter.subjectPlaceholder')}
           />
 
-          <Text style={styles.messageLabel}>Message</Text>
+          <Text style={styles.messageLabel}>{t('helpCenter.messageLabel')}</Text>
           <GlassCard style={styles.messageCard} intensity={20} padding={Spacing.m}>
             <TextInput
               value={message}
               onChangeText={setMessage}
-              placeholder="Write your message here..."
+              placeholder={t('helpCenter.messagePlaceholder')}
               placeholderTextColor="rgba(255,255,255,0.3)"
               multiline
               style={styles.messageInput}
@@ -170,7 +172,7 @@ export default function HelpCenterScreen() {
           <Text style={styles.helperText}>{contactText}</Text>
 
           <CustomButton
-            title={isPending ? 'Sending...' : 'Send to Support'}
+            title={isPending ? t('helpCenter.sending') : t('helpCenter.sendBtn')}
             onPress={handleSubmit}
             loading={isPending}
             style={styles.sendButton}
@@ -179,16 +181,16 @@ export default function HelpCenterScreen() {
 
         {/* User Requests List with status and replies */}
         <Animated.View entering={FadeInDown.delay(400)} style={styles.requestsSection}>
-          <Text style={styles.sectionTitle}>My Requests</Text>
+          <Text style={styles.sectionTitle}>{t('helpCenter.myRequests')}</Text>
           {loadingRequests && requests.length === 0 ? (
-            <Text style={styles.helperText}>Loading requests…</Text>
+            <Text style={styles.helperText}>{t('helpCenter.loadingRequests')}</Text>
           ) : requests.length === 0 ? (
-            <Text style={styles.helperText}>You have not submitted any support tickets yet.</Text>
+            <Text style={styles.helperText}>{t('helpCenter.noRequests')}</Text>
           ) : (
             requests.map((r) => (
               <GlassCard key={r._id} style={styles.requestCard} intensity={18} padding={Spacing.m}>
                 <View style={styles.requestHeader}>
-                  <Text style={styles.requestSubject}>{r.topic || r.subject || 'General Support'}</Text>
+                  <Text style={styles.requestSubject}>{r.topic || r.subject || t('helpCenter.contactSupport')}</Text>
                   <View style={[
                     styles.statusBadge, 
                     r.status === 'closed' ? styles.statusClosed :
@@ -198,7 +200,7 @@ export default function HelpCenterScreen() {
                   </View>
                 </View>
                 
-                <Text style={styles.requestDate}>Opened on {formatDate(r.createdAt)}</Text>
+                <Text style={styles.requestDate}>{t('helpCenter.openedOn', { date: formatDate(r.createdAt) })}</Text>
                 
                 <View style={styles.originalMsgBox}>
                   <Text style={styles.requestMessage}>{r.message}</Text>
@@ -207,7 +209,7 @@ export default function HelpCenterScreen() {
                 {/* Reply Message Thread */}
                 {r.replies && r.replies.length > 0 && (
                   <View style={styles.repliesContainer}>
-                    <Text style={styles.repliesTitle}>Conversation History</Text>
+                    <Text style={styles.repliesTitle}>{t('helpCenter.conversationHistory')}</Text>
                     <View style={styles.replyThread}>
                       {r.replies.map((rep: any, idx: number) => {
                         const isAdmin = rep.from === 'admin';
@@ -220,7 +222,7 @@ export default function HelpCenterScreen() {
                             ]}
                           >
                             <Text style={styles.replyAuthor}>
-                              {isAdmin ? (rep.authorName || 'Support Agent') : 'You'}
+                              {isAdmin ? (rep.authorName || t('helpCenter.agentName')) : t('helpCenter.userName')}
                             </Text>
                             <Text style={styles.replyText}>{rep.message}</Text>
                             <Text style={styles.replyTime}>{formatDate(rep.createdAt)}</Text>
@@ -236,13 +238,13 @@ export default function HelpCenterScreen() {
                   <View style={styles.quickReplyContainer}>
                     <TextInput
                       style={styles.quickReplyInput}
-                      placeholder="Type reply to agent..."
+                      placeholder={t('helpCenter.replyPlaceholder')}
                       placeholderTextColor="rgba(255,255,255,0.4)"
                       value={ticketReplies[r._id] || ''}
                       onChangeText={(text) => handleReplyTextChange(r._id, text)}
                     />
                     <CustomButton
-                      title="Send"
+                      title={t('helpCenter.sendReplyBtn')}
                       onPress={() => submitReply(r._id)}
                       style={styles.quickReplyBtn}
                       loading={submittingReplies[r._id]}

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -232,6 +233,7 @@ export default function TransactionDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { id, amount: initialAmount } = useLocalSearchParams<{ id: string; amount?: string }>();
   const { role, user } = useAuth();
   const isWorker = role === 'worker';
@@ -299,12 +301,12 @@ export default function TransactionDetailsScreen() {
   const partner = isWorker ? booking.customer : booking.worker;
   const customerId = typeof booking.customer === 'object' ? booking.customer._id : booking.customer;
   const workerId = typeof booking.worker === 'object' ? booking.worker._id : booking.worker;
-  const partnerName = meta?.counterParty?.fullName || partner?.fullName || 'Service partner';
-  const partnerRole = isWorker ? 'Client' : 'Assigned Ustad';
+  const partnerName = meta?.counterParty?.fullName || partner?.fullName || t('transactionDetails.servicePartner', 'Service partner');
+  const partnerRole = isWorker ? t('transactionDetails.client', 'Client') : t('transactionDetails.assignedUstad', 'Assigned Ustad');
   const partnerImage = meta?.counterParty?.profileImage || partner?.profileImage || '';
   const partnerProfileId = isWorker ? customerId : workerId;
   const partnerPhone = isCommunicationLocked ? '' : meta?.counterParty?.phone || partner?.phone || '';
-  const partnerCategory = meta?.counterParty?.category || partner?.category || (isWorker ? 'Service client' : 'Ustad specialist');
+  const partnerCategory = meta?.counterParty?.category || partner?.category || (isWorker ? t('transactionDetails.activeClient', 'Service client') : t('findingWorker.ustadSpecialist', 'Ustad specialist'));
   const partnerCity = meta?.counterParty?.city || partner?.city || '';
   const partnerAddress = meta?.counterParty?.address || partner?.address || partnerCity || '';
   const partnerRating = Number(meta?.counterParty?.rating ?? partner?.rating ?? 0);
@@ -313,27 +315,44 @@ export default function TransactionDetailsScreen() {
   const partnerHourlyRate = Number(meta?.counterParty?.hourlyRate ?? partner?.hourlyRate ?? booking.hourlyRate ?? 0);
   const partnerExperience = Number(meta?.counterParty?.experience ?? partner?.experience ?? 0);
   const partnerJoinedAt = meta?.counterParty?.joinedAt || partner?.createdAt;
+
+  const formatSince = (value?: string) => {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return t('transactionDetails.newMember', 'New member');
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return t('transactionDetails.memberSince', { date: dateStr }, `Since ${dateStr}`);
+  };
+
   const partnerStatusText = isWorker
-    ? (meta?.counterParty?.isActive === false || partner?.isActive === false ? 'Inactive account' : 'Active client')
-    : (meta?.counterParty?.isVerified || partner?.isVerified ? 'Verified Ustad' : 'Verification pending');
+    ? (meta?.counterParty?.isActive === false || partner?.isActive === false 
+        ? t('transactionDetails.inactiveAccount', 'Inactive account') 
+        : t('transactionDetails.activeClient', 'Active client'))
+    : (meta?.counterParty?.isVerified || partner?.isVerified 
+        ? t('transactionDetails.verifiedUstad', 'Verified Ustad') 
+        : t('transactionDetails.verificationPending', 'Verification pending'));
   const partnerSubtitle = isWorker
-    ? (partnerAddress || partnerPhone || 'Client profile available')
-    : `${partnerCategory}${partnerExperience > 0 ? ` • ${partnerExperience}y exp` : ''}`;
+    ? (partnerAddress || partnerPhone || t('transactionDetails.clientProfileAvailable', 'Client profile available'))
+    : `${partnerCategory}${partnerExperience > 0 ? ` • ${t('transactionDetails.yearsExp', { count: partnerExperience }, `${partnerExperience}y exp`)}` : ''}`;
   const canTrackMission = Boolean(customerId && workerId);
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking.workerEarning : booking.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
-  const amountLabel = isWorker ? 'Your Earning' : 'Booking Value';
-  const serviceTitle = meta?.title || booking.category || 'Service Booking';
-  const serviceDescription = meta?.description || booking.description || 'Service request details';
-  const dateLabel = meta?.schedule?.dateLabel || formatDate(booking.scheduledDate);
-  const timeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
-  const addressLabel = meta?.location?.address || booking.address || 'Service location';
+  const amountLabel = isWorker ? t('transactionDetails.yourEarning', 'Your Earning') : t('transactionDetails.bookingValue', 'Booking Value');
+  const serviceTitle = meta?.title || booking.category || t('transactionDetails.jobDetails', 'Service Booking');
+  const serviceDescription = meta?.description || booking.description || t('transactionDetails.serviceDescription', 'Service request details');
+  
+  const rawDateLabel = meta?.schedule?.dateLabel || formatDate(booking.scheduledDate);
+  const dateLabel = rawDateLabel === 'Today' ? t('transactionDetails.today', 'Today') : rawDateLabel;
+
+  const rawTimeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
+  const timeLabel = rawTimeLabel === 'ASAP' ? t('transactionDetails.asap', 'ASAP') : rawTimeLabel;
+
+  const addressLabel = meta?.location?.address || booking.address || t('transactionDetails.serviceLocation', 'Service location');
   const workerLocation = (isWorker
     ? (booking.worker?.address || (user as any)?.address || booking.worker?.city || (user as any)?.city)
     : (booking.worker?.address || booking.worker?.city || meta?.counterParty?.address || '')
   ) || '';
-  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? 'Instant visit' : 'Scheduled visit');
-  const paymentStatusLabel = booking.paymentStatus === 'paid' ? 'Paid' : 'Cash pending';
+  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? t('transactionDetails.instantVisit', 'Instant visit') : t('transactionDetails.scheduledVisit', 'Scheduled visit'));
+  const paymentStatusLabel = booking.paymentStatus === 'paid' ? t('transactionDetails.paid', 'Paid') : t('transactionDetails.cashPending', 'Cash pending');
   const stepIndex = STEPS.findIndex(step => step.value === status);
   const visibleStepIndex = stepIndex < 0 ? 0 : stepIndex;
   const latitude = typeof booking.location === 'object' && booking.location.coordinates ? booking.location.coordinates[1] : 0;
@@ -394,8 +413,8 @@ export default function TransactionDetailsScreen() {
             <ChevronLeft color={P.text} size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerEyebrow}>Booking Details</Text>
-            <Text style={styles.headerTitle}>Overview</Text>
+            <Text style={styles.headerEyebrow}>{t('transactionDetails.bookingDetails', 'Booking Details')}</Text>
+            <Text style={styles.headerTitle}>{t('transactionDetails.overview', 'Overview')}</Text>
           </View>
           <TouchableOpacity onPress={shareMission} style={styles.headerButton} activeOpacity={0.8}>
             <Share2 color={P.textMuted} size={19} strokeWidth={2.3} />
@@ -414,7 +433,7 @@ export default function TransactionDetailsScreen() {
             <View style={styles.heroTop}>
               <View style={[styles.statusPill, { backgroundColor: statusInfo.muted, borderColor: `${statusInfo.color}50` }]}>
                 <PulseDot color={statusInfo.color} />
-                <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
+                <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusLabel}</Text>
               </View>
               <View style={styles.kindPill}>
                 <Zap size={12} color={booking.bookingType === 'instant' ? P.orange : P.cyan} />
@@ -427,7 +446,7 @@ export default function TransactionDetailsScreen() {
                 <StatusIcon size={22} color={statusInfo.color} strokeWidth={2.5} />
               </View>
               <View style={styles.heroTitleCopy}>
-                <Text style={styles.heroStage}>{statusInfo.title}</Text>
+                <Text style={styles.heroStage}>{statusTitle}</Text>
                 <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{serviceTitle}</Text>
                 <Text style={styles.heroDescription} numberOfLines={2}>{serviceDescription}</Text>
               </View>
@@ -458,7 +477,9 @@ export default function TransactionDetailsScreen() {
                         ]}>
                           {current ? <View style={styles.timelineDot} /> : active ? <CheckCircle2 size={10} color="#001014" strokeWidth={3} /> : null}
                         </View>
-                        <Text style={[styles.timelineText, active && { color: P.cyan }]}>{step.label}</Text>
+                        <Text style={[styles.timelineText, active && { color: P.cyan }]}>
+                          {t('transactionDetails.step' + step.label, step.label)}
+                        </Text>
                       </View>
                       {index < STEPS.length - 1 && <View style={[styles.timelineLine, index < visibleStepIndex && { backgroundColor: P.cyan }]} />}
                     </React.Fragment>
@@ -469,9 +490,9 @@ export default function TransactionDetailsScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(80).duration(450)} style={styles.quickGrid}>
-            <InfoTile icon={CalendarDays} label="Date" value={dateLabel} />
-            <InfoTile icon={Clock3} label="Time" value={timeLabel} color={P.orange} />
-            <InfoTile icon={MapPin} label="Service Loc" value={addressLabel} color={P.green} />
+            <InfoTile icon={CalendarDays} label={t('transactionDetails.date', 'Date')} value={dateLabel} />
+            <InfoTile icon={Clock3} label={t('transactionDetails.time', 'Time')} value={timeLabel} color={P.orange} />
+            <InfoTile icon={MapPin} label={t('transactionDetails.serviceLoc', 'Service Loc')} value={addressLabel} color={P.green} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(140).duration(450)} style={styles.section}>
@@ -506,15 +527,13 @@ export default function TransactionDetailsScreen() {
               <View style={styles.partnerInsightRow}>
                 {isWorker ? (
                   <>
-                    <PartnerInsight icon={Phone} label="Contact" value={isCommunicationLocked ? 'Closed after job completion' : partnerPhone || 'In app'} />
-                    <PartnerInsight icon={MapPin} label="Area" value={partnerCity || partnerAddress || 'Not shared'} color={P.green} />
-                    <PartnerInsight icon={CalendarDays} label="Member" value={formatSince(partnerJoinedAt)} color={P.orange} />
+                    <PartnerInsight icon={Phone} label={t('transactionDetails.contact', 'Contact')} value={isCommunicationLocked ? t('transactionDetails.closedAfterCompletion', 'Closed after job completion') : partnerPhone || t('chat.inApp', 'In app')} />
+                    <PartnerInsight icon={MapPin} label={t('transactionDetails.area', 'Area')} value={partnerCity || partnerAddress || t('common.notShared', 'Not shared')} color={P.green} />
+                    <PartnerInsight icon={CalendarDays} label={t('transactionDetails.member', 'Member')} value={formatSince(partnerJoinedAt)} color={P.orange} />
                   </>
                 ) : (
                   <>
-                    <PartnerInsight icon={Star} label="Rating" value={partnerRating > 0 ? `${partnerRating.toFixed(1)} (${partnerReviews})` : 'New'} color={P.gold} />
-                    <PartnerInsight icon={BriefcaseBusiness} label="Jobs" value={`${partnerJobs || 0} done`} color={P.green} />
-                    <PartnerInsight icon={Banknote} label="Rate" value={formatCurrency(partnerHourlyRate)} />
+                    <PartnerInsight icon={Banknote} label={t('transactionDetails.rate', 'Rate')} value={formatCurrency(partnerHourlyRate)} />
                   </>
                 )}
               </View>
@@ -524,7 +543,9 @@ export default function TransactionDetailsScreen() {
                 <Text style={styles.partnerStatusText} numberOfLines={1}>{partnerStatusText}</Text>
                 <View style={styles.partnerProfileLink}>
                   <Eye size={13} color={P.cyan} strokeWidth={2.4} />
-                  <Text style={styles.partnerProfileText}>{isWorker ? 'View client profile' : 'View Ustad profile'}</Text>
+                  <Text style={styles.partnerProfileText}>
+                    {isWorker ? t('transactionDetails.viewClientProfile', 'View client profile') : t('transactionDetails.viewUstadProfile', 'View Ustad profile')}
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -533,7 +554,7 @@ export default function TransactionDetailsScreen() {
           {/* Unified Collapsible Job Details Card */}
           {(voiceBriefs.length > 0 || photosAndVideos.length > 0 || !!booking.description || !!booking.category) && (
             <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
-              <SectionHeader icon={BriefcaseBusiness} title="Job Details" />
+              <SectionHeader icon={BriefcaseBusiness} title={t('transactionDetails.jobDetails', 'Job Details')} />
               
               <View style={styles.unifiedJobCard}>
                 <LinearGradient
@@ -544,7 +565,7 @@ export default function TransactionDetailsScreen() {
                 {/* Primary Info: Written Description (Always visible, max 3 lines when collapsed) */}
                 {!!booking.description && (
                   <View style={styles.primaryDescBlock}>
-                    <Text style={styles.primaryDescLabel}>DESCRIPTION</Text>
+                    <Text style={styles.primaryDescLabel}>{t('transactionDetails.descriptionLabel', 'DESCRIPTION')}</Text>
                     <Text 
                       style={styles.primaryDescText} 
                       numberOfLines={isDetailsExpanded ? undefined : 3}
@@ -565,7 +586,9 @@ export default function TransactionDetailsScreen() {
                   <View style={[styles.primaryBadge, { borderColor: 'rgba(255, 140, 0, 0.25)' }]}>
                     <Clock3 size={11} color={P.orange} />
                     <Text style={styles.primaryBadgeText} numberOfLines={1}>
-                      {booking.estimatedHours || 1} hour{booking.estimatedHours === 1 ? '' : 's'}
+                      {booking.estimatedHours === 1 
+                        ? t('transactionDetails.durationHours', { count: 1 }) 
+                        : t('transactionDetails.durationHoursPlural', { count: booking.estimatedHours || 1 })}
                     </Text>
                   </View>
                 </View>
@@ -589,7 +612,9 @@ export default function TransactionDetailsScreen() {
                           ))}
                         </View>
                         <Text style={styles.previewItemText}>
-                          {photosAndVideos.length} File{photosAndVideos.length !== 1 ? 's' : ''}
+                          {photosAndVideos.length === 1 
+                            ? t('transactionDetails.filesCount', { count: 1 }) 
+                            : t('transactionDetails.filesCountPlural', { count: photosAndVideos.length })}
                         </Text>
                       </View>
                     )}
@@ -601,7 +626,7 @@ export default function TransactionDetailsScreen() {
                           <Volume2 size={10} color={P.orange} strokeWidth={2.5} />
                         </View>
                         <Text style={[styles.previewItemText, { color: P.orange }]}>
-                          Voice Brief
+                          {t('transactionDetails.voiceBrief', 'Voice Brief')}
                         </Text>
                       </View>
                     )}
@@ -612,7 +637,7 @@ export default function TransactionDetailsScreen() {
                         <MapPin size={10} color={P.cyan} strokeWidth={2.5} />
                       </View>
                       <Text style={[styles.previewItemText, { color: P.cyan }]}>
-                        Loc & Rates
+                        {t('transactionDetails.locRates', 'Loc & Rates')}
                       </Text>
                     </View>
                   </View>
@@ -625,7 +650,7 @@ export default function TransactionDetailsScreen() {
                     {/* 1. Photos & Videos section (if any) */}
                     {photosAndVideos.length > 0 && (
                       <View style={styles.detailsSubSection}>
-                        <Text style={styles.detailsSubSectionTitle}>PHOTOS & VIDEOS</Text>
+                        <Text style={styles.detailsSubSectionTitle}>{t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}</Text>
                         <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} cardWidth={galleryCardWidth} />
                       </View>
                     )}
@@ -634,7 +659,7 @@ export default function TransactionDetailsScreen() {
                     {voiceBriefs.length > 0 && (
                       <View style={styles.detailsSubSection}>
                         <Text style={styles.detailsSubSectionTitle}>
-                          {isWorker ? "CLIENT'S VOICE BRIEF" : "YOUR VOICE BRIEF"}
+                          {isWorker ? t('transactionDetails.clientVoiceBrief', "CLIENT'S VOICE BRIEF") : t('transactionDetails.yourVoiceBrief', "YOUR VOICE BRIEF")}
                         </Text>
                         <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} cardWidth={galleryCardWidth} />
                       </View>
@@ -642,12 +667,12 @@ export default function TransactionDetailsScreen() {
 
                     {/* 3. Fully detailed specifications (Location & Rates) */}
                     <View style={styles.detailsSubSection}>
-                      <Text style={styles.detailsSubSectionTitle}>ADDITIONAL DETAILS</Text>
+                      <Text style={styles.detailsSubSectionTitle}>{t('transactionDetails.additionalDetails', 'ADDITIONAL DETAILS')}</Text>
                       <View style={styles.detailSpecsCard}>
-                        <InfoRow icon={MapPin} label="Service Location" value={addressLabel} />
+                        <InfoRow icon={MapPin} label={t('transactionDetails.serviceLocation', 'Service Location')} value={addressLabel} />
                         <InfoRow 
                           icon={Banknote} 
-                          label={isWorker ? 'Hourly Rate' : 'Quoted Rate'} 
+                          label={isWorker ? t('transactionDetails.hourlyRate', 'Hourly Rate') : t('transactionDetails.quotedRate', 'Quoted Rate')} 
                           value={formatCurrency(booking.hourlyRate)} 
                         />
                       </View>
@@ -663,7 +688,7 @@ export default function TransactionDetailsScreen() {
                   style={styles.unifiedCardToggle}
                 >
                   <Text style={styles.unifiedCardToggleText}>
-                    {isDetailsExpanded ? 'Show Less' : 'Show More Details'}
+                    {isDetailsExpanded ? t('transactionDetails.showLess', 'Show Less') : t('transactionDetails.showMoreDetails', 'Show More Details')}
                   </Text>
                   <ChevronRight
                     size={14}
@@ -677,12 +702,12 @@ export default function TransactionDetailsScreen() {
 
           {isWorker && status !== 'completed' && status !== 'cancelled' && (
             <Animated.View entering={FadeInDown.delay(500).duration(450)} style={styles.section}>
-              <SectionHeader icon={ShieldCheck} title="Worker Controls" color={status === 'ongoing' ? P.green : P.cyan} />
+              <SectionHeader icon={ShieldCheck} title={t('transactionDetails.workerControls', 'Worker Controls')} color={status === 'ongoing' ? P.green : P.cyan} />
               {status === 'accepted' && (
                 <ActionButton
                   color={P.cyan}
                   icon={Zap}
-                  label="Start Job"
+                  label={t('transactionDetails.startJob', 'Start Job')}
                   loading={isUpdating}
                   onPress={() => updateStatus({ bookingId: id as string, status: 'ongoing' })}
                 />
@@ -691,7 +716,7 @@ export default function TransactionDetailsScreen() {
                 <ActionButton
                   color={P.green}
                   icon={CheckCircle2}
-                  label="Complete Job"
+                  label={t('transactionDetails.completeJob', 'Complete Job')}
                   loading={isUpdating}
                   onPress={() => updateStatus({ bookingId: id as string, status: 'completed' })}
                 />
@@ -701,11 +726,11 @@ export default function TransactionDetailsScreen() {
 
           {!isWorker && status === 'completed' && booking.paymentStatus !== 'paid' && (
             <Animated.View entering={FadeInDown.delay(500).duration(450)} style={styles.section}>
-              <SectionHeader icon={CreditCard} title="Cash Settlement" color={P.green} />
+              <SectionHeader icon={CreditCard} title={t('transactionDetails.cashSettlement', 'Cash Settlement')} color={P.green} />
               <ActionButton
                 color={P.green}
                 icon={CheckCircle2}
-                label="Confirm Cash Payment"
+                label={t('transactionDetails.confirmCash', 'Confirm Cash Payment')}
                 loading={isPaying}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -729,17 +754,17 @@ export default function TransactionDetailsScreen() {
 
           {!isWorker && status === 'completed' && (
             <Animated.View entering={FadeInDown.delay(560).duration(450)} style={styles.section}>
-              <SectionHeader icon={Star} title="Service Review" color={booking.isReviewed ? P.green : P.gold} />
+              <SectionHeader icon={Star} title={t('transactionDetails.serviceReview', 'Service Review')} color={booking.isReviewed ? P.green : P.gold} />
               {booking.isReviewed ? (
                 <View style={styles.noticeCard}>
                   <CheckCircle2 size={18} color={P.green} />
-                  <Text style={styles.noticeText}>Your feedback has been recorded for this job.</Text>
+                  <Text style={styles.noticeText}>{t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}</Text>
                 </View>
               ) : (
                 <View style={styles.inlineReviewCard}>
-                  <Text style={styles.inlineReviewTitle}>Rate {partnerName}</Text>
+                  <Text style={styles.inlineReviewTitle}>{t('transactionDetails.ratePartner', { name: partnerName }, `Rate ${partnerName}`)}</Text>
                   <Text style={styles.inlineReviewSubtitle}>
-                    A quick review helps improve service quality for future customers.
+                    {t('transactionDetails.reviewSubtitle', 'A quick review helps improve service quality for future customers.')}
                   </Text>
 
                   {/* 5-Star Selection Row */}
@@ -769,7 +794,7 @@ export default function TransactionDetailsScreen() {
                   {/* Comment Input */}
                   <TextInput
                     style={styles.reviewInput}
-                    placeholder="Write a comment about their work... (optional)"
+                    placeholder={t('transactionDetails.commentPlaceholder', 'Write a comment about their work... (optional)')}
                     placeholderTextColor={P.textDim}
                     value={reviewComment}
                     onChangeText={setReviewComment}
@@ -796,8 +821,8 @@ export default function TransactionDetailsScreen() {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           Toast.show({
                             type: 'success',
-                            text1: 'Review Submitted',
-                            text2: 'Thank you for your feedback!',
+                            text1: t('review.successTitle', 'Review Submitted'),
+                            text2: t('review.successDesc', 'Thank you for your feedback!'),
                           });
                           refetch();
                         },
@@ -805,8 +830,8 @@ export default function TransactionDetailsScreen() {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                           Toast.show({
                             type: 'error',
-                            text1: 'Failed to Submit Review',
-                            text2: err.response?.data?.message || 'Please try again.',
+                            text1: t('review.failedTitle', 'Failed to Submit Review'),
+                            text2: err.response?.data?.message || t('common.tryAgain', 'Please try again.'),
                           });
                         }
                       });
@@ -816,7 +841,7 @@ export default function TransactionDetailsScreen() {
                     {isCreatingReview ? (
                       <ActivityIndicator size="small" color="#001014" />
                     ) : (
-                      <Text style={styles.reviewSubmitBtnText}>Submit Review</Text>
+                      <Text style={styles.reviewSubmitBtnText}>{t('transactionDetails.submitReview', 'Submit Review')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -827,7 +852,7 @@ export default function TransactionDetailsScreen() {
           {status === 'completed' && booking.paymentStatus === 'paid' && (
             <View style={styles.noticeCard}>
               <CheckCircle2 size={18} color={P.green} />
-              <Text style={styles.noticeText}>Cash payment has been confirmed for this job.</Text>
+              <Text style={styles.noticeText}>{t('transactionDetails.paymentConfirmed', 'Cash payment has been confirmed for this job.')}</Text>
             </View>
           )}
         </ScrollView>
@@ -845,9 +870,9 @@ export default function TransactionDetailsScreen() {
           setShowPaymentSuccess(false);
           router.replace('/(tabs)' as any);
         }}
-        title="Settlement Confirmed"
-        message={`You have successfully settled the payment of ${formatCurrency(booking.hourlyRate)} with your Ustad ${partnerName} for the ${booking.category} job.\n\nThank you for choosing Apna Ustad!`}
-        buttonText="Back to Home"
+        title={t('transactionDetails.settlementConfirmed', 'Settlement Confirmed')}
+        message={t('transactionDetails.settlementMsg', { amount: formatCurrency(booking.hourlyRate), ustad: partnerName, category: booking.category }, `You have successfully settled the payment of ${formatCurrency(booking.hourlyRate)} with your Ustad ${partnerName} for the ${booking.category} job.\n\nThank you for choosing Apna Ustad!`)}
+        buttonText={t('transactionDetails.backToHome', 'Back to Home')}
         type="success"
       />
     </BackgroundWrapper>

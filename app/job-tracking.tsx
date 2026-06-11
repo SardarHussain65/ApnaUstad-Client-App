@@ -15,6 +15,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { socketService } from '../services/socketService';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useBookingDetails } from '../hooks';
 import { MAPTILER_API_KEY } from '../constants/Config';
@@ -94,6 +95,7 @@ function PulseDot({ color }: { color: string }) {
 }
 
 export default function JobTrackingScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{
     bookingId?: string | string[];
@@ -135,9 +137,9 @@ export default function JobTrackingScreen() {
   const workerId = personId(bookingWorker) || routeWorkerId;
   const partner = isWorker ? bookingCustomer : bookingWorker;
   const partnerId = personId(partner) || (isWorker ? customerId : workerId);
-  const partnerName = booking?.cardMeta?.counterParty?.fullName || partner?.fullName || (isWorker ? 'Client' : 'Assigned Ustad');
+  const partnerName = booking?.cardMeta?.counterParty?.fullName || partner?.fullName || (isWorker ? t('jobDetails.client') : t('jobDetails.specialist'));
   const partnerPhone = booking?.cardMeta?.counterParty?.phone || partner?.phone || '';
-  const addressLabel = booking?.cardMeta?.location?.address || booking?.address || routeAddress || 'Service destination';
+  const addressLabel = booking?.cardMeta?.location?.address || booking?.address || routeAddress || t('jobDetails.noLocation');
 
   const destinationLocation = useMemo<LocationType>(() => {
     const coordinates = booking?.location?.coordinates;

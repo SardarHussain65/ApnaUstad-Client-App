@@ -43,6 +43,7 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BlurView } from 'expo-blur';
 import api from '../../services/api';
 import { getOptimizedImageUrl } from '../../constants/Config';
+import { useTranslation } from 'react-i18next';
 
 const HEADER_HEIGHT = 240;
 
@@ -62,24 +63,25 @@ type ProfileSpecialty = {
 
 // ─── Stats Row ─────────────────────────────────────────────────────────────────
 function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number; successRate: number }) {
+  const { t } = useTranslation();
   return (
     <Animated.View entering={FadeInDown.delay(320).springify()} style={styles.statsCard}>
       <LinearGradient colors={['rgba(255,255,255,0.04)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: '#00F5FF' }]}>{jobs}</Text>
-        <Text style={styles.statLbl}>Jobs</Text>
+        <Text style={styles.statLbl}>{t('profile.jobs')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: '#FFD60A' }]}>
           {rating > 0 ? rating.toFixed(1) : '—'}
         </Text>
-        <Text style={styles.statLbl}>Rating</Text>
+        <Text style={styles.statLbl}>{t('profile.rating')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: '#34C759' }]}>{successRate}%</Text>
-        <Text style={styles.statLbl}>Success</Text>
+        <Text style={styles.statLbl}>{t('profile.success')}</Text>
       </View>
     </Animated.View>
   );
@@ -87,22 +89,23 @@ function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number;
 
 // ─── Client Stats Row ──────────────────────────────────────────────────────────
 function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing: number; completed: number }) {
+  const { t } = useTranslation();
   return (
     <Animated.View entering={FadeInDown.delay(320).springify()} style={styles.statsCard}>
       <LinearGradient colors={['rgba(255,255,255,0.04)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: '#00F5FF' }]}>{total}</Text>
-        <Text style={styles.statLbl}>Bookings</Text>
+        <Text style={styles.statLbl}>{t('profile.bookings')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: '#FF9F0A' }]}>{ongoing}</Text>
-        <Text style={styles.statLbl}>Ongoing</Text>
+        <Text style={styles.statLbl}>{t('profile.ongoing')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: '#34C759' }]}>{completed}</Text>
-        <Text style={styles.statLbl}>Completed</Text>
+        <Text style={styles.statLbl}>{t('profile.completed')}</Text>
       </View>
     </Animated.View>
   );
@@ -139,6 +142,7 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileTab() {
   const { logout, role, user } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const scrollY = useSharedValue(0);
 
@@ -268,7 +272,7 @@ export default function ProfileTab() {
               <LinearGradient
                 colors={isWorker ? ['#FF8C00', '#FF5E00'] : ['#00F5FF', '#007AFF']}
                 style={styles.rolePill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Text style={styles.rolePillText}>{isWorker ? '⚡ Elite Ustad' : '💎 Platinum Client'}</Text>
+                <Text style={styles.rolePillText}>{isWorker ? t('profile.eliteUstad') : t('profile.platinumClient')}</Text>
               </LinearGradient>
             </View>
           </Animated.View>
@@ -375,16 +379,16 @@ export default function ProfileTab() {
 
           {/* Account */}
           <View style={styles.menuSection}>
-            <Text style={styles.sectionLabel}>Account</Text>
-            <MenuItem icon={User} label="Personal Information" sublabel="Name, phone & photo" delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
+            <Text style={styles.sectionLabel}>{t('profile.account')}</Text>
+            <MenuItem icon={User} label={t('profile.personalInfo')} sublabel={t('profile.personalInfoSub')} delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
             {isWorker && (
-              <MenuItem icon={Layers3} label="Skills & Categories" sublabel="Priorities, requests & renewals" delay={655} accent="#FF8C00" onPress={() => router.push('/profile/specialties' as any)} />
+              <MenuItem icon={Layers3} label={t('profile.skills')} sublabel={t('profile.skillsSub')} delay={655} accent="#FF8C00" onPress={() => router.push('/profile/specialties' as any)} />
             )}
             {isWorker && (
               <MenuItem
                 icon={BadgeCheck}
-                label="Identity Verification"
-                sublabel={verificationStatus}
+                label={t('profile.identity')}
+                sublabel={verificationStatus === 'Verify identity' ? t('profile.identitySub') : verificationStatus}
                 delay={670}
                 accent={
                   verificationStatus === 'Verified'
@@ -398,23 +402,23 @@ export default function ProfileTab() {
                 onPress={() => router.push('/profile/identity-verification')}
               />
             )}
-            <MenuItem icon={Shield} label="Security" sublabel="Password & login" delay={700} accent="#BF5AF2" onPress={() => router.push('/profile/security')} />
-            <MenuItem icon={Bell} label="Notifications" sublabel="Alerts & preferences" delay={730} accent="#FF9F0A" onPress={() => router.push('/profile/notifications')} />
+            <MenuItem icon={Shield} label={t('profile.security')} sublabel={t('profile.securitySub')} delay={700} accent="#BF5AF2" onPress={() => router.push('/profile/security')} />
+            <MenuItem icon={Bell} label={t('profile.notifications')} sublabel={t('profile.notificationsSub')} delay={730} accent="#FF9F0A" onPress={() => router.push('/profile/notifications')} />
           </View>
 
           {/* Support */}
           <View style={styles.menuSection}>
-            <Text style={styles.sectionLabel}>Support</Text>
-            <MenuItem icon={HelpCircle} label="Help Center" sublabel="FAQs & articles" delay={760} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
-            <MenuItem icon={Star} label="Rate ApnaUstad" sublabel="Share your feedback" delay={790} accent="#FFD60A" />
-            <MenuItem icon={Settings} label="App Settings" delay={820} accent="#8E8E93" />
+            <Text style={styles.sectionLabel}>{t('profile.support')}</Text>
+            <MenuItem icon={HelpCircle} label={t('profile.helpCenter')} sublabel={t('profile.helpCenterSub')} delay={760} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
+            <MenuItem icon={Star} label={t('profile.rateApp')} sublabel={t('profile.rateAppSub')} delay={790} accent="#FFD60A" />
+            <MenuItem icon={Settings} label={t('profile.appSettings')} sublabel={t('profile.appSettingsSub')} delay={820} accent="#8E8E93" onPress={() => router.push('/profile/settings')} />
           </View>
 
           {/* Logout */}
           <Animated.View entering={FadeInDown.delay(820)}>
             <Pressable style={styles.logoutBtn} onPress={handleLogout}>
               <LogOut size={16} color="#FF3B30" strokeWidth={2.3} />
-              <Text style={styles.logoutText}>Sign Out</Text>
+              <Text style={styles.logoutText}>{t('profile.signOut')}</Text>
             </Pressable>
           </Animated.View>
 

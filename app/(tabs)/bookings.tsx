@@ -12,6 +12,7 @@ import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
 import { SkeletonList } from '../../components/ui';
+import { useTranslation } from 'react-i18next';
 
 const TABS = ['Active', 'Completed', 'Cancelled'] as const;
 type TabType = typeof TABS[number];
@@ -69,6 +70,7 @@ const isWithinJobResponseWindow = (bookingCreatedAt: string, jobCreatedAt: strin
 
 export default function BookingsTab() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const router = useRouter();
   const { role } = useAuth();
   const isWorker = role === 'worker';
@@ -191,14 +193,15 @@ export default function BookingsTab() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>My Bookings</Text>
-          <Text style={styles.headerSubtitle}>View all your service requests and bookings</Text>
+          <Text style={[styles.headerTitle, Typography.threeD]}>{t('bookings.myBookings')}</Text>
+          <Text style={styles.headerSubtitle}>{t('bookings.subtitle')}</Text>
         </View>
 
         {/* Custom Tab Bar */}
         <View style={styles.tabContainer}>
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
+            const tabKey = tab === 'Active' ? 'activeTab' : tab === 'Completed' ? 'completedTab' : 'cancelledTab';
             return (
               <TouchableOpacity
                 key={tab}
@@ -222,7 +225,7 @@ export default function BookingsTab() {
                   styles.tabText,
                   isActive && styles.activeTabText
                 ]}>
-                  {tab}
+                  {t(`bookings.${tabKey}`)}
                 </Text>
               </TouchableOpacity>
             )
@@ -346,7 +349,7 @@ export default function BookingsTab() {
                       <View style={styles.cardTopStrip}>
                         <View style={styles.missionTypePill}>
                           {isInstant ? <Zap size={12} color={Colors.cyan} /> : <Calendar size={12} color={Colors.cyan} />}
-                          <Text style={styles.missionTypeText}>{isInstant ? 'Instant' : 'Scheduled'}</Text>
+                          <Text style={styles.missionTypeText}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
                         </View>
                         <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
                           {getStatusIcon(status, statusColor)}
@@ -477,20 +480,18 @@ export default function BookingsTab() {
             })}
             {filteredData.length === 0 && (() => {
               const tabColor = activeTab === 'Active' ? Colors.cyan : activeTab === 'Completed' ? Colors.success : Colors.error;
+              const emptyTitleKey = activeTab === 'Active' ? 'noActiveBookings' : activeTab === 'Completed' ? 'noCompletedBookings' : 'noCancelledBookings';
+              const emptySubKey = activeTab === 'Active' ? 'activeEmpty' : activeTab === 'Completed' ? 'completedEmpty' : 'cancelledEmpty';
               return (
                 <Animated.View entering={FadeInDown.duration(600)} style={styles.emptyContainer}>
                   <View style={[styles.emptyIconCircle, { borderColor: tabColor + '38', backgroundColor: tabColor + '10', shadowColor: tabColor }]}>
                     <Inbox size={42} color={tabColor} />
                   </View>
                   <Text style={[styles.emptyTitle, Typography.threeD]}>
-                    NO {activeTab.toUpperCase()} BOOKINGS
+                    {t(`bookings.${emptyTitleKey}`).toUpperCase()}
                   </Text>
                   <Text style={styles.emptySub}>
-                    {activeTab === 'Active'
-                      ? 'You do not have any active bookings at the moment.'
-                      : activeTab === 'Completed'
-                        ? 'You do not have any completed bookings.'
-                        : 'You do not have any cancelled bookings.'}
+                    {t(`bookings.${emptySubKey}`)}
                   </Text>
                 </Animated.View>
               );

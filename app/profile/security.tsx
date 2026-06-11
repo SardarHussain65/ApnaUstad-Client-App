@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Shield, Lock, HelpCircle, ChevronRight, Eye } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
@@ -11,6 +12,7 @@ import { useRouter } from 'expo-router';
 
 export default function SecurityScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <BackgroundWrapper>
@@ -19,7 +21,7 @@ export default function SecurityScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Scrollable Header */}
-        <ProfileHeader title="Security" />
+        <ProfileHeader title={t('security.title')} />
 
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
           <View style={styles.shieldIconWrapper}>
@@ -31,27 +33,27 @@ export default function SecurityScreen() {
               <Shield size={40} color="#fff" />
             </View>
           </View>
-          <Text style={[styles.screenTitle, Typography.threeD]}>Account Security</Text>
-          <Text style={styles.screenSubtitle}>Update your password and manage account protection.</Text>
+          <Text style={[styles.screenTitle, Typography.threeD]}>{t('security.screenTitle')}</Text>
+          <Text style={styles.screenSubtitle}>{t('security.screenSubtitle')}</Text>
         </Animated.View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Security Options</Text>
+          <Text style={styles.sectionTitle}>{t('security.sectionTitle')}</Text>
           <SecurityItem 
             icon={Lock} 
-            label="Change Password" 
+            label={t('changePassword.title')} 
             onPress={() => router.push('/profile/change-password')} 
             delay={300} 
           />
           <SecurityItem 
             icon={Eye} 
-            label="Policies & Terms" 
+            label={t('security.policiesTerms')} 
             onPress={() => router.push('/profile/privacy')} 
             delay={350} 
           />
           <SecurityItem 
             icon={HelpCircle} 
-            label="Report a Security Issue" 
+            label={t('security.reportIssue')} 
             onPress={() => router.push('/profile/help-center')} 
             delay={400} 
           />

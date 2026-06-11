@@ -24,9 +24,11 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
 import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { useTranslation } from 'react-i18next';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const isWorker = role === 'worker';
   const accentColor = isWorker ? Colors.worker : Colors.cyan;
@@ -130,14 +132,14 @@ export default function SignupScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title="Create account" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('auth.secureSignUp')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthProgress currentStep={1} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
-              eyebrow={isWorker ? 'Specialist profile' : 'Client profile'}
-              title="Start your"
-              highlight="journey"
-              description="Tell us the basics first. We will verify your email before setting up your profile."
+              eyebrow={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+              title={t('auth.secureSignUp')}
+              highlight=""
+              description={t('auth.signUpDesc')}
             />
 
             <GlassCard
@@ -151,12 +153,12 @@ export default function SignupScreen() {
                 autoComplete="name"
                 error={nameError}
                 icon={<User size={18} color={accentColor} />}
-                label="Full name"
+                label={t('auth.fullName')}
                 onChangeText={(value) => {
                   setFullName(value);
                   if (nameError) setNameError('');
                 }}
-                placeholder="Your full name"
+                placeholder={t('auth.fullName')}
                 value={fullName}
               />
               <InputField
@@ -166,7 +168,7 @@ export default function SignupScreen() {
                 error={emailError}
                 icon={<Mail size={18} color={accentColor} />}
                 keyboardType="email-address"
-                label="Email address"
+                label={t('auth.email')}
                 onChangeText={(value) => {
                   setEmail(value);
                   if (emailError) setEmailError('');
@@ -180,7 +182,7 @@ export default function SignupScreen() {
                 error={phoneError}
                 icon={<Phone size={18} color={accentColor} />}
                 keyboardType="phone-pad"
-                label="Phone number"
+                label={t('auth.phone')}
                 onChangeText={(value) => {
                   setPhoneNumber(value);
                   if (phoneError) setPhoneError('');
@@ -193,7 +195,7 @@ export default function SignupScreen() {
                 isLoading={checkUserMutation.isPending}
                 onPress={handleNext}
                 style={styles.submitButton}
-                title="Continue to verification"
+                title={t('common.continue')}
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
@@ -204,7 +206,7 @@ export default function SignupScreen() {
             )}
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account?</Text>
+              <Text style={styles.footerText}>{t('auth.hasAccount')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.push({
@@ -212,7 +214,7 @@ export default function SignupScreen() {
                   params: { role },
                 })}
               >
-                <Text style={[styles.footerLink, { color: accentColor }]}> Sign in</Text>
+                <Text style={[styles.footerLink, { color: accentColor }]}> {t('auth.signIn')}</Text>
               </TouchableOpacity>
             </View>
 

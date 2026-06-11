@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react-native';
 import { OtpInput } from 'react-native-otp-entry';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { AnimatedButton } from '../../components/AnimatedButton';
 import { InputField } from '../../components/InputField';
 import { AuthHeader } from '../../components/auth/AuthHeader';
@@ -29,6 +30,7 @@ const { width } = Dimensions.get('window');
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { email, role } = useLocalSearchParams<{ email: string; role?: string }>();
   const isWorker = role === 'worker';
   const accentColor = isWorker ? Colors.worker : Colors.cyan;
@@ -56,17 +58,17 @@ export default function ResetPasswordScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Verification or password update failed.');
+        throw new Error(data.message || t('resetPassword.invalidCode'));
       }
       return data;
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        'Password updated',
-        'Your new password is ready. You can now sign in securely.',
+        t('resetPassword.passwordUpdated'),
+        t('resetPassword.readySignIn'),
         [{
-          text: 'Sign in',
+          text: t('resetPassword.signIn'),
           onPress: () => router.replace({
             pathname: '/(auth)/login' as never,
             params: { role },
@@ -76,7 +78,7 @@ export default function ResetPasswordScreen() {
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Unable to reset password', error.message || 'The code is invalid or has expired.');
+      Alert.alert(t('resetPassword.unableReset'), error.message || t('resetPassword.invalidCode'));
     },
   });
 
@@ -86,15 +88,15 @@ export default function ResetPasswordScreen() {
 
     if (otp.length !== 6) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Code required', 'Enter the 6-digit code sent to your email.');
+      Alert.alert(t('resetPassword.codeRequired'), t('resetPassword.enterCode'));
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError('Use at least 6 characters.');
+      setPasswordError(t('resetPassword.useMinChars'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setConfirmError('Passwords do not match.');
+      setConfirmError(t('resetPassword.passwordsMismatch'));
       return;
     }
 
@@ -113,14 +115,14 @@ export default function ResetPasswordScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title="Secure reset" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('resetPassword.title')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
               align="center"
-              description={`Enter the code sent to ${email}, then choose a new password for your account.`}
-              highlight="new password"
+              description={t('resetPassword.desc', { email })}
+              highlight={t('resetPassword.highlight')}
               icon={<ShieldCheck size={36} color={accentColor} strokeWidth={1.8} />}
-              title="Create a"
+              title={t('resetPassword.createNew')}
             />
 
             <GlassCard
@@ -129,7 +131,7 @@ export default function ResetPasswordScreen() {
               style={styles.formCard}
               gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
             >
-              <Text style={styles.otpLabel}>Recovery code</Text>
+              <Text style={styles.otpLabel}>{t('resetPassword.recoveryCode')}</Text>
               <OtpInput
                 numberOfDigits={6}
                 focusColor={accentColor}
@@ -154,12 +156,12 @@ export default function ResetPasswordScreen() {
                 autoCapitalize="none"
                 error={passwordError}
                 icon={<Lock size={18} color={accentColor} />}
-                label="New password"
+                label={t('resetPassword.newPassword')}
                 onChangeText={(value) => {
                   setNewPassword(value);
                   if (passwordError) setPasswordError('');
                 }}
-                placeholder="At least 6 characters"
+                placeholder={t('resetPassword.atLeast6')}
                 rightIcon={
                   <PasswordVisibilityButton
                     isVisible={showNewPassword}
@@ -174,12 +176,12 @@ export default function ResetPasswordScreen() {
                 autoCapitalize="none"
                 error={confirmError}
                 icon={<Lock size={18} color={accentColor} />}
-                label="Confirm new password"
+                label={t('resetPassword.confirmNewPassword')}
                 onChangeText={(value) => {
                   setConfirmPassword(value);
                   if (confirmError) setConfirmError('');
                 }}
-                placeholder="Repeat your new password"
+                placeholder={t('resetPassword.repeatNew')}
                 rightIcon={
                   <PasswordVisibilityButton
                     isVisible={showConfirmPassword}
@@ -194,12 +196,12 @@ export default function ResetPasswordScreen() {
                 isLoading={resetMutation.isPending}
                 onPress={handleResetPassword}
                 style={styles.resetButton}
-                title="Update password"
+                title={t('resetPassword.updatePassword')}
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
 
-            <SecurityNote accentColor={accentColor} text="Your password is updated through a secure, one-time recovery request." />
+            <SecurityNote accentColor={accentColor} text={t('resetPassword.securityNote')} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

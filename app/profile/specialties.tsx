@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BeautifulModal } from '../../components/ui';
 import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/Theme';
@@ -92,6 +93,7 @@ const isWalletBalanceError = (error: any) => error?.response?.status === 402 || 
 export default function SpecialtiesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [data, setData] = useState<SpecialtyResponse>({ specialties: [], maxSpecialties: 5, freeSpecialtyLimit: 1, additionalCategoryMonthlyFee: 500 });
   const [categories, setCategories] = useState<Category[]>([]);
   const [walletAvailableBalance, setWalletAvailableBalance] = useState(0);
@@ -126,12 +128,12 @@ export default function SpecialtiesScreen() {
       setCategories(categoryResponse.data.data || []);
       setWalletAvailableBalance(Math.max(0, Number(walletData.availableBalance ?? walletData.balance ?? 0)));
     } catch (error) {
-      Alert.alert('Could not load specialties', getErrorMessage(error));
+      Alert.alert(t('specialties.loadError'), getErrorMessage(error));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(useCallback(() => {
     load();
@@ -157,7 +159,7 @@ export default function SpecialtiesScreen() {
     try {
       await action();
       await load(true);
-      Alert.alert('Done', successMessage);
+      Alert.alert(t('specialties.done'), successMessage);
       return true;
     } catch (error) {
       const actionError: any = error;
@@ -170,10 +172,10 @@ export default function SpecialtiesScreen() {
         if (Number.isFinite(currentBalance) && currentBalance >= 0) {
           setWalletAvailableBalance(currentBalance);
         }
-        showRechargePrompt(key.startsWith('activate-') ? 'activate this category' : 'continue');
+        showRechargePrompt(key.startsWith('activate-') ? t('specialties.activatePay').toLowerCase() : t('specialties.requestNew').toLowerCase());
         return false;
       }
-      Alert.alert('Unable to continue', getErrorMessage(actionError));
+      Alert.alert(t('specialties.unableContinue'), getErrorMessage(actionError));
       return false;
     } finally {
       setWorkingKey('');
@@ -207,7 +209,7 @@ export default function SpecialtiesScreen() {
     const hourlyRate = Number(draftRate);
     const experience = Number(draftExperience);
     if (!draftCategoryId || skills.length === 0 || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
-      Alert.alert('Complete category details', 'Select a category and add skills, hourly rate, experience, and a short description.');
+      Alert.alert(t('specialties.completeDetails'), t('specialties.completeDetailsDesc'));
       return;
     }
     if (!isWalletReadyForAdditionalCategory()) {
@@ -224,7 +226,7 @@ export default function SpecialtiesScreen() {
         experience,
         bio: draftBio.trim(),
       }),
-      'Your category request and professional details were sent to admin for review. If approved, the monthly fee will be deducted automatically and the category will become active.'
+      t('specialties.requestSentDesc')
     ).then((success) => {
       if (success) {
         resetDraft();
@@ -236,20 +238,20 @@ export default function SpecialtiesScreen() {
   const activate = (specialty: Specialty) => {
     const fee = specialty.priority > data.freeSpecialtyLimit ? additionalCategoryMonthlyFee : 0;
     if (fee > 0 && walletAvailableBalance < fee) {
-      showRechargePrompt('activate this category');
+      showRechargePrompt(t('specialties.activatePay').toLowerCase());
       return;
     }
     Alert.alert(
-      'Activate additional specialty?',
-      `${formatPKR(fee)} will be deducted from your wallet now for the next full month. The same amount will be deducted monthly while auto-renew is enabled.`,
+      t('specialties.activateConfirmTitle'),
+      t('specialties.activateConfirmDesc', { fee: formatPKR(fee) }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Activate & Pay',
+          text: t('specialties.activatePayBtn', { defaultValue: 'Activate & Pay' }),
           onPress: () => runAction(
             `activate-${specialty._id}`,
             () => api.patch(`/workers/specialties/${specialty.categoryId._id}/activate`),
-            'Your specialty is active and can receive matching jobs.'
+            t('specialties.activatedDesc', { defaultValue: 'Your specialty is active and can receive matching jobs.' })
           ),
         },
       ]
@@ -264,22 +266,22 @@ export default function SpecialtiesScreen() {
     runAction(
       'reorder',
       () => api.patch('/workers/specialties/priorities', { categoryIds: next.map(item => item.categoryId._id) }),
-      'Your category priorities were updated.'
+      t('specialties.priorityUpdatedDesc')
     );
   };
 
   const remove = (specialty: Specialty) => Alert.alert(
-    'Remove specialty?',
-    `Remove ${specialty.categoryId.name} from your worker profile?`,
+    t('specialties.removeConfirmTitle'),
+    t('specialties.removeConfirmDesc', { category: specialty.categoryId.name }),
     [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: t('common.remove', { defaultValue: 'Remove' }),
         style: 'destructive',
         onPress: () => runAction(
           `remove-${specialty._id}`,
           () => api.delete(`/workers/specialties/${specialty.categoryId._id}`),
-          'The specialty was removed from your profile.'
+          t('specialties.removedDesc')
         ),
       },
     ]
@@ -296,35 +298,35 @@ export default function SpecialtiesScreen() {
           <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
             <ChevronLeft size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Skills & Categories</Text>
+          <Text style={styles.headerTitle}>{t('specialties.title')}</Text>
           <View style={styles.headerCounter}><Text style={styles.headerCounterText}>{specialties.length}/{data.maxSpecialties}</Text></View>
         </View>
 
         <Animated.View entering={FadeInDown.delay(80)} style={styles.hero}>
           <LinearGradient colors={['rgba(0,245,255,0.18)', 'rgba(191,90,242,0.10)']} style={StyleSheet.absoluteFillObject} />
           <View style={styles.heroIcon}><Layers3 size={23} color={Colors.primary} /></View>
-          <Text style={styles.heroTitle}>Grow your service reach</Text>
-          <Text style={styles.heroText}>Your first approved category is free. Additional categories need their own skills, rate, experience, admin review, and {formatPKR(additionalCategoryMonthlyFee)} available in your wallet. After approval, the fee is deducted automatically.</Text>
+          <Text style={styles.heroTitle}>{t('specialties.heroTitle')}</Text>
+          <Text style={styles.heroText}>{t('specialties.heroText', { fee: formatPKR(additionalCategoryMonthlyFee) })}</Text>
         </Animated.View>
 
         {loading ? (
-          <View style={styles.loading}><ActivityIndicator color={Colors.primary} /><Text style={styles.loadingText}>Loading categories...</Text></View>
+          <View style={styles.loading}><ActivityIndicator color={Colors.primary} /><Text style={styles.loadingText}>{t('specialties.loadingText')}</Text></View>
         ) : (
           <>
             <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Your Categories</Text>
+              <Text style={styles.sectionTitle}>{t('specialties.mySpecialties')}</Text>
               {specialties.length < data.maxSpecialties && (
                 <TouchableOpacity style={styles.addButton} onPress={openAddCategory}>
                   <Plus size={15} color="#000" strokeWidth={3} />
-                  <Text style={styles.addButtonText}>Add category</Text>
+                  <Text style={styles.addButtonText}>{t('specialties.addCategory')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             {showPicker && (
               <Animated.View entering={FadeInDown.duration(220)} style={styles.picker}>
-                <Text style={styles.pickerTitle}>Request another category</Text>
-                <Text style={styles.pickerText}>Add your professional details for this service. No money is deducted now; after admin approval, the monthly fee is deducted automatically and the category becomes active.</Text>
+                <Text style={styles.pickerTitle}>{t('specialties.requestNew')}</Text>
+                <Text style={styles.pickerText}>{t('specialties.pickerText')}</Text>
                 <View style={styles.categoryChips}>
                   {availableCategories.map(category => (
                     <TouchableOpacity
@@ -341,24 +343,24 @@ export default function SpecialtiesScreen() {
                       <Text style={styles.categoryChipText}>{category.name}</Text>
                     </TouchableOpacity>
                   ))}
-                  {availableCategories.length === 0 && <Text style={styles.emptyText}>No more categories are available.</Text>}
+                  {availableCategories.length === 0 && <Text style={styles.emptyText}>{t('specialties.noMoreCategories')}</Text>}
                 </View>
                 {availableCategories.length > 0 && (
                   <>
-                    <Text style={styles.formLabel}>Skills for this category</Text>
+                    <Text style={styles.formLabel}>{t('specialties.skillsLabel')}</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="Repair, installation, maintenance"
+                      placeholder={t('specialties.skillsPlaceholder')}
                       placeholderTextColor="rgba(255,255,255,0.28)"
                       value={draftSkills}
                       onChangeText={setDraftSkills}
                     />
                     <View style={styles.formRow}>
                       <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>Rate / hour</Text>
+                        <Text style={styles.formLabel}>{t('specialties.rateLabel')}</Text>
                         <TextInput
                           style={styles.input}
-                          placeholder="500"
+                          placeholder={t('specialties.ratePlaceholder')}
                           placeholderTextColor="rgba(255,255,255,0.28)"
                           keyboardType="numeric"
                           value={draftRate}
@@ -366,10 +368,10 @@ export default function SpecialtiesScreen() {
                         />
                       </View>
                       <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>Experience</Text>
+                        <Text style={styles.formLabel}>{t('specialties.experienceLabel')}</Text>
                         <TextInput
                           style={styles.input}
-                          placeholder="3"
+                          placeholder={t('specialties.experiencePlaceholder')}
                           placeholderTextColor="rgba(255,255,255,0.28)"
                           keyboardType="numeric"
                           value={draftExperience}
@@ -377,10 +379,10 @@ export default function SpecialtiesScreen() {
                         />
                       </View>
                     </View>
-                    <Text style={styles.formLabel}>Description</Text>
+                    <Text style={styles.formLabel}>{t('specialties.descriptionLabel')}</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
-                      placeholder="Describe your work quality, tools, and service experience..."
+                      placeholder={t('specialties.descriptionPlaceholder')}
                       placeholderTextColor="rgba(255,255,255,0.28)"
                       value={draftBio}
                       onChangeText={setDraftBio}
@@ -390,13 +392,13 @@ export default function SpecialtiesScreen() {
                       <Wallet size={14} color={Colors.worker} />
                       <Text style={styles.feeText}>
                         {draftCategory
-                          ? `Monthly fee after approval: ${formatPKR(additionalCategoryMonthlyFee)}. Available wallet: ${formatPKR(walletAvailableBalance)}.`
-                          : `Select a category to continue. Monthly fee: ${formatPKR(additionalCategoryMonthlyFee)}.`}
+                          ? t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })
+                          : t('specialties.selectCategoryInfo', { fee: formatPKR(additionalCategoryMonthlyFee) })}
                       </Text>
                     </View>
                     <TouchableOpacity disabled={!!workingKey} style={styles.submitButton} onPress={requestCategory}>
                       {workingKey === 'request-category' ? <ActivityIndicator size="small" color="#000" /> : <Plus size={15} color="#000" strokeWidth={3} />}
-                      <Text style={styles.submitButtonText}>Send for admin review</Text>
+                      <Text style={styles.submitButtonText}>{t('specialties.sendReviewBtn')}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -419,7 +421,9 @@ export default function SpecialtiesScreen() {
                     </View>
                     <View style={styles.cardMain}>
                       <Text style={styles.cardTitle}>{specialty.categoryId.name}</Text>
-                      <Text style={styles.tierText}>{specialty.tier} category</Text>
+                      <Text style={styles.tierText}>
+                        {specialty.tier === 'primary' ? t('specialties.primaryTier') : t('specialties.additionalTier')}
+                      </Text>
                     </View>
                     <View style={styles.orderButtons}>
                       <TouchableOpacity disabled={index === 0 || !!workingKey} style={styles.orderButton} onPress={() => move(index, -1)}><ArrowUp size={14} color={index === 0 ? Colors.textDim : Colors.textMuted} /></TouchableOpacity>
@@ -430,20 +434,39 @@ export default function SpecialtiesScreen() {
                   <View style={styles.statusRow}>
                     <View style={[styles.statusDot, { backgroundColor: color }]} />
                     <Text style={[styles.statusText, { color }]}>
-                      {specialty.approvalStatus === 'pending' ? 'Waiting for admin approval' : specialty.approvalStatus === 'rejected' ? 'Request rejected' : specialty.subscriptionStatus.replace(/_/g, ' ')}
+                      {specialty.approvalStatus === 'pending'
+                        ? t('specialties.waitingApproval')
+                        : specialty.approvalStatus === 'rejected'
+                        ? t('specialties.requestRejected')
+                        : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
                     </Text>
                   </View>
 
                   <View style={styles.metaRow}>
                     {isPaid ? <Wallet size={13} color={Colors.worker} /> : <ShieldCheck size={13} color={Colors.success} />}
-                    <Text style={styles.metaText}>{isPaid ? `${formatPKR(specialtyFee)} / month` : 'Included free'}</Text>
-                    {specialty.nextBillingAt ? <><Clock3 size={13} color={Colors.textMuted} /><Text style={styles.metaText}>Renews {formatDate(specialty.nextBillingAt)}</Text></> : null}
+                    <Text style={styles.metaText}>
+                      {isPaid
+                        ? t('specialties.feePerMonth', { fee: formatPKR(specialtyFee) })
+                        : t('specialties.includedFree')}
+                    </Text>
+                    {specialty.nextBillingAt ? (
+                      <>
+                        <Clock3 size={13} color={Colors.textMuted} />
+                        <Text style={styles.metaText}>
+                          {t('specialties.renewsOn', { date: formatDate(specialty.nextBillingAt) })}
+                        </Text>
+                      </>
+                    ) : null}
                   </View>
 
                   <View style={styles.profileBox}>
                     <View style={styles.profileStats}>
-                      <Text style={styles.profileStat}>Rs. {Number(specialty.hourlyRate || 0).toLocaleString('en-PK')}/hr</Text>
-                      <Text style={styles.profileStat}>{Number(specialty.experience || 0)} yrs exp</Text>
+                      <Text style={styles.profileStat}>
+                        {t('specialties.ratePerHr', { rate: Number(specialty.hourlyRate || 0).toLocaleString('en-PK') })}
+                      </Text>
+                      <Text style={styles.profileStat}>
+                        {t('specialties.yearsExp', { count: Number(specialty.experience || 0) })}
+                      </Text>
                     </View>
                     {(specialty.skills || []).length > 0 && (
                       <View style={styles.skillsWrap}>
@@ -459,12 +482,16 @@ export default function SpecialtiesScreen() {
                     {canActivate && (
                       <TouchableOpacity disabled={!!workingKey} style={styles.activateButton} onPress={() => activate(specialty)}>
                         {workingKey === `activate-${specialty._id}` ? <ActivityIndicator size="small" color="#000" /> : <Wallet size={15} color="#000" />}
-                        <Text style={styles.activateText}>{specialty.subscriptionStatus === 'expired' ? 'Reactivate & Pay' : 'Activate & Pay'}</Text>
+                        <Text style={styles.activateText}>
+                          {specialty.subscriptionStatus === 'expired'
+                            ? t('specialties.reactivatePay')
+                            : t('specialties.activatePay')}
+                        </Text>
                       </TouchableOpacity>
                     )}
                     {showRenew && (
                       <View style={styles.renewWrap}>
-                        <Text style={styles.renewLabel}>Auto-renew</Text>
+                        <Text style={styles.renewLabel}>{t('specialties.autoRenew')}</Text>
                         <Switch
                           value={specialty.autoRenew}
                           disabled={!!workingKey}
@@ -472,7 +499,9 @@ export default function SpecialtiesScreen() {
                             void runAction(
                               `renew-${specialty._id}`,
                               () => api.patch(`/workers/specialties/${specialty.categoryId._id}/auto-renew`, { autoRenew }),
-                              autoRenew ? 'Automatic renewal is enabled.' : 'Automatic renewal is disabled.'
+                              autoRenew
+                                ? t('specialties.renewalEnabledDesc', { defaultValue: 'Automatic renewal is enabled.' })
+                                : t('specialties.renewalDisabledDesc', { defaultValue: 'Automatic renewal is disabled.' })
                             );
                           }}
                           trackColor={{ false: Colors.surfaceLight, true: 'rgba(52,199,89,0.5)' }}
@@ -496,7 +525,7 @@ export default function SpecialtiesScreen() {
       <BeautifulModal
         visible={rechargePromptVisible}
         onClose={() => setRechargePromptVisible(false)}
-        title="Wallet Recharge Needed"
+        title={t('specialties.rechargeNeeded')}
         height={470}
         glowColor={Colors.worker}
         icon={<Wallet size={32} color={Colors.worker} strokeWidth={2.4} />}
@@ -505,31 +534,31 @@ export default function SpecialtiesScreen() {
           <View style={styles.rechargeIconRing}>
             <AlertTriangle size={22} color={Colors.worker} strokeWidth={2.4} />
           </View>
-          <Text style={styles.rechargeTitle}>Add balance before you continue</Text>
+          <Text style={styles.rechargeTitle}>{t('specialties.addBalancePrompt')}</Text>
           <Text style={styles.rechargeMessage}>
-            To {rechargeActionLabel}, your wallet needs at least {formatPKR(additionalCategoryMonthlyFee)} available. Recharge now, then come back and request the category for admin review. If approved, it will activate automatically.
+            {t('specialties.rechargeMessage', { action: rechargeActionLabel, fee: formatPKR(additionalCategoryMonthlyFee) })}
           </Text>
 
           <View style={styles.walletSummaryCard}>
             <View style={styles.walletSummaryRow}>
-              <Text style={styles.walletSummaryLabel}>Required balance</Text>
+              <Text style={styles.walletSummaryLabel}>{t('specialties.requiredBalance')}</Text>
               <Text style={styles.walletSummaryValue}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
             </View>
             <View style={styles.walletSummaryDivider} />
             <View style={styles.walletSummaryRow}>
-              <Text style={styles.walletSummaryLabel}>Available balance</Text>
+              <Text style={styles.walletSummaryLabel}>{t('specialties.availableBalance')}</Text>
               <Text style={styles.walletSummaryValue}>{formatPKR(walletAvailableBalance)}</Text>
             </View>
             <View style={styles.walletSummaryDivider} />
             <View style={styles.walletSummaryRow}>
-              <Text style={styles.walletSummaryLabel}>Need to recharge</Text>
+              <Text style={styles.walletSummaryLabel}>{t('specialties.needRecharge')}</Text>
               <Text style={[styles.walletSummaryValue, styles.shortfallText]}>{formatPKR(walletShortfall)}</Text>
             </View>
           </View>
 
           <View style={styles.rechargeActions}>
             <TouchableOpacity style={styles.rechargeSecondaryButton} onPress={() => setRechargePromptVisible(false)}>
-              <Text style={styles.rechargeSecondaryText}>Maybe later</Text>
+              <Text style={styles.rechargeSecondaryText}>{t('specialties.maybeLater')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.rechargePrimaryButton}
@@ -540,7 +569,7 @@ export default function SpecialtiesScreen() {
             >
               <LinearGradient colors={[Colors.worker, '#FF5E00']} style={styles.rechargePrimaryGradient}>
                 <Wallet size={16} color="#160900" strokeWidth={2.6} />
-                <Text style={styles.rechargePrimaryText}>Recharge Wallet</Text>
+                <Text style={styles.rechargePrimaryText}>{t('specialties.rechargeWallet')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>

@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AlertCircle,
@@ -225,6 +226,7 @@ export default function BidSubmissionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { t } = useTranslation();
   const { jobId, title, urgency: urgencyParam, responseMode } = useLocalSearchParams<{
     jobId: string;
     title?: string;
@@ -321,15 +323,15 @@ export default function BidSubmissionScreen() {
     setIsSubmitting(true);
     try {
       await api.post(`/jobs/${jobId}/accept-instant`);
-      toast.success('Interest Sent', 'The client can now review your availability.');
+      toast.success(t('bidSubmission.interestSent', 'Interest Sent'), t('bidSubmission.interestSentDesc', 'The client can now review your availability.'));
       router.replace('/(tabs)' as any);
     } catch (error: any) {
       if (error.response?.status === 402) {
         const required = Number(error.response?.data?.requiredBalance || requiredWalletBalance);
-        toast.warning('Top-Up Required', `Keep at least ${formatMoney(required)} in your wallet to continue.`);
+        toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.keepRequiredBalance', { amount: formatMoney(required) }, `Keep at least ${formatMoney(required)} in your wallet to continue.`));
         router.push('/(tabs)/wallet' as any);
       } else {
-        toast.error('Could Not Continue', error.response?.data?.message || 'Please try again.');
+        toast.error(t('bidSubmission.couldNotContinue', 'Could Not Continue'), error.response?.data?.message || t('bidSubmission.tryAgain', 'Please try again.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -338,7 +340,7 @@ export default function BidSubmissionScreen() {
 
   const handleSubmitBid = async () => {
     if (isWalletBlocked) {
-      toast.warning('Top-Up Required', `Add ${formatMoney(walletShortfall)} to keep the required wallet balance.`);
+      toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.addShortfall', { amount: formatMoney(walletShortfall) }, `Add ${formatMoney(walletShortfall)} to keep the required wallet balance.`));
       router.push('/(tabs)/wallet' as any);
       return;
     }
@@ -349,17 +351,17 @@ export default function BidSubmissionScreen() {
     }
 
     if (parsedPrice <= 0) {
-      toast.error('Add Your Quote', 'Enter the amount you want to charge for this work.');
+      toast.error(t('bidSubmission.addYourQuote', 'Add Your Quote'), t('bidSubmission.enterQuoteAmount', 'Enter the amount you want to charge for this work.'));
       return;
     }
 
     if (!message.trim()) {
-      toast.error('Add A Short Message', 'Tell the client how you can help with this work.');
+      toast.error(t('bidSubmission.addShortMessage', 'Add A Short Message'), t('bidSubmission.tellClientHelp', 'Tell the client how you can help with this work.'));
       return;
     }
 
     if (estimatedDays && Number(estimatedDays) <= 0) {
-      toast.error('Check Estimated Days', 'Estimated days must be greater than zero.');
+      toast.error(t('bidSubmission.checkEstDays', 'Check Estimated Days'), t('bidSubmission.daysGreaterThanZero', 'Estimated days must be greater than zero.'));
       return;
     }
 
@@ -370,15 +372,15 @@ export default function BidSubmissionScreen() {
         proposedPrice: parsedPrice,
         ...(estimatedDays ? { estimatedDays: Number(estimatedDays) } : {}),
       });
-      toast.success('Proposal Sent', 'The client can now review your offer.');
+      toast.success(t('bidSubmission.proposalSent', 'Proposal Sent'), t('bidSubmission.proposalSentDesc', 'The client can now review your offer.'));
       router.replace('/(tabs)' as any);
     } catch (error: any) {
       if (error.response?.status === 402) {
         const required = Number(error.response?.data?.requiredBalance || requiredWalletBalance);
-        toast.warning('Top-Up Required', `Keep at least ${formatMoney(required)} in your wallet to continue.`);
+        toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.keepRequiredBalance', { amount: formatMoney(required) }, `Keep at least ${formatMoney(required)} in your wallet to continue.`));
         router.push('/(tabs)/wallet' as any);
       } else {
-        toast.error('Could Not Send Proposal', error.response?.data?.message || 'Please try again.');
+        toast.error(t('bidSubmission.couldNotSend', 'Could Not Send Proposal'), error.response?.data?.message || t('bidSubmission.tryAgain', 'Please try again.'));
       }
     } finally {
       setIsSubmitting(false);
@@ -392,8 +394,8 @@ export default function BidSubmissionScreen() {
           <View style={styles.loadingIcon}>
             <BriefcaseBusiness size={25} color={CYAN} />
           </View>
-          <Text style={styles.loadingTitle}>Loading request</Text>
-          <Text style={styles.loadingText}>Preparing the job details...</Text>
+          <Text style={styles.loadingTitle}>{t('bidSubmission.loadingRequest', 'Loading request')}</Text>
+          <Text style={styles.loadingText}>{t('bidSubmission.preparingDetails', 'Preparing the job details...')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -404,10 +406,10 @@ export default function BidSubmissionScreen() {
       <BackgroundWrapper>
         <View style={styles.centeredFill}>
           <AlertCircle size={32} color={RED} />
-          <Text style={styles.loadingTitle}>Request unavailable</Text>
-          <Text style={styles.loadingText}>This request may have expired or already been assigned.</Text>
+          <Text style={styles.loadingTitle}>{t('bidSubmission.requestUnavailable', 'Request unavailable')}</Text>
+          <Text style={styles.loadingText}>{t('bidSubmission.expiredAssigned', 'This request may have expired or already been assigned.')}</Text>
           <TouchableOpacity style={styles.returnButton} onPress={() => router.back()}>
-            <Text style={styles.returnButtonText}>Go back</Text>
+            <Text style={styles.returnButtonText}>{t('bidSubmission.goBack', 'Go back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -426,15 +428,15 @@ export default function BidSubmissionScreen() {
             <ChevronLeft size={21} color="#FFFFFF" strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{isInstant ? 'INSTANT REQUEST' : 'SCHEDULED REQUEST'}</Text>
+            <Text style={styles.headerEyebrow}>{isInstant ? t('bidSubmission.instantRequest', 'INSTANT REQUEST') : t('bidSubmission.scheduledRequest', 'SCHEDULED REQUEST')}</Text>
             <Text style={styles.headerTitle}>
-              {isInstant ? (isCounterProposal ? 'Propose Fair Price' : 'Confirm Availability') : 'Send Proposal'}
+              {isInstant ? (isCounterProposal ? t('bidSubmission.proposeFairPrice', 'Propose Fair Price') : t('bidSubmission.confirmAvailability', 'Confirm Availability')) : t('bidSubmission.sendProposal', 'Send Proposal')}
             </Text>
           </View>
           <View style={[styles.headerBadge, { borderColor: `${isInstant ? CYAN : ORANGE}45`, backgroundColor: `${isInstant ? CYAN : ORANGE}12` }]}>
             {isInstant ? <Zap size={12} color={CYAN} /> : <CalendarDays size={12} color={ORANGE} />}
             <Text style={[styles.headerBadgeText, { color: isInstant ? CYAN : ORANGE }]}>
-              {isInstant ? 'LIVE' : 'PLANNED'}
+              {isInstant ? t('bidSubmission.live', 'LIVE') : t('bidSubmission.planned', 'PLANNED')}
             </Text>
           </View>
         </View>
@@ -449,34 +451,34 @@ export default function BidSubmissionScreen() {
               <View style={styles.requestTopRow}>
                 <View style={styles.requestTitleGroup}>
                   <Text style={[styles.requestEyebrow, { color: isInstant ? CYAN : ORANGE }]}>
-                    {isInstant ? 'AVAILABLE NOW' : 'UPCOMING VISIT'}
+                    {isInstant ? t('bidSubmission.availableNow', 'AVAILABLE NOW') : t('bidSubmission.upcomingVisit', 'UPCOMING VISIT')}
                   </Text>
-                  <Text style={styles.requestCategory}>{job.category || title || 'Service request'}</Text>
+                  <Text style={styles.requestCategory}>{job.category || title || t('bidSubmission.serviceRequest', 'Service request')}</Text>
                 </View>
                 <View style={styles.budgetBadge}>
                   <Banknote size={14} color={GREEN} />
                   <View>
-                    <Text style={styles.budgetLabel}>{isInstant ? 'OFFER' : 'CLIENT BUDGET'}</Text>
-                    <Text style={styles.budgetValue}>{budget > 0 ? formatMoney(budget) : 'Open budget'}</Text>
+                    <Text style={styles.budgetLabel}>{isInstant ? t('bidSubmission.offer', 'OFFER') : t('bidSubmission.clientBudget', 'CLIENT BUDGET')}</Text>
+                    <Text style={styles.budgetValue}>{budget > 0 ? formatMoney(budget) : t('bidSubmission.openBudget', 'Open budget')}</Text>
                   </View>
                 </View>
               </View>
 
               <Text style={styles.requestDescription}>
-                {job.description || 'The client has requested professional help for this service.'}
+                {job.description || t('bidSubmission.clientRequestHelp', 'The client has requested professional help for this service.')}
               </Text>
 
               <View style={styles.factRow}>
                 <RequestFact
                   icon={isInstant ? Navigation : CalendarDays}
-                  label={isInstant ? 'DISTANCE' : 'VISIT DATE'}
-                  value={isInstant ? distanceText : scheduledDate}
+                  label={isInstant ? t('bidSubmission.distanceLabel', 'DISTANCE') : t('findingWorker.visitDate', 'VISIT DATE')}
+                  value={isInstant ? (distanceText === 'Nearby' ? t('common.nearby', 'Nearby') : distanceText) : scheduledDate}
                   color={isInstant ? CYAN : ORANGE}
                 />
                 <View style={styles.factDivider} />
                 <RequestFact
                   icon={Clock3}
-                  label={isInstant ? 'RESPONSE' : 'VISIT TIME'}
+                  label={isInstant ? t('bidSubmission.response', 'RESPONSE') : t('findingWorker.visitTime', 'VISIT TIME')}
                   value={scheduledTime}
                   color={isInstant ? CYAN : ORANGE}
                 />
@@ -484,15 +486,17 @@ export default function BidSubmissionScreen() {
 
               <View style={styles.locationRow}>
                 <MapPin size={15} color={CYAN} />
-                <Text style={styles.locationText} numberOfLines={2}>{jobAddress}</Text>
+                <Text style={styles.locationText} numberOfLines={2}>
+                  {jobAddress === 'Location not specified' ? t('bidSubmission.locationNotSpecified', 'Location not specified') : jobAddress}
+                </Text>
               </View>
 
               {media.totalCount > 0 && (
                 <View style={styles.evidenceSection}>
                   <SectionTitle
                     icon={ImageIcon}
-                    title="Work evidence"
-                    detail={`${media.totalCount} file${media.totalCount === 1 ? '' : 's'}`}
+                    title={t('bidSubmission.workEvidence', 'Work evidence')}
+                    detail={media.totalCount === 1 ? t('bidSubmission.filesCount', { count: 1 }) : t('bidSubmission.filesCountPlural', { count: media.totalCount })}
                     color={PURPLE}
                   />
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.evidenceList}>
@@ -513,7 +517,7 @@ export default function BidSubmissionScreen() {
 
           <Animated.View entering={FadeInUp.delay(80).duration(450)}>
             <Surface accent={GREEN} style={styles.clientSurface}>
-              <SectionTitle icon={UserRound} title="Client history" color={GREEN} />
+              <SectionTitle icon={UserRound} title={t('bidSubmission.clientHistory', 'Client history')} color={GREEN} />
               <View style={styles.clientRow}>
                 {client?.profileImage ? (
                   <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
@@ -523,18 +527,18 @@ export default function BidSubmissionScreen() {
                   </View>
                 )}
                 <View style={styles.clientCopy}>
-                  <Text style={styles.clientName}>{client?.fullName || 'Client'}</Text>
+                  <Text style={styles.clientName}>{client?.fullName || t('transactionDetails.client', 'Client')}</Text>
                   <View style={styles.clientStatusRow}>
                     <ShieldCheck size={12} color={GREEN} />
                     <Text style={styles.clientStatusText}>
-                      {clientTotalJobs > 0 ? `${clientCompletedJobs}/${clientTotalJobs} completed jobs` : 'New client profile'}
+                      {clientTotalJobs > 0 ? t('bidSubmission.completedJobsCount', { completed: clientCompletedJobs, total: clientTotalJobs }) : t('bidSubmission.newClientProfile', 'New client profile')}
                     </Text>
                   </View>
                 </View>
                 {clientTotalJobs > 0 && (
                   <View style={styles.reliabilityBadge}>
                     <Text style={styles.reliabilityValue}>{completionRate}%</Text>
-                    <Text style={styles.reliabilityLabel}>HISTORY</Text>
+                    <Text style={styles.reliabilityLabel}>{t('bidSubmission.history', 'HISTORY')}</Text>
                   </View>
                 )}
               </View>
@@ -544,16 +548,16 @@ export default function BidSubmissionScreen() {
           {isInstant && !isCounterProposal ? (
             <Animated.View entering={FadeInUp.delay(140).duration(450)}>
               <Surface accent={CYAN} style={styles.instantSurface}>
-                <SectionTitle icon={Zap} title="Ready to respond?" color={CYAN} />
+                <SectionTitle icon={Zap} title={t('bidSubmission.readyToRespond', 'Ready to respond?')} color={CYAN} />
                 <Text style={styles.instantText}>
-                  Send your availability to the client. They will review your profile before the booking is confirmed.
+                  {t('bidSubmission.availabilityDesc', 'Send your availability to the client. They will review your profile before the booking is confirmed.')}
                 </Text>
                 <View style={styles.settlementRow}>
-                  <SettlementItem label="Offer value" value={formatMoney(instantOffer)} />
+                  <SettlementItem label={t('bidSubmission.offerValue', 'Offer value')} value={formatMoney(instantOffer)} />
                   <View style={styles.settlementDivider} />
-                  <SettlementItem label={`Fee ${commissionPercentage}%`} value={`- ${formatMoney(estimatedCommission)}`} color={ORANGE} />
+                  <SettlementItem label={t('bidSubmission.feeLabel', { percentage: commissionPercentage })} value={`- ${formatMoney(estimatedCommission)}`} color={ORANGE} />
                   <View style={styles.settlementDivider} />
-                  <SettlementItem label="You receive" value={formatMoney(estimatedNetEarning)} color={GREEN} />
+                  <SettlementItem label={t('bidSubmission.youReceive', 'You receive')} value={formatMoney(estimatedNetEarning)} color={GREEN} />
                 </View>
               </Surface>
             </Animated.View>
@@ -562,12 +566,12 @@ export default function BidSubmissionScreen() {
               <Surface accent={CYAN} style={styles.proposalSurface}>
                 <SectionTitle
                   icon={Send}
-                  title={isInstant ? 'Your fair price' : 'Your price'}
-                  detail={proposalReady ? 'Ready to send' : 'Quote required'}
+                  title={isInstant ? t('bidSubmission.yourFairPrice', 'Your fair price') : t('bidSubmission.yourPrice', 'Your price')}
+                  detail={proposalReady ? t('bidSubmission.readyToSend', 'Ready to send') : t('bidSubmission.quoteRequired', 'Quote required')}
                   color={CYAN}
                 />
 
-                <Text style={styles.formLabel}>QUICK QUOTE</Text>
+                <Text style={styles.formLabel}>{t('bidSubmission.quickQuote', 'QUICK QUOTE')}</Text>
                 <View style={styles.quoteSuggestionRow}>
                   {quoteSuggestions.map(suggestion => {
                     const isSelected = parsedPrice === suggestion;
@@ -588,7 +592,7 @@ export default function BidSubmissionScreen() {
 
                 <View style={styles.inputRow}>
                   <View style={styles.quoteInputGroup}>
-                    <Text style={styles.formLabel}>{parsedPrice === budget ? 'ACCEPT CLIENT OFFER' : 'YOUR COUNTER OFFER'}</Text>
+                    <Text style={styles.formLabel}>{parsedPrice === budget ? t('bidSubmission.acceptClientOffer', 'ACCEPT CLIENT OFFER') : t('bidSubmission.yourCounterOffer', 'YOUR COUNTER OFFER')}</Text>
                     <View style={styles.inputShell}>
                       <Text style={styles.inputPrefix}>PKR</Text>
                       <TextInput
@@ -596,13 +600,13 @@ export default function BidSubmissionScreen() {
                         value={proposedPrice}
                         onChangeText={value => setProposedPrice(keepDigits(value))}
                         keyboardType="number-pad"
-                        placeholder="Enter amount"
+                        placeholder={t('bidSubmission.enterAmount', 'Enter amount')}
                         placeholderTextColor={TEXT_MUTED}
                       />
                     </View>
                   </View>
                   <View style={styles.daysInputGroup}>
-                    <Text style={styles.formLabel}>EST. DAYS</Text>
+                    <Text style={styles.formLabel}>{t('bidSubmission.estDays', 'EST. DAYS')}</Text>
                     <View style={styles.inputShell}>
                       <CalendarDays size={16} color={ORANGE} />
                       <TextInput
@@ -610,14 +614,14 @@ export default function BidSubmissionScreen() {
                         value={estimatedDays}
                         onChangeText={value => setEstimatedDays(keepDigits(value))}
                         keyboardType="number-pad"
-                        placeholder="Optional"
+                        placeholder={t('common.optional', 'Optional')}
                         placeholderTextColor={TEXT_MUTED}
                       />
                     </View>
                   </View>
                 </View>
 
-                <Text style={styles.formLabel}>MESSAGE TO CLIENT</Text>
+                <Text style={styles.formLabel}>{t('bidSubmission.messageToClient', 'MESSAGE TO CLIENT')}</Text>
                 <View style={[styles.inputShell, styles.messageShell]}>
                   <MessageSquare size={16} color={CYAN} style={styles.messageIcon} />
                   <TextInput
@@ -626,7 +630,7 @@ export default function BidSubmissionScreen() {
                     onChangeText={setMessage}
                     multiline
                     maxLength={300}
-                    placeholder="Briefly explain how you will handle this work."
+                    placeholder={t('bidSubmission.messagePlaceholder', 'Briefly explain how you will handle this work.')}
                     placeholderTextColor={TEXT_MUTED}
                     textAlignVertical="top"
                   />
@@ -635,15 +639,15 @@ export default function BidSubmissionScreen() {
 
                 <View style={styles.settlementBlock}>
                   <View style={styles.settlementHeader}>
-                    <Text style={styles.settlementTitle}>Estimated settlement</Text>
-                    <Text style={styles.settlementHint}>Cash collected after completion</Text>
+                    <Text style={styles.settlementTitle}>{t('bidSubmission.estSettlement', 'Estimated settlement')}</Text>
+                    <Text style={styles.settlementHint}>{t('bidSubmission.cashCollected', 'Cash collected after completion')}</Text>
                   </View>
                   <View style={styles.settlementRow}>
-                    <SettlementItem label="Your quote" value={formatMoney(parsedPrice)} />
+                    <SettlementItem label={t('bidSubmission.yourQuote', 'Your quote')} value={formatMoney(parsedPrice)} />
                     <View style={styles.settlementDivider} />
-                    <SettlementItem label={`Fee ${commissionPercentage}%`} value={`- ${formatMoney(estimatedCommission)}`} color={ORANGE} />
+                    <SettlementItem label={t('bidSubmission.feeLabel', { percentage: commissionPercentage })} value={`- ${formatMoney(estimatedCommission)}`} color={ORANGE} />
                     <View style={styles.settlementDivider} />
-                    <SettlementItem label="You receive" value={formatMoney(estimatedNetEarning)} color={GREEN} />
+                    <SettlementItem label={t('bidSubmission.youReceive', 'You receive')} value={formatMoney(estimatedNetEarning)} color={GREEN} />
                   </View>
                 </View>
               </Surface>
@@ -656,18 +660,18 @@ export default function BidSubmissionScreen() {
               <View style={styles.walletStripCopy}>
                 <Text style={styles.walletStripTitle}>
                   {isLoadingWallet
-                    ? 'Checking wallet eligibility'
+                    ? t('bidSubmission.checkingWallet', 'Checking wallet eligibility')
                     : isWalletBlocked
-                      ? `${formatMoney(walletShortfall)} top-up needed`
-                      : 'Wallet ready'}
+                      ? t('bidSubmission.topUpNeeded', { amount: formatMoney(walletShortfall) })
+                      : t('bidSubmission.walletReady', 'Wallet ready')}
                 </Text>
                 <Text style={styles.walletStripText}>
-                  Balance {formatMoney(walletBalance)} - Required {formatMoney(requiredWalletBalance)}
+                  {t('bidSubmission.balanceRequired', { balance: formatMoney(walletBalance), required: formatMoney(requiredWalletBalance) })}
                 </Text>
               </View>
               {isWalletBlocked ? (
                 <TouchableOpacity style={styles.topUpButton} onPress={handleWalletPress} activeOpacity={0.78}>
-                  <Text style={styles.topUpButtonText}>Top up</Text>
+                  <Text style={styles.topUpButtonText}>{t('bidSubmission.topUp', 'Top up')}</Text>
                 </TouchableOpacity>
               ) : (
                 <CheckCircle2 size={18} color={GREEN} />
@@ -701,14 +705,14 @@ export default function BidSubmissionScreen() {
                   {isInstant && !isCounterProposal ? <Zap size={19} color="#001014" /> : <Send size={18} color="#001014" />}
                   <View style={styles.submitCopy}>
                     <Text style={styles.submitTitle}>
-                      {isInstant ? (isCounterProposal ? 'SEND FAIR PRICE' : 'SEND AVAILABILITY') : 'SEND PROPOSAL'}
+                      {isInstant ? (isCounterProposal ? t('bidSubmission.sendFairPrice', 'SEND FAIR PRICE') : t('bidSubmission.sendAvailability', 'SEND AVAILABILITY')) : t('bidSubmission.sendProposal', 'SEND PROPOSAL')}
                     </Text>
                     <Text style={styles.submitSubtitle}>
                       {isInstant && !isCounterProposal
-                        ? 'Client confirmation required'
+                        ? t('bidSubmission.clientConfirmationRequired', 'Client confirmation required')
                         : proposalReady
-                          ? `${formatMoney(parsedPrice)} quote - ${formatMoney(estimatedNetEarning)} estimated earning`
-                          : 'Add your quote and a short message'}
+                          ? t('bidSubmission.proposalSummary', { quote: formatMoney(parsedPrice), earning: formatMoney(estimatedNetEarning) })
+                          : t('bidSubmission.quoteAndMessageRequired', 'Add your quote and a short message')}
                     </Text>
                   </View>
                 </>
