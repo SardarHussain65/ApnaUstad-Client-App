@@ -10,6 +10,7 @@ interface VoiceBriefRecorderProps {
   onStartRecord: () => void;
   onStopRecord: () => void;
   onRemoveRecord: () => void;
+  hideLabel?: boolean;
 }
 
 const formatVoiceDuration = (durationMillis: number) => {
@@ -24,10 +25,11 @@ export function VoiceBriefRecorder({
   onStartRecord,
   onStopRecord,
   onRemoveRecord,
+  hideLabel = false,
 }: VoiceBriefRecorderProps) {
   return (
-    <View style={styles.section}>
-      <SectionLabel icon={Mic} label="VOICE BRIEF" color={P.orange} badge="Optional · Max 60s" />
+    <View style={hideLabel ? null : styles.section}>
+      {!hideLabel && <SectionLabel icon={Mic} label="VOICE BRIEF" color={P.orange} badge="Optional · Max 60s" />}
       <GlassInput glowColor={isRecording || voiceNoteUri ? P.orange : undefined}>
         <View style={styles.voiceNoteRow}>
           <View style={[styles.voiceNoteIcon, isRecording && styles.voiceNoteIconRecording]}>

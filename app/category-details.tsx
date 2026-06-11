@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { Colors, Typography, Spacing, Shadows } from '../constants/Theme';
+import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Zap, Calendar, Users, ArrowRight, Sparkles } from 'lucide-react-native';
+import { ChevronLeft, Zap, Calendar, Users, ArrowRight, Sparkles, FileText } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   FadeInDown,
@@ -99,95 +99,65 @@ export default function CategoryDetailsScreen() {
             <View style={[styles.glowingOrb, { shadowColor: themeColor, borderColor: themeColor + '60' }]}>
               <Sparkles color={themeColor} size={40} />
             </View>
-            <Text style={styles.heroSub}>CHOOSE TYPE</Text>
+            <Text style={styles.heroSub}>SELECT METHOD</Text>
             <Text style={[styles.heroTitle, Typography.threeD]}>{title.toUpperCase()}</Text>
             {params.description ? (
               <Text style={styles.categoryDescription}>{params.description}</Text>
             ) : (
-              <Text style={styles.categoryDescription}>Select how you want to book below to instantly find or schedule an Ustad.</Text>
+              <Text style={styles.categoryDescription}>Choose how you want to book or connect with your Ustad.</Text>
             )}
           </Animated.View>
 
-          {/* Instant & Schedule Buttons */}
+          {/* Post a Job & Browse Ustads Cards */}
           <View style={styles.mainOptionsGrid}>
+            {/* Option 1: Post a Job */}
             <Animated.View entering={FadeInDown.delay(200).duration(600)} style={[styles.optionWrapper, pulseStyle]}>
               <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.mainOption, { borderColor: Colors.cyan, backgroundColor: 'rgba(0, 245, 255, 0.03)' }]}
+                activeOpacity={0.8}
+                style={[styles.mainOption, { borderColor: Colors.cyan, backgroundColor: 'rgba(10, 10, 31, 0.75)' }]}
                 onPress={() => handleRouteToJob('instant')}
               >
                 <LinearGradient
                   colors={['rgba(0,245,255,0.15)', 'transparent']}
                   style={styles.optionGradient}
                 />
-                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(0,245,255,0.15)', borderColor: Colors.cyan + '60' }]}>
-                  <Zap size={32} color={Colors.cyan} fill="rgba(0,245,255,0.2)" />
+                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(0,245,255,0.12)', borderColor: Colors.cyan + '40' }]}>
+                  <FileText size={28} color={Colors.cyan} />
                 </View>
-                <Text style={[styles.optionTitle, { color: Colors.cyan }]}>INSTANT</Text>
-                <Text style={styles.optionSub}>ETA: 15-30 MIN</Text>
-                <View style={[styles.deployHint, { backgroundColor: Colors.cyan }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>BOOK NOW</Text>
+                <View style={styles.optionTextContainer}>
+                  <Text style={[styles.optionTitle, { color: Colors.cyan }]} adjustsFontSizeToFit minimumFontScale={0.8}>POST A JOB</Text>
+                  <Text style={styles.optionSub}>GET BIDS NEARBY</Text>
+                </View>
+                <View style={[styles.deployHint, { backgroundColor: Colors.cyan, shadowColor: Colors.cyan }]}>
+                  <Text style={[styles.deployHintText, { color: '#000' }]}>POST NOW</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
 
+            {/* Option 2: Choose Ustad */}
             <Animated.View entering={FadeInDown.delay(300).duration(600)} style={[styles.optionWrapper, pulseStyle]}>
               <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.mainOption, { borderColor: Colors.worker, backgroundColor: 'rgba(255, 107, 0, 0.03)' }]}
-                onPress={() => handleRouteToJob('scheduled')}
+                activeOpacity={0.8}
+                style={[styles.mainOption, { borderColor: Colors.worker, backgroundColor: 'rgba(10, 10, 31, 0.75)' }]}
+                onPress={handleBrowseWorkers}
               >
                 <LinearGradient
                   colors={['rgba(255,107,0,0.15)', 'transparent']}
                   style={styles.optionGradient}
                 />
-                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(255,107,0,0.15)', borderColor: Colors.worker + '60' }]}>
-                  <Calendar size={32} color={Colors.worker} />
+                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(255,107,0,0.12)', borderColor: Colors.worker + '40' }]}>
+                  <Users size={28} color={Colors.worker} />
                 </View>
-                <Text style={[styles.optionTitle, { color: Colors.worker }]} numberOfLines={1}>SCHEDULED</Text>
-                <Text style={styles.optionSub}>PICK A TIME</Text>
-                <View style={[styles.deployHint, { backgroundColor: Colors.worker }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>SCHEDULE</Text>
+                <View style={styles.optionTextContainer}>
+                  <Text style={[styles.optionTitle, { color: Colors.worker }]} adjustsFontSizeToFit minimumFontScale={0.8}>CHOOSE USTAD</Text>
+                  <Text style={styles.optionSub}>HIRE DIRECTLY</Text>
+                </View>
+                <View style={[styles.deployHint, { backgroundColor: Colors.worker, shadowColor: Colors.worker }]}>
+                  <Text style={[styles.deployHintText, { color: '#000' }]}>BROWSE</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
           </View>
-
-          {/* Cyber-Anchor Card (Split Panel Design) */}
-          <Animated.View entering={FadeInUp.delay(500).duration(800)} style={styles.cyberWrapper}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={handleBrowseWorkers}
-              style={styles.cyberTouch}
-            >
-              <GlassCard intensity={15} style={styles.cyberCard} padding={0}>
-                <View style={styles.cyberContent}>
-                  {/* Left: Balanced Icon Box */}
-                  <View style={[styles.iconBox, { backgroundColor: themeColor }]}>
-                    <Users size={24} color="#000" />
-                  </View>
-
-                  {/* Center: Mission Info */}
-                  <View style={styles.infoBox}>
-                    <Text style={styles.cyberLabel}>USTAD DIRECTORY</Text>
-                    <Text style={styles.cyberTitle}>VIEW ALL USTADS</Text>
-                    <View style={styles.cyberStatusRow}>
-                      <View style={[styles.statusIndicator, { backgroundColor: themeColor }]} />
-                      <Text style={styles.cyberStatusText}>STATUS: ACTIVE</Text>
-                    </View>
-                  </View>
-
-                  {/* Right: Action Hub */}
-                  <View style={[styles.cyberAction, { borderColor: themeColor + '60' }]}>
-                    <ArrowRight size={18} color={themeColor} />
-                  </View>
-                </View>
-
-                {/* Global Shimmer Overlay */}
-                <Animated.View style={[styles.shimmerLine, shimmerStyle]} pointerEvents="none" />
-              </GlassCard>
-            </TouchableOpacity>
-          </Animated.View>
 
         </ScrollView>
       </View>
@@ -281,49 +251,62 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainOption: {
-    height: 180,
-    borderRadius: 32,
+    height: 205,
+    borderRadius: 24,
     borderWidth: 1.5,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 12,
     overflow: 'hidden',
+    ...Shadows.card,
   },
   optionGradient: {
     ...StyleSheet.absoluteFillObject,
   },
   optionIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
     ...Shadows.depth,
   },
+  optionTextContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: 4,
+  },
   optionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
-    letterSpacing: 1.5,
-    marginBottom: 6,
+    letterSpacing: 1,
+    marginBottom: 4,
     textAlign: 'center',
+    width: '100%',
   },
   optionSub: {
-    fontSize: 9,
+    fontSize: 10,
     color: Colors.textDim,
     fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 12,
+    letterSpacing: 0.8,
+    textAlign: 'center',
   },
   deployHint: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginTop: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
   deployHintText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,
   },

@@ -46,7 +46,7 @@ export function UrgencyToggle({ urgency, onChange, colors }: UrgencyToggleProps)
           activeOpacity={0.7}
         >
           <Zap size={13} color={isInstant ? colors.cyan : colors.textMuted} strokeWidth={2.5} />
-          <Text style={[styles.toggleText, { color: colors.textMuted }, isInstant && { color: colors.cyan }]}>Instant</Text>
+          <Text style={[styles.toggleText, { color: colors.textMuted }, isInstant && { color: colors.cyan }]}>Urgent (Now)</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.toggleOption}
@@ -54,7 +54,7 @@ export function UrgencyToggle({ urgency, onChange, colors }: UrgencyToggleProps)
           activeOpacity={0.7}
         >
           <Calendar size={13} color={!isInstant ? colors.orange : colors.textMuted} strokeWidth={2.5} />
-          <Text style={[styles.toggleText, { color: colors.textMuted }, !isInstant && { color: colors.orange }]}>Schedule</Text>
+          <Text style={[styles.toggleText, { color: colors.textMuted }, !isInstant && { color: colors.orange }]}>Book Later</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -1,7 +1,7 @@
-import React from 'react';
-import { StyleSheet, View, Text, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { MapPin, Target } from 'lucide-react-native';
-import { SectionLabel, GlassInput, P } from './shared';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { GlassInput, P, SectionLabel } from './shared';
 
 interface LocationSelectorProps {
   address: string;

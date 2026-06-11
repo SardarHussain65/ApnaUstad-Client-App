@@ -6,12 +6,13 @@ import { SectionLabel, GlassInput, P } from './shared';
 interface BudgetInputProps {
   amount: string;
   onChangeAmount: (value: string) => void;
+  hideLabel?: boolean;
 }
 
-export function BudgetInput({ amount, onChangeAmount }: BudgetInputProps) {
+export function BudgetInput({ amount, onChangeAmount, hideLabel = false }: BudgetInputProps) {
   return (
-    <View style={styles.section}>
-      <SectionLabel icon={Banknote} label="YOUR OFFER" color={P.success} badge="Required" />
+    <View style={hideLabel ? null : styles.section}>
+      {!hideLabel && <SectionLabel icon={Banknote} label="YOUR OFFER" color={P.success} badge="Required" />}
       <GlassInput glowColor={amount ? P.success : undefined}>
         <View style={styles.budgetRow}>
           <View style={styles.currencyBadge}>

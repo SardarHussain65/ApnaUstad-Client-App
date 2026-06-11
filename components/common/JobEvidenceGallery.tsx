@@ -128,7 +128,7 @@ function VideoCard({ item, index, width }: { item: JobEvidenceItem; index: numbe
   );
 }
 
-function AudioCard({ item, index, width }: { item: JobEvidenceItem; index: number; width: number }) {
+function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; index: number; width: number; isWorker?: boolean }) {
   const player = useAudioPlayer(item.url);
   const status = useAudioPlayerStatus(player);
 
@@ -143,39 +143,61 @@ function AudioCard({ item, index, width }: { item: JobEvidenceItem; index: numbe
     player.play();
   };
 
+  const progress = status.duration > 0 ? status.currentTime / status.duration : 0;
+  const progressPercent = Math.min(100, Math.max(0, progress * 100));
+
   return (
-    <TouchableOpacity style={[styles.card, styles.audioCard, { width }]} onPress={togglePlayback} activeOpacity={0.84}>
-      <LinearGradient colors={['rgba(255,140,0,0.16)', 'rgba(25,6,26,0.9)']} style={StyleSheet.absoluteFillObject} />
-      <View style={styles.audioInner}>
-        <View style={styles.audioButton}>
-          {status.playing ? (
-            <PauseCircle size={43} color="#FFB000" strokeWidth={1.8} />
-          ) : (
-            <PlayCircle size={43} color="#FFB000" strokeWidth={1.8} />
-          )}
+    <View style={[styles.whatsappVoiceCard, { width }]}>
+      <LinearGradient 
+        colors={['rgba(255,140,0,0.14)', 'rgba(12,16,42,0.96)']} 
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFillObject} 
+      />
+      
+      {/* Left Icon Avatar */}
+      <View style={styles.waAvatarShell}>
+        <Volume2 size={16} color="#FF9F0A" strokeWidth={2.5} />
+      </View>
+
+      {/* Play/Pause Button */}
+      <TouchableOpacity style={styles.waPlayButton} onPress={togglePlayback} activeOpacity={0.8}>
+        {status.playing ? (
+          <PauseCircle size={28} color="#FF9F0A" fill="rgba(255,159,10,0.1)" strokeWidth={2} />
+        ) : (
+          <PlayCircle size={28} color="#FF9F0A" fill="rgba(255,159,10,0.1)" strokeWidth={2} />
+        )}
+      </TouchableOpacity>
+
+      {/* Progress Slider Track */}
+      <View style={styles.waTrackContainer}>
+        <View style={styles.waTrackBg}>
+          <View style={[styles.waTrackFill, { width: `${progressPercent}%` }]} />
+          <View style={[styles.waTrackThumb, { left: `${progressPercent}%` }]} />
         </View>
-        <View style={styles.audioCopy}>
-          <View style={styles.audioHeading}>
-            <Volume2 size={15} color="#FFB000" strokeWidth={2.5} />
-            <Text style={styles.audioTitle}>Client voice brief</Text>
-          </View>
-          <Text style={styles.audioHint}>{status.playing ? 'Playing requirement details' : 'Tap to listen before responding'}</Text>
-          <Text style={styles.audioTime}>
+        
+        {/* Info text below track */}
+        <View style={styles.waMetaRow}>
+          <Text style={styles.waTitleText}>
+            {isWorker ? 'Client voice brief' : 'Your voice brief'}
+          </Text>
+          <Text style={styles.waTimeText}>
             {formatPlaybackTime(status.currentTime)} / {formatPlaybackTime(status.duration)}
           </Text>
         </View>
       </View>
-      <MediaFooter item={item} index={index} />
-    </TouchableOpacity>
+    </View>
   );
 }
 
 export function JobEvidenceGallery({
   items,
   cardWidth,
+  isWorker,
 }: {
   items: JobEvidenceItem[];
   cardWidth?: number;
+  isWorker?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const resolvedCardWidth = cardWidth || Math.max(280, width - 40);
@@ -194,7 +216,7 @@ export function JobEvidenceGallery({
         const key = `${item.type}-${item.url}-${index}`;
         const cardProps = { item, index, width: resolvedCardWidth };
         if (item.type === 'video') return <VideoCard key={key} {...cardProps} />;
-        if (item.type === 'audio') return <AudioCard key={key} {...cardProps} />;
+        if (item.type === 'audio') return <AudioCard key={key} {...cardProps} isWorker={isWorker} />;
         return <ImageCard key={key} {...cardProps} />;
       })}
     </ScrollView>
@@ -358,5 +380,82 @@ const styles = StyleSheet.create({
   previewMedia: {
     width: '100%',
     height: '100%',
+  },
+  whatsappVoiceCard: {
+    height: 82,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,159,10,0.3)',
+    backgroundColor: 'rgba(12,16,42,0.92)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    overflow: 'hidden',
+  },
+  waAvatarShell: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,159,10,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,159,10,0.25)',
+  },
+  waPlayButton: {
+    marginLeft: 10,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  waTrackContainer: {
+    flex: 1,
+    marginLeft: 10,
+    justifyContent: 'center',
+  },
+  waTrackBg: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    position: 'relative',
+  },
+  waTrackFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: '#FF9F0A',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  waTrackThumb: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    top: -3,
+    marginLeft: -5,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  waMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  waTitleText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  waTimeText: {
+    color: '#FF9F0A',
+    fontSize: 10,
+    fontWeight: '900',
   },
 });

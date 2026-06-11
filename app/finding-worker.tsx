@@ -42,7 +42,7 @@ export default function FindingWorkerScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
-  const [status, setStatus] = useState('Searching for nearby Ustads');
+  const [status, setStatus] = useState('Finding nearby Ustads...');
   const [applicants, setApplicants] = useState<any[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
@@ -166,7 +166,7 @@ export default function FindingWorkerScreen() {
         return combined;
       });
       
-      setStatus('Ustad proposals received');
+      setStatus('Offers received');
     }
   }, [initialBids]);
 
@@ -203,14 +203,14 @@ export default function FindingWorkerScreen() {
         if (prev.some(a => a._id === newBid._id)) return prev;
         return [...prev, newBid];
       });
-      setStatus('Ustad proposals received');
+      setStatus('Offers received');
     });
 
     const unsubscribeWithdrawn = socketService.on('bid:withdrawn', (payload: any) => {
       if (payload?.jobId && String(payload.jobId) !== String(jobId)) return;
       setApplicants(prev => {
         const nextApplicants = prev.filter(app => app._id !== payload?.bidId);
-        if (nextApplicants.length === 0) setStatus('Searching for nearby Ustads');
+        if (nextApplicants.length === 0) setStatus('Finding nearby Ustads...');
         return nextApplicants;
       });
     });
@@ -385,7 +385,7 @@ export default function FindingWorkerScreen() {
             >
               <View style={styles.searchStatusBadge}>
                 <Radio size={13} color={Colors.cyan} />
-                <Text style={styles.searchStatusText}>{isSearching ? 'FINDING NEARBY USTADS' : `${applicants.length} OFFER${applicants.length === 1 ? '' : 'S'} RECEIVED`}</Text>
+                <Text style={styles.searchStatusText}>{isSearching ? 'SEARCHING FOR USTADS' : `${applicants.length} OFFER${applicants.length === 1 ? '' : 'S'} RECEIVED`}</Text>
               </View>
 
               <View style={styles.animationContainer}>
@@ -454,7 +454,7 @@ export default function FindingWorkerScreen() {
                   </View>
                   <View style={[styles.requestTypeBadge, job.urgency !== 'instant' && styles.scheduledBadge]}>
                     <Text style={[styles.requestTypeText, !isInstant && styles.scheduledText]}>
-                      {isInstant ? 'INSTANT' : 'SCHEDULED'}
+                      {isInstant ? 'URGENT' : 'SCHEDULED'}
                     </Text>
                   </View>
                 </View>
@@ -490,10 +490,10 @@ export default function FindingWorkerScreen() {
                   </View>
                   <View style={styles.requestMetaDivider} />
                   <View style={styles.requestMetaItem}>
-                    <Text style={styles.requestMetaLabel}>EVIDENCE</Text>
+                    <Text style={styles.requestMetaLabel}>PHOTOS/VIDEOS</Text>
                     <View style={styles.inlineMeta}>
                       <ImageIcon size={13} color={Colors.purple} />
-                      <Text style={styles.requestMetaValue}>{evidenceCount} files</Text>
+                      <Text style={styles.requestMetaValue}>{evidenceCount} photo{evidenceCount !== 1 ? 's' : ''} added</Text>
                     </View>
                   </View>
                 </View>
@@ -518,8 +518,8 @@ export default function FindingWorkerScreen() {
               >
                 <View style={styles.responseCopy}>
                   <Text style={styles.responseEyebrow}>USTADS ARE READY</Text>
-                  <Text style={styles.responseTitle}>Review {applicants.length} proposal{applicants.length === 1 ? '' : 's'}</Text>
-                  <Text style={styles.responseText}>Compare profiles, ratings, and quoted prices before selecting an Ustad.</Text>
+                  <Text style={styles.responseTitle}>Review {applicants.length} offer{applicants.length === 1 ? '' : 's'}</Text>
+                  <Text style={styles.responseText}>Compare profiles, ratings, and offers before choosing an Ustad.</Text>
                 </View>
                 <View style={styles.responseProfiles}>
                   {applicants.slice(0, 3).map((applicant) => (
@@ -544,7 +544,7 @@ export default function FindingWorkerScreen() {
                   ))}
                 </View>
                 <TouchableOpacity style={styles.reviewButton} onPress={handleReviewFirstProposal} activeOpacity={0.78}>
-                  <Text style={styles.reviewButtonText}>Review first proposal</Text>
+                  <Text style={styles.reviewButtonText}>Review first offer</Text>
                   <ChevronRight size={17} color="#001014" strokeWidth={2.8} />
                 </TouchableOpacity>
               </LinearGradient>
@@ -552,7 +552,7 @@ export default function FindingWorkerScreen() {
           ) : (
             <View style={styles.waitingNote}>
               <Clock size={15} color={Colors.textMuted} />
-              <Text style={styles.waitingText}>You can return home safely. Search will continue in the background.</Text>
+              <Text style={styles.waitingText}>You can safely leave this screen. We will continue searching in the background.</Text>
             </View>
           )}
 
@@ -560,13 +560,13 @@ export default function FindingWorkerScreen() {
             <View style={styles.statItem}>
               <Users size={15} color={Colors.cyan} />
               <Text style={styles.statVal}>{applicants.length}</Text>
-              <Text style={styles.statLab}>PROPOSALS</Text>
+              <Text style={styles.statLab}>OFFERS</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Radio size={15} color={Colors.pink} />
-              <Text style={styles.statVal}>{isInstant ? 'Instant' : 'Scheduled'}</Text>
-              <Text style={styles.statLab}>REQUEST TYPE</Text>
+              <Text style={styles.statVal}>{isInstant ? 'Urgent' : 'Scheduled'}</Text>
+              <Text style={styles.statLab}>JOB TYPE</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
@@ -578,7 +578,7 @@ export default function FindingWorkerScreen() {
 
           {averageApplicantRating !== null && (
             <Text style={styles.ratingSummary}>
-              Proposal average: {averageApplicantRating.toFixed(1)} rating
+              Average rating: {averageApplicantRating.toFixed(1)} rating
             </Text>
           )}
 
@@ -622,8 +622,8 @@ export default function FindingWorkerScreen() {
                 <View style={styles.modalHandle} />
                 <View style={styles.modalHeader}>
                   <View style={styles.modalHeaderCopy}>
-                    <Text style={styles.modalTitle}>USTAD PROPOSAL</Text>
-                    <Text style={styles.modalSubtitle}>Review the offer and specialist profile</Text>
+                    <Text style={styles.modalTitle}>USTAD OFFER</Text>
+                    <Text style={styles.modalSubtitle}>Review the offer and Ustad profile</Text>
                   </View>
                   <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
                     <X size={19} color={Colors.textMuted} />
@@ -680,15 +680,15 @@ export default function FindingWorkerScreen() {
                   <View style={styles.proposalCard}>
                     <View style={styles.proposalHeader}>
                       <MessageSquare size={14} color={Colors.cyan} />
-                      <Text style={styles.proposalTitle}>PROPOSAL NOTE</Text>
+                      <Text style={styles.proposalTitle}>OFFER NOTE</Text>
                     </View>
                     <Text style={styles.proposalText}>
-                      {selectedWorker?.message || 'This Ustad is ready to take your service request.'}
+                      {selectedWorker?.message || 'I am ready to help you with this job.'}
                     </Text>
                     <View style={styles.proposalDivider} />
                     <View style={styles.proposalFooter}>
                       <View>
-                        <Text style={styles.proposalLabel}>QUOTED TOTAL</Text>
+                        <Text style={styles.proposalLabel}>OFFERED PRICE</Text>
                         {appliedPromo?.isValid ? (
                           <View style={styles.priceContainer}>
                             <Text style={styles.strikethroughAmount}>{formatMoney(selectedPrice)}</Text>

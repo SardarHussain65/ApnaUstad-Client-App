@@ -7,7 +7,9 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
@@ -34,13 +36,15 @@ import {
   ShieldCheck,
   Star,
   UserRound,
+  Volume2,
   XCircle,
   Zap,
 } from 'lucide-react-native';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { Typography } from '../constants/Theme';
-import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation } from '../hooks';
+import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
 import { AlertModal } from '../components/ui/BeautifulModal';
@@ -67,17 +71,17 @@ const P = {
 
 const STATUS_MAP: Record<string, { color: string; muted: string; label: string; title: string; Icon: React.ComponentType<any> }> = {
   pending: { color: P.orange, muted: P.orangeMuted, label: 'Pending', title: 'Request sent', Icon: Clock3 },
-  accepted: { color: P.cyan, muted: P.cyanMuted, label: 'Accepted', title: 'Ustad assigned', Icon: ShieldCheck },
+  accepted: { color: P.cyan, muted: P.cyanMuted, label: 'Assigned', title: 'Ustad assigned', Icon: ShieldCheck },
   ongoing: { color: P.cyan, muted: P.cyanMuted, label: 'Ongoing', title: 'Work in progress', Icon: Navigation },
   completed: { color: P.green, muted: P.greenMuted, label: 'Completed', title: 'Job completed', Icon: CheckCircle2 },
   cancelled: { color: P.red, muted: P.redMuted, label: 'Cancelled', title: 'Job cancelled', Icon: XCircle },
 };
 
 const STEPS = [
-  { value: 'pending', label: 'Request' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'ongoing', label: 'On site' },
-  { value: 'completed', label: 'Done' },
+  { value: 'pending', label: 'Posted' },
+  { value: 'accepted', label: 'Assigned' },
+  { value: 'ongoing', label: 'Started' },
+  { value: 'completed', label: 'Completed' },
 ] as const;
 
 const formatCurrency = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString()}`;
@@ -224,6 +228,7 @@ function FloatingAction({
 }
 
 export default function TransactionDetailsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
@@ -232,7 +237,13 @@ export default function TransactionDetailsScreen() {
   const isWorker = role === 'worker';
 
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
   const bypassBeforeRemoveRef = useRef(false);
+
+  const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
+  const galleryCardWidth = windowWidth - 72;
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -327,9 +338,12 @@ export default function TransactionDetailsScreen() {
   const visibleStepIndex = stepIndex < 0 ? 0 : stepIndex;
   const latitude = typeof booking.location === 'object' && booking.location.coordinates ? booking.location.coordinates[1] : 0;
   const longitude = typeof booking.location === 'object' && booking.location.coordinates ? booking.location.coordinates[0] : 0;
-  const visualMedia = buildJobEvidenceItems({
+  const photosAndVideos = buildJobEvidenceItems({
     images: booking.imageUrls || [],
     videos: booking.videoUrls || [],
+  });
+
+  const voiceBriefs = buildJobEvidenceItems({
     audios: booking.audioUrls || [],
   });
 
@@ -516,31 +530,147 @@ export default function TransactionDetailsScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          {visualMedia.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(200).duration(450)} style={styles.section}>
-              <SectionHeader icon={ImageIcon} title="Work Evidence" />
-              <JobEvidenceGallery items={visualMedia} />
-            </Animated.View>
-          )}
+          {/* Unified Collapsible Job Details Card */}
+          {(voiceBriefs.length > 0 || photosAndVideos.length > 0 || !!booking.description || !!booking.category) && (
+            <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
+              <SectionHeader icon={BriefcaseBusiness} title="Job Details" />
+              
+              <View style={styles.unifiedJobCard}>
+                <LinearGradient
+                  colors={['rgba(9, 12, 32, 0.94)', 'rgba(12, 16, 42, 0.98)']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                
+                {/* Primary Info: Written Description (Always visible, max 3 lines when collapsed) */}
+                {!!booking.description && (
+                  <View style={styles.primaryDescBlock}>
+                    <Text style={styles.primaryDescLabel}>DESCRIPTION</Text>
+                    <Text 
+                      style={styles.primaryDescText} 
+                      numberOfLines={isDetailsExpanded ? undefined : 3}
+                    >
+                      {booking.description}
+                    </Text>
+                  </View>
+                )}
 
-          <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
-            <SectionHeader icon={BriefcaseBusiness} title="Job Details" />
-            <View style={styles.detailCard}>
-              <InfoRow icon={BriefcaseBusiness} label="Category" value={booking.category || serviceTitle} />
-              <InfoRow icon={MapPin} label="Service Location" value={addressLabel} />
-              {!!workerLocation && (
-                <InfoRow icon={MapPin} label="Worker Location" value={workerLocation} />
-              )}
-              <InfoRow icon={Clock3} label="Estimated Hours" value={`${booking.estimatedHours || 1} hour${booking.estimatedHours === 1 ? '' : 's'}`} />
-              <InfoRow icon={Banknote} label={isWorker ? 'Hourly Rate' : 'Quoted Rate'} value={formatCurrency(booking.hourlyRate)} />
-            </View>
-          </Animated.View>
+                {/* Primary Specifications: Category & Duration Badges */}
+                <View style={styles.primaryBadgesRow}>
+                  <View style={styles.primaryBadge}>
+                    <BriefcaseBusiness size={11} color={P.cyan} />
+                    <Text style={styles.primaryBadgeText} numberOfLines={1}>
+                      {booking.category || serviceTitle}
+                    </Text>
+                  </View>
+                  <View style={[styles.primaryBadge, { borderColor: 'rgba(255, 140, 0, 0.25)' }]}>
+                    <Clock3 size={11} color={P.orange} />
+                    <Text style={styles.primaryBadgeText} numberOfLines={1}>
+                      {booking.estimatedHours || 1} hour{booking.estimatedHours === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                </View>
 
-          {!!booking.description && (
-            <Animated.View entering={FadeInDown.delay(380).duration(450)} style={styles.section}>
-              <SectionHeader icon={ShieldCheck} title="Job Description" />
-              <View style={styles.briefCard}>
-                <Text style={styles.briefText}>{booking.description}</Text>
+                {/* Collapsed Preview Item Indicators (Photo pile, Voice, Specs) */}
+                {!isDetailsExpanded && (
+                  <View style={styles.collapsedPreviewContainer}>
+                    {/* Photos/Videos stack preview */}
+                    {photosAndVideos.length > 0 && (
+                      <View style={styles.previewItem}>
+                        <View style={styles.thumbnailPile}>
+                          {photosAndVideos.slice(0, 3).map((item, idx) => (
+                            <Image 
+                              key={idx}
+                              source={{ uri: item.url }} 
+                              style={[
+                                styles.previewThumbnail, 
+                                { marginLeft: idx > 0 ? -12 : 0, zIndex: 3 - idx }
+                              ]} 
+                            />
+                          ))}
+                        </View>
+                        <Text style={styles.previewItemText}>
+                          {photosAndVideos.length} File{photosAndVideos.length !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Voice Brief indicator preview */}
+                    {voiceBriefs.length > 0 && (
+                      <View style={styles.previewItem}>
+                        <View style={styles.voicePreviewIcon}>
+                          <Volume2 size={10} color={P.orange} strokeWidth={2.5} />
+                        </View>
+                        <Text style={[styles.previewItemText, { color: P.orange }]}>
+                          Voice Brief
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Spec Indicators preview */}
+                    <View style={styles.previewItem}>
+                      <View style={styles.specsPreviewIcon}>
+                        <MapPin size={10} color={P.cyan} strokeWidth={2.5} />
+                      </View>
+                      <Text style={[styles.previewItemText, { color: P.cyan }]}>
+                        Loc & Rates
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Collapsible Content */}
+                {isDetailsExpanded && (
+                  <Animated.View entering={FadeInDown.duration(300)} style={styles.expandedContentBlock}>
+                    
+                    {/* 1. Photos & Videos section (if any) */}
+                    {photosAndVideos.length > 0 && (
+                      <View style={styles.detailsSubSection}>
+                        <Text style={styles.detailsSubSectionTitle}>PHOTOS & VIDEOS</Text>
+                        <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} cardWidth={galleryCardWidth} />
+                      </View>
+                    )}
+
+                    {/* 2. Voice brief player (if any) */}
+                    {voiceBriefs.length > 0 && (
+                      <View style={styles.detailsSubSection}>
+                        <Text style={styles.detailsSubSectionTitle}>
+                          {isWorker ? "CLIENT'S VOICE BRIEF" : "YOUR VOICE BRIEF"}
+                        </Text>
+                        <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} cardWidth={galleryCardWidth} />
+                      </View>
+                    )}
+
+                    {/* 3. Fully detailed specifications (Location & Rates) */}
+                    <View style={styles.detailsSubSection}>
+                      <Text style={styles.detailsSubSectionTitle}>ADDITIONAL DETAILS</Text>
+                      <View style={styles.detailSpecsCard}>
+                        <InfoRow icon={MapPin} label="Service Location" value={addressLabel} />
+                        <InfoRow 
+                          icon={Banknote} 
+                          label={isWorker ? 'Hourly Rate' : 'Quoted Rate'} 
+                          value={formatCurrency(booking.hourlyRate)} 
+                        />
+                      </View>
+                    </View>
+
+                  </Animated.View>
+                )}
+
+                {/* Expansion Toggle Button */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setIsDetailsExpanded(prev => !prev)}
+                  style={styles.unifiedCardToggle}
+                >
+                  <Text style={styles.unifiedCardToggleText}>
+                    {isDetailsExpanded ? 'Show Less' : 'Show More Details'}
+                  </Text>
+                  <ChevronRight
+                    size={14}
+                    color={P.cyan}
+                    style={{ transform: [{ rotate: isDetailsExpanded ? '270deg' : '90deg' }] }}
+                  />
+                </TouchableOpacity>
               </View>
             </Animated.View>
           )}
@@ -606,16 +736,88 @@ export default function TransactionDetailsScreen() {
                   <Text style={styles.noticeText}>Your feedback has been recorded for this job.</Text>
                 </View>
               ) : (
-                <View style={styles.reviewCard}>
-                  <View style={styles.reviewIcon}>
-                    <Star size={22} color={P.gold} fill={P.gold} />
+                <View style={styles.inlineReviewCard}>
+                  <Text style={styles.inlineReviewTitle}>Rate {partnerName}</Text>
+                  <Text style={styles.inlineReviewSubtitle}>
+                    A quick review helps improve service quality for future customers.
+                  </Text>
+
+                  {/* 5-Star Selection Row */}
+                  <View style={styles.starsRowContainer}>
+                    {[1, 2, 3, 4, 5].map((num) => {
+                      const active = num <= selectedRating;
+                      return (
+                        <TouchableOpacity 
+                          key={num} 
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setSelectedRating(num);
+                          }}
+                          activeOpacity={0.7}
+                          style={styles.starTouch}
+                        >
+                          <Star 
+                            size={32} 
+                            color={active ? P.gold : 'rgba(255,255,255,0.15)'} 
+                            fill={active ? P.gold : 'transparent'} 
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                  <View style={styles.reviewCopy}>
-                    <Text style={styles.reviewTitle}>Rate {partnerName}</Text>
-                    <Text style={styles.reviewText}>A quick review helps improve service quality for future customers.</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => router.push({ pathname: '/review', params: { bookingId: id } })} style={styles.reviewButton} activeOpacity={0.86}>
-                    <Text style={styles.reviewButtonText}>Rate</Text>
+
+                  {/* Comment Input */}
+                  <TextInput
+                    style={styles.reviewInput}
+                    placeholder="Write a comment about their work... (optional)"
+                    placeholderTextColor={P.textDim}
+                    value={reviewComment}
+                    onChangeText={setReviewComment}
+                    multiline
+                    numberOfLines={3}
+                  />
+
+                  {/* Submit Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.reviewSubmitBtn,
+                      (selectedRating === 0 || isCreatingReview) && styles.reviewSubmitBtnDisabled
+                    ]}
+                    disabled={selectedRating === 0 || isCreatingReview}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      createReview({
+                        booking: id as string,
+                        worker: workerId as string,
+                        rating: selectedRating,
+                        comment: reviewComment.trim() || undefined,
+                      }, {
+                        onSuccess: () => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          Toast.show({
+                            type: 'success',
+                            text1: 'Review Submitted',
+                            text2: 'Thank you for your feedback!',
+                          });
+                          refetch();
+                        },
+                        onError: (err: any) => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                          Toast.show({
+                            type: 'error',
+                            text1: 'Failed to Submit Review',
+                            text2: err.response?.data?.message || 'Please try again.',
+                          });
+                        }
+                      });
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    {isCreatingReview ? (
+                      <ActivityIndicator size="small" color="#001014" />
+                    ) : (
+                      <Text style={styles.reviewSubmitBtnText}>Submit Review</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -1438,5 +1640,195 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  unifiedJobCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: P.surfaceStrong,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  primaryDescBlock: {
+    marginBottom: 12,
+  },
+  primaryDescLabel: {
+    color: P.cyan,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  primaryDescText: {
+    color: P.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  primaryBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  primaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  primaryBadgeText: {
+    color: P.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  expandedContentBlock: {
+    marginTop: 16,
+    gap: 16,
+  },
+  detailsSubSection: {
+    gap: 8,
+  },
+  detailsSubSectionTitle: {
+    color: P.textDim,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginLeft: 4,
+  },
+  detailSpecsCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    overflow: 'hidden',
+  },
+  unifiedCardToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    marginHorizontal: -16,
+    marginBottom: -16,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  unifiedCardToggleText: {
+    color: P.cyan,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  collapsedPreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  previewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  thumbnailPile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewThumbnail: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: P.surfaceStrong,
+    backgroundColor: '#000',
+  },
+  previewItemText: {
+    color: P.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  voicePreviewIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 140, 0, 0.12)',
+  },
+  specsPreviewIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 245, 255, 0.12)',
+  },
+  inlineReviewCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.18)',
+    backgroundColor: 'rgba(255,215,0,0.04)',
+    padding: 16,
+    gap: 12,
+  },
+  inlineReviewTitle: {
+    color: P.text,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  inlineReviewSubtitle: {
+    color: P.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  starsRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 6,
+  },
+  starTouch: {
+    padding: 4,
+  },
+  reviewInput: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    color: P.text,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 12,
+    minHeight: 64,
+    textAlignVertical: 'top',
+  },
+  reviewSubmitBtn: {
+    borderRadius: 14,
+    backgroundColor: P.gold,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  reviewSubmitBtnDisabled: {
+    opacity: 0.5,
+  },
+  reviewSubmitBtnText: {
+    color: '#201600',
+    fontSize: 13,
+    fontWeight: '900',
   },
 });

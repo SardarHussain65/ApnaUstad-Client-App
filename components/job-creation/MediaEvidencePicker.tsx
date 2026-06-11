@@ -12,6 +12,7 @@ interface MediaEvidencePickerProps {
   onPickMedia: () => void;
   onRemoveMedia: (index: number) => void;
   onClearAll: () => void;
+  hideLabel?: boolean;
 }
 
 export function MediaEvidencePicker({
@@ -19,6 +20,7 @@ export function MediaEvidencePicker({
   onPickMedia,
   onRemoveMedia,
   onClearAll,
+  hideLabel = false,
 }: MediaEvidencePickerProps) {
   const selectedImageCount = selectedMedia.filter((asset) => asset.type === 'image').length;
   const selectedVideoCount = selectedMedia.filter((asset) => asset.type === 'video').length;
@@ -29,8 +31,8 @@ export function MediaEvidencePicker({
   };
 
   return (
-    <View style={styles.section}>
-      <SectionLabel icon={Camera} label="PHOTOS OR VIDEO" color={P.purple} badge="Optional" />
+    <View style={hideLabel ? null : styles.section}>
+      {!hideLabel && <SectionLabel icon={Camera} label="PHOTOS OR VIDEO" color={P.purple} badge="Optional" />}
 
       {selectedMedia.length === 0 ? (
         <TouchableOpacity activeOpacity={0.75} onPress={onPickMedia} style={styles.dropzone}>
