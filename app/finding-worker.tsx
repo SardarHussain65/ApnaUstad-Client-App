@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Alert, ScrollView, TextInput } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Alert, ScrollView, TextInput, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Shield, Star, MapPin, Check, Briefcase, Award, Clock, Eye, ChevronRight, MessageSquare, ArrowLeft, Search, Users, Radio, Image as ImageIcon, CalendarDays, Tag, Percent } from 'lucide-react-native';
+import { X, Shield, Star, MapPin, Check, Briefcase, Award, Clock, Eye, ChevronRight, MessageSquare, ArrowLeft, Search, Users, Radio, Image as ImageIcon, CalendarDays, Tag, Percent, Zap } from 'lucide-react-native';
 import Animated, { 
   useAnimatedStyle, 
   withRepeat, 
@@ -21,6 +21,7 @@ import { useAcceptBidMutation, useCancelJobMutation } from '../hooks/mutations/u
 import { useBidsByJob, useJobDetails } from '../hooks/queries/useMessagesAndJobs';
 import api from '../services/api';
 import Toast from 'react-native-toast-message';
+import { addAlpha } from '../utils/colorUtils';
 
 const getWorkerRating = (worker?: any) => {
   const rating = Number(worker?.rating ?? worker?.averageRating ?? 0);
@@ -57,7 +58,45 @@ export default function FindingWorkerScreen() {
 
   const bypassBeforeRemoveRef = useRef(false);
 
-  const { data: job } = useJobDetails(jobId as string);
+  const { data: job, refetch: refetchJob } = useJobDetails(jobId as string);
+  const isInstant = job?.urgency === 'instant';
+
+  const getRemainingTimeForEscalation = () => {
+    if (!job?.createdAt) return 600;
+    const createdTime = new Date(job.createdAt).getTime();
+    const nowTime = Date.now();
+    const elapsedMs = nowTime - createdTime;
+    
+    const version = job.urgencyPricingVersion || 1;
+    if (version === 1) {
+      // 10 minutes countdown to next escalation
+      const limitMs = 10 * 60 * 1000;
+      const remainingMs = Math.max(0, limitMs - elapsedMs);
+      return Math.floor(remainingMs / 1000);
+    } else {
+      // 10 minutes countdown (total 20 min)
+      const limitMs = 20 * 60 * 1000;
+      const remainingMs = Math.max(0, limitMs - elapsedMs);
+      return Math.floor(remainingMs / 1000);
+    }
+  };
+
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(600);
+
+  useEffect(() => {
+    if (!isInstant) return;
+    const timer = setInterval(() => {
+      const rem = getRemainingTimeForEscalation();
+      setRemainingSeconds(rem);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [job, isInstant]);
+
+  const formatCountdown = (secs: number) => {
+    const minutes = Math.floor(secs / 60);
+    const seconds = secs % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -194,6 +233,45 @@ export default function FindingWorkerScreen() {
       }, 1500);
     });
 
+    const unsubscribeAutoAssigned = socketService.on('job:auto_assigned', (data: any) => {
+      setStatus('Ustad assigned');
+      
+      Toast.show({
+        type: 'success',
+        text1: 'USTAD ASSIGNED! ⚡',
+        text2: 'An Ustad has accepted your urgent request.',
+      });
+      
+      setTimeout(() => {
+        bypassBeforeRemoveRef.current = true;
+        router.replace({
+          pathname: '/transaction-details',
+          params: { id: data._id }
+        });
+      }, 1500);
+    });
+
+    const unsubscribeSearchExtended = socketService.on('job:search_extended', (data: any) => {
+      if (data?.jobId && String(data.jobId) !== String(jobId)) return;
+      
+      if (data?.timeout) {
+        Toast.show({
+          type: 'info',
+          text1: 'Search Timeout',
+          text2: 'No Ustads accepted yet. Keep searching or cancel.',
+          visibilityTime: 6000
+        });
+      } else {
+        Toast.show({
+          type: 'info',
+          text1: 'Searching Expanded! ⚡',
+          text2: `Increasing fixed price to Rs. ${data.newPrice.toLocaleString()} for wider search.`,
+          visibilityTime: 6000
+        });
+        refetchJob();
+      }
+    });
+
     const unsubscribeBids = socketService.on('bid:new', (newBid: any) => {
       const bidJobId = String(newBid?.jobPost?._id || newBid?.jobPost || '');
       if (bidJobId && bidJobId !== String(jobId)) return;
@@ -217,6 +295,8 @@ export default function FindingWorkerScreen() {
 
     return () => {
       unsubscribeAssigned();
+      unsubscribeAutoAssigned();
+      unsubscribeSearchExtended();
       unsubscribeBids();
       unsubscribeWithdrawn();
     };
@@ -348,7 +428,6 @@ export default function FindingWorkerScreen() {
     || (job?.imageUrls?.length || 0) + (job?.videoUrls?.length || 0)
   );
   const isSearching = applicants.length === 0;
-  const isInstant = job?.urgency === 'instant';
   const scheduledDateLabel = job?.detailMeta?.schedule?.fullDateLabel
     || (job?.scheduledDate
       ? new Date(job.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -376,65 +455,103 @@ export default function FindingWorkerScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          <Animated.View entering={FadeIn.duration(500)} style={styles.searchHero}>
-            <LinearGradient
-              colors={['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(191,90,242,0.10)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.searchHeroGradient}
-            >
-              <View style={styles.searchStatusBadge}>
-                <Radio size={13} color={Colors.cyan} />
-                <Text style={styles.searchStatusText}>{isSearching ? 'SEARCHING FOR USTADS' : `${applicants.length} OFFER${applicants.length === 1 ? '' : 'S'} RECEIVED`}</Text>
-              </View>
-
-              <View style={styles.animationContainer}>
-                <Animated.View style={[styles.pulseRing, ringStyle]} />
-                <View style={styles.satelliteOrbit}>
-                  {applicants.slice(0, 6).map((app, index) => {
-                    const angle = (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
-                    const radius = 91;
-                    const tx = radius * Math.cos(angle);
-                    const ty = radius * Math.sin(angle);
-
-                    return (
-                      <TouchableOpacity
-                        key={app._id}
-                        onPress={() => handleWorkerPress(app)}
-                        style={[
-                          styles.satelliteContainer,
-                          { transform: [{ translateX: tx }, { translateY: ty }] }
-                        ]}
-                      >
-                        <Animated.View entering={FadeIn.delay(180 * index).duration(450)} style={styles.satelliteGlow}>
-                          <Image
-                            source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
-                            style={styles.satelliteImage}
-                          />
-                          <View style={styles.priceBadge}>
-                            <Text style={styles.priceText}>{formatMoney(app.proposedPrice)}</Text>
-                          </View>
-                        </Animated.View>
-                      </TouchableOpacity>
-                    );
-                  })}
+          {isInstant ? (
+            <Animated.View entering={FadeIn.duration(500)} style={styles.searchHero}>
+              <LinearGradient
+                colors={['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(123,97,255,0.12)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.searchHeroGradient}
+              >
+                <View style={[styles.searchStatusBadge, { borderColor: addAlpha(Colors.cyan, '30') }]}>
+                  <Radio size={13} color={Colors.cyan} />
+                  <Text style={styles.searchStatusText}>WAITING FOR USTAD TO ACCEPT</Text>
                 </View>
-                <Animated.View style={[styles.orbitContainer, orbitStyle]}>
-                  <View style={styles.orbitNode} />
-                </Animated.View>
-                <View style={styles.centerNode}>
-                  {isBidsLoading ? <ActivityIndicator size="small" color={Colors.cyan} /> : <Search color={Colors.cyan} size={28} />}
-                </View>
-              </View>
 
-              <Text style={[styles.statusText, Typography.threeD]}>{status}</Text>
-              <Text style={styles.subText}>
-                {isSearching
-                  ? 'Your request has been sent to nearby Ustads.'
-                  : 'Review the offers and choose the Ustad who fits your work best.'}
-              </Text>
-            </LinearGradient>
-          </Animated.View>
+                {/* Big Visual Countdown timer */}
+                <View style={styles.countdownContainer}>
+                  <Text style={styles.countdownValue}>{formatCountdown(remainingSeconds)}</Text>
+                  <Text style={styles.countdownLabel}>
+                    {(job?.urgencyPricingVersion || 1) === 1 
+                      ? "Until price escalates +15% & radius expands" 
+                      : "Until search times out"}
+                  </Text>
+                </View>
+
+                <View style={styles.fixedPriceContainer}>
+                  <Text style={styles.fixedPriceLabel}>⚡ LOCKED FIXED PRICE</Text>
+                  <Text style={styles.fixedPriceAmount}>
+                    Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
+                  </Text>
+                </View>
+
+                <Text style={[styles.statusText, Typography.threeD]}>Searching Ustads...</Text>
+                <Text style={styles.subText}>
+                  Your request has been broadcasted to all nearby verified Ustads at this fixed price. The first Ustad to accept will be hired instantly.
+                </Text>
+              </LinearGradient>
+            </Animated.View>
+          ) : (
+            <Animated.View entering={FadeIn.duration(500)} style={styles.searchHero}>
+              <LinearGradient
+                colors={['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(191,90,242,0.10)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.searchHeroGradient}
+              >
+                <View style={styles.searchStatusBadge}>
+                  <Radio size={13} color={Colors.cyan} />
+                  <Text style={styles.searchStatusText}>{isSearching ? 'SEARCHING FOR USTADS' : `${applicants.length} OFFER${applicants.length === 1 ? '' : 'S'} RECEIVED`}</Text>
+                </View>
+
+                <View style={styles.animationContainer}>
+                  <Animated.View style={[styles.pulseRing, ringStyle]} />
+                  <View style={styles.satelliteOrbit}>
+                    {applicants.slice(0, 6).map((app, index) => {
+                      const angle = (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
+                      const radius = 91;
+                      const tx = radius * Math.cos(angle);
+                      const ty = radius * Math.sin(angle);
+
+                      return (
+                        <TouchableOpacity
+                          key={app._id}
+                          onPress={() => handleWorkerPress(app)}
+                          style={[
+                            styles.satelliteContainer,
+                            { transform: [{ translateX: tx }, { translateY: ty }] }
+                          ]}
+                        >
+                          <Animated.View entering={FadeIn.delay(180 * index).duration(450)} style={styles.satelliteGlow}>
+                            <Image
+                              source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
+                              style={styles.satelliteImage}
+                            />
+                            <View style={styles.priceBadge}>
+                              <Text style={styles.priceText}>{formatMoney(app.proposedPrice)}</Text>
+                            </View>
+                          </Animated.View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <Animated.View style={[styles.orbitContainer, orbitStyle]}>
+                    <View style={styles.orbitNode} />
+                  </Animated.View>
+                  <View style={styles.centerNode}>
+                    {isBidsLoading ? <ActivityIndicator size="small" color={Colors.cyan} /> : <Search color={Colors.cyan} size={28} />}
+                  </View>
+                </View>
+
+                <Text style={[styles.statusText, Typography.threeD]}>{status}</Text>
+                <Text style={styles.subText}>
+                  {isSearching
+                    ? 'Your request has been sent to nearby Ustads.'
+                    : 'Review the offers and choose the Ustad who fits your work best.'}
+                </Text>
+              </LinearGradient>
+            </Animated.View>
+          )}
 
           {job && (
             <Animated.View entering={FadeIn.delay(200)} style={styles.jobBriefCard}>
@@ -508,7 +625,7 @@ export default function FindingWorkerScreen() {
             </Animated.View>
           )}
 
-          {applicants.length > 0 ? (
+          {!isInstant && applicants.length > 0 ? (
             <Animated.View entering={SlideInDown.springify().damping(16)} style={styles.responseCard}>
               <LinearGradient
                 colors={['rgba(0,255,127,0.15)', 'rgba(0,245,255,0.08)']}
@@ -861,6 +978,55 @@ export default function FindingWorkerScreen() {
 }
 
 const styles = StyleSheet.create({
+  countdownContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 18,
+    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    width: '85%',
+  },
+  countdownValue: {
+    fontSize: 48,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    letterSpacing: 2,
+  },
+  countdownLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.cyan,
+    textTransform: 'uppercase',
+    marginTop: 6,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  fixedPriceContainer: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: addAlpha(Colors.cyan, '10'),
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: addAlpha(Colors.cyan, '30'),
+    marginBottom: 20,
+  },
+  fixedPriceLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.cyan,
+    letterSpacing: 1,
+  },
+  fixedPriceAmount: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: Colors.cyan,
+    marginTop: 2,
+  },
   container: {
     flex: 1,
   },

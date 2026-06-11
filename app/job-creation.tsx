@@ -61,6 +61,8 @@ import { SchedulePickerModal } from '../components/job-creation/SchedulePickerMo
 import { GlassInput, P, SectionLabel, StatBadge } from '../components/job-creation/shared';
 import { UrgencyToggle } from '../components/job-creation/UrgencyToggle';
 import { VoiceBriefRecorder } from '../components/job-creation/VoiceBriefRecorder';
+import { UrgentPricingCard } from '../components/job-creation/UrgentPricingCard';
+import { calculateUrgentPrice } from '../constants/UrgentPricing';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Urgency = 'instant' | 'scheduled';
@@ -159,6 +161,7 @@ export default function JobCreationScreen() {
   );
   const [description, setDescription] = useState<string>(initialDescription ?? '');
   const [amount, setAmount] = useState<string>('');
+  const [estimatedHours, setEstimatedHours] = useState<number>(2);
   const [selectedMedia, setSelectedMedia] = useState<EvidenceAsset[]>([]);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('Detecting location...');
@@ -363,7 +366,7 @@ export default function JobCreationScreen() {
       showError('Invalid Location', 'Please provide or detect a booking address.');
       return;
     }
-    if (amount && Number(amount) <= 0) {
+    if (!isInstant && amount && Number(amount) <= 0) {
       showError('Invalid Offer', 'Please enter a positive amount or leave the field blank for an open bid.');
       return;
     }
@@ -373,16 +376,20 @@ export default function JobCreationScreen() {
         return;
       }
     }
+    
+    const fixedPrice = isInstant ? calculateUrgentPrice(title ?? 'General', estimatedHours) : 0;
     showConfirm(
-      'Post Service Request',
-      `Your ${isInstant ? 'instant' : 'scheduled'} service request is ready to post.`,
+      isInstant ? 'Post Urgent Job' : 'Post Service Request',
+      isInstant 
+        ? `You are posting an urgent job with a fixed price of Rs. ${fixedPrice.toLocaleString()}. The first Ustad to accept will be auto-assigned.`
+        : `Your scheduled service request is ready to post.`,
       handleConfirmSubmit,
       closeConfirm,
       'Post Request',
       'Keep Editing',
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, address, amount, isInstant, scheduledDate, scheduledTime, validateSchedule]);
+  }, [description, address, amount, estimatedHours, isInstant, scheduledDate, scheduledTime, validateSchedule]);
 
   const handleConfirmSubmit = useCallback(async () => {
     setConfirmLoading(true);
@@ -423,12 +430,17 @@ export default function JobCreationScreen() {
         uploadedAudioUrls = response.audioUrls ?? [];
       }
 
+      const fixedPrice = isInstant
+        ? calculateUrgentPrice(title ?? 'General', estimatedHours)
+        : (amount && Number(amount) > 0) ? parseFloat(amount) : 500;
+
       const payload = {
         category: title ?? 'General',
         description,
         urgency,
         address,
-        amount: (amount && Number(amount) > 0) ? parseFloat(amount) : 500,
+        amount: fixedPrice,
+        estimatedHours: isInstant ? estimatedHours : undefined,
         imageUrls: uploadedImageUrls,
         videoUrls: uploadedVideoUrls,
         audioUrls: uploadedAudioUrls,
@@ -457,7 +469,7 @@ export default function JobCreationScreen() {
     }
   }, [
     selectedMedia, voiceNoteUri, uploadImages, title, description, urgency,
-    address, amount, longitude, latitude, targetWorkerId,
+    address, amount, estimatedHours, longitude, latitude, targetWorkerId,
     isInstant, scheduledDate, scheduledTime,
     createJob, closeConfirm, showError, setConfirmLoading,
   ]);
@@ -635,23 +647,33 @@ export default function JobCreationScreen() {
               <View style={styles.optionalLine} />
             </Animated.View>
 
-            {/* ── Budget Offer (Collapsible Optional) ── */}
-            <Animated.View entering={FadeInDown.delay(320).duration(600)}>
-              <CollapsibleCard
-                title="YOUR OFFER"
-                icon={Banknote}
-                color={P.success}
-                summary={budgetSummary}
-                isExpanded={expandedSections.budget}
-                onToggle={() => toggleSection('budget')}
-              >
-                <BudgetInput
-                  amount={amount}
-                  onChangeAmount={setAmount}
-                  hideLabel
+            {/* ── Budget / Urgent Fixed Price Card ── */}
+            {isInstant ? (
+              <Animated.View entering={FadeInDown.delay(320).duration(600)}>
+                <UrgentPricingCard
+                  category={title ?? 'General'}
+                  estimatedHours={estimatedHours}
+                  onChangeHours={setEstimatedHours}
                 />
-              </CollapsibleCard>
-            </Animated.View>
+              </Animated.View>
+            ) : (
+              <Animated.View entering={FadeInDown.delay(320).duration(600)}>
+                <CollapsibleCard
+                  title="YOUR OFFER"
+                  icon={Banknote}
+                  color={P.success}
+                  summary={budgetSummary}
+                  isExpanded={expandedSections.budget}
+                  onToggle={() => toggleSection('budget')}
+                >
+                  <BudgetInput
+                    amount={amount}
+                    onChangeAmount={setAmount}
+                    hideLabel
+                  />
+                </CollapsibleCard>
+              </Animated.View>
+            )}
 
             {/* ── Schedule (Collapsible Optional, conditional) ── */}
             {!isInstant && (
@@ -812,8 +834,11 @@ export default function JobCreationScreen() {
           visible={confirmVisible}
           onConfirm={handleConfirmSubmit}
           onCancel={closeConfirm}
-          title="Post Job Request?"
-          message={isInstant ? "Are you sure you want to broadcast this request to nearby Ustads?" : "Are you sure you want to schedule and broadcast this request?"}
+          title={isInstant ? "Post Urgent Job?" : "Post Job Request?"}
+          message={isInstant 
+            ? `You are posting an urgent job with a fixed price of Rs. ${calculateUrgentPrice(title ?? 'General', estimatedHours).toLocaleString()}. The first Ustad to accept will be auto-assigned instantly.`
+            : "Are you sure you want to schedule and broadcast this request?"
+          }
           confirmText="Yes, Post Job"
           cancelText="Cancel"
           isLoading={isConfirming}
@@ -826,7 +851,7 @@ export default function JobCreationScreen() {
           type="success"
           buttonText="OK"
           message={isInstant 
-            ? "Your job has been posted! Nearby Ustads can now see your request and send you offers.\n\nYou can track updates in your Bookings." 
+            ? "Your urgent job has been posted!\n\nThe first Ustad to accept will be auto-assigned instantly. We are finding the best Ustad for you right now." 
             : "Your scheduled job has been posted! Ustads will review and send you bids.\n\nYou can track updates in your Bookings."
           }
         />
