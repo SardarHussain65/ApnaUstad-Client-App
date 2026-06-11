@@ -359,7 +359,7 @@ export function WorkerHome() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Radio color="#FF8C00" size={22} />
-                <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Recent Signals</Text>
+                <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Missed Jobs</Text>
               </View>
             </View>
             <View style={styles.agendaList}>
@@ -372,7 +372,7 @@ export function WorkerHome() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Radio color="#FF8C00" size={22} />
-                  <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Recent Signals</Text>
+                  <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Missed Jobs</Text>
                 </View>
                 {recentSignals.length > 3 ? (
                   <TouchableOpacity onPress={() => setShowAllSignals(!showAllSignals)}>
@@ -440,7 +440,7 @@ export function WorkerHome() {
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No bookings yet.{'\n'}Accepted missions will appear here.</Text>
+                <Text style={styles.emptyText}>No bookings yet.{'\n'}Accepted bookings will appear here.</Text>
               </View>
             )}
           </View>

@@ -49,7 +49,7 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                  <CheckCircle2 size={54} color={Colors.cyan} strokeWidth={2.5} />
               </View>
 
-              <Text style={styles.eyebrow}>PROTOCOL SECURED</Text>
+              <Text style={styles.eyebrow}>PAYMENT RECEIVED ✅</Text>
               <Text style={styles.title}>PAYMENT RECEIVED</Text>
               
               <View style={styles.amountBox}>
@@ -57,12 +57,12 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                 <Text style={styles.amount}>{booking.totalAmount || booking.amount || '—'}</Text>
               </View>
 
-              <Text style={styles.category}>{booking.category || 'Mission Task'}</Text>
-              <Text style={styles.subtitle}>Settlement has been verified and deposited into your account protocol.</Text>
+              <Text style={styles.category}>{booking.category || 'Job Task'}</Text>
+              <Text style={styles.subtitle}>Payment has been verified and deposited into your wallet.</Text>
 
               <View style={styles.footerRow}>
                 <ShieldCheck size={14} color={Colors.cyan} />
-                <Text style={styles.securityTxt}>VERIFIED BY APNAUSTAD PROTOCOL</Text>
+                 <Text style={styles.securityTxt}>VERIFIED BY APNAUSTAD</Text>
               </View>
 
               <TouchableOpacity
@@ -76,7 +76,7 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                   end={{ x: 1, y: 0 }}
                   style={styles.ctaGradient}
                 >
-                  <Text style={styles.ctaText}>UNDERSTOOD</Text>
+                  <Text style={styles.ctaText}>GOT IT</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>

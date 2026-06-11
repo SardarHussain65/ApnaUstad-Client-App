@@ -191,8 +191,8 @@ export default function BookingsTab() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>Mission Log</Text>
-          <Text style={styles.headerSubtitle}>Real-time status of your active protocols</Text>
+          <Text style={[styles.headerTitle, Typography.threeD]}>My Bookings</Text>
+          <Text style={styles.headerSubtitle}>View all your service requests and bookings</Text>
         </View>
 
         {/* Custom Tab Bar */}
@@ -277,10 +277,10 @@ export default function BookingsTab() {
                 : status === 'cancelled'
                   ? 'View Details'
                   : status === 'ongoing'
-                    ? 'Track Live Mission'
+                    ? 'Track Live Job'
                     : status === 'assigned' || status === 'accepted'
-                      ? 'Track Mission'
-                      : 'Review Mission';
+                      ? 'Track Job'
+                      : 'View Details';
 
               let counterPartyName = meta?.counterParty?.fullName || 'Searching...';
               let counterPartyImage = meta?.primaryImageUrl || meta?.counterParty?.profileImage || '';
@@ -292,7 +292,7 @@ export default function BookingsTab() {
               } else if (!meta?.counterParty) {
                 counterPartyName = job.bidCount > 0 ? `${job.bidCount} bids received` : 'Open broadcast';
                 counterPartyImage = job.imageUrl || job.imageUrls?.[0] || '';
-                counterPartyRole = 'Mission';
+                counterPartyRole = 'Job';
               }
               const openDetails = () => {
                 if (isBooking) {
@@ -483,14 +483,14 @@ export default function BookingsTab() {
                     <Inbox size={42} color={tabColor} />
                   </View>
                   <Text style={[styles.emptyTitle, Typography.threeD]}>
-                    NO {activeTab.toUpperCase()} MISSIONS
+                    NO {activeTab.toUpperCase()} BOOKINGS
                   </Text>
                   <Text style={styles.emptySub}>
                     {activeTab === 'Active'
-                      ? 'Your active mission log is currently clear in this sector.'
+                      ? 'You do not have any active bookings at the moment.'
                       : activeTab === 'Completed'
-                        ? 'No completed records detected in this mission log.'
-                        : 'No cancelled missions recorded in this mission log.'}
+                        ? 'You do not have any completed bookings.'
+                        : 'You do not have any cancelled bookings.'}
                   </Text>
                 </Animated.View>
               );

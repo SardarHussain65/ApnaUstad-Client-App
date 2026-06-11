@@ -187,8 +187,8 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
       Toast.show({
         type: 'success',
-        text1: 'MISSION SECURED! 🚀',
-        text2: 'The client has hired you. Tap to view mission details.',
+        text1: 'BOOKING SECURED! ✅',
+        text2: 'The client has hired you. Tap to view booking details.',
         visibilityTime: 5000,
         onPress: () => {
           router.push({
@@ -211,7 +211,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       console.log('📉 [IncomingJobContext] Mission Lost:', data);
       Toast.show({
         type: 'info',
-        text1: 'MISSION TERMINATED',
+        text1: 'BOOKING CANCELLED',
         text2: 'The client has selected another specialist.',
       });
     });
@@ -220,9 +220,9 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     const unsubscribeAccepted = socketService.on('booking:accepted', (data: any) => {
       Toast.show({
         type: 'success',
-        text1: 'PROTOCOL ACTIVE 🛡️',
+        text1: 'BOOKING ACTIVE 🛡️',
         text2: role === 'worker'
-          ? `You have accepted the mission for ${data?.category || 'a new job'}.`
+          ? `You have accepted the job for ${data?.category || 'a new job'}.`
           : `Specialist has accepted your request for ${data?.category || 'the job'}.`,
       });
     });
@@ -230,9 +230,9 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     const unsubscribeOngoing = socketService.on('booking:ongoing', (data: any) => {
       Toast.show({
         type: 'info',
-        text1: 'ENGAGEMENT STARTED ⚡',
+        text1: 'JOB STARTED ⚡',
         text2: role === 'worker'
-          ? `You have initialized the mission: ${data?.category || 'Task'}.`
+          ? `You have started the job: ${data?.category || 'Task'}.`
           : `The Ustad is now on-site performing: ${data?.category || 'Task'}`,
       });
     });
@@ -240,18 +240,18 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     const unsubscribeCompleted = socketService.on('booking:completed', (data: any) => {
       Toast.show({
         type: 'success',
-        text1: 'OBJECTIVE SECURED 🏁',
+        text1: 'JOB COMPLETED 🏁',
         text2: role === 'worker'
-          ? `You have successfully completed the mission: ${data?.category || 'Task'}.`
-          : `Mission accomplished! Your Ustad has finished: ${data?.category || 'Task'}`,
+          ? `You have successfully completed the job: ${data?.category || 'Task'}.`
+          : `Job completed! Your Ustad has finished: ${data?.category || 'Task'}`,
       });
     });
 
     const unsubscribeCancelled = socketService.on('booking:cancelled', (data: any) => {
       Toast.show({
         type: 'error',
-        text1: 'PROTOCOL SHUTDOWN ⚠️',
-        text2: `Mission aborted: ${data?.category || 'the job'} has been cancelled.`,
+        text1: 'BOOKING CANCELLED ⚠️',
+        text2: `Job cancelled: ${data?.category || 'the job'} has been cancelled.`,
       });
     });
 
@@ -323,8 +323,8 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         if (response.data.success) {
           Toast.show({
             type: 'success',
-            text1: 'MISSION ACCEPTED',
-            text2: 'Protocol initialized. Waiting for client confirmation...',
+            text1: 'JOB ACCEPTED',
+            text2: 'Booking initialized. Waiting for client confirmation...',
           });
           // Close modal cleanly - remaining jobs (not the accepted one) go to dismissed
           const remaining = incomingJobsQueueRef.current.filter(j => j._id !== job._id);
@@ -336,7 +336,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       } catch (error: any) {
         Toast.show({
           type: 'error',
-          text1: 'LINK FAILURE',
+          text1: 'CONNECTION FAILURE',
           text2: error.response?.data?.message || 'Could not establish connection.',
         });
         removeJobFromQueue(job._id);
@@ -410,14 +410,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         if (response.data.success) {
           Toast.show({
             type: 'success',
-            text1: 'MISSION ACCEPTED',
-            text2: 'Protocol initialized. Waiting for client confirmation...',
+            text1: 'JOB ACCEPTED',
+            text2: 'Booking initialized. Waiting for client confirmation...',
           });
         }
       } catch (error: any) {
         Toast.show({
           type: 'error',
-          text1: 'LINK FAILURE',
+          text1: 'CONNECTION FAILURE',
           text2: error.response?.data?.message || 'Could not establish connection.',
         });
       } finally {

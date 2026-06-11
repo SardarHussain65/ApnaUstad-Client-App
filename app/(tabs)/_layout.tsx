@@ -19,8 +19,8 @@ export default function TabLayout() {
       if (role === 'worker') {
         Toast.show({
           type: 'success',
-          text1: 'MISSION SECURED! 🚀',
-          text2: `Your bid for ${data.jobPost?.category} was accepted!`,
+          text1: 'Booking Confirmed! ✅',
+          text2: `The client hired you for ${data.jobPost?.category}!`,
         });
         router.push({
           pathname: '/transaction-details',
@@ -34,8 +34,8 @@ export default function TabLayout() {
       if (role === 'client') {
         Toast.show({
           type: 'success',
-          text1: 'USTAD SECURED! 🚀',
-          text2: `${data.jobPost?.category} mission has been accepted.`,
+          text1: 'Ustad Found! ✅',
+          text2: `An Ustad has accepted your ${data.jobPost?.category} request.`,
         });
         router.push({
           pathname: '/transaction-details',
@@ -66,7 +66,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="bookings"
         options={{
-          title: 'Missions',
+          title: 'Bookings',
         }}
       />
       <Tabs.Screen

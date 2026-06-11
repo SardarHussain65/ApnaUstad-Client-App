@@ -159,7 +159,7 @@ export default function ReviewScreen() {
             <ChevronLeft color="#fff" size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>MISSION FEEDBACK</Text>
+            <Text style={styles.headerEyebrow}>JOB FEEDBACK</Text>
             <Text style={[styles.headerTitle, Typography.threeD]}>Rate Your Ustad</Text>
           </View>
           <View style={{ width: 44 }} />
@@ -171,7 +171,7 @@ export default function ReviewScreen() {
               <GlassCard intensity={25} style={styles.doneCard}>
                 <CheckCircle2 size={50} color={Colors.success} />
                 <Text style={styles.doneTitle}>Review Already Submitted</Text>
-                <Text style={styles.doneText}>This completed mission already has customer feedback attached.</Text>
+                <Text style={styles.doneText}>This completed job already has customer feedback attached.</Text>
                 <TouchableOpacity onPress={() => router.replace({ pathname: '/transaction-details', params: { id: bookingId } })} style={styles.doneBtn}>
                   <Text style={styles.doneBtnText}>BACK TO DETAILS</Text>
                 </TouchableOpacity>
@@ -182,7 +182,7 @@ export default function ReviewScreen() {
               <GlassCard intensity={25} style={styles.doneCard}>
                 <MessageSquareText size={50} color={Colors.orange} />
                 <Text style={styles.doneTitle}>Review Unlocks After Completion</Text>
-                <Text style={styles.doneText}>Once the mission is completed, you can rate the service and share your experience.</Text>
+                <Text style={styles.doneText}>Once the job is completed, you can rate the service and share your experience.</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn}>
                   <Text style={styles.doneBtnText}>GO BACK</Text>
                 </TouchableOpacity>

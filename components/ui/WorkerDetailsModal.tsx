@@ -37,7 +37,7 @@ export function WorkerDetailsModal({
     <BeautifulModal
       visible={visible}
       onClose={onClose}
-      title="Specialist Details"
+      title="Ustad Details"
       height="85%"
       glowColor={themeColor}
       showCloseButton
@@ -45,7 +45,7 @@ export function WorkerDetailsModal({
       {isLoading || !worker ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={themeColor} />
-          <Text style={styles.loadingText}>Fetching network profile...</Text>
+          <Text style={styles.loadingText}>Fetching profile...</Text>
         </View>
       ) : (
         <View style={styles.container}>
@@ -69,7 +69,7 @@ export function WorkerDetailsModal({
                 <View style={styles.statusRow}>
                   <View style={[styles.statusDot, { backgroundColor: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]} />
                   <Text style={[styles.statusText, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
-                    {worker.isAvailable ? 'AVAILABLE FOR DEPLOYMENT' : 'CURRENTLY ENGAGED'}
+                    {worker.isAvailable ? 'AVAILABLE NOW' : 'BUSY NOW'}
                   </Text>
                 </View>
               </View>
@@ -96,7 +96,7 @@ export function WorkerDetailsModal({
 
             {/* Contact Info */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>CONTACT PROTOCOLS</Text>
+              <Text style={styles.sectionTitle}>CONTACT DETAILS</Text>
               <View style={styles.infoRow}>
                 <Phone size={14} color={Colors.textDim} />
                 <Text style={styles.infoText}>{worker.phone}</Text>
@@ -122,7 +122,7 @@ export function WorkerDetailsModal({
             {/* Skills */}
             {(worker.skills?.length ?? 0) > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>AUTHORIZED SKILLS</Text>
+                <Text style={styles.sectionTitle}>SKILLS</Text>
                 <View style={styles.skillsRow}>
                   {worker.skills?.map((skill) => (
                     <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35' }]}>
@@ -152,7 +152,7 @@ export function WorkerDetailsModal({
                 style={styles.deployBtnGradient}
               >
                 <Zap size={16} color="#000" fill="#000" />
-                <Text style={styles.deployBtnText}>DEPLOY UNIT</Text>
+                <Text style={styles.deployBtnText}>HIRE USTAD</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>

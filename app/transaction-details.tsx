@@ -69,8 +69,8 @@ const STATUS_MAP: Record<string, { color: string; muted: string; label: string; 
   pending: { color: P.orange, muted: P.orangeMuted, label: 'Pending', title: 'Request sent', Icon: Clock3 },
   accepted: { color: P.cyan, muted: P.cyanMuted, label: 'Accepted', title: 'Ustad assigned', Icon: ShieldCheck },
   ongoing: { color: P.cyan, muted: P.cyanMuted, label: 'Ongoing', title: 'Work in progress', Icon: Navigation },
-  completed: { color: P.green, muted: P.greenMuted, label: 'Completed', title: 'Mission completed', Icon: CheckCircle2 },
-  cancelled: { color: P.red, muted: P.redMuted, label: 'Cancelled', title: 'Mission cancelled', Icon: XCircle },
+  completed: { color: P.green, muted: P.greenMuted, label: 'Completed', title: 'Job completed', Icon: CheckCircle2 },
+  cancelled: { color: P.red, muted: P.redMuted, label: 'Cancelled', title: 'Job cancelled', Icon: XCircle },
 };
 
 const STEPS = [
@@ -261,7 +261,7 @@ export default function TransactionDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.loading}>
           <ActivityIndicator color={P.cyan} size="large" />
-          <Text style={styles.loadingText}>Loading mission details</Text>
+          <Text style={styles.loadingText}>Loading booking details</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -271,7 +271,7 @@ export default function TransactionDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loading}>
-          <Text style={styles.emptyTitle}>Mission not found</Text>
+          <Text style={styles.emptyTitle}>Booking not found</Text>
           <TouchableOpacity onPress={() => router.back()} style={styles.emptyButton}>
             <Text style={styles.emptyButtonText}>Go back</Text>
           </TouchableOpacity>
@@ -311,8 +311,8 @@ export default function TransactionDetailsScreen() {
   const canTrackMission = Boolean(customerId && workerId);
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking.workerEarning : booking.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
-  const amountLabel = isWorker ? 'Your Earning' : 'Mission Value';
-  const serviceTitle = meta?.title || booking.category || 'Service Mission';
+  const amountLabel = isWorker ? 'Your Earning' : 'Booking Value';
+  const serviceTitle = meta?.title || booking.category || 'Service Booking';
   const serviceDescription = meta?.description || booking.description || 'Service request details';
   const dateLabel = meta?.schedule?.dateLabel || formatDate(booking.scheduledDate);
   const timeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
@@ -356,7 +356,7 @@ export default function TransactionDetailsScreen() {
 
   const shareMission = () => {
     Share.share({
-      message: `${serviceTitle} mission - ${statusInfo.label} - ${amountText}`,
+      message: `${serviceTitle} booking - ${statusInfo.label} - ${amountText}`,
     });
   };
 
@@ -381,7 +381,7 @@ export default function TransactionDetailsScreen() {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerEyebrow}>Booking Details</Text>
-            <Text style={styles.headerTitle}>Mission Overview</Text>
+            <Text style={styles.headerTitle}>Overview</Text>
           </View>
           <TouchableOpacity onPress={shareMission} style={styles.headerButton} activeOpacity={0.8}>
             <Share2 color={P.textMuted} size={19} strokeWidth={2.3} />
@@ -492,7 +492,7 @@ export default function TransactionDetailsScreen() {
               <View style={styles.partnerInsightRow}>
                 {isWorker ? (
                   <>
-                    <PartnerInsight icon={Phone} label="Contact" value={isCommunicationLocked ? 'Closed after mission' : partnerPhone || 'In app'} />
+                    <PartnerInsight icon={Phone} label="Contact" value={isCommunicationLocked ? 'Closed after job completion' : partnerPhone || 'In app'} />
                     <PartnerInsight icon={MapPin} label="Area" value={partnerCity || partnerAddress || 'Not shared'} color={P.green} />
                     <PartnerInsight icon={CalendarDays} label="Member" value={formatSince(partnerJoinedAt)} color={P.orange} />
                   </>
@@ -524,7 +524,7 @@ export default function TransactionDetailsScreen() {
           )}
 
           <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
-            <SectionHeader icon={BriefcaseBusiness} title="Mission Details" />
+            <SectionHeader icon={BriefcaseBusiness} title="Job Details" />
             <View style={styles.detailCard}>
               <InfoRow icon={BriefcaseBusiness} label="Category" value={booking.category || serviceTitle} />
               <InfoRow icon={MapPin} label="Service Location" value={addressLabel} />
@@ -538,7 +538,7 @@ export default function TransactionDetailsScreen() {
 
           {!!booking.description && (
             <Animated.View entering={FadeInDown.delay(380).duration(450)} style={styles.section}>
-              <SectionHeader icon={ShieldCheck} title="Mission Brief" />
+              <SectionHeader icon={ShieldCheck} title="Job Description" />
               <View style={styles.briefCard}>
                 <Text style={styles.briefText}>{booking.description}</Text>
               </View>
@@ -552,7 +552,7 @@ export default function TransactionDetailsScreen() {
                 <ActionButton
                   color={P.cyan}
                   icon={Zap}
-                  label="Start Mission"
+                  label="Start Job"
                   loading={isUpdating}
                   onPress={() => updateStatus({ bookingId: id as string, status: 'ongoing' })}
                 />
@@ -561,7 +561,7 @@ export default function TransactionDetailsScreen() {
                 <ActionButton
                   color={P.green}
                   icon={CheckCircle2}
-                  label="Complete Mission"
+                  label="Complete Job"
                   loading={isUpdating}
                   onPress={() => updateStatus({ bookingId: id as string, status: 'completed' })}
                 />
@@ -603,7 +603,7 @@ export default function TransactionDetailsScreen() {
               {booking.isReviewed ? (
                 <View style={styles.noticeCard}>
                   <CheckCircle2 size={18} color={P.green} />
-                  <Text style={styles.noticeText}>Your feedback has been recorded for this mission.</Text>
+                  <Text style={styles.noticeText}>Your feedback has been recorded for this job.</Text>
                 </View>
               ) : (
                 <View style={styles.reviewCard}>
@@ -625,7 +625,7 @@ export default function TransactionDetailsScreen() {
           {status === 'completed' && booking.paymentStatus === 'paid' && (
             <View style={styles.noticeCard}>
               <CheckCircle2 size={18} color={P.green} />
-              <Text style={styles.noticeText}>Cash payment has been confirmed for this mission.</Text>
+              <Text style={styles.noticeText}>Cash payment has been confirmed for this job.</Text>
             </View>
           )}
         </ScrollView>
@@ -644,7 +644,7 @@ export default function TransactionDetailsScreen() {
           router.replace('/(tabs)' as any);
         }}
         title="Settlement Confirmed"
-        message={`You have successfully settled the payment of ${formatCurrency(booking.hourlyRate)} with your Ustad ${partnerName} for the ${booking.category} mission.\n\nThank you for choosing Apna Ustad!`}
+        message={`You have successfully settled the payment of ${formatCurrency(booking.hourlyRate)} with your Ustad ${partnerName} for the ${booking.category} job.\n\nThank you for choosing Apna Ustad!`}
         buttonText="Back to Home"
         type="success"
       />

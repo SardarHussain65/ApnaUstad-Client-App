@@ -64,7 +64,7 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
                 <Calendar size={12} color="#FF8C00" />
               )}
               <Text style={[styles.urgencyText, { color: job.urgency === 'instant' ? '#00FFFF' : '#FF8C00' }]}>
-                {job.urgency === 'instant' ? 'INSTANT MISSION' : job.urgency.toUpperCase()}
+                {job.urgency === 'instant' ? 'INSTANT JOB' : job.urgency.toUpperCase()}
               </Text>
             </View>
             

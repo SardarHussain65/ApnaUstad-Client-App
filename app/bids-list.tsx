@@ -169,8 +169,8 @@ export default function BidsListScreen() {
               <Target size={24} color={NEON_CYAN} />
             </View>
           </View>
-          <Text style={styles.loadingTitle}>SCANNING MARKET</Text>
-          <Text style={styles.loadingSub}>Fetching specialist proposals…</Text>
+          <Text style={styles.loadingTitle}>FINDING USTADS</Text>
+          <Text style={styles.loadingSub}>Fetching Ustad bids...</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -201,11 +201,11 @@ export default function BidsListScreen() {
           </TouchableOpacity>
 
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarTitle}>MARKET PROPOSALS</Text>
+            <Text style={styles.topBarTitle}>USTAD BIDS</Text>
             <View style={[styles.countPill, { borderColor: `${NEON_CYAN}35`, backgroundColor: `${NEON_CYAN}10` }]}>
               <Users size={10} color={NEON_CYAN} />
               <Text style={[styles.countPillText, { color: NEON_CYAN }]}>
-                {bids.length} SPECIALIST{bids.length !== 1 ? 'S' : ''}
+                {bids.length} USTAD{bids.length !== 1 ? 'S' : ''}
               </Text>
             </View>
           </View>
@@ -229,8 +229,8 @@ export default function BidsListScreen() {
               <View style={styles.emptyIconRing}>
                 <TrendingUp size={28} color="rgba(255,255,255,0.2)" />
               </View>
-              <Text style={styles.emptyTitle}>NO PROPOSALS YET</Text>
-              <Text style={styles.emptySub}>Specialists will respond shortly. Check back soon.</Text>
+              <Text style={styles.emptyTitle}>NO BIDS YET</Text>
+              <Text style={styles.emptySub}>Ustads will submit bids shortly. Please check back soon.</Text>
             </AnimatedRN.View>
           )}
 
@@ -338,7 +338,7 @@ export default function BidsListScreen() {
                       ) : (
                         <>
                           <Zap size={15} color="#fff" fill="#fff" />
-                          <Text style={styles.deployText}>DEPLOY</Text>
+                          <Text style={styles.deployText}>HIRE USTAD</Text>
                         </>
                       )}
                     </TouchableOpacity>

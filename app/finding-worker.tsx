@@ -363,7 +363,7 @@ export default function FindingWorkerScreen() {
             <ArrowLeft size={19} color="#FFFFFF" strokeWidth={2.2} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>REQUEST POSTED</Text>
+            <Text style={styles.headerEyebrow}>REQUEST SENT</Text>
             <Text style={styles.headerTitle}>Finding an Ustad</Text>
           </View>
           <View style={styles.liveBadge}>
@@ -385,7 +385,7 @@ export default function FindingWorkerScreen() {
             >
               <View style={styles.searchStatusBadge}>
                 <Radio size={13} color={Colors.cyan} />
-                <Text style={styles.searchStatusText}>{isSearching ? 'SEARCHING NEARBY' : `${applicants.length} PROPOSAL${applicants.length === 1 ? '' : 'S'} RECEIVED`}</Text>
+                <Text style={styles.searchStatusText}>{isSearching ? 'FINDING NEARBY USTADS' : `${applicants.length} OFFER${applicants.length === 1 ? '' : 'S'} RECEIVED`}</Text>
               </View>
 
               <View style={styles.animationContainer}>
@@ -430,8 +430,8 @@ export default function FindingWorkerScreen() {
               <Text style={[styles.statusText, Typography.threeD]}>{status}</Text>
               <Text style={styles.subText}>
                 {isSearching
-                  ? 'Your request is visible to available Ustads near the service location.'
-                  : 'Review the proposals and choose the Ustad who fits your work best.'}
+                  ? 'Your request has been sent to nearby Ustads.'
+                  : 'Review the offers and choose the Ustad who fits your work best.'}
               </Text>
             </LinearGradient>
           </Animated.View>
@@ -449,7 +449,7 @@ export default function FindingWorkerScreen() {
                     <Briefcase size={15} color={Colors.cyan} />
                   </View>
                   <View style={styles.sectionHeadingCopy}>
-                    <Text style={styles.sectionEyebrow}>YOUR REQUEST</Text>
+                    <Text style={styles.sectionEyebrow}>YOUR JOB</Text>
                     <Text style={styles.jobTitle}>{job.category || 'Service Request'}</Text>
                   </View>
                   <View style={[styles.requestTypeBadge, job.urgency !== 'instant' && styles.scheduledBadge]}>

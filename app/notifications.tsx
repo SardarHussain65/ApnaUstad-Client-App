@@ -45,7 +45,7 @@ type FilterKey = 'all' | 'unread' | 'missions' | 'payments';
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'unread', label: 'Unread' },
-  { key: 'missions', label: 'Missions' },
+  { key: 'missions', label: 'Bookings' },
   { key: 'payments', label: 'Payments' },
 ];
 
@@ -109,7 +109,7 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerText}>
-            <Text style={styles.headerEyebrow}>SIGNAL CENTER</Text>
+            <Text style={styles.headerEyebrow}>NOTIFICATIONS</Text>
             <Text style={[styles.headerTitle, Typography.threeD]}>Notifications</Text>
           </View>
 
@@ -136,9 +136,9 @@ export default function NotificationsScreen() {
                 <Sparkles size={18} color={Colors.cyan} />
               </View>
               <View style={styles.summaryCopy}>
-                <Text style={styles.summaryTitle}>Mission updates</Text>
+                <Text style={styles.summaryTitle}>Booking updates</Text>
                 <Text style={styles.summaryText}>
-                  {unreadCount > 0 ? `${unreadCount} unread signal${unreadCount === 1 ? '' : 's'} waiting` : 'Everything is up to date'}
+                  {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'} waiting` : 'Everything is up to date'}
                 </Text>
               </View>
             </View>
@@ -178,7 +178,7 @@ export default function NotificationsScreen() {
         {isLoading ? (
           <View style={styles.loading}>
             <ActivityIndicator color={Colors.cyan} size="large" />
-            <Text style={styles.loadingText}>Loading signal stream...</Text>
+            <Text style={styles.loadingText}>Loading notifications...</Text>
           </View>
         ) : (
           <ScrollView
@@ -208,7 +208,7 @@ export default function NotificationsScreen() {
                   <View style={styles.emptyIcon}>
                     <Bell size={34} color={Colors.cyan} />
                   </View>
-                  <Text style={styles.emptyTitle}>No Signals</Text>
+                  <Text style={styles.emptyTitle}>No Notifications</Text>
                   <Text style={styles.emptyText}>Your activity is clear right now.</Text>
                 </GlassCard>
               </Animated.View>
@@ -261,7 +261,7 @@ function NotificationCard({ notification, onPress }: { notification: AppNotifica
 
           <View style={styles.footerRow}>
             <Text style={[styles.statusText, unread ? { color: accent } : null]}>
-              {unread ? 'NEW SIGNAL' : 'READ'}
+              {unread ? 'NEW' : 'READ'}
             </Text>
             {notification.booking && (
               <View style={styles.openHint}>

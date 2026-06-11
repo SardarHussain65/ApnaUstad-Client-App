@@ -291,7 +291,7 @@ export default function JobCreationScreen() {
       return;
     }
     if (!address.trim() || address === 'Detecting location...') {
-      showError('Invalid Location', 'Please provide or detect a deployment address.');
+      showError('Invalid Location', 'Please provide or detect a booking address.');
       return;
     }
     if (!amount || Number(amount) <= 0) {
@@ -379,7 +379,7 @@ export default function JobCreationScreen() {
         },
         onError: (err: Error) => {
           setConfirmLoading(false);
-          showError('Deployment Failed', err.message || 'Failed to post job.');
+          showError('Request Failed', err.message || 'Failed to post job.');
         },
       });
     } catch (err) {
@@ -682,9 +682,9 @@ export default function JobCreationScreen() {
           visible={confirmVisible}
           onConfirm={handleConfirmSubmit}
           onCancel={closeConfirm}
-          title="Post Service Request"
-          message={`Your ${isInstant ? 'instant' : 'scheduled'} ${title ?? 'service'} request is ready to post.`}
-          confirmText="Post Request"
+          title="Confirm Booking Request"
+          message={`Your ${isInstant ? 'instant' : 'scheduled'} ${title ?? 'service'} request is ready.`}
+          confirmText="Confirm & Post"
           cancelText="Keep Editing"
           isLoading={isConfirming}
           confirmColor={isInstant ? P.cyan : P.orange}

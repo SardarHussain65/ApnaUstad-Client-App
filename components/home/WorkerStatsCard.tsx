@@ -20,8 +20,8 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
   const completed = stats.completed ?? 0;
   const successPercent = stats.missions > 0 ? Math.round(stats.successRate * 100) : 0;
   const activeSummary = activeJobs > 0
-    ? `${activeJobs} active mission${activeJobs > 1 ? 's' : ''}`
-    : 'Ready for new missions';
+    ? `${activeJobs} active job${activeJobs > 1 ? 's' : ''}`
+    : 'Ready for new jobs';
   const completedSummary = `${completed}/${stats.missions || 0} completed`;
 
   return (
@@ -61,7 +61,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
 
       <View style={styles.progressBlock}>
         <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>Mission success</Text>
+          <Text style={styles.progressTitle}>Job success</Text>
           <Text style={styles.progressValue}>{completedSummary}</Text>
         </View>
         <View style={styles.progressTrack}>
@@ -91,7 +91,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
             <Briefcase size={14} color={Colors.purple} />
           </View>
           <Text style={styles.statValue}>{stats.missions}</Text>
-          <Text style={styles.statLabel}>Missions</Text>
+          <Text style={styles.statLabel}>Jobs</Text>
         </View>
       </View>
     </GlassCard>

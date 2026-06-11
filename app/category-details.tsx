@@ -99,12 +99,12 @@ export default function CategoryDetailsScreen() {
             <View style={[styles.glowingOrb, { shadowColor: themeColor, borderColor: themeColor + '60' }]}>
               <Sparkles color={themeColor} size={40} />
             </View>
-            <Text style={styles.heroSub}>SERVICE PROTOCOL</Text>
+            <Text style={styles.heroSub}>CHOOSE TYPE</Text>
             <Text style={[styles.heroTitle, Typography.threeD]}>{title.toUpperCase()}</Text>
             {params.description ? (
               <Text style={styles.categoryDescription}>{params.description}</Text>
             ) : (
-              <Text style={styles.categoryDescription}>Select your preferred urgency protocol below to instantly deploy or schedule a top-tier specialist.</Text>
+              <Text style={styles.categoryDescription}>Select how you want to book below to instantly find or schedule an Ustad.</Text>
             )}
           </Animated.View>
 
@@ -126,7 +126,7 @@ export default function CategoryDetailsScreen() {
                 <Text style={[styles.optionTitle, { color: Colors.cyan }]}>INSTANT</Text>
                 <Text style={styles.optionSub}>ETA: 15-30 MIN</Text>
                 <View style={[styles.deployHint, { backgroundColor: Colors.cyan }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>DEPLOY NOW</Text>
+                  <Text style={[styles.deployHintText, { color: '#000' }]}>BOOK NOW</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -147,7 +147,7 @@ export default function CategoryDetailsScreen() {
                 <Text style={[styles.optionTitle, { color: Colors.worker }]} numberOfLines={1}>SCHEDULED</Text>
                 <Text style={styles.optionSub}>PICK A TIME</Text>
                 <View style={[styles.deployHint, { backgroundColor: Colors.worker }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>BOOK LATER</Text>
+                  <Text style={[styles.deployHintText, { color: '#000' }]}>SCHEDULE</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -169,11 +169,11 @@ export default function CategoryDetailsScreen() {
 
                   {/* Center: Mission Info */}
                   <View style={styles.infoBox}>
-                    <Text style={styles.cyberLabel}>SPECIALIST COMMAND</Text>
-                    <Text style={styles.cyberTitle}>BROWSE ALL PROS</Text>
+                    <Text style={styles.cyberLabel}>USTAD DIRECTORY</Text>
+                    <Text style={styles.cyberTitle}>VIEW ALL USTADS</Text>
                     <View style={styles.cyberStatusRow}>
                       <View style={[styles.statusIndicator, { backgroundColor: themeColor }]} />
-                      <Text style={styles.cyberStatusText}>SYSTEM: ACTIVE</Text>
+                      <Text style={styles.cyberStatusText}>STATUS: ACTIVE</Text>
                     </View>
                   </View>
 

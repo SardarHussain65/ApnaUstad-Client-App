@@ -267,7 +267,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
               </View>
               <View style={styles.deployBtnRight}>
                 <Zap size={14} color="#000" fill="#000" />
-                <Text style={styles.deployBtnText}>DEPLOY</Text>
+                <Text style={styles.deployBtnText}>HIRE</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -371,8 +371,8 @@ export default function WorkerListScreen() {
             <Text style={styles.headerTitle}>{category.toUpperCase()}</Text>
             <Text style={styles.headerSub}>
               {isLoading
-                ? 'Scanning network...'
-                : `${filtered.length} specialist${filtered.length !== 1 ? 's' : ''} available`}
+                ? 'Searching for Ustads...'
+                : `${filtered.length} Ustad${filtered.length !== 1 ? 's' : ''} available`}
             </Text>
           </View>
 
@@ -432,7 +432,7 @@ export default function WorkerListScreen() {
           ) : (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyTitle}>No Specialists Found</Text>
+              <Text style={styles.emptyTitle}>No Ustads Found</Text>
               <Text style={styles.emptySub}>
                 {search
                   ? 'Try a different search term.'

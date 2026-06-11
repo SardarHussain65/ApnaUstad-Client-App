@@ -44,7 +44,7 @@ const STATUS_META = {
 };
 
 function formatMissionTime(booking: Booking) {
-  if (booking.bookingType === 'instant') return 'Immediate mission';
+  if (booking.bookingType === 'instant') return 'Immediate job';
 
   const dateLabel = booking.scheduledDate
     ? new Date(booking.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -100,10 +100,10 @@ export const WorkerActiveMissionCard = React.memo(function WorkerActiveMissionCa
           </View>
           <View style={styles.titleCopy}>
             <Text style={[styles.category, Typography.threeD]} numberOfLines={1}>
-              {booking.category || 'Active Mission'}
+              {booking.category || 'Active Job'}
             </Text>
             <Text style={styles.description} numberOfLines={2}>
-              {booking.description || 'Mission details are ready.'}
+              {booking.description || 'Job details are ready.'}
             </Text>
           </View>
         </View>

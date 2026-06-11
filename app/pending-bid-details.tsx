@@ -217,7 +217,7 @@ export default function PendingBidDetailsScreen() {
 
   const isInstant = (meta?.missionKind || displayJob.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
-  const title = meta?.title || displayJob.category || 'Service mission';
+  const title = meta?.title || displayJob.category || 'Service request';
   const description = meta?.description || displayJob.description || 'No additional job details were provided.';
   const missionKindLabel = meta?.missionKindLabel || (isInstant ? 'Instant visit' : 'Scheduled visit');
   const dateLabel = meta?.schedule?.dateLabel || formatDate(displayJob.scheduledDate);

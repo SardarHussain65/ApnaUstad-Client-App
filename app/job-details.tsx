@@ -381,7 +381,7 @@ export default function JobDetailsScreen() {
 
           <View style={styles.headerCopy}>
             <Text style={styles.headerEyebrow}>Service Request</Text>
-            <Text style={styles.headerTitle}>Mission Details</Text>
+            <Text style={styles.headerTitle}>Job Details</Text>
           </View>
 
           <TouchableOpacity style={styles.headerButton} onPress={shareRequest} activeOpacity={0.8}>
@@ -568,7 +568,7 @@ export default function JobDetailsScreen() {
           <Animated.View entering={FadeInDown.delay(280).duration(460)} style={styles.section}>
             <SectionHeader
               icon={FileText}
-              title="Mission Brief"
+              title="Job Brief"
               subtitle="The complete description provided for this request."
               color={Colors.green}
             />

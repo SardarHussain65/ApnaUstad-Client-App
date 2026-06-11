@@ -139,7 +139,7 @@ export const WorkerAlertJobCard = React.memo(
           <View style={styles.body}>
             <View style={styles.infoCol}>
               <Text style={styles.category} numberOfLines={1}>
-                {job.category || 'New Mission'}
+                {job.category || 'New Job'}
               </Text>
               {job.description ? (
                 <Text style={styles.description} numberOfLines={2}>
