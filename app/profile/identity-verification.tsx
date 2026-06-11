@@ -185,12 +185,12 @@ export default function IdentityVerificationScreen() {
     const type = match ? `image/${match[1]}` : 'image/jpeg';
     formData.append(side === 'front' ? 'cnicFrontImage' : 'cnicBackImage', { uri, name: filename, type } as any);
     const endpoint = side === 'front' ? '/workers/upload-cnic-front' : '/workers/upload-cnic-back';
-    
+
     const response = await fetch(`${BASE_URL}/api/v1${endpoint}`, {
       method: 'POST',
       body: formData,
     });
-    
+
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
       throw new Error(err?.message || t('registerDetails.uploadError'));
@@ -245,7 +245,7 @@ export default function IdentityVerificationScreen() {
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       success(t('identityVerification.successTitle'), t('identityVerification.successDesc'));
-      
+
       // Update UI state
       fetchStatus();
     } catch (err: any) {
@@ -349,9 +349,9 @@ export default function IdentityVerificationScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <TouchableOpacity style={styles.resubmitBtn} onPress={handleReset}>
-                <LinearGradient colors={[Colors.primary, Colors.secondary]} start={{ x:0, y:0 }} end={{ x:1, y:1 }} style={styles.resubmitGradient}>
+                <LinearGradient colors={[Colors.primary, Colors.secondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.resubmitGradient}>
                   <Text style={styles.resubmitText}>{t('identityVerification.correctResubmit')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -461,7 +461,7 @@ function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onS
   return (
     <View style={styles.uploadWidgetWrap}>
       <Text style={styles.uploadWidgetTitle}>{title}</Text>
-      
+
       {displayUri ? (
         <View style={styles.imagePreviewWrap}>
           <Image source={{ uri: displayUri }} style={styles.previewImage} resizeMode="cover" />
@@ -472,13 +472,13 @@ function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onS
       ) : (
         <View style={styles.pickerBox}>
           <LinearGradient colors={['rgba(255,255,255,0.03)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]} />
-          
+
           <View style={styles.pickerIcon}>
             <ImageIcon size={28} color="rgba(255,255,255,0.3)" strokeWidth={1.5} />
           </View>
-          
+
           <Text style={styles.pickerNudge}>{t('identityVerification.noDocument')}</Text>
-          
+
           <View style={styles.pickerBtnRow}>
             <TouchableOpacity style={styles.pickerBtn} onPress={onSelectCamera}>
               <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)']} style={StyleSheet.absoluteFill} />

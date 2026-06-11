@@ -4,6 +4,7 @@ import { Clock, ShieldCheck, Zap } from 'lucide-react-native';
 import { SectionLabel, GlassInput, P } from './shared';
 import { calculateUrgentPrice, getRateForCategory } from '../../constants/UrgentPricing';
 import { addAlpha } from '../../utils/colorUtils';
+import { useTranslation } from 'react-i18next';
 
 interface UrgentPricingCardProps {
   category: string;
@@ -12,6 +13,7 @@ interface UrgentPricingCardProps {
 }
 
 export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: UrgentPricingCardProps) {
+  const { t } = useTranslation();
   const rateInfo = getRateForCategory(category);
   const baseRate = rateInfo.baseRatePerHour;
   const minPrice = rateInfo.minimumPrice;
@@ -34,16 +36,16 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
 
   return (
     <View style={styles.section}>
-      <SectionLabel icon={Zap} label="URGENT FIXED PRICING" color={P.cyan} badge="Locked" />
+      <SectionLabel icon={Zap} label={t('jobCreation.urgentFixedPricing', 'URGENT FIXED PRICING')} color={P.cyan} badge={t('jobCreation.locked', 'Locked')} />
       
       <GlassInput glowColor={P.cyan}>
         <View style={styles.container}>
           {/* Header section explaining fixed pricing */}
           <View style={styles.headerRow}>
             <View style={styles.textColumn}>
-              <Text style={styles.titleText}>Job Duration (Hours)</Text>
+              <Text style={styles.titleText}>{t('jobCreation.jobDuration', 'Job Duration (Hours)')}</Text>
               <Text style={styles.subtitleText}>
-                Estimate the hours needed. Rate is Rs. {baseRate}/hr.
+                {t('jobCreation.estimateHoursDesc', 'Estimate the hours needed. Rate is Rs. {{rate}}/hr.', { rate: baseRate })}
               </Text>
             </View>
 
@@ -60,7 +62,7 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
               
               <View style={styles.hoursDisplay}>
                 <Text style={styles.hoursText}>{estimatedHours}</Text>
-                <Text style={styles.hoursLabel}>{estimatedHours === 1 ? 'Hr' : 'Hrs'}</Text>
+                <Text style={styles.hoursLabel}>{estimatedHours === 1 ? t('jobCreation.hr', 'Hr') : t('jobCreation.hrs', 'Hrs')}</Text>
               </View>
 
               <TouchableOpacity 
@@ -78,16 +80,21 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
           <View style={styles.priceBanner}>
             <Zap size={18} color={P.cyan} fill={P.cyan} style={styles.zapIcon} />
             <View style={styles.bannerTextColumn}>
-              <Text style={styles.bannerLabel}>Locked Fixed Price</Text>
-              <Text style={styles.priceText}>Rs. {fixedPrice.toLocaleString()}</Text>
+              <Text style={styles.bannerLabel}>{t('jobCreation.lockedFixedPrice', 'Locked Fixed Price')}</Text>
+              <Text style={styles.priceText}>{t('common.rupeesFormat', 'Rs. {{amount}}', { amount: fixedPrice.toLocaleString() })}</Text>
             </View>
           </View>
 
           {/* Pricing Breakdown & Security message */}
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Pricing Formula:</Text>
+            <Text style={styles.breakdownLabel}>{t('jobCreation.pricingFormula', 'Pricing Formula:')}</Text>
             <Text style={styles.breakdownValue}>
-              Rs. {baseRate}/hr × {estimatedHours} {estimatedHours === 1 ? 'hr' : 'hrs'} = Rs. {rawCalculation.toLocaleString()}
+              {t('jobCreation.pricingFormulaValue', 'Rs. {{rate}}/hr × {{hours}} {{hoursText}} = Rs. {{total}}', {
+                rate: baseRate,
+                hours: estimatedHours,
+                hoursText: estimatedHours === 1 ? t('jobCreation.hr', 'hr') : t('jobCreation.hrs', 'hrs'),
+                total: rawCalculation.toLocaleString()
+              })}
             </Text>
           </View>
 
@@ -95,14 +102,14 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
             <View style={styles.minPriceAlert}>
               <ShieldCheck size={12} color={P.success} />
               <Text style={styles.minPriceAlertText}>
-                Platform minimum booking rate (Rs. {minPrice}) applied.
+                {t('jobCreation.minPriceApplied', 'Platform minimum booking rate (Rs. {{price}}) applied.', { price: minPrice })}
               </Text>
             </View>
           )}
 
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>
-              ⚡ Clients and Ustads are matched instantly. The price is locked before posting and cannot be negotiated. The first Ustad to accept is hired instantly.
+              {t('jobCreation.urgentFixedPriceInfo', '⚡ Clients and Ustads are matched instantly. The price is locked before posting and cannot be negotiated. The first Ustad to accept is hired instantly.')}
             </Text>
           </View>
         </View>

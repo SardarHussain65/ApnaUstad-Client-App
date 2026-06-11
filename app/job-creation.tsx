@@ -328,7 +328,7 @@ export default function JobCreationScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission Denied, Access to your photo library is required.');
+        alert(t('jobCreation.permissionDenied'));
         return;
       }
       const remainingSlots = Math.max(1, 5 - selectedMedia.length);
@@ -349,9 +349,9 @@ export default function JobCreationScreen() {
         setSelectedMedia((prev) => [...prev, ...nextAssets].slice(0, 5));
       }
     } catch {
-      alert('Error: Could not access the media library.');
+      alert(t('jobCreation.mediaLibraryError'));
     }
-  }, [selectedMedia.length]);
+  }, [selectedMedia.length, t]);
 
   const removeMedia = useCallback((indexToRemove: number) => {
     setSelectedMedia((current) => current.filter((_, index) => index !== indexToRemove));
@@ -361,37 +361,37 @@ export default function JobCreationScreen() {
   // ─── Submit flow ──────────────────────────────────────────────────────────
   const handlePostJob = useCallback(() => {
     if (description.trim().length < 10) {
-      showError('Description Too Short', 'Please describe the job with at least 10 characters.');
+      showError(t('jobCreation.descTooShortTitle'), t('jobCreation.descTooShortDesc'));
       return;
     }
     if (!address.trim() || address === 'Detecting location...' || address === 'Detecting location') {
-      showError('Invalid Location', 'Please provide or detect a booking address.');
+      showError(t('jobCreation.invalidLocation'), t('jobCreation.invalidLocationDesc'));
       return;
     }
     if (!isInstant && amount && Number(amount) <= 0) {
-      showError('Invalid Offer', 'Please enter a positive amount or leave the field blank for an open bid.');
+      showError(t('jobCreation.invalidOffer'), t('jobCreation.invalidOfferDesc'));
       return;
     }
     if (!isInstant) {
       if (!validateSchedule(scheduledDate, scheduledTime)) {
-        showError('Invalid Schedule', 'The scheduled date & time must be at least 1 hour in the future.');
+        showError(t('jobCreation.invalidSchedule'), t('jobCreation.invalidScheduleDesc'));
         return;
       }
     }
     
     const fixedPrice = isInstant ? calculateUrgentPrice(title ?? 'General', estimatedHours) : 0;
     showConfirm(
-      isInstant ? 'Post Urgent Job' : 'Post Service Request',
+      isInstant ? t('jobCreation.postUrgentTitle') : t('jobCreation.postServiceTitle'),
       isInstant 
-        ? `You are posting an urgent job with a fixed price of Rs. ${fixedPrice.toLocaleString()}. The first Ustad to accept will be auto-assigned.`
-        : `Your scheduled service request is ready to post.`,
+        ? t('jobCreation.postUrgentConfirm', { price: fixedPrice.toLocaleString() })
+        : t('jobCreation.postServiceConfirm'),
       handleConfirmSubmit,
       closeConfirm,
-      'Post Request',
-      'Keep Editing',
+      t('jobCreation.postRequest'),
+      t('jobCreation.keepEditing'),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, address, amount, estimatedHours, isInstant, scheduledDate, scheduledTime, validateSchedule]);
+  }, [description, address, amount, estimatedHours, isInstant, scheduledDate, scheduledTime, validateSchedule, t]);
 
   const handleConfirmSubmit = useCallback(async () => {
     setConfirmLoading(true);
@@ -462,18 +462,18 @@ export default function JobCreationScreen() {
         },
         onError: (err: Error) => {
           setConfirmLoading(false);
-          showError('Request Failed', err.message || 'Failed to post job.');
+          showError(t('jobCreation.requestFailed'), err.message || t('jobDetails.toastUnableRespond'));
         },
       });
     } catch (err) {
       setConfirmLoading(false);
-      showError('Upload Failed', err instanceof Error ? err.message : 'Failed to upload job evidence.');
+      showError(t('jobCreation.uploadFailed'), err instanceof Error ? err.message : t('registerDetails.uploadError'));
     }
   }, [
     selectedMedia, voiceNoteUri, uploadImages, title, description, urgency,
     address, amount, estimatedHours, longitude, latitude, targetWorkerId,
     isInstant, scheduledDate, scheduledTime,
-    createJob, closeConfirm, showError, setConfirmLoading,
+    createJob, closeConfirm, showError, setConfirmLoading, t
   ]);
 
   const handleSuccessModalDismiss = useCallback(() => {
@@ -577,19 +577,19 @@ export default function JobCreationScreen() {
                 {/* Stats row */}
                 <View style={styles.statsRow}>
                   <StatBadge
-                    label="SERVICE"
+                    label={t('jobCreation.service')}
                     value={isInstant ? 'NOW' : 'PLANNED'}
                     color={isInstant ? P.cyan : P.orange}
                   />
                   <View style={styles.statDivider} />
                   <StatBadge
-                    label="EVIDENCE"
+                    label={t('jobCreation.evidence')}
                     value={`${selectedMedia.length}/5`}
                     color={P.purple}
                   />
                   <View style={styles.statDivider} />
                   <StatBadge
-                    label="BUDGET"
+                    label={t('jobCreation.budgetLabel')}
                     value={amount ? `RS ${amount}` : 'ADD'}
                     color={P.success}
                   />
@@ -615,10 +615,10 @@ export default function JobCreationScreen() {
                 <View style={styles.inputFooter}>
                   {description.trim().length > 0 && description.trim().length < 10 ? (
                     <Text style={[styles.inputHint, { color: P.error, fontWeight: '700' }]}>
-                      ⚠️ Description too short (minimum 10 characters)
+                      {t('jobCreation.descTooShort')}
                     </Text>
                   ) : (
-                    <Text style={styles.inputHint}>Include the issue, size, and access details</Text>
+                    <Text style={styles.inputHint}>{t('jobCreation.descHint')}</Text>
                   )}
                   <Text style={[
                     styles.charCount,
@@ -645,7 +645,7 @@ export default function JobCreationScreen() {
             {/* ── Optional Details Divider ── */}
             <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.optionalDividerRow}>
               <View style={styles.optionalLine} />
-              <Text style={styles.optionalDividerText}>OPTIONAL DETAILS</Text>
+              <Text style={styles.optionalDividerText}>{t('jobCreation.optionalDetails')}</Text>
               <View style={styles.optionalLine} />
             </Animated.View>
 
@@ -661,7 +661,7 @@ export default function JobCreationScreen() {
             ) : (
               <Animated.View entering={FadeInDown.delay(320).duration(600)}>
                 <CollapsibleCard
-                  title="YOUR OFFER"
+                  title={t('jobCreation.yourOffer')}
                   icon={Banknote}
                   color={P.success}
                   summary={budgetSummary}
@@ -681,7 +681,7 @@ export default function JobCreationScreen() {
             {!isInstant && (
               <Animated.View entering={FadeInDown.delay(340).duration(500)}>
                 <CollapsibleCard
-                  title="VISIT SCHEDULE"
+                  title={t('jobCreation.visitSchedule')}
                   icon={Calendar}
                   color={P.orange}
                   summary={scheduleSummary}
@@ -717,7 +717,7 @@ export default function JobCreationScreen() {
             {/* ── Media Evidence Picker (Collapsible Optional) ── */}
             <Animated.View entering={FadeInDown.delay(380).duration(600)}>
               <CollapsibleCard
-                title="PHOTOS OR VIDEO"
+                title={t('jobCreation.photosOrVideo')}
                 icon={Camera}
                 color={P.purple}
                 summary={mediaSummary}
@@ -737,7 +737,7 @@ export default function JobCreationScreen() {
             {/* ── Voice Brief Recorder (Collapsible Optional) ── */}
             <Animated.View entering={FadeInDown.delay(420).duration(600)}>
               <CollapsibleCard
-                title="VOICE BRIEF"
+                title={t('jobCreation.voiceBrief')}
                 icon={Mic}
                 color={P.orange}
                 summary={voiceSummary}
@@ -765,7 +765,7 @@ export default function JobCreationScreen() {
               <View style={styles.completionCopy}>
                 <View style={styles.completionTitleRow}>
                   <ShieldCheck size={14} color={completionPercentage === 100 ? P.success : P.cyanDim} strokeWidth={2.3} />
-                  <Text style={styles.completionTitle}>Required Details</Text>
+                  <Text style={styles.completionTitle}>{t('jobCreation.requiredDetails')}</Text>
                 </View>
                 <Text style={styles.completionText}>
                   {completedStepCount} of {requiredStepCount} filled
@@ -836,25 +836,25 @@ export default function JobCreationScreen() {
           visible={confirmVisible}
           onConfirm={handleConfirmSubmit}
           onCancel={closeConfirm}
-          title={isInstant ? "Post Urgent Job?" : "Post Job Request?"}
+          title={isInstant ? t('jobCreation.postUrgentConfirmQuestion') : t('jobCreation.postJobConfirmQuestion')}
           message={isInstant 
-            ? `You are posting an urgent job with a fixed price of Rs. ${calculateUrgentPrice(title ?? 'General', estimatedHours).toLocaleString()}. The first Ustad to accept will be auto-assigned instantly.`
-            : "Are you sure you want to schedule and broadcast this request?"
+            ? t('jobCreation.postUrgentAlertConfirm', { price: calculateUrgentPrice(title ?? 'General', estimatedHours).toLocaleString() })
+            : t('jobCreation.postJobAlertConfirm')
           }
-          confirmText="Yes, Post Job"
-          cancelText="Cancel"
+          confirmText={t('jobCreation.yesPostJob')}
+          cancelText={t('jobCreation.cancel')}
           isLoading={isConfirming}
           confirmColor={isInstant ? P.cyan : P.orange}
         />
         <AlertModal
           visible={showSuccessModal}
           onDismiss={handleSuccessModalDismiss}
-          title="JOB POSTED SUCCESSFULLY!"
+          title={t('jobCreation.successTitle')}
           type="success"
-          buttonText="OK"
+          buttonText={t('common.done')}
           message={isInstant 
-            ? "Your urgent job has been posted!\n\nThe first Ustad to accept will be auto-assigned instantly. We are finding the best Ustad for you right now." 
-            : "Your scheduled job has been posted! Ustads will review and send you bids.\n\nYou can track updates in your Bookings."
+            ? t('jobCreation.successModalUrgentDesc') 
+            : t('jobCreation.successModalScheduledDesc')
           }
         />
 

@@ -3,20 +3,21 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LogOut, MessageCircle, RefreshCcw, ShieldAlert } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { CustomButton } from '../components/CustomButton';
 import { BorderRadius, Colors, Spacing, Typography } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 
-const DEFAULT_REASON = 'Account deactivated by admin. Please contact support for details.';
-
 export default function AccountDeactivatedScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { accountStatus, logout, refreshAccountStatus } = useAuth();
   const [checking, setChecking] = useState(false);
 
-  const reason = accountStatus?.deactivationReason || DEFAULT_REASON;
+  const defaultReason = t('accountDeactivated.defaultReason');
+  const reason = accountStatus?.deactivationReason || defaultReason;
   const deactivatedAt = accountStatus?.deactivatedAt
     ? new Date(accountStatus.deactivatedAt).toLocaleString()
     : null;
@@ -25,7 +26,7 @@ export default function AccountDeactivatedScreen() {
     router.push({
       pathname: '/profile/help-center' as any,
       params: {
-        subject: 'Account deactivation appeal',
+        subject: t('accountDeactivated.appealSubject'),
         reason,
         source: 'account_deactivation',
       },
@@ -56,37 +57,36 @@ export default function AccountDeactivatedScreen() {
             </View>
           </View>
 
-          <Text style={[styles.title, Typography.threeD]}>Account Deactivated</Text>
+          <Text style={[styles.title, Typography.threeD]}>{t('accountDeactivated.title')}</Text>
           <Text style={styles.subtitle}>
-            Your account is currently deactivated by admin.
+            {t('accountDeactivated.subtitle')}
           </Text>
 
           <GlassCard style={styles.card} intensity={24} padding={Spacing.l}>
-            <Text style={styles.reasonLabel}>Admin reason</Text>
+            <Text style={styles.reasonLabel}>{t('accountDeactivated.reasonLabel')}</Text>
             <Text style={styles.reasonText}>{reason}</Text>
-            {deactivatedAt && <Text style={styles.dateText}>Deactivated on {deactivatedAt}</Text>}
+            {deactivatedAt && <Text style={styles.dateText}>{t('accountDeactivated.deactivatedOn', { date: deactivatedAt })}</Text>}
           </GlassCard>
 
           <Text style={styles.explainer}>
-            You cannot use bookings, jobs, wallet, chat, or profile actions until your account is activated again.
-            Please contact admin from Help Center if you think this is a mistake.
+            {t('accountDeactivated.explainer')}
           </Text>
 
           <View style={styles.actions}>
             <CustomButton
-              title="Contact Admin"
+              title={t('accountDeactivated.contactAdmin')}
               onPress={handleContactAdmin}
               icon={<MessageCircle size={20} color="#000" strokeWidth={2.5} />}
             />
             <CustomButton
-              title={checking ? 'Checking...' : 'Check Status'}
+              title={checking ? t('accountDeactivated.checking') : t('accountDeactivated.checkStatus')}
               onPress={handleCheckStatus}
               loading={checking}
               variant="secondary"
               icon={<RefreshCcw size={20} color="#fff" strokeWidth={2.5} />}
             />
             <CustomButton
-              title="Logout"
+              title={t('accountDeactivated.logout')}
               onPress={handleLogout}
               variant="outline"
               icon={<LogOut size={20} color="#fff" strokeWidth={2.5} />}

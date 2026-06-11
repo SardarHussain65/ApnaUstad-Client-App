@@ -78,7 +78,7 @@ export default function LoginScreen() {
       const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
 
       if (!token || !refreshToken || !user) {
-        Alert.alert('Login error', 'The server returned an incomplete response. Please try again.');
+        Alert.alert(t('auth.loginError', 'Login error'), t('auth.incompleteResponse', 'The server returned an incomplete response. Please try again.'));
         return;
       }
 
@@ -87,7 +87,7 @@ export default function LoginScreen() {
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Unable to sign in', error.message);
+      Alert.alert(t('auth.unableSignIn', 'Unable to sign in'), error.message);
     },
   });
 
@@ -97,15 +97,19 @@ export default function LoginScreen() {
     setPasswordError('');
 
     if (!normalizedIdentifier) {
-      setIdentifierError(`Enter your ${loginType === 'email' ? 'email address' : 'phone number'}.`);
+      setIdentifierError(
+        loginType === 'email'
+          ? t('auth.enterEmail', 'Enter your email address.')
+          : t('auth.enterPhone', 'Enter your phone number.')
+      );
       return;
     }
     if (loginType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier)) {
-      setIdentifierError('Enter a valid email address.');
+      setIdentifierError(t('auth.enterValidEmail', 'Enter a valid email address.'));
       return;
     }
     if (!password) {
-      setPasswordError('Enter your password.');
+      setPasswordError(t('auth.enterPassword', 'Enter your password.'));
       return;
     }
 
@@ -145,14 +149,14 @@ export default function LoginScreen() {
                   active={loginType === 'email'}
                   accentColor={accentColor}
                   icon={<Mail size={15} color={loginType === 'email' ? accentColor : Colors.textDim} />}
-                  label="Email"
+                  label={t('auth.emailTab', 'Email')}
                   onPress={() => handleTabChange('email')}
                 />
                 <LoginTab
                   active={loginType === 'phone'}
                   accentColor={accentColor}
                   icon={<Phone size={15} color={loginType === 'phone' ? accentColor : Colors.textDim} />}
-                  label="Phone"
+                  label={t('auth.phoneTab', 'Phone')}
                   onPress={() => handleTabChange('phone')}
                 />
               </View>
@@ -171,7 +175,7 @@ export default function LoginScreen() {
                   setIdentifier(value);
                   if (identifierError) setIdentifierError('');
                 }}
-                placeholder={loginType === 'email' ? 'name@example.com' : '+92 300 0000000'}
+                placeholder={loginType === 'email' ? t('auth.emailPlaceholder', 'name@example.com') : t('auth.phonePlaceholder', '+92 300 0000000')}
                 value={identifier}
               />
 

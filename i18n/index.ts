@@ -4,6 +4,7 @@ import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { I18nManager } from 'react-native';
 import * as Updates from 'expo-updates';
+import { DevSettings } from 'react-native';
 
 import en from './locales/en.json';
 import ur from './locales/ur.json';
@@ -15,17 +16,24 @@ export const changeAppLanguage = async (lang: 'en' | 'ur') => {
   try {
     await AsyncStorage.setItem(LANGUAGE_KEY, lang);
     await i18n.changeLanguage(lang);
-    
+
     const isRTL = lang === 'ur';
-    
+
     // Check if direction needs to change
     if (I18nManager.isRTL !== isRTL) {
       I18nManager.allowRTL(isRTL);
       I18nManager.forceRTL(isRTL);
-      
+
       // Reload app to apply RTL layout mirroring
       setTimeout(() => {
-        Updates.reloadAsync();
+        if (__DEV__) {
+          DevSettings.reload();
+        } else {
+          Updates.reloadAsync().catch(err => {
+            console.warn('Updates.reloadAsync failed, falling back to DevSettings', err);
+            DevSettings.reload();
+          });
+        }
       }, 150);
     }
   } catch (error) {
@@ -47,30 +55,38 @@ const languageDetector = {
           I18nManager.allowRTL(isRTL);
           I18nManager.forceRTL(isRTL);
           // Wait briefly, then reload to apply mirroring
-          Updates.reloadAsync();
+          if (__DEV__) {
+            DevSettings.reload();
+          } else {
+            Updates.reloadAsync().catch(() => DevSettings.reload());
+          }
         }
         return callback(savedLanguage);
       }
-      
+
       // If no saved language, use system language
       const locales = Localization.getLocales();
       const locale = locales[0]?.languageCode || 'en';
       const initialLang = locale === 'ur' ? 'ur' : 'en';
-      
+
       const isSystemRTL = initialLang === 'ur';
       if (I18nManager.isRTL !== isSystemRTL) {
         I18nManager.allowRTL(isSystemRTL);
         I18nManager.forceRTL(isSystemRTL);
-        Updates.reloadAsync();
+        if (__DEV__) {
+          DevSettings.reload();
+        } else {
+          Updates.reloadAsync().catch(() => DevSettings.reload());
+        }
       }
-      
+
       callback(initialLang);
     } catch (error) {
       callback('en');
     }
   },
-  init: () => {},
-  cacheUserLanguage: () => {},
+  init: () => { },
+  cacheUserLanguage: () => { },
 };
 
 i18n

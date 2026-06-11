@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Zap, Calendar } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 type Urgency = 'instant' | 'scheduled';
 
@@ -20,6 +21,7 @@ interface UrgencyToggleProps {
 }
 
 export function UrgencyToggle({ urgency, onChange, colors }: UrgencyToggleProps) {
+  const { t } = useTranslation();
   const isInstant = urgency === 'instant';
 
   const handleSelect = (mode: Urgency) => {
@@ -46,7 +48,7 @@ export function UrgencyToggle({ urgency, onChange, colors }: UrgencyToggleProps)
           activeOpacity={0.7}
         >
           <Zap size={13} color={isInstant ? colors.cyan : colors.textMuted} strokeWidth={2.5} />
-          <Text style={[styles.toggleText, { color: colors.textMuted }, isInstant && { color: colors.cyan }]}>Urgent (Now)</Text>
+          <Text style={[styles.toggleText, { color: colors.textMuted }, isInstant && { color: colors.cyan }]}>{t('jobCreation.urgentNow', 'Urgent (Now)')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.toggleOption}
@@ -54,7 +56,7 @@ export function UrgencyToggle({ urgency, onChange, colors }: UrgencyToggleProps)
           activeOpacity={0.7}
         >
           <Calendar size={13} color={!isInstant ? colors.orange : colors.textMuted} strokeWidth={2.5} />
-          <Text style={[styles.toggleText, { color: colors.textMuted }, !isInstant && { color: colors.orange }]}>Book Later</Text>
+          <Text style={[styles.toggleText, { color: colors.textMuted }, !isInstant && { color: colors.orange }]}>{t('jobCreation.bookLater', 'Book Later')}</Text>
         </TouchableOpacity>
       </View>
     </View>

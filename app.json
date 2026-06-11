@@ -75,7 +75,8 @@
       ],
       "@maplibre/maplibre-react-native",
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

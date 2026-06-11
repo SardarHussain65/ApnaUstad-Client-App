@@ -25,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Banknote,
@@ -104,13 +105,13 @@ const getClientMeta = (job: any) => job.clientMeta || (typeof job.customer === '
 
 const formatMoney = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString()}`;
 
-const formatAge = (value?: string) => {
+const formatAge = (value?: string, t?: any) => {
   const timestamp = value ? new Date(value).getTime() : 0;
-  if (!timestamp || Number.isNaN(timestamp)) return 'New signal';
+  if (!timestamp || Number.isNaN(timestamp)) return t ? t('incomingJobModal.newSignal', 'New signal') : 'New signal';
   const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
-  if (minutes < 1) return 'Posted just now';
-  if (minutes < 60) return `Posted ${minutes}m ago`;
-  return `Posted ${Math.floor(minutes / 60)}h ago`;
+  if (minutes < 1) return t ? t('incomingJobModal.postedJustNow', 'Posted just now') : 'Posted just now';
+  if (minutes < 60) return t ? t('incomingJobModal.postedMinutesAgo', 'Posted {{count}}m ago', { count: minutes }) : `Posted ${minutes}m ago`;
+  return t ? t('incomingJobModal.postedHoursAgo', 'Posted {{count}}h ago', { count: Math.floor(minutes / 60) }) : `Posted ${Math.floor(minutes / 60)}h ago`;
 };
 
 const formatCountdown = (seconds: number) => {
@@ -140,6 +141,7 @@ export function IncomingJobModal({
 }: IncomingJobModalProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const [parentScrollEnabled, setParentScrollEnabled] = useState(true);
 
   if (!jobs || jobs.length === 0) return null;
@@ -191,7 +193,7 @@ export function IncomingJobModal({
           {jobs.length > 1 && (
             <View style={[styles.swipeHint, { bottom: insets.bottom + 14 }]}>
               <ChevronLeft size={14} color={Colors.cyan} strokeWidth={2.5} />
-              <Text style={styles.swipeHintText}>Swipe for {jobs.length} offers</Text>
+              <Text style={styles.swipeHintText}>{t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: jobs.length })}</Text>
               <ChevronRight size={14} color={Colors.cyan} strokeWidth={2.5} />
             </View>
           )}
@@ -223,6 +225,7 @@ function JobDecisionCard({
   onScrollActive?: (active: boolean) => void;
 }) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const workerLoc = (user as any)?.address || (user as any)?.city || '';
   const signal = job.signalMeta || {};
   const isInstant = job.urgency === 'instant';
@@ -262,15 +265,15 @@ function JobDecisionCard({
   const completedJobs = Number(client?.completedJobs || 0);
   const totalJobsPosted = Number(client?.totalJobs || 0);
   const timingText = isInstant
-    ? 'Immediate response requested'
-    : `${schedule.fullDateLabel || schedule.dateLabel || 'Scheduled visit'} at ${schedule.timeLabel || 'Time pending'}`;
-  const primaryAmountLabel = isInstant ? 'Net earning' : 'Client budget';
+    ? t('incomingJobModal.immediateResponse', 'Immediate response requested')
+    : `${schedule.fullDateLabel || schedule.dateLabel || t('incomingJobModal.scheduledVisit', 'Scheduled visit')} at ${schedule.timeLabel || t('incomingJobModal.timePending', 'Time pending')}`;
+  const primaryAmountLabel = isInstant ? t('incomingJobModal.netEarning', 'Net earning') : t('incomingJobModal.clientBudget', 'Client budget');
   const primaryAmountText = isInstant
     ? (signal.estimatedNetEarningText || formatMoney(netEarning))
-    : (signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : 'Open budget'));
+    : (signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget')));
   const primaryAmountHint = isInstant
-    ? (commission > 0 ? `${formatMoney(commission)} commission` : 'No commission')
-    : 'Submit your own quote';
+    ? (commission > 0 ? t('incomingJobModal.commissionText', '{{amount}} commission', { amount: formatMoney(commission) }) : t('incomingJobModal.noCommission', 'No commission'))
+    : t('incomingJobModal.submitQuoteHint', 'Submit your own quote');
 
   return (
     <Animated.View entering={SlideInDown.duration(420).springify().damping(18)} style={styles.cardFrame}>
@@ -287,7 +290,7 @@ function JobDecisionCard({
         >
           <View style={styles.liveBarLeft}>
             <Radio size={13} color="#001014" strokeWidth={2.8} />
-            <Text style={styles.liveBarText}>{isInstant ? 'LIVE JOB OFFER' : 'NEW SCHEDULED REQUEST'}</Text>
+            <Text style={styles.liveBarText}>{isInstant ? t('incomingJobModal.liveJobOffer', 'LIVE JOB OFFER') : t('incomingJobModal.newScheduledRequest', 'NEW SCHEDULED REQUEST')}</Text>
           </View>
           <View style={styles.liveBarRight}>
             {totalJobs > 1 && <Text style={styles.queueText}>{currentIndex}/{totalJobs}</Text>}
@@ -315,16 +318,16 @@ function JobDecisionCard({
               <View style={styles.eyebrowRow}>
                 <View style={[styles.signalDot, { backgroundColor: accent }]} />
                 <Text style={[styles.eyebrowText, { color: accent }]}>
-                  {isInstant ? 'Instant response' : 'Scheduled opportunity'}
+                  {isInstant ? t('incomingJobModal.instantResponse', 'Instant response') : t('incomingJobModal.scheduledOpportunity', 'Scheduled opportunity')}
                 </Text>
-                <Text style={styles.postedText}>{formatAge(job.createdAt)}</Text>
+                <Text style={styles.postedText}>{formatAge(job.createdAt, t)}</Text>
               </View>
-              <Text style={styles.categoryTitle} numberOfLines={1}>{job.category || 'Service request'}</Text>
+              <Text style={styles.categoryTitle} numberOfLines={1}>{job.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
             </View>
           </View>
 
           <Text style={styles.descriptionText}>
-            {job.description || 'The client has requested professional assistance for this service.'}
+            {job.description || t('incomingJobModal.defaultDescription', 'The client has requested professional assistance for this service.')}
           </Text>
 
           <View style={styles.primaryFacts}>
@@ -337,20 +340,20 @@ function JobDecisionCard({
             />
             <DecisionMetric
               icon={Navigation}
-              label="Travel distance"
+              label={t('incomingJobModal.travelDistance', 'Travel distance')}
               value={distanceText}
-              hint={isInstant ? 'Respond nearby' : 'Plan your visit'}
+              hint={isInstant ? t('incomingJobModal.respondNearby', 'Respond nearby') : t('incomingJobModal.planVisit', 'Plan your visit')}
               color={accent}
             />
           </View>
 
           <View style={styles.detailCard}>
-            <DetailRow icon={MapPin} label="Service location" value={job.address || 'Nearby service area'} color={accent} />
-            <DetailRow icon={CalendarDays} label="Visit timing" value={timingText} color={isInstant ? Colors.green : '#FF8C00'} />
+            <DetailRow icon={MapPin} label={t('incomingJobModal.serviceLocation', 'Service location')} value={job.address || t('incomingJobModal.nearbyServiceArea', 'Nearby service area')} color={accent} />
+            <DetailRow icon={CalendarDays} label={t('incomingJobModal.visitTiming', 'Visit timing')} value={timingText} color={isInstant ? Colors.green : '#FF8C00'} />
             <DetailRow
               icon={Banknote}
-              label="Client offer"
-              value={signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : 'Open budget')}
+              label={t('incomingJobModal.clientOffer', 'Client offer')}
+              value={signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'))}
               color={Colors.green}
               isLast
             />
@@ -359,9 +362,9 @@ function JobDecisionCard({
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderTitle}>
               <ImageIcon size={14} color={accent} strokeWidth={2.4} />
-              <Text style={[styles.sectionTitle, { color: accent }]}>Work evidence</Text>
+              <Text style={[styles.sectionTitle, { color: accent }]}>{t('incomingJobModal.workEvidence', 'Work evidence')}</Text>
             </View>
-            <Text style={styles.sectionMeta}>{media.totalCount} attachment{media.totalCount === 1 ? '' : 's'}</Text>
+            <Text style={styles.sectionMeta}>{t('incomingJobModal.attachmentsLabel', '{{count}} attachments', { count: media.totalCount })}</Text>
           </View>
 
           {media.items.length > 0 ? (
@@ -380,14 +383,14 @@ function JobDecisionCard({
           ) : (
             <View style={styles.emptyEvidence}>
               <ImageIcon size={18} color="rgba(255,255,255,0.3)" />
-              <Text style={styles.emptyEvidenceText}>No work evidence attached. Review the brief carefully.</Text>
+              <Text style={styles.emptyEvidenceText}>{t('incomingJobModal.noEvidenceMsg', 'No work evidence attached. Review the brief carefully.')}</Text>
             </View>
           )}
 
           <View style={styles.sectionHeader}>
             <View style={styles.sectionHeaderTitle}>
               <UserRound size={14} color={accent} strokeWidth={2.4} />
-              <Text style={[styles.sectionTitle, { color: accent }]}>Client context</Text>
+              <Text style={[styles.sectionTitle, { color: accent }]}>{t('incomingJobModal.clientContext', 'Client context')}</Text>
             </View>
           </View>
 
@@ -400,16 +403,16 @@ function JobDecisionCard({
               </View>
             )}
             <View style={styles.clientCopy}>
-              <Text style={styles.clientLabel}>Service client</Text>
-              <Text style={styles.clientName} numberOfLines={1}>{client?.fullName || 'ApnaUstad client'}</Text>
+              <Text style={styles.clientLabel}>{t('incomingJobModal.serviceClient', 'Service client')}</Text>
+              <Text style={styles.clientName} numberOfLines={1}>{client?.fullName || t('incomingJobModal.defaultClientName', 'ApnaUstad client')}</Text>
               <View style={styles.clientStats}>
                 <View style={styles.clientStat}>
                   <Star size={11} color="#FFD700" fill={clientRating > 0 ? '#FFD700' : 'transparent'} />
-                  <Text style={styles.clientStatText}>{clientRating > 0 ? `${clientRating.toFixed(1)} rating` : 'New client'}</Text>
+                  <Text style={styles.clientStatText}>{clientRating > 0 ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: clientRating.toFixed(1) }) : t('incomingJobModal.newClient', 'New client')}</Text>
                 </View>
                 <View style={styles.clientStat}>
                   <ShieldCheck size={11} color={Colors.green} />
-                  <Text style={styles.clientStatText}>{completedJobs}/{totalJobsPosted} jobs completed</Text>
+                  <Text style={styles.clientStatText}>{t('incomingJobModal.jobsCompleted', '{{completed}}/{{total}} jobs completed', { completed: completedJobs, total: totalJobsPosted })}</Text>
                 </View>
               </View>
             </View>
@@ -427,10 +430,10 @@ function JobDecisionCard({
             </View>
             <View style={styles.walletCopy}>
               <Text style={[styles.walletTitle, { color: isWalletEligible ? Colors.green : '#FF8C00' }]}>
-                {isWalletEligible ? 'Wallet ready for acceptance' : 'Wallet top-up required'}
+                {isWalletEligible ? t('incomingJobModal.walletReady', 'Wallet ready for acceptance') : t('incomingJobModal.walletTopUpRequired', 'Wallet top-up required')}
               </Text>
               <Text style={styles.walletText}>
-                Balance {formatMoney(walletBalance)}. Minimum required {formatMoney(requiredWalletBalance)}.
+                {t('incomingJobModal.walletBalanceDesc', 'Balance {{balance}}. Minimum required {{required}}.', { balance: formatMoney(walletBalance), required: formatMoney(requiredWalletBalance) })}
               </Text>
             </View>
           </View>
@@ -447,8 +450,8 @@ function JobDecisionCard({
               <Banknote size={17} color="#FFB000" strokeWidth={2.5} />
             </View>
             <View style={styles.counterOfferCopy}>
-              <Text style={styles.counterOfferTitle}>Offer feels low?</Text>
-              <Text style={styles.counterOfferText}>Propose your fair price with a short explanation</Text>
+              <Text style={styles.counterOfferTitle}>{t('incomingJobModal.offerLow', 'Offer feels low?')}</Text>
+              <Text style={styles.counterOfferText}>{t('incomingJobModal.counterOfferDesc', 'Propose your fair price with a short explanation')}</Text>
             </View>
             <ChevronRight size={17} color="#FFB000" strokeWidth={2.6} />
           </TouchableOpacity>
@@ -457,7 +460,7 @@ function JobDecisionCard({
         <View style={styles.footer}>
           <TouchableOpacity style={styles.skipButton} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
             <X size={18} color="rgba(255,255,255,0.62)" strokeWidth={2.5} />
-            <Text style={styles.skipButtonText}>Skip</Text>
+            <Text style={styles.skipButtonText}>{t('common.skip', 'Skip')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -477,13 +480,15 @@ function JobDecisionCard({
               ) : isWalletEligible ? (
                 <>
                   <Check size={19} color="#001014" strokeWidth={3} />
-                  <Text style={styles.primaryButtonText}>{isInstant ? 'Accept offer' : 'Continue to bid'}</Text>
+                  <Text style={styles.primaryButtonText}>
+                    {isInstant ? t('incomingJobModal.acceptOffer', 'Accept offer') : t('incomingJobModal.continueBid', 'Continue to bid')}
+                  </Text>
                   <ChevronRight size={17} color="#001014" strokeWidth={3} />
                 </>
               ) : (
                 <>
                   <WalletCards size={18} color="#201000" strokeWidth={2.7} />
-                  <Text style={styles.primaryButtonText}>Top up wallet</Text>
+                  <Text style={styles.primaryButtonText}>{t('incomingJobModal.topUpWallet', 'Top up wallet')}</Text>
                   <ChevronRight size={17} color="#201000" strokeWidth={3} />
                 </>
               )}
@@ -494,7 +499,7 @@ function JobDecisionCard({
         <View style={styles.footerNote}>
           <ShieldAlert size={11} color="rgba(255,255,255,0.4)" />
           <Text style={styles.footerNoteText}>
-            {isInstant ? 'Acceptance sends your interest to the client for confirmation.' : 'Submit your quote after reviewing the complete request.'}
+            {isInstant ? t('incomingJobModal.instantFooterNote', 'Acceptance sends your interest to the client for confirmation.') : t('incomingJobModal.scheduledFooterNote', 'Submit your quote after reviewing the complete request.')}
           </Text>
         </View>
       </View>
@@ -564,6 +569,7 @@ function EvidenceTile({ item, index, accent }: { item: MediaItem; index: number;
 }
 
 function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  const { t } = useTranslation();
   const [previewVisible, setPreviewVisible] = useState(false);
   return (
     <>
@@ -579,7 +585,7 @@ function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
           <Maximize2 size={12} color="#FFFFFF" strokeWidth={2.4} />
         </View>
         <View style={styles.mediaTypeBadge}>
-          <Text style={styles.mediaTypeText}>PHOTO</Text>
+          <Text style={styles.mediaTypeText}>{t('incomingJobModal.photo', 'PHOTO')}</Text>
         </View>
       </TouchableOpacity>
       <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
@@ -595,6 +601,7 @@ function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
 }
 
 function VideoEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  const { t } = useTranslation();
   const [previewVisible, setPreviewVisible] = useState(false);
   const player = useVideoPlayer(item.url);
 
@@ -611,12 +618,12 @@ function VideoEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
       >
         <View style={styles.videoTile}>
           <PlayCircle size={34} color={accent} strokeWidth={1.8} />
-          <Text style={styles.videoTileText}>Play job video</Text>
+          <Text style={styles.videoTileText}>{t('incomingJobModal.playVideo', 'Play job video')}</Text>
         </View>
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFillObject} />
         <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
         <View style={styles.mediaTypeBadge}>
-          <Text style={styles.mediaTypeText}>VIDEO</Text>
+          <Text style={styles.mediaTypeText}>{t('incomingJobModal.video', 'VIDEO')}</Text>
         </View>
       </TouchableOpacity>
       <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
@@ -637,6 +644,7 @@ const formatPlaybackTime = (seconds: number) => {
 };
 
 function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+  const { t } = useTranslation();
   const player = useAudioPlayer(item.url);
   const status = useAudioPlayerStatus(player);
 
@@ -667,10 +675,10 @@ function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
       <View style={styles.audioCopy}>
         <View style={styles.audioTitleRow}>
           <Volume2 size={14} color={accent} strokeWidth={2.3} />
-          <Text style={styles.audioTitle}>Client voice brief</Text>
+          <Text style={styles.audioTitle}>{t('incomingJobModal.voiceBrief', 'Client voice brief')}</Text>
         </View>
         <Text style={styles.audioSubtitle}>
-          {status.playing ? 'Playing requirement details' : 'Tap to listen before responding'}
+          {status.playing ? t('incomingJobModal.playingVoice', 'Playing requirement details') : t('incomingJobModal.tapListen', 'Tap to listen before responding')}
         </Text>
         <Text style={[styles.audioDuration, { color: accent }]}>
           {formatPlaybackTime(status.currentTime)} / {formatPlaybackTime(status.duration)}
@@ -678,7 +686,7 @@ function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
       </View>
       <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
       <View style={styles.mediaTypeBadge}>
-        <Text style={styles.mediaTypeText}>VOICE</Text>
+        <Text style={styles.mediaTypeText}>{t('incomingJobModal.voice', 'VOICE')}</Text>
       </View>
     </TouchableOpacity>
   );

@@ -126,7 +126,7 @@ export default function ForgotPasswordScreen() {
                   setEmail(value);
                   if (emailError) setEmailError('');
                 }}
-                placeholder="name@example.com"
+                placeholder={t('auth.emailPlaceholder', 'name@example.com')}
                 value={email}
               />
               <AnimatedButton

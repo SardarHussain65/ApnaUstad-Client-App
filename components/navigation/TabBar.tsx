@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, Text } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTranslation } from 'react-i18next';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -75,6 +76,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 }
 
 function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPress: () => void, routeName: string }) {
+  const { t } = useTranslation();
   const prog = useSharedValue(isFocused ? 1 : 0);
 
   useEffect(() => {
@@ -116,10 +118,10 @@ function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPres
 
   const getLabel = () => {
      switch (routeName) {
-       case 'index': return 'Home';
-       case 'bookings': return 'Jobs';
-       case 'wallet': return 'Wallet';
-       case 'profile': return 'Profile';
+       case 'index': return t('tabs.home');
+       case 'bookings': return t('tabs.bookings');
+       case 'wallet': return t('tabs.wallet');
+       case 'profile': return t('tabs.profile');
        default: return '';
      }
   }

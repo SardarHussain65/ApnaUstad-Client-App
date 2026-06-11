@@ -272,8 +272,24 @@ export default function BookingsTab() {
               const amountValue = Number(meta?.financial?.amount ?? (isBooking
                 ? Number(isWorker ? booking.workerEarning : booking.totalAmount || 0)
                 : Number(job.amount || 0)));
-              const amountLabel = meta?.financial?.label || (isBooking ? (isWorker ? 'Earning' : 'Total') : 'Budget');
-              const actionLabel = isAwaitingProposals
+              const getLocalizedAmountLabel = (label: string) => {
+                if (label === 'Total') return t('bookings.totalLabel', 'Total');
+                if (label === 'Earning') return t('bookings.earningLabel', 'Earning');
+                if (label === 'Budget') return t('bookings.budgetLabel', 'Budget');
+                return label;
+              };
+              const amountLabel = getLocalizedAmountLabel(meta?.financial?.label || (isBooking ? (isWorker ? 'Earning' : 'Total') : 'Budget'));
+              
+              const getLocalizedActionLabel = (label: string) => {
+                if (label === 'View details' || label === 'View Details') return t('bookings.actionViewDetails', 'View Details');
+                if (label === 'View Receipt') return t('bookings.actionViewReceipt', 'View Receipt');
+                if (label === 'Track Live Job') return t('bookings.actionTrackLiveJob', 'Track Live Job');
+                if (label === 'Track Job') return t('bookings.actionTrackJob', 'Track Job');
+                if (label === 'Review Proposals') return t('bookings.actionReviewProposals', 'Review Proposals');
+                if (label === 'Resume Search') return t('bookings.actionResumeSearch', 'Resume Search');
+                return label;
+              };
+              const actionLabel = getLocalizedActionLabel(isAwaitingProposals
                 ? Number(job.bidCount || 0) > 0 ? 'Review Proposals' : 'Resume Search'
                 : status === 'completed' || status === 'closed'
                 ? 'View Receipt'
@@ -283,11 +299,16 @@ export default function BookingsTab() {
                     ? 'Track Live Job'
                     : status === 'assigned' || status === 'accepted'
                       ? 'Track Job'
-                      : 'View Details';
+                      : 'View Details');
 
+              const getLocalizedRole = (role: string) => {
+                if (role === 'Ustad') return t('common.ustad', 'Ustad');
+                if (role === 'Client') return t('common.client', 'Client');
+                return role;
+              };
               let counterPartyName = meta?.counterParty?.fullName || 'Searching...';
               let counterPartyImage = meta?.primaryImageUrl || meta?.counterParty?.profileImage || '';
-              let counterPartyRole = meta?.counterParty?.roleLabel || (isWorker ? 'Client' : 'Ustad');
+              let counterPartyRole = getLocalizedRole(meta?.counterParty?.roleLabel || (isWorker ? 'Client' : 'Ustad'));
               if (isBooking) {
                 const person = isWorker ? booking.customer : booking.worker;
                 counterPartyName = meta?.counterParty?.fullName || person?.fullName || 'Searching...';
@@ -354,7 +375,7 @@ export default function BookingsTab() {
                         <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
                           {getStatusIcon(status, statusColor)}
                           <Text style={[styles.statusText, { color: statusColor }]}>
-                            {statusLabel(status)}
+                            {t(`bookingStatus.${status}.label`, statusLabel(status))}
                           </Text>
                         </View>
                       </View>
@@ -424,7 +445,7 @@ export default function BookingsTab() {
                       <View style={styles.locationBox}>
                         <MapPin size={15} color={Colors.textMuted} />
                         <Text style={styles.locationText} numberOfLines={2}>
-                          {address || 'Open details to view the service location'}
+                          {address || t('bookings.openDetailsToViewLocation', 'Open details to view the service location')}
                         </Text>
                       </View>
 
@@ -469,7 +490,7 @@ export default function BookingsTab() {
                             style={styles.reviewGradient}
                           >
                             <Star size={15} color="#000" fill="#000" />
-                            <Text style={styles.reviewBtnText}>RATE USTAD</Text>
+                            <Text style={styles.reviewBtnText}>{t('bookings.rateUstad', 'RATE USTAD')}</Text>
                           </LinearGradient>
                         </TouchableOpacity>
                       )}

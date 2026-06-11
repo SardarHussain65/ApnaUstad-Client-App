@@ -6,6 +6,7 @@ import { GlassCard } from './GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +18,7 @@ interface PaymentReceivedModalProps {
 
 export function PaymentReceivedModal({ visible, booking, onClose }: PaymentReceivedModalProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   if (!booking) return null;
 
   const handleAcknowledge = () => {
@@ -49,20 +51,20 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                  <CheckCircle2 size={54} color={Colors.cyan} strokeWidth={2.5} />
               </View>
 
-              <Text style={styles.eyebrow}>PAYMENT RECEIVED ✅</Text>
-              <Text style={styles.title}>PAYMENT RECEIVED</Text>
+              <Text style={styles.eyebrow}>{t('paymentReceivedModal.eyebrow', 'PAYMENT RECEIVED ✅')}</Text>
+              <Text style={styles.title}>{t('paymentReceivedModal.title', 'PAYMENT RECEIVED')}</Text>
               
               <View style={styles.amountBox}>
-                <Text style={styles.currency}>PKR</Text>
+                <Text style={styles.currency}>{t('paymentReceivedModal.currency', 'PKR')}</Text>
                 <Text style={styles.amount}>{booking.totalAmount || booking.amount || '—'}</Text>
               </View>
 
-              <Text style={styles.category}>{booking.category || 'Job Task'}</Text>
-              <Text style={styles.subtitle}>Payment has been verified and deposited into your wallet.</Text>
+              <Text style={styles.category}>{booking.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
+              <Text style={styles.subtitle}>{t('paymentReceivedModal.subtitle', 'Payment has been verified and deposited into your wallet.')}</Text>
 
               <View style={styles.footerRow}>
                 <ShieldCheck size={14} color={Colors.cyan} />
-                 <Text style={styles.securityTxt}>VERIFIED BY APNAUSTAD</Text>
+                 <Text style={styles.securityTxt}>{t('paymentReceivedModal.verifiedBy', 'VERIFIED BY APNAUSTAD')}</Text>
               </View>
 
               <TouchableOpacity
@@ -76,7 +78,7 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                   end={{ x: 1, y: 0 }}
                   style={styles.ctaGradient}
                 >
-                  <Text style={styles.ctaText}>GOT IT</Text>
+                  <Text style={styles.ctaText}>{t('paymentReceivedModal.gotIt', 'GOT IT')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>

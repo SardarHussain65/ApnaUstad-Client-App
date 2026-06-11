@@ -82,11 +82,20 @@ export default function SignupScreen() {
     },
     onError: (error: Error) => {
       if (error.message === 'PHONE_EXISTS') {
-        Alert.alert('Account already exists', `This phone number is already registered as a ${isWorker ? 'specialist' : 'client'}.`);
+        Alert.alert(
+          t('auth.accountExistsTitle', 'Account already exists'),
+          t('auth.phoneExistsMsg', 'This phone number is already registered as a {{role}}.', { role: isWorker ? t('roleSelection.worker.title', 'Continue as a specialist') : t('roleSelection.client.title', 'Continue as a client') })
+        );
       } else if (error.message === 'EMAIL_EXISTS') {
-        Alert.alert('Account already exists', 'This email address is already registered to another account.');
+        Alert.alert(
+          t('auth.accountExistsTitle', 'Account already exists'),
+          t('auth.emailExistsMsg', 'This email address is already registered to another account.')
+        );
       } else {
-        Alert.alert('Unable to continue', error.message || 'Failed to send the verification code.');
+        Alert.alert(
+          t('auth.unableContinueTitle', 'Unable to continue'),
+          error.message || t('auth.failedSendVerification', 'Failed to send the verification code.')
+        );
       }
     },
   });
@@ -103,15 +112,15 @@ export default function SignupScreen() {
     setPhoneError('');
 
     if (normalizedName.length < 3) {
-      setNameError('Enter your full name.');
+      setNameError(t('auth.enterFullName', 'Enter your full name.'));
       hasError = true;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setEmailError('Enter a valid email address.');
+      setEmailError(t('auth.enterValidEmail', 'Enter a valid email address.'));
       hasError = true;
     }
     if (phoneDigits.length < 10) {
-      setPhoneError('Enter a valid phone number.');
+      setPhoneError(t('auth.enterValidPhone', 'Enter a valid phone number.'));
       hasError = true;
     }
 
@@ -173,7 +182,7 @@ export default function SignupScreen() {
                   setEmail(value);
                   if (emailError) setEmailError('');
                 }}
-                placeholder="name@example.com"
+                placeholder={t('auth.emailPlaceholder', 'name@example.com')}
                 value={email}
               />
               <InputField
@@ -187,7 +196,7 @@ export default function SignupScreen() {
                   setPhoneNumber(value);
                   if (phoneError) setPhoneError('');
                 }}
-                placeholder="+92 300 0000000"
+                placeholder={t('auth.phonePlaceholder', '+92 300 0000000')}
                 value={phoneNumber}
               />
 

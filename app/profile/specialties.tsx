@@ -437,8 +437,8 @@ export default function SpecialtiesScreen() {
                       {specialty.approvalStatus === 'pending'
                         ? t('specialties.waitingApproval')
                         : specialty.approvalStatus === 'rejected'
-                        ? t('specialties.requestRejected')
-                        : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
+                          ? t('specialties.requestRejected')
+                          : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
                     </Text>
                   </View>
 

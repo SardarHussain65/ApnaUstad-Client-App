@@ -39,7 +39,7 @@ export const WorkerStatusCard = React.memo(({
           />
         </View>
         <Text style={[styles.statusTitle, Typography.threeD]}>{t('home.worker.instant').toUpperCase()}</Text>
-        <Text style={styles.statusSub}>REAL-TIME</Text>
+        <Text style={styles.statusSub}>{t('home.worker.realTime', 'REAL-TIME')}</Text>
       </GlassCard>
 
       <GlassCard 
@@ -59,7 +59,7 @@ export const WorkerStatusCard = React.memo(({
           />
         </View>
         <Text style={[styles.statusTitle, Typography.threeD]}>{t('home.worker.scheduled').toUpperCase()}</Text>
-        <Text style={styles.statusSub}>PLANNED</Text>
+        <Text style={styles.statusSub}>{t('home.worker.planned', 'PLANNED')}</Text>
       </GlassCard>
     </View>
   );

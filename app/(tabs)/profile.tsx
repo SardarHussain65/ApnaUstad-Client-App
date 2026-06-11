@@ -304,7 +304,7 @@ export default function ProfileTab() {
                 <View style={styles.serviceCategoriesBox}>
                   <View style={styles.serviceCategoriesHeader}>
                     <Layers3 size={14} color="#FF8C00" strokeWidth={2.4} />
-                    <Text style={styles.serviceCategoriesTitle}>Active service categories</Text>
+                    <Text style={styles.serviceCategoriesTitle}>{t('profile.activeCategories', 'Active service categories')}</Text>
                   </View>
                   <View style={styles.serviceCategoryStack}>
                     {activeSpecialties.map((specialty) => {
@@ -394,10 +394,10 @@ export default function ProfileTab() {
                   verificationStatus === 'Verified'
                     ? '#34C759'
                     : verificationStatus === 'Pending review'
-                    ? '#FF9F0A'
-                    : verificationStatus.includes('Rejected')
-                    ? '#FF3B30'
-                    : '#00F5FF'
+                      ? '#FF9F0A'
+                      : verificationStatus.includes('Rejected')
+                        ? '#FF3B30'
+                        : '#00F5FF'
                 }
                 onPress={() => router.push('/profile/identity-verification')}
               />
@@ -422,7 +422,7 @@ export default function ProfileTab() {
             </Pressable>
           </Animated.View>
 
-          <Text style={styles.version}>ApnaUstad v2.4.0</Text>
+          <Text style={styles.version}>{t('profile.version', 'ApnaUstad v2.4.0')}</Text>
         </View>
       </Animated.ScrollView>
     </BackgroundWrapper>

@@ -433,7 +433,7 @@ export default function RegisterDetailsScreen() {
                       <View style={styles.iconContainer}><PenTool size={18} color={accentColor} /></View>
                       <TextInput
                         style={styles.input}
-                        placeholder="Plumbing, Painting, Repair"
+                        placeholder={t('registerDetails.skillsPlaceholderHint', 'Plumbing, Painting, Repair')}
                         placeholderTextColor="rgba(255,255,255,0.3)"
                         value={skills}
                         onChangeText={setSkills}

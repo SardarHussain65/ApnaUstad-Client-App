@@ -274,7 +274,7 @@ export default function TransactionDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.loading}>
           <ActivityIndicator color={P.cyan} size="large" />
-          <Text style={styles.loadingText}>Loading booking details</Text>
+          <Text style={styles.loadingText}>{t('transactionDetails.loadingDetails', 'Loading booking details')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -284,9 +284,9 @@ export default function TransactionDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loading}>
-          <Text style={styles.emptyTitle}>Booking not found</Text>
+          <Text style={styles.emptyTitle}>{t('transactionDetails.bookingNotFound', 'Booking not found')}</Text>
           <TouchableOpacity onPress={() => router.back()} style={styles.emptyButton}>
-            <Text style={styles.emptyButtonText}>Go back</Text>
+            <Text style={styles.emptyButtonText}>{t('transactionDetails.goBack', 'Go back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -298,6 +298,8 @@ export default function TransactionDetailsScreen() {
   const isCommunicationLocked = status === 'completed' || status === 'cancelled';
   const statusInfo = STATUS_MAP[status] || STATUS_MAP.accepted;
   const StatusIcon = statusInfo.Icon;
+  const statusLabel = t(`bookingStatus.${status}.label`, statusInfo.label);
+  const statusTitle = t(`bookingStatus.${status}.title`, statusInfo.title);
   const partner = isWorker ? booking.customer : booking.worker;
   const customerId = typeof booking.customer === 'object' ? booking.customer._id : booking.customer;
   const workerId = typeof booking.worker === 'object' ? booking.worker._id : booking.worker;
@@ -320,7 +322,7 @@ export default function TransactionDetailsScreen() {
     const date = value ? new Date(value) : null;
     if (!date || Number.isNaN(date.getTime())) return t('transactionDetails.newMember', 'New member');
     const dateStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    return t('transactionDetails.memberSince', { date: dateStr }, `Since ${dateStr}`);
+    return t('transactionDetails.memberSince', `Since ${dateStr}`, { date: dateStr });
   };
 
   const partnerStatusText = isWorker
@@ -332,7 +334,7 @@ export default function TransactionDetailsScreen() {
         : t('transactionDetails.verificationPending', 'Verification pending'));
   const partnerSubtitle = isWorker
     ? (partnerAddress || partnerPhone || t('transactionDetails.clientProfileAvailable', 'Client profile available'))
-    : `${partnerCategory}${partnerExperience > 0 ? ` • ${t('transactionDetails.yearsExp', { count: partnerExperience }, `${partnerExperience}y exp`)}` : ''}`;
+    : `${partnerCategory}${partnerExperience > 0 ? ` • ${t('transactionDetails.yearsExp', '{{count}}y exp', { count: partnerExperience })}` : ''}`;
   const canTrackMission = Boolean(customerId && workerId);
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking.workerEarning : booking.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
@@ -762,7 +764,7 @@ export default function TransactionDetailsScreen() {
                 </View>
               ) : (
                 <View style={styles.inlineReviewCard}>
-                  <Text style={styles.inlineReviewTitle}>{t('transactionDetails.ratePartner', { name: partnerName }, `Rate ${partnerName}`)}</Text>
+                  <Text style={styles.inlineReviewTitle}>{t('transactionDetails.ratePartner', `Rate ${partnerName}`, { name: partnerName })}</Text>
                   <Text style={styles.inlineReviewSubtitle}>
                     {t('transactionDetails.reviewSubtitle', 'A quick review helps improve service quality for future customers.')}
                   </Text>
@@ -858,9 +860,9 @@ export default function TransactionDetailsScreen() {
         </ScrollView>
         {status !== 'completed' && status !== 'cancelled' && (
           <Animated.View entering={FadeInDown.delay(620).duration(420)} style={[styles.floatingActions, { bottom: insets.bottom + 20 }]}>
-            <FloatingAction icon={Navigation} label="Track" onPress={openRoute} color={P.green} disabled={!canTrackMission} />
-            <FloatingAction icon={MessageCircle} label="Chat" onPress={navigateToChat} color={P.cyan} disabled={!partnerProfileId} />
-            <FloatingAction icon={Phone} label="Call" onPress={callPartner} primary disabled={!partnerPhone} />
+            <FloatingAction icon={Navigation} label={t('transactionDetails.track', 'Track')} onPress={openRoute} color={P.green} disabled={!canTrackMission} />
+            <FloatingAction icon={MessageCircle} label={t('transactionDetails.chat', 'Chat')} onPress={navigateToChat} color={P.cyan} disabled={!partnerProfileId} />
+            <FloatingAction icon={Phone} label={t('transactionDetails.call', 'Call')} onPress={callPartner} primary disabled={!partnerPhone} />
           </Animated.View>
         )}
       </View>
@@ -871,7 +873,7 @@ export default function TransactionDetailsScreen() {
           router.replace('/(tabs)' as any);
         }}
         title={t('transactionDetails.settlementConfirmed', 'Settlement Confirmed')}
-        message={t('transactionDetails.settlementMsg', { amount: formatCurrency(booking.hourlyRate), ustad: partnerName, category: booking.category }, `You have successfully settled the payment of ${formatCurrency(booking.hourlyRate)} with your Ustad ${partnerName} for the ${booking.category} job.\n\nThank you for choosing Apna Ustad!`)}
+        message={t('transactionDetails.settlementMsg', `You have successfully settled the payment of {{amount}} with your Ustad {{ustad}} for the {{category}} job.\n\nThank you for choosing Apna Ustad!`, { amount: formatCurrency(booking.hourlyRate), ustad: partnerName, category: booking.category })}
         buttonText={t('transactionDetails.backToHome', 'Back to Home')}
         type="success"
       />

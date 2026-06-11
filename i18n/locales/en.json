@@ -19,7 +19,70 @@
     "optional": "Optional",
     "nearby": "Nearby",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "today": "Today",
+    "asap": "ASAP",
+    "flexible": "Flexible",
+    "client": "Client",
+    "anonymous": "Anonymous",
+    "done": "Done",
+    "remove": "Remove",
+    "tryAgain": "Try again",
+    "notShared": "Not shared",
+    "remote": "Remote",
+    "voice": "VOICE",
+    "video": "VIDEO",
+    "image": "IMAGE",
+    "refresh": "Refresh",
+    "required": "Required",
+    "pkr": "PKR",
+    "rupeesFormat": "Rs. {{amount}}",
+    "add": "Add",
+    "availableNow": "AVAILABLE NOW",
+    "busyNow": "BUSY NOW",
+    "ustad": "Ustad"
+  },
+  "bookingStatus": {
+    "pending": {
+      "label": "Pending",
+      "title": "Request sent"
+    },
+    "accepted": {
+      "label": "Assigned",
+      "title": "Ustad assigned"
+    },
+    "assigned": {
+      "label": "Assigned",
+      "title": "Ustad assigned"
+    },
+    "ongoing": {
+      "label": "Ongoing",
+      "title": "Work in progress"
+    },
+    "in-progress": {
+      "label": "Ongoing",
+      "title": "Work in progress"
+    },
+    "completed": {
+      "label": "Completed",
+      "title": "Job completed"
+    },
+    "closed": {
+      "label": "Closed",
+      "title": "Closed"
+    },
+    "cancelled": {
+      "label": "Cancelled",
+      "title": "Job cancelled"
+    },
+    "open": {
+      "label": "Open",
+      "title": "Open request"
+    },
+    "reviewing": {
+      "label": "Reviewing",
+      "title": "Reviewing proposals"
+    }
   },
   "onboarding": {
     "slide1": {
@@ -73,7 +136,25 @@
     "email": "Email Address (Optional)",
     "city": "City",
     "signUpButton": "Create account securely",
-    "signInButton": "Sign in securely"
+    "signInButton": "Sign in securely",
+    "emailPlaceholder": "name@example.com",
+    "phonePlaceholder": "+92 300 0000000",
+    "emailTab": "Email",
+    "phoneTab": "Phone",
+    "loginError": "Login error",
+    "incompleteResponse": "The server returned an incomplete response. Please try again.",
+    "unableSignIn": "Unable to sign in",
+    "enterEmail": "Enter your email address.",
+    "enterPhone": "Enter your phone number.",
+    "enterValidEmail": "Enter a valid email address.",
+    "enterPassword": "Enter your password.",
+    "accountExistsTitle": "Account already exists",
+    "phoneExistsMsg": "This phone number is already registered as a {{role}}.",
+    "emailExistsMsg": "This email address is already registered to another account.",
+    "unableContinueTitle": "Unable to continue",
+    "failedSendVerification": "Failed to send the verification code.",
+    "enterFullName": "Enter your full name.",
+    "enterValidPhone": "Enter a valid phone number."
   },
   "home": {
     "client": {
@@ -92,7 +173,8 @@
       "noBookings": "No bookings yet. Book a service to get started!",
       "seeAll": "SEE ALL",
       "showLess": "SHOW LESS",
-      "viewAll": "VIEW ALL"
+      "viewAll": "VIEW ALL",
+      "clientName": "Client Name"
     },
     "worker": {
       "missedJobs": "Missed Jobs",
@@ -104,8 +186,24 @@
       "noBookings": "No bookings yet. Accepted bookings will appear here.",
       "readyWork": "Ready to work",
       "instant": "Instant",
-      "scheduled": "Scheduled"
-    }
+      "scheduled": "Scheduled",
+      "scheduledAt": "Scheduled at {{time}}",
+      "activeJob": "ACTIVE JOB",
+      "jobDetailsReady": "Job details are ready for you",
+      "newJob": "New Job",
+      "viewDetails": "VIEW DETAILS",
+      "withdrawBidTitle": "Withdraw Bid",
+      "withdrawBidConfirm": "Are you sure you want to withdraw your bid for this job?",
+      "withdrawBidFailed": "Failed to withdraw the bid. Please try again.",
+      "pendingJob": "PENDING JOB",
+      "waitingClientReview": "Waiting for client review",
+      "proposalSubmitted": "Proposal submitted",
+      "realTime": "REAL-TIME",
+      "planned": "PLANNED",
+      "workerName": "Worker Name"
+    },
+    "loadingLocation": "Loading location...",
+    "yourLocation": "Your Location"
   },
   "jobCreation": {
     "describeNeed": "Describe your need",
@@ -119,7 +217,85 @@
     "submitInstant": "Find an Ustad Now",
     "submitScheduled": "Post Scheduled Request",
     "voiceNote": "Voice Note (Optional)",
-    "mediaEvidence": "Media Evidence (Optional)"
+    "mediaEvidence": "Media Evidence (Optional)",
+    "service": "SERVICE",
+    "evidence": "EVIDENCE",
+    "budgetLabel": "BUDGET",
+    "descTooShort": "⚠️ Description too short (minimum 10 characters)",
+    "descHint": "Include the issue, size, and access details",
+    "optionalDetails": "OPTIONAL DETAILS",
+    "yourOffer": "YOUR OFFER",
+    "visitSchedule": "VISIT SCHEDULE",
+    "photosOrVideo": "PHOTOS OR VIDEO",
+    "voiceBrief": "VOICE BRIEF",
+    "requiredDetails": "Required Details",
+    "successTitle": "JOB POSTED SUCCESSFULLY!",
+    "permissionDenied": "Permission Denied, Access to your photo library is required.",
+    "mediaLibraryError": "Error: Could not access the media library.",
+    "descTooShortTitle": "Description Too Short",
+    "descTooShortDesc": "Please describe the job with at least 10 characters.",
+    "invalidLocation": "Invalid Location",
+    "invalidLocationDesc": "Please provide or detect a booking address.",
+    "invalidOffer": "Invalid Offer",
+    "invalidOfferDesc": "Please enter a positive amount or leave the field blank for an open bid.",
+    "invalidSchedule": "Invalid Schedule",
+    "invalidScheduleDesc": "The scheduled date & time must be at least 1 hour in the future.",
+    "postUrgentTitle": "Post Urgent Job",
+    "postServiceTitle": "Post Service Request",
+    "postUrgentConfirm": "You are posting an urgent job with a fixed price of Rs. {{price}}. The first Ustad to accept will be auto-assigned.",
+    "postServiceConfirm": "Your scheduled service request is ready to post.",
+    "postRequest": "Post Request",
+    "keepEditing": "Keep Editing",
+    "requestFailed": "Request Failed",
+    "uploadFailed": "Upload Failed",
+    "successModalUrgentDesc": "Your urgent job has been posted!\n\nThe first Ustad to accept will be auto-assigned instantly. We are finding the best Ustad for you right now.",
+    "successModalScheduledDesc": "Your scheduled job has been posted! Ustads will review and send you bids.\n\nYou can track updates in your Bookings.",
+    "postUrgentConfirmQuestion": "Post Urgent Job?",
+    "postJobConfirmQuestion": "Post Job Request?",
+    "postUrgentAlertConfirm": "You are posting an urgent job with a fixed price of Rs. {{price}}. The first Ustad to accept will be auto-assigned instantly.",
+    "postJobAlertConfirm": "Are you sure you want to schedule and broadcast this request?",
+    "yesPostJob": "Yes, Post Job",
+    "cancel": "Cancel",
+    "budgetPlaceholder": "Enter your offered amount",
+    "serviceLocation": "SERVICE LOCATION",
+    "locationPlaceholder": "Enter the address where service is needed",
+    "updatingLocation": "Updating current location...",
+    "useCurrentLocation": "Use my current location",
+    "dropzoneTitle": "Add photos or a short video",
+    "dropzoneSubtitle": "Help the Ustad understand the work before accepting",
+    "vidBadge": "VID",
+    "imgBadge": "IMG",
+    "photosCount_one": "1 photo",
+    "photosCount_other": "{{count}} photos",
+    "videosCount_one": "1 video",
+    "videosCount_other": "{{count}} videos",
+    "clearAllMedia": "Clear all media",
+    "scheduleVisit": "Schedule Visit",
+    "chooseDateTime": "Choose a date and time for the service",
+    "selectDate": "Select Date",
+    "adjustTime": "Adjust Time (24h)",
+    "scheduleAvailable": "SCHEDULE IS AVAILABLE",
+    "chooseOneHourLater": "CHOOSE AT LEAST 1 HOUR FROM NOW",
+    "lockSchedule": "Lock Schedule",
+    "urgentNow": "Urgent (Now)",
+    "bookLater": "Book Later",
+    "urgentFixedPricing": "URGENT FIXED PRICING",
+    "locked": "Locked",
+    "jobDuration": "Job Duration (Hours)",
+    "estimateHoursDesc": "Estimate the hours needed. Rate is Rs. {{rate}}/hr.",
+    "hr": "Hr",
+    "hrs": "Hrs",
+    "lockedFixedPrice": "Locked Fixed Price",
+    "pricingFormula": "Pricing Formula:",
+    "pricingFormulaValue": "Rs. {{rate}}/hr × {{hours}} {{hoursText}} = Rs. {{total}}",
+    "minPriceApplied": "Platform minimum booking rate (Rs. {{price}}) applied.",
+    "urgentFixedPriceInfo": "⚡ Clients and Ustads are matched instantly. The price is locked before posting and cannot be negotiated. The first Ustad to accept is hired instantly.",
+    "voiceBriefBadge": "Optional · Max 60s",
+    "recordingExplanation": "Recording job explanation",
+    "voiceBriefAttached": "Voice brief attached",
+    "explainWorkVoice": "Explain the work in your own words",
+    "workersListenBefore": "Workers can listen before they respond",
+    "usefulExplainVoice": "Useful when the issue is easier to explain than type"
   },
   "bookings": {
     "myBookings": "My Bookings",
@@ -133,7 +309,18 @@
     "cancelledEmpty": "You do not have any cancelled bookings.",
     "noActiveBookings": "NO ACTIVE BOOKINGS",
     "noCompletedBookings": "NO COMPLETED BOOKINGS",
-    "noCancelledBookings": "NO CANCELLED BOOKINGS"
+    "noCancelledBookings": "NO CANCELLED BOOKINGS",
+    "rateUstad": "RATE USTAD",
+    "earningLabel": "Earning",
+    "totalLabel": "Total",
+    "budgetLabel": "Budget",
+    "actionReviewProposals": "Review Proposals",
+    "actionResumeSearch": "Resume Search",
+    "actionViewReceipt": "View Receipt",
+    "actionViewDetails": "View Details",
+    "actionTrackLiveJob": "Track Live Job",
+    "actionTrackJob": "Track Job",
+    "openDetailsToViewLocation": "Open details to view the service location"
   },
   "profile": {
     "title": "Profile",
@@ -162,7 +349,10 @@
     "ongoing": "Ongoing",
     "completed": "Completed",
     "eliteUstad": "⚡ Elite Ustad",
-    "platinumClient": "💎 Platinum Client"
+    "platinumClient": "💎 Platinum Client",
+    "activeCategories": "Active service categories",
+    "version": "ApnaUstad v2.4.0",
+    "identitySub": "CNIC & profile validation"
   },
   "settings": {
     "title": "App Settings",
@@ -170,7 +360,10 @@
     "selectLanguage": "Select your preferred language:",
     "english": "English (انگریزی)",
     "urdu": "اردو (Urdu)",
-    "saveReload": "Saving changes will reload the app."
+    "saveReload": "Saving changes will reload the app.",
+    "confirmButton": "Confirm & Apply",
+    "appliedInstantly": "Changes are applied instantly without reloading.",
+    "languageUpdated": "Language updated successfully!"
   },
   "verify": {
     "title": "Email verification",
@@ -240,7 +433,8 @@
     "locationRequiredDesc": "Please allow location access so nearby jobs can reach you.",
     "errorTitle": "Error",
     "uploadError": "Something went wrong during upload.",
-    "privacySecured": "Privacy Secured: Your government documents are highly encrypted and solely utilized for partner validation compliance audits."
+    "privacySecured": "Privacy Secured: Your government documents are highly encrypted and solely utilized for partner validation compliance audits.",
+    "skillsPlaceholderHint": "Plumbing, Painting, Repair"
   },
   "forgotPassword": {
     "title": "Password recovery",
@@ -338,7 +532,18 @@
     "selectUstad": "SELECT USTAD",
     "cancelJob": "Cancel Request",
     "cancelJobConfirm": "Are you sure you want to stop searching and cancel this service request?",
-    "keepSearching": "Keep Searching"
+    "keepSearching": "Keep Searching",
+    "bookingSuccess": "Your booking has been created successfully.",
+    "selectUstadError": "Could Not Select Ustad",
+    "requestCancelled": "Request Cancelled",
+    "cancelSuccess": "Your service request has been cancelled.",
+    "cancelError": "Could Not Cancel Request",
+    "assignedTitle": "USTAD ASSIGNED! ⚡",
+    "assignedDesc": "An Ustad has accepted your urgent request.",
+    "searchTimeoutTitle": "Search Timeout",
+    "searchTimeoutDesc": "No Ustads accepted yet. Keep searching or cancel.",
+    "searchExpandedTitle": "Searching Expanded! ⚡",
+    "searchExpandedDesc": "Increasing fixed price to Rs. {{price}} for wider search."
   },
   "bidSubmission": {
     "instantRequest": "INSTANT REQUEST",
@@ -511,7 +716,14 @@
     "today": "Today",
     "asap": "ASAP",
     "instantVisit": "Instant visit",
-    "scheduledVisit": "Scheduled visit"
+    "scheduledVisit": "Scheduled visit",
+    "loadingDetails": "Loading booking details",
+    "bookingNotFound": "Booking not found",
+    "goBack": "Go back",
+    "track": "Track",
+    "chat": "Chat",
+    "call": "Call",
+    "step": "Step {{step}}"
   },
   "review": {
     "title": "Share Feedback",
@@ -682,7 +894,8 @@
     "couldNotFinish": "Could not finish recording",
     "notSent": "Voice message not sent",
     "checkConnection": "Please check your connection and try again.",
-    "protected": "BOOKING CHAT PROTECTED"
+    "protected": "BOOKING CHAT PROTECTED",
+    "inApp": "In-App Chat"
   },
   "notifications": {
     "title": "Notifications",
@@ -819,7 +1032,11 @@
     "removeConfirmTitle": "Remove specialty?",
     "removeConfirmDesc": "Remove {{category}} from your worker profile?",
     "activateConfirmTitle": "Activate additional specialty?",
-    "activateConfirmDesc": "{{fee}} will be deducted from your wallet now for the next full month. The same amount will be deducted monthly while auto-renew is enabled."
+    "activateConfirmDesc": "{{fee}} will be deducted from your wallet now for the next full month. The same amount will be deducted monthly while auto-renew is enabled.",
+    "activatePayBtn": "Activate & Pay",
+    "activatedDesc": "Your specialty is active and can receive matching jobs.",
+    "renewalEnabledDesc": "Auto-renewal is enabled. Subscription fee will be deducted monthly.",
+    "renewalDisabledDesc": "Auto-renewal is disabled. Specialty will expire at the end of billing cycle."
   },
   "identityVerification": {
     "title": "Identity Verification",
@@ -850,7 +1067,10 @@
     "failedTitle": "Submission failed",
     "noDocument": "No document selected",
     "camera": "Camera",
-    "gallery": "Gallery"
+    "gallery": "Gallery",
+    "selectError": "Selection Error",
+    "cameraPermission": "Camera Permission Required",
+    "cameraError": "Camera Error"
   },
   "helpCenter": {
     "title": "Help Center",
@@ -1019,7 +1239,12 @@
     "unableSelect": "Unable to select Ustad",
     "acceptError": "Please try again in a moment.",
     "shareMessage": "{{name}} - {{category}}{{cityInfo}}.",
-    "shareCity": " in {{city}}"
+    "shareCity": " in {{city}}",
+    "defaultSpecialist": "Ustad Specialist",
+    "defaultCategory": "Specialist",
+    "noCity": "Pakistan",
+    "hourlyRateValue": "Rs. {{rate}}/hr",
+    "detailsLabel": "Details"
   },
   "workerList": {
     "title": "Available Ustads",
@@ -1145,20 +1370,80 @@
     "chatClosed": "Chat closed",
     "chatClosedDesc": "Messaging is disabled because this mission has ended.",
     "chatUnavailable": "Chat unavailable",
-    "chatUnavailableDesc": "This mission is missing its booking reference."
+    "chatUnavailableDesc": "This mission is missing its booking reference.",
+    "serviceLocationLabel": "SERVICE LOCATION",
+    "back": "Back",
+    "chat": "Chat",
+    "call": "Call"
   },
   "jobsNearby": {
     "title": "Nearby Jobs",
     "map": "Map View",
     "list": "List View",
-    "noJobs": "No jobs found nearby at the moment."
+    "noJobs": "No jobs found nearby at the moment.",
+    "scanning": "Scanning...",
+    "activeOpportunities": "{{count}} active opportunities",
+    "scanningLocalFrequency": "Scanning local frequency...",
+    "noMissionsFound": "No Jobs Found",
+    "emptyDescription": "We couldn't detect any active jobs in your current orbit. Try refreshing or expanding your range.",
+    "refreshScan": "REFRESH SCAN",
+    "distanceAway": "{{distance}} km away"
   },
   "pendingBidDetails": {
     "title": "Bid Review",
     "proposedPrice": "Proposed Price",
     "message": "Ustad Message",
     "acceptBid": "Accept Bid & Hire",
-    "declineBid": "Decline Bid"
+    "declineBid": "Decline Bid",
+    "loading": "Loading proposal details",
+    "unavailable": "Proposal unavailable",
+    "unavailableDesc": "This job may have been closed or assigned to another Ustad.",
+    "goBack": "Go back",
+    "activeBid": "Active Bid",
+    "proposalDetails": "Proposal Details",
+    "awaitingClient": "Awaiting client",
+    "proposalSent": "Proposal sent",
+    "yourQuotedValue": "Your quoted value",
+    "offerActive": "Offer active",
+    "visitOverview": "Visit Overview",
+    "visitOverviewDesc": "The timing and service location shared by the client.",
+    "visitType": "Visit type",
+    "date": "Date",
+    "time": "Time",
+    "serviceLocation": "Service location",
+    "client": "Client",
+    "clientDesc": "Review who requested the service before the client responds.",
+    "serviceClient": "Service client",
+    "completedServiceRequests_one": "1 completed service request",
+    "completedServiceRequests_other": "{{count}} completed service requests",
+    "newApnaUstadClient": "New ApnaUstad client",
+    "workEvidence": "Work Evidence",
+    "attachmentsCount_one": "1 attachment added by the client.",
+    "attachmentsCount_other": "{{count}} attachments added by the client.",
+    "yourProposal": "Your Proposal",
+    "yourProposalDesc": "This is the offer currently visible to the client.",
+    "yourQuote": "Your quote",
+    "estimatedTime": "Estimated time",
+    "messageToClient": "Message to client",
+    "noMessage": "No additional message was included with this proposal.",
+    "withdrawProposal": "Withdraw proposal",
+    "removeOffer": "Remove your offer from this job",
+    "withdrawConfirmTitle": "Withdraw proposal?",
+    "withdrawConfirmMsg": "Your offer will be removed from this job. The client will no longer be able to accept it.",
+    "keepProposal": "Keep proposal",
+    "withdraw": "Withdraw",
+    "unableWithdraw": "Unable to withdraw",
+    "tryAgain": "Please try again in a moment.",
+    "serviceLocationNotShared": "Service location not shared",
+    "daysCount_one": "1 day",
+    "daysCount_other": "{{count}} days",
+    "recentlySubmitted": "Recently submitted",
+    "submittedJustNow": "Submitted just now",
+    "submittedMinutesAgo_one": "Submitted 1m ago",
+    "submittedMinutesAgo_other": "Submitted {{count}}m ago",
+    "submittedHoursAgo_one": "Submitted 1h ago",
+    "submittedHoursAgo_other": "Submitted {{count}}h ago",
+    "submittedDate": "Submitted {{date}}"
   },
   "splash": {
     "tagline": "The Service Galaxy",
@@ -1167,6 +1452,116 @@
   "accountDeactivated": {
     "title": "Account Deactivated",
     "description": "Your account has been suspended or deactivated due to compliance review or platform policy violation. If you believe this is an error, please contact ApnaUstad support.",
-    "contactSupport": "Contact Support"
+    "contactSupport": "Contact Support",
+    "subtitle": "Your account is currently deactivated by admin.",
+    "reasonLabel": "Admin reason",
+    "deactivatedOn": "Deactivated on {{date}}",
+    "explainer": "You cannot use bookings, jobs, wallet, chat, or profile actions until your account is activated again. Please contact admin from Help Center if you think this is a mistake.",
+    "contactAdmin": "Contact Admin",
+    "checkStatus": "Check Status",
+    "checking": "Checking...",
+    "logout": "Logout",
+    "appealSubject": "Account deactivation appeal",
+    "defaultReason": "Account deactivated by admin. Please contact support for details."
+  },
+  "tabs": {
+    "home": "Home",
+    "bookings": "Jobs",
+    "wallet": "Wallet",
+    "profile": "Profile"
+  },
+  "jobEvidence": {
+    "jobVideo": "Job video",
+    "tapToPlay": "Tap to play with controls",
+    "clientVoiceBrief": "Client voice brief",
+    "yourVoiceBrief": "Your voice brief"
+  },
+  "incomingJobModal": {
+    "newSignal": "Recent",
+    "postedJustNow": "Just now",
+    "postedMinutesAgo_one": "1m ago",
+    "postedMinutesAgo_other": "{{count}}m ago",
+    "postedHoursAgo_one": "1h ago",
+    "postedHoursAgo_other": "{{count}}h ago",
+    "swipeHint": "Swipe for {{count}} offers",
+    "immediateResponse": "Immediate response requested",
+    "scheduledVisit": "Scheduled visit",
+    "timePending": "Time pending",
+    "netEarning": "Net earning",
+    "clientBudget": "Client budget",
+    "openBudget": "Open Bid",
+    "commissionText": "{{amount}} commission",
+    "noCommission": "No commission",
+    "submitQuoteHint": "Submit your own quote",
+    "liveJobOffer": "LIVE JOB OFFER",
+    "newScheduledRequest": "NEW SCHEDULED REQUEST",
+    "instantResponse": "Instant response",
+    "scheduledOpportunity": "Scheduled opportunity",
+    "defaultDescription": "The client has requested professional assistance for this service.",
+    "travelDistance": "Travel distance",
+    "respondNearby": "Respond nearby",
+    "planVisit": "Plan your visit",
+    "serviceLocation": "Service location",
+    "nearbyServiceArea": "Nearby service area",
+    "visitTiming": "Visit timing",
+    "clientOffer": "Client offer",
+    "workEvidence": "Work evidence",
+    "attachmentsLabel_one": "1 attachment",
+    "attachmentsLabel_other": "{{count}} attachments",
+    "noEvidenceMsg": "No work evidence attached. Review the brief carefully.",
+    "clientContext": "Client context",
+    "serviceClient": "Service client",
+    "defaultClientName": "Client",
+    "clientRating": "{{rating}} rating",
+    "newClient": "New Client",
+    "jobsCompleted": "{{count}} jobs completed",
+    "walletReady": "Wallet balance eligible",
+    "walletTopUpRequired": "Top Up Required",
+    "walletBalanceDesc": "Keep at least Rs. {{amount}} in your wallet to accept",
+    "offerLow": "Offer feels low?",
+    "counterOfferDesc": "Propose your fair price with a short explanation",
+    "acceptOffer": "Accept Offer",
+    "continueBid": "Submit Bid",
+    "topUpWallet": "Top up wallet",
+    "instantFooterNote": "First Ustad to accept wins this live offer instantly.",
+    "scheduledFooterNote": "Post your interest to broadcast details for client review.",
+    "photo": "PHOTO",
+    "playVideo": "Play job video",
+    "video": "VIDEO",
+    "voiceBrief": "Voice brief",
+    "playingVoice": "Playing...",
+    "tapListen": "Tap to listen",
+    "voice": "VOICE",
+    "evidenceLabel_one": "1 Evidence",
+    "evidenceLabel_other": "{{count}} Evidence",
+    "attachmentsLabelCount_one": "1 evidence file attached",
+    "attachmentsLabelCount_other": "{{count}} evidence files attached",
+    "jobsCount_one": "1 job",
+    "jobsCount_other": "{{count}} jobs",
+    "jobsCompletedCount_one": "1 job completed",
+    "jobsCompletedCount_other": "{{count}} jobs completed"
+  },
+  "paymentReceivedModal": {
+    "eyebrow": "PAYMENT RECEIVED ✅",
+    "title": "PAYMENT RECEIVED",
+    "currency": "PKR",
+    "subtitle": "Payment has been verified and deposited into your wallet.",
+    "verifiedBy": "VERIFIED BY APNAUSTAD",
+    "gotIt": "GOT IT"
+  },
+  "workerDetailsModal": {
+    "title": "Ustad Details",
+    "fetchingProfile": "Fetching profile...",
+    "jobsDone": "Jobs Done",
+    "experienceYears_one": "1yr",
+    "experienceYears_other": "{{count}}yrs",
+    "experience": "Experience",
+    "reviewsCount_one": "1 Review",
+    "reviewsCount_other": "{{count}} Reviews",
+    "contactDetails": "CONTACT DETAILS",
+    "profileData": "PROFILE DATA",
+    "skills": "SKILLS",
+    "hourlyRate": "Hourly Rate",
+    "hireUstad": "HIRE USTAD"
   }
 }

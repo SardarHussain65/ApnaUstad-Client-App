@@ -21,6 +21,7 @@ import {
   Volume2,
   X,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 export type JobEvidenceItem = {
   type: 'image' | 'video' | 'audio';
@@ -50,14 +51,21 @@ const formatPlaybackTime = (seconds: number) => {
 };
 
 function MediaFooter({ item, index }: { item: JobEvidenceItem; index: number }) {
+  const { t } = useTranslation();
   const MediaIcon = item.type === 'image' ? ImageIcon : item.type === 'video' ? Video : Volume2;
+
+  const typeLabel = item.type === 'audio' 
+    ? t('common.voice', 'VOICE') 
+    : item.type === 'video' 
+      ? t('common.video', 'VIDEO') 
+      : t('common.image', 'IMAGE');
 
   return (
     <View style={styles.footer}>
       <Text style={styles.index}>{String(index + 1).padStart(2, '0')}</Text>
       <View style={styles.typeBadge}>
         <MediaIcon size={11} color="#FFFFFF" strokeWidth={2.4} />
-        <Text style={styles.typeText}>{item.type === 'audio' ? 'VOICE' : item.type.toUpperCase()}</Text>
+        <Text style={styles.typeText}>{typeLabel}</Text>
       </View>
     </View>
   );
@@ -84,6 +92,7 @@ function PreviewShell({
   );
 }
 
+// Same as before
 function ImageCard({ item, index, width }: { item: JobEvidenceItem; index: number; width: number }) {
   const [visible, setVisible] = useState(false);
 
@@ -103,6 +112,7 @@ function ImageCard({ item, index, width }: { item: JobEvidenceItem; index: numbe
 }
 
 function VideoCard({ item, index, width }: { item: JobEvidenceItem; index: number; width: number }) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const player = useVideoPlayer(item.url);
 
@@ -116,8 +126,8 @@ function VideoCard({ item, index, width }: { item: JobEvidenceItem; index: numbe
         <LinearGradient colors={['rgba(191,90,242,0.08)', 'rgba(0,0,0,0.7)']} style={StyleSheet.absoluteFillObject} />
         <View style={styles.mediaCenter}>
           <View style={styles.playButton}><PlayCircle size={46} color="#00F5FF" strokeWidth={1.7} /></View>
-          <Text style={styles.mediaTitle}>Job video</Text>
-          <Text style={styles.mediaHint}>Tap to play with controls</Text>
+          <Text style={styles.mediaTitle}>{t('jobEvidence.jobVideo', 'Job video')}</Text>
+          <Text style={styles.mediaHint}>{t('jobEvidence.tapToPlay', 'Tap to play with controls')}</Text>
         </View>
         <MediaFooter item={item} index={index} />
       </TouchableOpacity>
@@ -129,6 +139,7 @@ function VideoCard({ item, index, width }: { item: JobEvidenceItem; index: numbe
 }
 
 function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; index: number; width: number; isWorker?: boolean }) {
+  const { t } = useTranslation();
   const player = useAudioPlayer(item.url);
   const status = useAudioPlayerStatus(player);
 
@@ -159,7 +170,7 @@ function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; in
       <View style={styles.waAvatarShell}>
         <Volume2 size={16} color="#FF9F0A" strokeWidth={2.5} />
       </View>
-
+ 
       {/* Play/Pause Button */}
       <TouchableOpacity style={styles.waPlayButton} onPress={togglePlayback} activeOpacity={0.8}>
         {status.playing ? (
@@ -168,7 +179,7 @@ function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; in
           <PlayCircle size={28} color="#FF9F0A" fill="rgba(255,159,10,0.1)" strokeWidth={2} />
         )}
       </TouchableOpacity>
-
+ 
       {/* Progress Slider Track */}
       <View style={styles.waTrackContainer}>
         <View style={styles.waTrackBg}>
@@ -179,7 +190,7 @@ function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; in
         {/* Info text below track */}
         <View style={styles.waMetaRow}>
           <Text style={styles.waTitleText}>
-            {isWorker ? 'Client voice brief' : 'Your voice brief'}
+            {isWorker ? t('jobEvidence.clientVoiceBrief', 'Client voice brief') : t('jobEvidence.yourVoiceBrief', 'Your voice brief')}
           </Text>
           <Text style={styles.waTimeText}>
             {formatPlaybackTime(status.currentTime)} / {formatPlaybackTime(status.duration)}

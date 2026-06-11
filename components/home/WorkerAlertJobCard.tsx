@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import Animated, { FadeInDown, FadeOutLeft } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Zap,
@@ -38,6 +39,7 @@ interface WorkerAlertJobCardProps {
 export const WorkerAlertJobCard = React.memo(
   function WorkerAlertJobCard({ job, index, onAccept, onDismiss, isAccepting }: WorkerAlertJobCardProps) {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const workerLoc = (user as any)?.address || (user as any)?.city || '';
     const isInstant = job.urgency === 'instant';
     const accentColor = isInstant ? '#00F0FF' : '#FF8C00';
@@ -64,16 +66,16 @@ export const WorkerAlertJobCard = React.memo(
     }, [job]);
     const client = job.clientMeta || (typeof job.customer === 'object' ? job.customer : null);
     const amount = Number(job.signalMeta?.amount || job.amount || job.hourlyRate || 0);
-    const amountText = job.signalMeta?.amountText || (amount > 0 ? `Rs. ${amount.toLocaleString()}` : 'Open Bid');
+    const amountText = job.signalMeta?.amountText || (amount > 0 ? `Rs. ${amount.toLocaleString()}` : t('incomingJobModal.openBudget', 'Open Bid'));
 
     const timeAgo = useMemo(() => {
-      if (!job.createdAt) return 'Recent';
+      if (!job.createdAt) return t('incomingJobModal.newSignal', 'Recent');
       const diff = Date.now() - new Date(job.createdAt).getTime();
       const mins = Math.floor(diff / 60000);
-      if (mins < 1) return 'Just now';
-      if (mins < 60) return `${mins}m ago`;
-      return `${Math.floor(mins / 60)}h ago`;
-    }, [job.createdAt]);
+      if (mins < 1) return t('incomingJobModal.postedJustNow', 'Just now');
+      if (mins < 60) return t('incomingJobModal.postedMinutesAgo', '{{count}}m ago', { count: mins });
+      return t('incomingJobModal.postedHoursAgo', '{{count}}h ago', { count: Math.floor(mins / 60) });
+    }, [job.createdAt, t]);
 
     return (
       <Animated.View
@@ -96,7 +98,7 @@ export const WorkerAlertJobCard = React.memo(
                 <Calendar size={11} color={accentColor} />
               )}
               <Text style={[styles.badgeText, { color: accentColor }]}>
-                {isInstant ? 'INSTANT' : 'SCHEDULED'}
+                {isInstant ? t('home.worker.instant', 'INSTANT') : t('home.worker.scheduled', 'SCHEDULED')}
               </Text>
             </View>
 
@@ -116,13 +118,13 @@ export const WorkerAlertJobCard = React.memo(
               <View style={[styles.mediaBadge, { borderColor: accentColor + '55', backgroundColor: accentDim }]}>
                 <ImageIcon size={11} color={accentColor} />
                 <Text style={[styles.mediaBadgeText, { color: accentColor }]}>
-                  {media.totalCount} Evidence
+                  {t('incomingJobModal.evidenceLabel', '{{count}} Evidence', { count: media.totalCount })}
                 </Text>
               </View>
               {media.videos.length > 0 && (
                 <View style={styles.videoBadge}>
                   <PlayCircle size={11} color="#FFFFFF" />
-                  <Text style={styles.videoBadgeText}>Video</Text>
+                  <Text style={styles.videoBadgeText}>{t('incomingJobModal.video', 'Video')}</Text>
                 </View>
               )}
             </View>
@@ -130,7 +132,7 @@ export const WorkerAlertJobCard = React.memo(
             <View style={[styles.noImageEvidence, { borderColor: accentColor + '25' }]}>
               <PlayCircle size={16} color={accentColor} />
               <Text style={[styles.noImageEvidenceText, { color: accentColor }]}>
-                {media.totalCount} evidence file{media.totalCount === 1 ? '' : 's'} attached
+                {t('incomingJobModal.attachmentsLabelCount', '{{count}} evidence files attached', { count: media.totalCount })}
               </Text>
             </View>
           ) : null}
@@ -139,7 +141,7 @@ export const WorkerAlertJobCard = React.memo(
           <View style={styles.body}>
             <View style={styles.infoCol}>
               <Text style={styles.category} numberOfLines={1}>
-                {job.category || 'New Job'}
+                {job.category || t('home.worker.newJob', 'New Job')}
               </Text>
               {job.description ? (
                 <Text style={styles.description} numberOfLines={2}>
@@ -156,11 +158,11 @@ export const WorkerAlertJobCard = React.memo(
                     </View>
                   )}
                   <View style={styles.clientTextWrap}>
-                    <Text style={styles.clientName} numberOfLines={1}>{client.fullName || 'Client'}</Text>
+                    <Text style={styles.clientName} numberOfLines={1}>{client.fullName || t('common.client', 'Client')}</Text>
                     <View style={styles.clientMetaRow}>
                       <Star size={9} color="#FFD700" fill="#FFD700" />
                       <Text style={styles.clientMetaText}>
-                        {client.rating ? `${Number(client.rating).toFixed(1)} rating` : `${client.completedJobs || client.totalJobs || 0} jobs`}
+                        {client.rating ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: Number(client.rating).toFixed(1) }) : t('incomingJobModal.jobsCount', '{{count}} jobs', { count: client.completedJobs || client.totalJobs || 0 })}
                       </Text>
                     </View>
                   </View>
@@ -171,7 +173,7 @@ export const WorkerAlertJobCard = React.memo(
             <View style={[styles.budgetBadge, { backgroundColor: 'rgba(0,255,127,0.1)', borderColor: 'rgba(0,255,127,0.25)' }]}>
               <Banknote size={13} color={Colors.green} />
               <Text style={styles.budgetText}>
-                {isInstant ? amountText : amount > 0 ? amountText : 'Open Bid'}
+                {isInstant ? amountText : amount > 0 ? amountText : t('incomingJobModal.openBudget', 'Open Bid')}
               </Text>
             </View>
           </View>
@@ -219,7 +221,7 @@ export const WorkerAlertJobCard = React.memo(
                 ) : (
                   <>
                     <Check size={15} color="#000" strokeWidth={3} />
-                    <Text style={styles.acceptText}>VIEW DETAILS</Text>
+                    <Text style={styles.acceptText}>{t('home.worker.viewDetails', 'VIEW DETAILS')}</Text>
                     <ChevronRight size={15} color="#000" strokeWidth={3} />
                   </>
                 )}

@@ -328,7 +328,7 @@ export default function BidSubmissionScreen() {
     } catch (error: any) {
       if (error.response?.status === 402) {
         const required = Number(error.response?.data?.requiredBalance || requiredWalletBalance);
-        toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.keepRequiredBalance', { amount: formatMoney(required) }, `Keep at least ${formatMoney(required)} in your wallet to continue.`));
+        toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.keepRequiredBalance', 'Keep at least {{amount}} in your wallet to continue.', { amount: formatMoney(required) }));
         router.push('/(tabs)/wallet' as any);
       } else {
         toast.error(t('bidSubmission.couldNotContinue', 'Could Not Continue'), error.response?.data?.message || t('bidSubmission.tryAgain', 'Please try again.'));
@@ -340,7 +340,7 @@ export default function BidSubmissionScreen() {
 
   const handleSubmitBid = async () => {
     if (isWalletBlocked) {
-      toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.addShortfall', { amount: formatMoney(walletShortfall) }, `Add ${formatMoney(walletShortfall)} to keep the required wallet balance.`));
+      toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.addShortfall', 'Add {{amount}} to keep the required wallet balance.', { amount: formatMoney(walletShortfall) }));
       router.push('/(tabs)/wallet' as any);
       return;
     }
@@ -377,7 +377,7 @@ export default function BidSubmissionScreen() {
     } catch (error: any) {
       if (error.response?.status === 402) {
         const required = Number(error.response?.data?.requiredBalance || requiredWalletBalance);
-        toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.keepRequiredBalance', { amount: formatMoney(required) }, `Keep at least ${formatMoney(required)} in your wallet to continue.`));
+        toast.warning(t('bidSubmission.topUpRequired', 'Top-Up Required'), t('bidSubmission.keepRequiredBalance', 'Keep at least {{amount}} in your wallet to continue.', { amount: formatMoney(required) }));
         router.push('/(tabs)/wallet' as any);
       } else {
         toast.error(t('bidSubmission.couldNotSend', 'Could Not Send Proposal'), error.response?.data?.message || t('bidSubmission.tryAgain', 'Please try again.'));

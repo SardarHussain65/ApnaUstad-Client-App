@@ -434,9 +434,9 @@ export function ClientHome() {
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={[styles.sectionTitle, Typography.threeD]}>
-                  Recent Bookings
+                  {t('home.client.recentBookings', 'Recent Bookings')}
                 </Text>
-                <Text style={styles.sectionSub}>Your latest activity</Text>
+                <Text style={styles.sectionSub}>{t('home.client.latestActivity', 'Your latest activity')}</Text>
               </View>
             </View>
             <BookingCardSkeleton translateX={translateX} />

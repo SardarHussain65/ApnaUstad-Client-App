@@ -268,7 +268,7 @@ export default function JobTrackingScreen() {
   useEffect(() => {
     let isActive = true;
     if (!routeOrigin) {
-      setOriginAddress('Waiting for live location');
+      setOriginAddress(t('jobTracking.waitingLive'));
       return undefined;
     }
 
@@ -307,34 +307,34 @@ export default function JobTrackingScreen() {
   const directDistance = routeOrigin
     ? formatDistanceKm(calculateDistance(routeOrigin, destinationLocation))
     : null;
-  const distDisplay = isLoadingRoute ? 'Updating...' : (routeDistance ?? directDistance ?? 'Waiting for GPS');
+  const distDisplay = isLoadingRoute ? t('jobTracking.updating') : (routeDistance ?? directDistance ?? t('jobTracking.waitingGps'));
 
   const handleCallPartner = useCallback(async () => {
     if (isCommunicationLocked) {
-      Alert.alert('Contact closed', 'Calling is disabled because this mission has ended.');
+      Alert.alert(t('jobTracking.callClosed'), t('jobTracking.callClosedDesc'));
       return;
     }
 
     if (!partnerPhone) {
-      Alert.alert('Phone unavailable', `${partnerName}'s phone number is not available for this mission.`);
+      Alert.alert(t('jobTracking.phoneUnavailable'), t('jobTracking.phoneUnavailableDesc', { name: partnerName }));
       return;
     }
 
     try {
       await Linking.openURL(`tel:${partnerPhone}`);
     } catch {
-      Alert.alert('Could not start call', 'Your device could not open the phone dialer.');
+      Alert.alert(t('jobTracking.callError'), t('jobTracking.callErrorDesc'));
     }
-  }, [isCommunicationLocked, partnerName, partnerPhone]);
+  }, [isCommunicationLocked, partnerName, partnerPhone, t]);
 
   const handleOpenChat = useCallback(() => {
     if (isCommunicationLocked) {
-      Alert.alert('Chat closed', 'Messaging is disabled because this mission has ended.');
+      Alert.alert(t('jobTracking.chatClosed'), t('jobTracking.chatClosedDesc'));
       return;
     }
 
     if (!bookingId) {
-      Alert.alert('Chat unavailable', 'This mission is missing its booking reference.');
+      Alert.alert(t('jobTracking.chatUnavailable'), t('jobTracking.chatUnavailableDesc'));
       return;
     }
 
@@ -346,7 +346,7 @@ export default function JobTrackingScreen() {
         recipientName: partnerName,
       },
     });
-  }, [bookingId, isCommunicationLocked, partnerId, partnerName, router]);
+  }, [bookingId, isCommunicationLocked, partnerId, partnerName, router, t]);
 
   const routeGeoJSON = {
     type: 'Feature',
@@ -432,12 +432,12 @@ export default function JobTrackingScreen() {
 
           <View style={styles.headerCenter}>
             <PulseDot color={COLORS.cyan} />
-            <Text style={styles.headerTitle}>Live Tracking</Text>
+            <Text style={styles.headerTitle}>{t('jobTracking.title')}</Text>
           </View>
 
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
+            <Text style={styles.liveText}>{t('jobTracking.liveBadge')}</Text>
           </View>
         </Animated.View>
       </SafeAreaView>
@@ -452,7 +452,7 @@ export default function JobTrackingScreen() {
             <Ionicons name="navigate" size={19} color={COLORS.cyan} />
           </View>
           <View style={styles.distanceCopy}>
-            <Text style={styles.sheetEyebrow}>LIVE ROUTE DISTANCE</Text>
+            <Text style={styles.sheetEyebrow}>{t('jobTracking.liveDistanceLabel')}</Text>
             <Text style={styles.distanceValue}>{distDisplay}</Text>
           </View>
           <PulseDot color={COLORS.cyan} />
@@ -470,11 +470,11 @@ export default function JobTrackingScreen() {
           </View>
           <View style={styles.routeStops}>
             <View style={styles.routeStop}>
-              <Text style={styles.routeStopLabel}>LIVE ORIGIN</Text>
-              <Text style={styles.routeStopValue} numberOfLines={2}>{originAddress || 'Waiting for live location'}</Text>
+              <Text style={styles.routeStopLabel}>{t('jobTracking.liveOriginLabel')}</Text>
+              <Text style={styles.routeStopValue} numberOfLines={2}>{originAddress || t('jobTracking.waitingLive')}</Text>
             </View>
             <View style={styles.routeStop}>
-              <Text style={styles.routeStopLabel}>SERVICE LOCATION</Text>
+              <Text style={styles.routeStopLabel}>{t('jobTracking.serviceLocationLabel')}</Text>
               <Text style={styles.routeStopValue} numberOfLines={2}>{destinationAddress || addressLabel}</Text>
             </View>
           </View>
@@ -487,7 +487,7 @@ export default function JobTrackingScreen() {
               style={styles.actionBtnInner}
             >
               <Ionicons name="arrow-back" size={21} color={COLORS.text} />
-              <Text style={[styles.actionLabel, { color: COLORS.text }]}>Back</Text>
+              <Text style={[styles.actionLabel, { color: COLORS.text }]}>{t('jobTracking.back')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -499,7 +499,7 @@ export default function JobTrackingScreen() {
                   style={styles.actionBtnInner}
                 >
                   <Ionicons name="chatbubble-ellipses" size={22} color={COLORS.purple} />
-                  <Text style={[styles.actionLabel, { color: COLORS.purple }]}>Chat</Text>
+                  <Text style={[styles.actionLabel, { color: COLORS.purple }]}>{t('jobTracking.chat')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -509,7 +509,7 @@ export default function JobTrackingScreen() {
                   style={styles.actionBtnInner}
                 >
                   <Ionicons name="call" size={21} color={COLORS.cyan} />
-                  <Text style={[styles.actionLabel, { color: COLORS.cyan }]}>Call</Text>
+                  <Text style={[styles.actionLabel, { color: COLORS.cyan }]}>{t('jobTracking.call')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </>

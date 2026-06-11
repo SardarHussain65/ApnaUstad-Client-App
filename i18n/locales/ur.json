@@ -19,7 +19,70 @@
     "optional": "اختیاری",
     "nearby": "قریبی",
     "yes": "جی ہاں",
-    "no": "نہیں"
+    "no": "نہیں",
+    "today": "آج",
+    "asap": "جلد از جلد",
+    "flexible": "لچکدار",
+    "client": "کسٹمر",
+    "anonymous": "گمنام",
+    "done": "مکمل",
+    "remove": "ہٹائیں",
+    "tryAgain": "دوبارہ کوشش کریں",
+    "notShared": "شیئر نہیں کیا گیا",
+    "remote": "ریموٹ",
+    "voice": "آواز",
+    "video": "ویڈیو",
+    "image": "تصویر",
+    "refresh": "تازہ کریں",
+    "required": "ضروری",
+    "pkr": "PKR",
+    "rupeesFormat": "Rs. {{amount}}",
+    "add": "شامل کریں",
+    "availableNow": "ابھی دستیاب ہے",
+    "busyNow": "ابھی مصروف ہے",
+    "ustad": "استاد"
+  },
+  "bookingStatus": {
+    "pending": {
+      "label": "پینڈنگ",
+      "title": "درخواست بھیج دی گئی"
+    },
+    "accepted": {
+      "label": "مقرر شدہ",
+      "title": "استاد مقرر ہو گئے"
+    },
+    "assigned": {
+      "label": "مقرر شدہ",
+      "title": "استاد مقرر ہو گئے"
+    },
+    "ongoing": {
+      "label": "جاری ہے",
+      "title": "کام جاری ہے"
+    },
+    "in-progress": {
+      "label": "جاری ہے",
+      "title": "کام جاری ہے"
+    },
+    "completed": {
+      "label": "مکمل",
+      "title": "کام مکمل ہو گیا"
+    },
+    "closed": {
+      "label": "بند",
+      "title": "بند ہو گیا"
+    },
+    "cancelled": {
+      "label": "منسوخ",
+      "title": "کام منسوخ ہو گیا"
+    },
+    "open": {
+      "label": "کھلا ہے",
+      "title": "کھلی درخواست"
+    },
+    "reviewing": {
+      "label": "جائزہ",
+      "title": "تجویز کا جائزہ"
+    }
   },
   "onboarding": {
     "slide1": {
@@ -73,7 +136,25 @@
     "email": "ای میل ایڈریس (اختیاری)",
     "city": "شہر",
     "signUpButton": "محفوظ اکاؤنٹ بنائیں",
-    "signInButton": "محفوظ سائن ان کریں"
+    "signInButton": "محفوظ سائن ان کریں",
+    "emailPlaceholder": "name@example.com",
+    "phonePlaceholder": "+92 300 0000000",
+    "emailTab": "ای میل",
+    "phoneTab": "فون",
+    "loginError": "لاگ ان کی خرابی",
+    "incompleteResponse": "سرور نے نامکمل جواب واپس کیا ہے۔ براہ کرم دوبارہ کوشش کریں۔",
+    "unableSignIn": "سائن ان کرنے میں ناکام",
+    "enterEmail": "اپنا ای میل ایڈریس درج کریں۔",
+    "enterPhone": "اپنا فون نمبر درج کریں۔",
+    "enterValidEmail": "درست ای میل ایڈریس درج کریں۔",
+    "enterPassword": "اپنا پاس ورڈ درج کریں۔",
+    "accountExistsTitle": "اکاؤنٹ پہلے سے موجود ہے",
+    "phoneExistsMsg": "یہ فون نمبر پہلے سے ہی بطور {{role}} رجسٹرڈ ہے۔",
+    "emailExistsMsg": "یہ ای میل ایڈریس پہلے سے ہی کسی دوسرے اکاؤنٹ پر رجسٹرڈ ہے۔",
+    "unableContinueTitle": "جاری رکھنے میں ناکام",
+    "failedSendVerification": "تصدیقی کوڈ بھیجنے میں ناکامی۔",
+    "enterFullName": "اپنا پورا نام درج کریں۔",
+    "enterValidPhone": "درست فون نمبر درج کریں۔"
   },
   "home": {
     "client": {
@@ -92,7 +173,8 @@
       "noBookings": "ابھی تک کوئی بکنگ نہیں ہے۔ شروع کرنے کے لیے سروس بک کریں!",
       "seeAll": "سب دیکھیں",
       "showLess": "کم دیکھیں",
-      "viewAll": "سب دیکھیں"
+      "viewAll": "سب دیکھیں",
+      "clientName": "کسٹمر کا نام"
     },
     "worker": {
       "missedJobs": "چھوٹے ہوئے کام",
@@ -104,8 +186,24 @@
       "noBookings": "ابھی تک کوئی بکنگ نہیں ہے۔ قبول شدہ بکنگز یہاں دکھائی دیں گی۔",
       "readyWork": "کام کے لیے دستیاب",
       "instant": "فوری",
-      "scheduled": "شیڈول کے مطابق"
-    }
+      "scheduled": "شیڈول کے مطابق",
+      "scheduledAt": "شیڈول وقت: {{time}}",
+      "activeJob": "فعال کام",
+      "jobDetailsReady": "کام کی تفصیلات آپ کے لیے تیار ہیں",
+      "newJob": "نیا کام",
+      "viewDetails": "تفصیلات دیکھیں",
+      "withdrawBidTitle": "بولی واپس لیں",
+      "withdrawBidConfirm": "کیا آپ واقعی اس کام کے لیے اپنی بولی واپس لینا چاہتے ہیں؟",
+      "withdrawBidFailed": "بولی واپس لینے میں ناکامی۔ براہ کرم دوبارہ کوشش کریں۔",
+      "pendingJob": "زیر التوا کام",
+      "waitingClientReview": "کسٹمر کے جائزے کا انتظار",
+      "proposalSubmitted": "پیشکش جمع کر دی گئی",
+      "realTime": "ریئل ٹائم",
+      "planned": "منصوبہ بند",
+      "workerName": "استاد کا نام"
+    },
+    "loadingLocation": "لوکیشن لوڈ ہو رہی ہے...",
+    "yourLocation": "آپ کی لوکیشن"
   },
   "jobCreation": {
     "describeNeed": "اپنی ضرورت بیان کریں",
@@ -119,7 +217,85 @@
     "submitInstant": "ابھی استاد تلاش کریں",
     "submitScheduled": "شیڈول کام پوسٹ کریں",
     "voiceNote": "صوتی پیغام (اختیاری)",
-    "mediaEvidence": "تصویر یا ویڈیو (اختیاری)"
+    "mediaEvidence": "تصویر یا ویڈیو (اختیاری)",
+    "service": "سروس",
+    "evidence": "شواہد",
+    "budgetLabel": "بجٹ",
+    "descTooShort": "⚠️ تفصیل بہت مختصر ہے (کم از کم 10 حروف ہونا ضروری ہے)",
+    "descHint": "مسئلہ، سائز اور کام کی تفصیلات شامل کریں",
+    "optionalDetails": "اختیاری تفصیلات",
+    "yourOffer": "آپ کی پیشکش",
+    "visitSchedule": "سفر کا شیڈول",
+    "photosOrVideo": "تصاویر یا ویڈیو",
+    "voiceBrief": "آواز کا پیغام",
+    "requiredDetails": "لازمی تفصیلات",
+    "successTitle": "کام کامیابی سے پوسٹ ہو گیا!",
+    "permissionDenied": "اجازت مسترد کر دی گئی، آپ کی فوٹو گیلری تک رسائی درکار ہے۔",
+    "mediaLibraryError": "خرابی: فوٹو گیلری تک رسائی حاصل نہیں کی جا سکی۔",
+    "descTooShortTitle": "تفصیل بہت مختصر ہے",
+    "descTooShortDesc": "براہ کرم کم از کم 10 حروف کے ساتھ کام کی وضاحت کریں۔",
+    "invalidLocation": "غلط لوکیشن",
+    "invalidLocationDesc": "براہ کرم بکنگ کا پتہ فراہم کریں یا تلاش کریں۔",
+    "invalidOffer": "غلط پیشکش",
+    "invalidOfferDesc": "براہ کرم مثبت رقم درج کریں یا اوپن بولی کے لیے خالی چھوڑ دیں۔",
+    "invalidSchedule": "غلط شیڈول",
+    "invalidScheduleDesc": "شیڈول کی تاریخ اور وقت کم از کم 1 گھنٹہ مستقبل کا ہونا چاہیے۔",
+    "postUrgentTitle": "فوری کام پوسٹ کریں",
+    "postServiceTitle": "سروس کی درخواست پوسٹ کریں",
+    "postUrgentConfirm": "آپ Rs. {{price}} کی مقررہ قیمت پر ایک فوری کام پوسٹ کر رہے ہیں۔ قبول کرنے والے پہلے استاد کو خود بخود تفویض کر دیا جائے گا۔",
+    "postServiceConfirm": "آپ کی شیڈول شدہ سروس کی درخواست پوسٹ کرنے کے لیے تیار ہے۔",
+    "postRequest": "درخواست پوسٹ کریں",
+    "keepEditing": "ترمیم جاری رکھیں",
+    "requestFailed": "درخواست ناکام ہو گئی",
+    "uploadFailed": "اپ لوڈ ناکام ہو گیا",
+    "successModalUrgentDesc": "آپ کا فوری کام پوسٹ کر دیا گیا ہے!\n\nقبول کرنے والے پہلے استاد کو فوری طور پر تفویض کیا جائے گا۔ ہم ابھی آپ کے لیے بہترین استاد تلاش کر رہے ہیں۔",
+    "successModalScheduledDesc": "آپ کا شیڈول شدہ کام پوسٹ کر دیا گیا ہے! اساتذہ جائزہ لے کر آپ کو بولیاں بھیجیں گے۔\n\nآپ اپنے بکنگز میں اپ ڈیٹس ٹریک کر سکتے ہیں۔",
+    "postUrgentConfirmQuestion": "فوری کام پوسٹ کریں؟",
+    "postJobConfirmQuestion": "کام کی درخواست پوسٹ کریں؟",
+    "postUrgentAlertConfirm": "آپ مقررہ قیمت Rs. {{price}} کے ساتھ ایک فوری کام پوسٹ کر رہے ہیں۔ قبول کرنے والا پہلا استاد فوری طور پر خود بخود تفویض کیا جائے گا۔",
+    "postJobAlertConfirm": "کیا آپ واقعی اس درخواست کو شیڈول اور نشر کرنا چاہتے ہیں؟",
+    "yesPostJob": "ہاں، کام پوسٹ کریں",
+    "cancel": "منسوخ کریں",
+    "budgetPlaceholder": "اپنی پیشکش کی رقم درج کریں",
+    "serviceLocation": "سروس کی لوکیشن",
+    "locationPlaceholder": "وہ پتہ درج کریں جہاں سروس کی ضرورت ہے",
+    "updatingLocation": "موجودہ لوکیشن اپ ڈیٹ ہو رہی ہے...",
+    "useCurrentLocation": "میری موجودہ لوکیشن استعمال کریں",
+    "dropzoneTitle": "تصاویر یا مختصر ویڈیو شامل کریں",
+    "dropzoneSubtitle": "کام قبول کرنے سے پہلے استاد کو سمجھنے میں مدد کریں",
+    "vidBadge": "ویڈیو",
+    "imgBadge": "تصویر",
+    "photosCount_one": "1 تصویر",
+    "photosCount_other": "{{count}} تصاویر",
+    "videosCount_one": "1 ویڈیو",
+    "videosCount_other": "{{count}} ویڈیوز",
+    "clearAllMedia": "تمام میڈیا صاف کریں",
+    "scheduleVisit": "دورہ شیڈول کریں",
+    "chooseDateTime": "سروس کے لیے تاریخ اور وقت منتخب کریں",
+    "selectDate": "تاریخ منتخب کریں",
+    "adjustTime": "وقت ایڈجسٹ کریں (24 گھنٹے)",
+    "scheduleAvailable": "شیڈول دستیاب ہے",
+    "chooseOneHourLater": "موجودہ وقت سے کم از کم 1 گھنٹہ بعد کا وقت منتخب کریں",
+    "lockSchedule": "شیڈول لاک کریں",
+    "urgentNow": "فوری (ابھی)",
+    "bookLater": "بعد کے لیے بک کریں",
+    "urgentFixedPricing": "فوری مقررہ قیمت",
+    "locked": "مقفول",
+    "jobDuration": "کام کا دورانیہ (گھنٹے)",
+    "estimateHoursDesc": "مطلوبہ گھنٹوں کا اندازہ لگائیں۔ ریٹ Rs. {{rate}}/گھنٹہ ہے۔",
+    "hr": "گھنٹہ",
+    "hrs": "گھنٹے",
+    "lockedFixedPrice": "مقررہ لاک قیمت",
+    "pricingFormula": "قیمت کا فارمولا:",
+    "pricingFormulaValue": "Rs. {{rate}}/گھنٹہ × {{hours}} {{hoursText}} = Rs. {{total}}",
+    "minPriceApplied": "پلیٹ فارم کا کم از کم بکنگ ریٹ (Rs. {{price}}) لاگو کیا گیا ہے۔",
+    "urgentFixedPriceInfo": "⚡ کسٹمر اور اساتذہ کا فوری ملاپ ہوتا ہے۔ پوسٹ کرنے سے پہلے قیمت لاک ہو جاتی ہے اور اس پر بات چیت نہیں کی جا سکتی۔ قبول کرنے والا پہلا استاد فوری ہائر ہو جاتا ہے۔",
+    "voiceBriefBadge": "اختیاری · زیادہ سے زیادہ 60 سیکنڈ",
+    "recordingExplanation": "کام کی وضاحت ریکارڈ ہو رہی ہے",
+    "voiceBriefAttached": "آواز کا خلاصہ منسلک ہے",
+    "explainWorkVoice": "اپنے الفاظ میں کام کی وضاحت کریں",
+    "workersListenBefore": "کام شروع کرنے سے پہلے اساتذہ اسے سن سکتے ہیں",
+    "usefulExplainVoice": "تب مفید ہے جب مسئلہ لکھ کر بتانے کے بجائے بول کر سمجھانا آسان ہو"
   },
   "bookings": {
     "myBookings": "میری بکنگز",
@@ -133,7 +309,18 @@
     "cancelledEmpty": "آپ کی کوئی منسوخ شدہ بکنگ نہیں ہے۔",
     "noActiveBookings": "کوئی فعال بکنگ نہیں ہے",
     "noCompletedBookings": "کوئی مکمل بکنگ نہیں ہے",
-    "noCancelledBookings": "کوئی منسوخ بکنگ نہیں ہے"
+    "noCancelledBookings": "کوئی منسوخ بکنگ نہیں ہے",
+    "rateUstad": "درجہ بندی کریں",
+    "earningLabel": "آمدنی",
+    "totalLabel": "کل رقم",
+    "budgetLabel": "بجٹ",
+    "actionReviewProposals": "پیشکشوں کا جائزہ",
+    "actionResumeSearch": "تلاش دوبارہ شروع کریں",
+    "actionViewReceipt": "رسید دیکھیں",
+    "actionViewDetails": "تفصیلات دیکھیں",
+    "actionTrackLiveJob": "لائیو ٹریک کریں",
+    "actionTrackJob": "کام ٹریک کریں",
+    "openDetailsToViewLocation": "سروس کی لوکیشن دیکھنے کے لیے تفصیلات کھولیں"
   },
   "profile": {
     "title": "پروفائل",
@@ -162,7 +349,10 @@
     "ongoing": "جاری",
     "completed": "مکمل",
     "eliteUstad": "⚡ الیٹ استاد",
-    "platinumClient": "💎 پلاٹینم کسٹمر"
+    "platinumClient": "💎 پلاٹینم کسٹمر",
+    "activeCategories": "فعال سروس کیٹیگریز",
+    "version": "ApnaUstad v2.4.0",
+    "identitySub": "شناختی کارڈ اور پروفائل کی تصدیق"
   },
   "settings": {
     "title": "ایپ کی ترتیبات",
@@ -170,7 +360,10 @@
     "selectLanguage": "اپنی پسندیدہ زبان منتخب کریں:",
     "english": "English (انگریزی)",
     "urdu": "اردو (Urdu)",
-    "saveReload": "تبدیلیاں لاگو کرنے کے لیے ایپ دوبارہ لوڈ ہوگی۔"
+    "saveReload": "تبدیلیاں لاگو کرنے کے لیے ایپ دوبارہ لوڈ ہوگی۔",
+    "confirmButton": "تصدیق کریں اور لاگو کریں",
+    "appliedInstantly": "تبدیلیاں فوری طور پر لاگو ہو جاتی ہیں۔",
+    "languageUpdated": "زبان کامیابی کے ساتھ تبدیل ہو گئی!"
   },
   "verify": {
     "title": "ای میل کی تصدیق",
@@ -240,7 +433,8 @@
     "locationRequiredDesc": "براہ کرم لوکیشن کی اجازت دیں تاکہ قریبی کام آپ تک پہنچ سکیں۔",
     "errorTitle": "خرابی",
     "uploadError": "اپلوڈ کے دوران کچھ غلط ہو گیا۔",
-    "privacySecured": "سیکیورٹی کی ضمانت: آپ کے سرکاری دستاویزات مکمل طور پر محفوظ ہیں اور صرف شراکت دار کی تصدیق کے لیے استعمال کیے جاتے ہیں۔"
+    "privacySecured": "سیکیورٹی کی ضمانت: آپ کے سرکاری دستاویزات مکمل طور پر محفوظ ہیں اور صرف شراکت دار کی تصدیق کے لیے استعمال کیے جاتے ہیں۔",
+    "skillsPlaceholderHint": "پلمبنگ، پینٹنگ، مرمت"
   },
   "forgotPassword": {
     "title": "پاس ورڈ کی بازیابی",
@@ -338,7 +532,18 @@
     "selectUstad": "استاد منتخب کریں",
     "cancelJob": "درخواست منسوخ کریں",
     "cancelJobConfirm": "کیا آپ واقعی تلاش روکنا اور اس سروس کی درخواست کو منسوخ کرنا چاہتے ہیں؟",
-    "keepSearching": "تلاش جاری رکھیں"
+    "keepSearching": "تلاش جاری رکھیں",
+    "bookingSuccess": "آپ کی بکنگ کامیابی کے ساتھ بن گئی ہے۔",
+    "selectUstadError": "استاد منتخب نہیں کیا جا سکا",
+    "requestCancelled": "درخواست منسوخ کر دی گئی",
+    "cancelSuccess": "آپ کی سروس کی درخواست منسوخ کر دی گئی ہے۔",
+    "cancelError": "درخواست منسوخ نہیں کی جا سکی",
+    "assignedTitle": "استاد مقرر کر دیا گیا! ⚡",
+    "assignedDesc": "ایک استاد نے آپ کی فوری درخواست قبول کر لی ہے۔",
+    "searchTimeoutTitle": "تلاش کا وقت ختم",
+    "searchTimeoutDesc": "ابھی تک کسی استاد نے قبول نہیں کیا۔ تلاش جاری رکھیں یا منسوخ کریں۔",
+    "searchExpandedTitle": "تلاش کا دائرہ بڑھا دیا گیا! ⚡",
+    "searchExpandedDesc": "وسیع تلاش کے لیے مقررہ قیمت بڑھا کر Rs. {{price}} کی جا رہی ہے۔"
   },
   "bidSubmission": {
     "instantRequest": "فوری کام کی درخواست",
@@ -511,7 +716,14 @@
     "today": "آج",
     "asap": "فوری طور پر",
     "instantVisit": "فوری دورہ",
-    "scheduledVisit": "شیڈول دورہ"
+    "scheduledVisit": "شیڈول دورہ",
+    "loadingDetails": "بکنگ کی تفصیلات لوڈ ہو رہی ہیں...",
+    "bookingNotFound": "بکنگ نہیں ملی",
+    "goBack": "واپس جائیں",
+    "track": "ٹریک کریں",
+    "chat": "چیٹ کریں",
+    "call": "کال کریں",
+    "step": "مرحلہ {{step}}"
   },
   "review": {
     "title": "رائے کا اظہار",
@@ -682,7 +894,8 @@
     "couldNotFinish": "ریکارڈنگ مکمل نہیں کی جا سکی",
     "notSent": "صوتی پیغام نہیں بھیجا جا سکا",
     "checkConnection": "براہ کرم اپنا انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔",
-    "protected": "بکنگ چیٹ محفوظ ہے"
+    "protected": "بکنگ چیٹ محفوظ ہے",
+    "inApp": "ان ایپ چیٹ"
   },
   "notifications": {
     "title": "نوٹیفیکیشنز",
@@ -819,7 +1032,11 @@
     "removeConfirmTitle": "کیٹیگری ہٹائیں؟",
     "removeConfirmDesc": "کیا آپ اپنے ورکر پروفائل سے {{category}} ہٹانا چاہتے ہیں؟",
     "activateConfirmTitle": "اضافی کیٹیگری فعال کریں؟",
-    "activateConfirmDesc": "اگلے پورے مہینے کے لیے ابھی آپ کے والٹ سے {{fee}} منہا کر لیے جائیں گے۔ خودکار تجدید آن رہنے کی صورت میں ہر ماہ یہی رقم منہا کی جائے گی۔"
+    "activateConfirmDesc": "اگلے پورے مہینے کے لیے ابھی آپ کے والٹ سے {{fee}} منہا کر لیے جائیں گے۔ خودکار تجدید آن رہنے کی صورت میں ہر ماہ یہی رقم منہا کی جائے گی۔",
+    "activatePayBtn": "فعال کریں اور ادائیگی کریں",
+    "activatedDesc": "آپ کی مہارت فعال ہے اور اس سے متعلقہ کام موصول ہو سکتے ہیں۔",
+    "renewalEnabledDesc": "خودکار تجدید فعال ہے۔ سبسکرپشن فیس ماہانہ منہا کی جائے گی۔",
+    "renewalDisabledDesc": "خودکار تجدید غیر فعال ہے۔ بلنگ سائیکل کے اختتام پر مہارت ختم ہو جائے گی۔"
   },
   "identityVerification": {
     "title": "شناخت کی تصدیق",
@@ -850,7 +1067,10 @@
     "failedTitle": "جمع کروانے میں ناکامی",
     "noDocument": "کوئی دستاویز منتخب نہیں کی گئی",
     "camera": "کیمرہ",
-    "gallery": "گیلری"
+    "gallery": "گیلری",
+    "selectError": "انتخاب کی خرابی",
+    "cameraPermission": "کیمرے کی اجازت درکار ہے",
+    "cameraError": "کیمرے کی خرابی"
   },
   "helpCenter": {
     "title": "مدد مرکز",
@@ -1019,7 +1239,12 @@
     "unableSelect": "استاد منتخب کرنے میں ناکامی",
     "acceptError": "براہ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔",
     "shareMessage": "{{name}} - {{category}}{{cityInfo}}۔",
-    "shareCity": "، {{city}} میں"
+    "shareCity": "، {{city}} میں",
+    "defaultSpecialist": "استاد سپیشلسٹ",
+    "defaultCategory": "مہارت",
+    "noCity": "پاکستان",
+    "hourlyRateValue": "Rs. {{rate}}/گھنٹہ",
+    "detailsLabel": "تفصیلات"
   },
   "workerList": {
     "title": "دستیاب اساتذہ",
@@ -1145,20 +1370,80 @@
     "chatClosed": "چیٹ بند ہے",
     "chatClosedDesc": "یہ کام ختم ہونے کی وجہ سے پیغامات بھیجنا بند ہے۔",
     "chatUnavailable": "چیٹ دستیاب نہیں",
-    "chatUnavailableDesc": "اس کام کے ساتھ بکنگ کا حوالہ نہیں ملا۔"
+    "chatUnavailableDesc": "اس کام کے ساتھ بکنگ کا حوالہ نہیں ملا۔",
+    "serviceLocationLabel": "سروس کی لوکیشن",
+    "back": "واپس",
+    "chat": "چیٹ",
+    "call": "کال"
   },
   "jobsNearby": {
     "title": "قریبی کام",
     "map": "نقشہ",
     "list": "فہرست",
-    "noJobs": "اس وقت آپ کے قریب کوئی کام دستیاب نہیں ہے۔"
+    "noJobs": "اس وقت آپ کے قریب کوئی کام دستیاب نہیں ہے۔",
+    "scanning": "اسکین ہو رہا ہے...",
+    "activeOpportunities": "{{count}} فعال کام دستیاب ہیں",
+    "scanningLocalFrequency": "قریبی سگنلز کی اسکیننگ...",
+    "noMissionsFound": "کوئی کام نہیں ملا",
+    "emptyDescription": "ہمیں آپ کے قریبی دائرے میں کوئی فعال کام نہیں ملا۔ دوبارہ کوشش کریں یا دائرہ کار بڑھائیں۔",
+    "refreshScan": "دوبارہ اسکین کریں",
+    "distanceAway": "{{distance}} کلومیٹر دور"
   },
   "pendingBidDetails": {
     "title": "بولی کا جائزہ",
     "proposedPrice": "پیشکش کی قیمت",
     "message": "استاد کا پیغام",
     "acceptBid": "بولی قبول کریں اور ہائر کریں",
-    "declineBid": "بولی مسترد کریں"
+    "declineBid": "بولی مسترد کریں",
+    "loading": "پیشکش کی تفصیلات لوڈ ہو رہی ہیں...",
+    "unavailable": "پیشکش دستیاب نہیں ہے",
+    "unavailableDesc": "ہو سکتا ہے یہ کام بند ہو چکا ہو یا کسی اور استاد کو تفویض کر دیا گیا ہو۔",
+    "goBack": "واپس جائیں",
+    "activeBid": "فعال بولی",
+    "proposalDetails": "پیشکش کی تفصیلات",
+    "awaitingClient": "کسٹمر کے جواب کا انتظار",
+    "proposalSent": "پیشکش بھیج دی گئی",
+    "yourQuotedValue": "آپ کی تجویز کردہ قیمت",
+    "offerActive": "پیشکش فعال ہے",
+    "visitOverview": "سفر کا جائزہ",
+    "visitOverviewDesc": "کسٹمر کی طرف سے فراہم کردہ وقت اور سروس کی لوکیشن۔",
+    "visitType": "سفر کی قسم",
+    "date": "تاریخ",
+    "time": "وقت",
+    "serviceLocation": "سروس کی لوکیشن",
+    "client": "کسٹمر",
+    "clientDesc": "کسٹمر کے جواب دینے سے پہلے سروس کی درخواست کرنے والے کا جائزہ لیں۔",
+    "serviceClient": "سروس کسٹمر",
+    "completedServiceRequests_one": "1 مکمل سروس درخواست",
+    "completedServiceRequests_other": "{{count}} مکمل سروس درخواستیں",
+    "newApnaUstadClient": "نیا اپنا استاد کسٹمر",
+    "workEvidence": "کام کے ثبوت",
+    "attachmentsCount_one": "1 فائل کسٹمر کی طرف سے منسلک کی گئی ہے۔",
+    "attachmentsCount_other": "{{count}} فائلیں کسٹمر کی طرف سے منسلک کی گئی ہیں۔",
+    "yourProposal": "آپ کی پیشکش",
+    "yourProposalDesc": "یہ وہ پیشکش ہے جو اس وقت کسٹمر کو نظر آ رہی ہے۔",
+    "yourQuote": "آپ کی قیمت",
+    "estimatedTime": "تخمینہ وقت",
+    "messageToClient": "کسٹمر کو پیغام",
+    "noMessage": "اس پیشکش کے ساتھ کوئی اضافی پیغام شامل نہیں تھا۔",
+    "withdrawProposal": "پیشکش واپس لیں",
+    "removeOffer": "اس کام سے اپنی پیشکش ہٹائیں",
+    "withdrawConfirmTitle": "پیشکش واپس لیں؟",
+    "withdrawConfirmMsg": "آپ کی پیشکش اس کام سے ہٹا دی جائے گی۔ کسٹمر اب اسے قبول نہیں کر سکے گا۔",
+    "keepProposal": "پیشکش برقرار رکھیں",
+    "withdraw": "واپس لیں",
+    "unableWithdraw": "واپس لینے میں ناکام",
+    "tryAgain": "براہ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+    "serviceLocationNotShared": "سروس کی لوکیشن شیئر نہیں کی گئی",
+    "daysCount_one": "1 دن",
+    "daysCount_other": "{{count}} دن",
+    "recentlySubmitted": "ابھی حال ہی میں بھیجی گئی",
+    "submittedJustNow": "ابھی ابھی بھیجی گئی",
+    "submittedMinutesAgo_one": "1 منٹ پہلے بھیجی گئی",
+    "submittedMinutesAgo_other": "{{count}} منٹ پہلے بھیجی گئی",
+    "submittedHoursAgo_one": "1 گھنٹہ پہلے بھیجی گئی",
+    "submittedHoursAgo_other": "{{count}} گھنٹے پہلے بھیجی گئی",
+    "submittedDate": "{{date}} کو بھیجی گئی"
   },
   "splash": {
     "tagline": "سروسز کی کہکشاں",
@@ -1167,6 +1452,116 @@
   "accountDeactivated": {
     "title": "اکاؤنٹ معطل کر دیا گیا",
     "description": "پالیسی کی خلاف ورزی یا تصدیقی عمل کی وجہ سے آپ کا اکاؤنٹ معطل کر دیا گیا ہے۔ اگر آپ کو لگتا ہے کہ یہ غلطی سے ہوا ہے تو اپنا استاد ہیلپ سینٹر پر رابطہ کریں۔",
-    "contactSupport": "سپورٹ سے رابطہ کریں"
+    "contactSupport": "سپورٹ سے رابطہ کریں",
+    "subtitle": "آپ کا اکاؤنٹ فی الحال ایڈمن کی طرف سے معطل کر دیا گیا ہے۔",
+    "reasonLabel": "ایڈمن کی وجہ",
+    "deactivatedOn": "اس تاریخ کو معطل کیا گیا: {{date}}",
+    "explainer": "جب تک آپ کا اکاؤنٹ دوبارہ فعال نہیں ہو جاتا، آپ بکنگ، کام، والٹ، چیٹ یا پروفائل کے فیچرز استعمال نہیں کر سکتے۔ اگر آپ کو لگتا ہے کہ یہ غلطی سے ہوا ہے تو ہیلپ سینٹر سے ایڈمن سے رابطہ کریں۔",
+    "contactAdmin": "ایڈمن سے رابطہ کریں",
+    "checkStatus": "اسٹیٹس چیک کریں",
+    "checking": "چیک ہو رہا ہے...",
+    "logout": "لاگ آؤٹ",
+    "appealSubject": "اکاؤنٹ معطلی کی اپیل",
+    "defaultReason": "ایڈمن کی طرف سے اکاؤنٹ معطل کر دیا گیا ہے۔ تفصیلات کے لیے براہ کرم سپورٹ سے رابطہ کریں۔"
+  },
+  "tabs": {
+    "home": "ہوم",
+    "bookings": "کام",
+    "wallet": "والٹ",
+    "profile": "پروفائل"
+  },
+  "jobEvidence": {
+    "jobVideo": "کام کی ویڈیو",
+    "tapToPlay": "چلانے کے لیے ٹیپ کریں",
+    "clientVoiceBrief": "کسٹمر کا وائس بریف",
+    "yourVoiceBrief": "آپ کا وائس بریف"
+  },
+  "incomingJobModal": {
+    "newSignal": "تازہ ترین",
+    "postedJustNow": "ابھی ابھی",
+    "postedMinutesAgo_one": "1 منٹ پہلے",
+    "postedMinutesAgo_other": "{{count}} منٹ پہلے",
+    "postedHoursAgo_one": "1 گھنٹہ پہلے",
+    "postedHoursAgo_other": "{{count}} گھنٹے پہلے",
+    "swipeHint": "{{count}} پیشکشوں کے لیے سوائپ کریں",
+    "immediateResponse": "فوری جواب درکار ہے",
+    "scheduledVisit": "شیڈول شدہ دورہ",
+    "timePending": "وقت باقی ہے",
+    "netEarning": "خالص آمدنی",
+    "clientBudget": "کسٹمر کا بجٹ",
+    "openBudget": "اوپن بولی",
+    "commissionText": "{{amount}} کمیشن",
+    "noCommission": "کوئی کمیشن نہیں",
+    "submitQuoteHint": "اپنا ریٹ پیش کریں",
+    "liveJobOffer": "لائیو کام کی پیشکش",
+    "newScheduledRequest": "نئی شیڈول شدہ درخواست",
+    "instantResponse": "فوری جواب",
+    "scheduledOpportunity": "شیڈول شدہ موقع",
+    "defaultDescription": "کسٹمر نے اس سروس کے لیے پیشہ ورانہ مدد کی درخواست کی ہے۔",
+    "travelDistance": "سفر کا فاصلہ",
+    "respondNearby": "قریب جواب دیں",
+    "planVisit": "دورے کی منصوبہ بندی کریں",
+    "serviceLocation": "سروس کی لوکیشن",
+    "nearbyServiceArea": "قریبی سروس ایریا",
+    "visitTiming": "دورے کا وقت",
+    "clientOffer": "کسٹمر کی پیشکش",
+    "workEvidence": "کام کے ثبوت",
+    "attachmentsLabel_one": "1 منسلک فائل",
+    "attachmentsLabel_other": "{{count}} منسلک فائلیں",
+    "noEvidenceMsg": "کوئی ثبوت منسلک نہیں ہے۔ کام کی تفصیل کا غور سے جائزہ لیں۔",
+    "clientContext": "کسٹمر کا پس منظر",
+    "serviceClient": "سروس کسٹمر",
+    "defaultClientName": "کسٹمر",
+    "clientRating": "{{rating}} ریٹنگ",
+    "newClient": "نیا کسٹمر",
+    "jobsCompleted": "{{count}} کام مکمل",
+    "walletReady": "والٹ بیلنس اہل ہے",
+    "walletTopUpRequired": "والٹ ریچارج درکار ہے",
+    "walletBalanceDesc": "قبول کرنے کے لیے والٹ میں کم از کم {{amount}} روپے رکھیں",
+    "offerLow": "پیشکش کم لگتی ہے؟",
+    "counterOfferDesc": "مختصر وضاحت کے ساتھ اپنا مناسب ریٹ پیش کریں",
+    "acceptOffer": "پیشکش قبول کریں",
+    "continueBid": "بولی جمع کریں",
+    "topUpWallet": "والٹ ریچارج کریں",
+    "instantFooterNote": "سب سے پہلے قبول کرنے والا استاد فوری طور پر یہ لائیو کام حاصل کرے گا۔",
+    "scheduledFooterNote": "کسٹمر کے جائزے کے لیے اپنی بولی بھیجیں۔",
+    "photo": "تصویر",
+    "playVideo": "کام کی ویڈیو چلائیں",
+    "video": "ویڈیو",
+    "voiceBrief": "آواز کا خلاصہ",
+    "playingVoice": "چل رہا ہے...",
+    "tapListen": "سننے کے لیے ٹیپ کریں",
+    "voice": "آواز",
+    "evidenceLabel_one": "1 ثبوت",
+    "evidenceLabel_other": "{{count}} ثبوت",
+    "attachmentsLabelCount_one": "1 ثبوت کی فائل منسلک ہے",
+    "attachmentsLabelCount_other": "{{count}} ثبوت کی فائلیں منسلک ہیں",
+    "jobsCount_one": "1 کام",
+    "jobsCount_other": "{{count}} کام",
+    "jobsCompletedCount_one": "1 کام مکمل",
+    "jobsCompletedCount_other": "{{count}} کام مکمل"
+  },
+  "paymentReceivedModal": {
+    "eyebrow": "رقم موصول ہو گئی ✅",
+    "title": "رقم موصول ہو گئی",
+    "currency": "PKR",
+    "subtitle": "ادائیگی کی تصدیق ہو گئی ہے اور آپ کے والٹ میں جمع کر دی گئی ہے۔",
+    "verifiedBy": "اپنا استاد سے تصدیق شدہ",
+    "gotIt": "سمجھ گیا"
+  },
+  "workerDetailsModal": {
+    "title": "استاد کی تفصیلات",
+    "fetchingProfile": "پروفائل لوڈ ہو رہی ہے...",
+    "jobsDone": "مکمل کام",
+    "experienceYears_one": "1 سال",
+    "experienceYears_other": "{{count}} سال",
+    "experience": "تجربہ",
+    "reviewsCount_one": "1 تبصرہ",
+    "reviewsCount_other": "{{count}} تبصرے",
+    "contactDetails": "رابطے کی تفصیلات",
+    "profileData": "پروفائل ڈیٹا",
+    "skills": "مہارتیں",
+    "hourlyRate": "فی گھنٹہ ریٹ",
+    "hireUstad": "استاد ہائر کریں"
   }
 }

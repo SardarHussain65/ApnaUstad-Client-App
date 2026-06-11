@@ -294,12 +294,12 @@ export function WorkerHome() {
 
   const handleWithdrawBid = useCallback((bid: Bid) => {
     Alert.alert(
-      'Withdraw Bid',
-      'Are you sure you want to withdraw your bid for this job?',
+      t('home.worker.withdrawBidTitle', 'Withdraw Bid'),
+      t('home.worker.withdrawBidConfirm', 'Are you sure you want to withdraw your bid for this job?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Withdraw',
+          text: t('pendingBidDetails.withdraw', 'Withdraw'),
           style: 'destructive',
           onPress: () => {
             setWithdrawingBidId(bid._id);
@@ -307,13 +307,13 @@ export function WorkerHome() {
               { bidId: bid._id },
               {
                 onSuccess: () => {
-                  refetchBids();
-                  setWithdrawingBidId(null);
+                   refetchBids();
+                   setWithdrawingBidId(null);
                 },
                 onError: (error) => {
-                  console.error('Error withdrawing bid:', error);
-                  setWithdrawingBidId(null);
-                  Alert.alert('Error', 'Failed to withdraw the bid. Please try again.');
+                   console.error('Error withdrawing bid:', error);
+                   setWithdrawingBidId(null);
+                   Alert.alert(t('common.error', 'Error'), t('home.worker.withdrawBidFailed', 'Failed to withdraw the bid. Please try again.'));
                 },
               }
             );
@@ -321,7 +321,7 @@ export function WorkerHome() {
         },
       ]
     );
-  }, [withdrawBid, refetchBids]);
+  }, [withdrawBid, refetchBids, t]);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -421,7 +421,7 @@ export function WorkerHome() {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={handleRefresh}>
-                <Text style={styles.seeAll}>REFRESH</Text>
+                <Text style={styles.seeAll}>{t('common.refresh', 'REFRESH')}</Text>
               </TouchableOpacity>
             )}
           </View>
