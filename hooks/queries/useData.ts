@@ -493,6 +493,11 @@ const fetchProfile = async (id: string, role: 'client' | 'worker'): Promise<Prof
   return response.data.data;
 };
 
+const fetchFavoriteWorkers = async (userId: string): Promise<Worker[]> => {
+  const response = await api.get(`/users/${userId}/favorites`);
+  return response.data.data || [];
+};
+
 const fetchPreferences = async (): Promise<UserPreferences> => {
   const response = await api.get('/preferences/my');
   return response.data.data;
@@ -714,6 +719,17 @@ export function useProfile(
     queryKey: [...queryKeys.profile.current(), role, id],
     queryFn: () => fetchProfile(id!, role as 'client' | 'worker'),
     enabled: !!id && !!role,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    ...options,
+  });
+}
+
+export function useFavoriteWorkers(userId: string | undefined, options?: Omit<UseQueryOptions<Worker[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<Worker[]>({
+    queryKey: queryKeys.favorites.list(userId || ''),
+    queryFn: () => fetchFavoriteWorkers(userId!),
+    enabled: !!userId,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
     ...options,

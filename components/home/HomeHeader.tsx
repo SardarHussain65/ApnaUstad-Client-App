@@ -50,8 +50,8 @@ export function HomeHeader() {
             <View style={[styles.activeIndicator, { backgroundColor: Colors.success }]} />
           </TouchableOpacity>
           <View style={styles.welcomeText}>
-            <Text style={styles.greetingLabel}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
-            <Text style={styles.greetingHeader}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
+            <Text style={styles.greetingLabel} numberOfLines={1}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
+            <Text style={styles.greetingHeader} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.6}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
           </View>
         </View>
 
@@ -90,6 +90,8 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
   },
   avatarContainer: {
     position: 'relative',
@@ -123,6 +125,7 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     marginLeft: Spacing.m,
+    flex: 1,
   },
   greetingLabel: {
     ...Typography.caption,

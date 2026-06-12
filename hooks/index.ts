@@ -18,6 +18,7 @@ export {
   useHelpChannels,
   useHelpSearch,
   useProfile,
+  useFavoriteWorkers,
   type Worker,
   type JobPost,
   type Review,
@@ -67,6 +68,7 @@ export {
   useUpdatePreferencesMutation,
   useLogoutAllSessionsMutation,
   useCreateSupportRequestMutation,
+  useToggleFavoriteMutation,
 } from './mutations/useMutations';
 
 // Wallet Hooks
@@ -98,3 +100,11 @@ export { useUserLocation, type UserLocation } from './useUserLocation';
 
 // Query Key Factory
 export { queryKeys } from '../lib/queryKeyFactory';
+
+// Worker Analytics
+export {
+  useWorkerAnalytics,
+  type WorkerAnalyticsData,
+  type EarningsDataPoint,
+  type EarningsSummary,
+} from './useWorkerAnalytics';

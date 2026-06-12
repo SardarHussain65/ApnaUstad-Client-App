@@ -238,13 +238,22 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     });
 
     const unsubscribeCompleted = socketService.on('booking:completed', (data: any) => {
-      Toast.show({
-        type: 'success',
-        text1: 'JOB COMPLETED 🏁',
-        text2: role === 'worker'
-          ? `You have successfully completed the job: ${data?.category || 'Task'}.`
-          : `Job completed! Your Ustad has finished: ${data?.category || 'Task'}`,
-      });
+      if (role === 'worker') {
+        const earning = Number(data?.workerEarning || data?.agreement?.workerNetIncome || 0);
+        const earningText = earning > 0 ? ` You earned Rs. ${earning.toLocaleString()}! 🎉` : '';
+        Toast.show({
+          type: 'success',
+          text1: 'JOB COMPLETED 🏁',
+          text2: `You have successfully completed: ${data?.category || 'Task'}.${earningText}`,
+          visibilityTime: 5000,
+        });
+      } else {
+        Toast.show({
+          type: 'success',
+          text1: 'JOB COMPLETED 🏁',
+          text2: `Job completed! Your Ustad has finished: ${data?.category || 'Task'}`,
+        });
+      }
     });
 
     const unsubscribeCancelled = socketService.on('booking:cancelled', (data: any) => {

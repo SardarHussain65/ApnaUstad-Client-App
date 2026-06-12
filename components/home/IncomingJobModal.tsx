@@ -439,23 +439,7 @@ function JobDecisionCard({
           </View>
         </ScrollView>
 
-        {isInstant && isWalletEligible ? (
-          <TouchableOpacity
-            style={styles.counterOfferButton}
-            onPress={onCounterOffer}
-            disabled={isLoading}
-            activeOpacity={0.82}
-          >
-            <View style={styles.counterOfferIcon}>
-              <Banknote size={17} color="#FFB000" strokeWidth={2.5} />
-            </View>
-            <View style={styles.counterOfferCopy}>
-              <Text style={styles.counterOfferTitle}>{t('incomingJobModal.offerLow', 'Offer feels low?')}</Text>
-              <Text style={styles.counterOfferText}>{t('incomingJobModal.counterOfferDesc', 'Propose your fair price with a short explanation')}</Text>
-            </View>
-            <ChevronRight size={17} color="#FFB000" strokeWidth={2.6} />
-          </TouchableOpacity>
-        ) : null}
+
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.skipButton} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>

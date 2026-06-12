@@ -11,15 +11,14 @@ import { HomeHeader } from './HomeHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
 import api from '../../services/api';
-import { WorkerStatusCard } from './WorkerStatusCard';
-import { WorkerStatsCard } from './WorkerStatsCard';
 import { WorkerAlertJobCard } from './WorkerAlertJobCard';
+import { WorkerEarningsChart } from './WorkerEarningsChart';
+import { WorkerQuickInsights } from './WorkerQuickInsights';
 import { IncomingJobModal } from './IncomingJobModal';
 import {
   SkeletonBox,
   useShimmerTranslateX,
   BookingCardSkeleton,
-  WorkerStatsCardSkeleton,
   WorkerAlertJobCardSkeleton,
   WorkerPendingBidCardSkeleton,
 } from './HomeSkeletonLoader';
@@ -28,6 +27,7 @@ import { Booking } from '../../hooks/queries/useData';
 import { socketService } from '../../services/socketService';
 import { WorkerPendingBidCard } from './WorkerPendingBidCard';
 import { useWorkerBids, useWithdrawBidMutation, Bid } from '../../hooks';
+import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
 
 type WorkerCoordinates = {
   latitude: number;
@@ -39,10 +39,6 @@ export function WorkerHome() {
   const { t } = useTranslation();
   const { token, user } = useAuth();
   const {
-    isInstantOnline,
-    setIsInstantOnline,
-    isScheduledOnline,
-    setIsScheduledOnline,
     dismissedJobs,
     clearDismissedJob,
     acceptDismissedJob,
@@ -70,6 +66,7 @@ export function WorkerHome() {
 
   const { data: workerBids, isLoading: bidsLoading, refetch: refetchBids } = useWorkerBids();
   const { mutate: withdrawBid } = useWithdrawBidMutation();
+  const { data: analyticsData, isLoading: analyticsLoading, refetch: refetchAnalytics } = useWorkerAnalytics();
 
   const pendingBids = useMemo(() => {
     return workerBids?.filter((bid) => bid.status === 'pending') || [];
@@ -171,16 +168,14 @@ export function WorkerHome() {
     const merged: any[] = [];
     // Dismissed first (worker already saw these in modal — highest priority)
     for (const job of dismissedJobs) {
-      if (job.urgency === 'instant' ? !isInstantOnline : !isScheduledOnline) continue;
       if (!seen.has(job._id)) { seen.add(job._id); merged.push({ ...job, _signalSource: 'dismissed' }); }
     }
     // Missed while offline (API)
     for (const job of missedJobs) {
-      if (job.urgency === 'instant' ? !isInstantOnline : !isScheduledOnline) continue;
       if (!seen.has(job._id)) { seen.add(job._id); merged.push({ ...job, _signalSource: 'missed' }); }
     }
     return merged;
-  }, [dismissedJobs, isInstantOnline, isScheduledOnline, missedJobs]);
+  }, [dismissedJobs, missedJobs]);
 
   // ─── Refresh Helpers ──────────────────────────────────────────────────────────
   const refreshWorkerHome = useCallback(async () => {
@@ -192,16 +187,18 @@ export function WorkerHome() {
       fetchWorkerSummary(true),
       fetchMissedJobs(true),
       refetchBids(),
+      refetchAnalytics(),
     ]);
-  }, [resolveWorkerLocation, syncWorkerLocation, fetchWorkerSummary, fetchMissedJobs, refetchBids]);
+  }, [resolveWorkerLocation, syncWorkerLocation, fetchWorkerSummary, fetchMissedJobs, refetchBids, refetchAnalytics]);
 
   const refreshWorkerActivity = useCallback(async () => {
     await Promise.all([
       fetchWorkerSummary(false),
       fetchMissedJobs(false),
       refetchBids(),
+      refetchAnalytics(),
     ]);
-  }, [fetchWorkerSummary, fetchMissedJobs, refetchBids]);
+  }, [fetchWorkerSummary, fetchMissedJobs, refetchBids, refetchAnalytics]);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -211,9 +208,10 @@ export function WorkerHome() {
       fetchWorkerSummary(false),
       fetchMissedJobs(false),
       refetchBids(),
+      refetchAnalytics(),
     ]);
     setIsRefreshing(false);
-  }, [resolveWorkerLocation, syncWorkerLocation, fetchWorkerSummary, fetchMissedJobs, refetchBids]);
+  }, [resolveWorkerLocation, syncWorkerLocation, fetchWorkerSummary, fetchMissedJobs, refetchBids, refetchAnalytics]);
 
   // ─── Effects ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -229,14 +227,6 @@ export function WorkerHome() {
     const unsubs = events.map((event) => socketService.on(event, refreshWorkerActivity));
     return () => unsubs.forEach((u) => u());
   }, [token, refreshWorkerActivity]);
-
-  useEffect(() => {
-    if (!selectedSignalJob) return;
-    const isEnabled = selectedSignalJob.urgency === 'instant'
-      ? isInstantOnline
-      : isScheduledOnline;
-    if (!isEnabled) setSelectedSignalJob(null);
-  }, [isInstantOnline, isScheduledOnline, selectedSignalJob]);
 
   // ─── Booking Handlers ─────────────────────────────────────────────────────────
   const handleBookingDetails = useCallback((booking: Booking) => {
@@ -340,18 +330,43 @@ export function WorkerHome() {
       >
         <HomeHeader />
 
-        {/* ── Stats Dashboard ── */}
+        {/* ── Worker Earnings Dashboard ── */}
         <View style={styles.dashboardSection}>
-          <WorkerStatusCard
-            isInstantOnline={isInstantOnline}
-            onToggleInstant={setIsInstantOnline}
-            isScheduledOnline={isScheduledOnline}
-            onToggleScheduled={setIsScheduledOnline}
-          />
-          {summaryLoading && !isRefreshing ? (
-            <WorkerStatsCardSkeleton translateX={translateX} />
+          {analyticsData?.summary ? (
+            <WorkerQuickInsights summary={analyticsData.summary} />
+          ) : analyticsLoading ? (
+            <View style={styles.insightsSkeletonRow}>
+              <SkeletonBox translateX={translateX} width={'31%'} height={110} borderRadius={20} />
+              <SkeletonBox translateX={translateX} width={'31%'} height={110} borderRadius={20} />
+              <SkeletonBox translateX={translateX} width={'31%'} height={110} borderRadius={20} />
+            </View>
+          ) : null}
+          {analyticsData ? (
+            <WorkerEarningsChart
+              daily={analyticsData.daily}
+              weekly={analyticsData.weekly}
+              monthly={analyticsData.monthly}
+              summary={analyticsData.summary}
+            />
+          ) : analyticsLoading ? (
+            <SkeletonBox translateX={translateX} width={'100%'} height={300} borderRadius={24} style={{ marginTop: 14 }} />
           ) : (
-            <WorkerStatsCard stats={stats} />
+            <WorkerEarningsChart
+              daily={[]}
+              weekly={[]}
+              monthly={[]}
+              summary={{
+                todayEarnings: 0,
+                thisWeekEarnings: 0,
+                thisMonthEarnings: 0,
+                todayJobs: 0,
+                thisWeekJobs: 0,
+                thisMonthJobs: 0,
+                bestDay: { label: '-', earnings: 0 },
+                streak: 0,
+                trendPercent: 0,
+              }}
+            />
           )}
         </View>
 
@@ -519,6 +534,11 @@ const styles = StyleSheet.create({
   dashboardSection: {
     paddingHorizontal: Spacing.l,
     marginTop: Spacing.m,
+  },
+  insightsSkeletonRow: {
+    flexDirection: 'row',
+    gap: 9,
+    marginBottom: 0,
   },
   section: {
     paddingHorizontal: Spacing.l,
