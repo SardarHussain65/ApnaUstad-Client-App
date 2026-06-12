@@ -200,7 +200,24 @@
       "proposalSubmitted": "پیشکش جمع کر دی گئی",
       "realTime": "ریئل ٹائم",
       "planned": "منصوبہ بند",
-      "workerName": "استاد کا نام"
+      "workerName": "استاد کا نام",
+      "earningsChart": "آمدنی کا جائزہ",
+      "daily": "روزانہ",
+      "weekly": "ہفتہ وار",
+      "monthly": "ماہانہ",
+      "todayEarnings": "آج کی آمدنی",
+      "thisWeek": "اس ہفتے",
+      "thisMonth": "اس مہینے",
+      "last6Months": "پچھلے 6 مہینے",
+      "bestDay": "بہترین دن",
+      "streak": "لگاتار دن",
+      "streakDays": "{{count}} دن مسلسل!",
+      "weeklyTrend": "ہفتہ وار رجحان",
+      "vsPrevWeek": "پچھلے ہفتے کے مقابلے",
+      "earned": "آپ نے Rs. {{amount}} کمائے!",
+      "noDataYet": "اپنی آمدنی یہاں دیکھنے کے لیے کام مکمل کریں",
+      "quickInsights": "فوری بصیرت",
+      "hatTrick": "ہیٹ ٹرک! آج {{count}} کام مکمل!"
     },
     "loadingLocation": "لوکیشن لوڈ ہو رہی ہے...",
     "yourLocation": "آپ کی لوکیشن"
@@ -352,7 +369,13 @@
     "platinumClient": "💎 پلاٹینم کسٹمر",
     "activeCategories": "فعال سروس کیٹیگریز",
     "version": "ApnaUstad v2.4.0",
-    "identitySub": "شناختی کارڈ اور پروفائل کی تصدیق"
+    "identitySub": "شناختی کارڈ اور پروفائل کی تصدیق",
+    "favoriteUstads": "پسندیدہ اساتذہ",
+    "favoriteUstadsSub": "اپنے پسندیدہ اساتذہ کو جلدی سے تلاش کریں اور ہائر کریں",
+    "favoritesTitle": "میرے پسندیدہ اساتذہ",
+    "favoritesSub": "وہ اساتذہ جنہیں آپ نے فوری رسائی کے لیے محفوظ کیا ہے",
+    "noFavorites": "ابھی تک کوئی پسندیدہ استاد نہیں ہے",
+    "noFavoritesDesc": "کسی بھی استاد کے پروفائل پر دل کے آئیکن کو دبائیں تاکہ انہیں فوری رسائی کے لیے یہاں محفوظ کیا جا سکے۔"
   },
   "settings": {
     "title": "ایپ کی ترتیبات",
@@ -1244,7 +1267,9 @@
     "defaultCategory": "مہارت",
     "noCity": "پاکستان",
     "hourlyRateValue": "Rs. {{rate}}/گھنٹہ",
-    "detailsLabel": "تفصیلات"
+    "detailsLabel": "تفصیلات",
+    "favoriteAdded": "پسندیدہ میں شامل کر دیا گیا",
+    "favoriteRemoved": "پسندیدہ سے ہٹا دیا گیا"
   },
   "workerList": {
     "title": "دستیاب اساتذہ",

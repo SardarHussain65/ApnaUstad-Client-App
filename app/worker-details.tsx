@@ -33,9 +33,12 @@ import {
   Star,
   Wrench,
   Zap,
+  Heart,
 } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { useBookingDetails, useWorker, useWorkerReviews } from '../hooks';
+import { useBookingDetails, useWorker, useWorkerReviews, useToggleFavoriteMutation } from '../hooks';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const C = {
@@ -85,6 +88,35 @@ export default function WorkerDetailsScreen() {
   const { data: worker, isLoading } = useWorker(workerId, selectedCategory);
   const { data: reviews = [], isLoading: isLoadingReviews } = useWorkerReviews(workerId);
   const { data: contextBooking } = useBookingDetails(bookingId);
+
+  const { user, role, updateUser } = useAuth();
+  const toggleFavoriteMutation = useToggleFavoriteMutation();
+  const [isToggling, setIsToggling] = useState(false);
+
+  const isFavorite = user?.favorites?.includes(workerId as any);
+
+  const handleToggleFavorite = async () => {
+    if (!user?._id || isToggling) return;
+    setIsToggling(true);
+    try {
+      const result = await toggleFavoriteMutation.mutateAsync({
+        userId: user._id,
+        workerId: workerId!,
+      });
+      await updateUser({
+        ...user,
+        favorites: result.favorites,
+      });
+      Toast.show({
+        type: 'success',
+        text1: result.isFavorite ? t('workerDetails.favoriteAdded') : t('workerDetails.favoriteRemoved'),
+      });
+    } catch (error: any) {
+      Alert.alert(t('common.error'), error?.response?.data?.message || t('common.tryAgain'));
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   const rating = Number(worker?.rating || 0);
   const reviewCount = Number(worker?.totalReviews || reviews.length || 0);
@@ -194,9 +226,16 @@ export default function WorkerDetailsScreen() {
             <Text style={styles.headerEyebrow}>{t('workerDetails.headerEyebrow')}</Text>
             <Text style={styles.headerTitle}>{t('workerDetails.headerTitle')}</Text>
           </View>
-          <TouchableOpacity style={styles.headerButton} onPress={shareProfile} activeOpacity={0.8}>
-            <Share2 size={18} color={C.muted} strokeWidth={2.3} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {role === 'client' && (
+              <TouchableOpacity style={[styles.headerButton, { marginRight: 8 }]} onPress={handleToggleFavorite} activeOpacity={0.8} disabled={isToggling}>
+                <Heart size={18} color={isFavorite ? C.pink : C.muted} fill={isFavorite ? C.pink : 'transparent'} strokeWidth={2.3} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.headerButton} onPress={shareProfile} activeOpacity={0.8}>
+              <Share2 size={18} color={C.muted} strokeWidth={2.3} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -436,6 +475,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border },
   headerButton: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', backgroundColor: 'rgba(4,9,26,0.78)' },
   headerCopy: { flex: 1, alignItems: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
   headerEyebrow: { color: C.dim, fontSize: 9, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
   headerTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },

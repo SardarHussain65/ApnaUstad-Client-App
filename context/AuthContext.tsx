@@ -21,6 +21,7 @@ export interface UserProfile {
   isActive?: boolean;
   deactivationReason?: string;
   deactivatedAt?: string | null;
+  favorites?: string[];
 }
 
 export interface WorkerProfile extends UserProfile {

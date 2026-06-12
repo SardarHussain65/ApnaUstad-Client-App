@@ -26,6 +26,7 @@ import {
   X,
   TrendingUp,
   Award,
+  Heart,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,6 +37,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { SkeletonCard, WorkerDetailsModal } from '../components/ui';
 import { useAllWorkers, type Worker } from '../hooks';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -51,11 +53,12 @@ interface WorkerCardProps {
   worker: Worker;
   themeColor: string;
   index: number;
+  isFavorite: boolean;
   onHire: (worker: Worker) => void;
   onViewDetails: (id: string) => void;
 }
 
-const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetails }: WorkerCardProps) => {
+const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, onViewDetails }: WorkerCardProps) => {
   const { t } = useTranslation();
   const ratingStr = worker.rating ? worker.rating.toFixed(1) : '5.0';
   const ratingNum = worker.rating ?? 5.0;
@@ -150,12 +153,11 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
                 <Text style={styles.workerName} numberOfLines={1}>
                   {worker.fullName}
                 </Text>
-                {/* ─── LEARNING: Short-circuit conditional rendering ──────
-                    worker.isVerified && <Component /> only renders the
-                    component when isVerified is true. Saves nesting an if.
-                ────────────────────────────────────────────────────────── */}
                 {worker.isVerified && (
                   <BadgeCheck size={16} color={themeColor} fill={themeColor + '30'} />
+                )}
+                {isFavorite && (
+                  <Heart size={14} color="#FF4D8D" fill="#FF4D8D" style={{ marginLeft: 'auto' }} />
                 )}
               </View>
 
@@ -286,6 +288,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
 
 export default function WorkerListScreen() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   // ─── LEARNING: useSafeAreaInsets ─────────────────────────────────────────
   // Returns { top, bottom, left, right } pixel values of the device's safe area
   // (notch, home indicator, status bar). We add insets.top to our header padding
@@ -428,6 +431,7 @@ export default function WorkerListScreen() {
                 worker={worker}
                 themeColor={themeColor}
                 index={idx}
+                isFavorite={user?.favorites?.includes(worker._id as any) || false}
                 onHire={handleHire}
                 onViewDetails={handleViewDetails}
               />

@@ -200,7 +200,24 @@
       "proposalSubmitted": "Proposal submitted",
       "realTime": "REAL-TIME",
       "planned": "PLANNED",
-      "workerName": "Worker Name"
+      "workerName": "Worker Name",
+      "earningsChart": "Earnings Overview",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "todayEarnings": "Today's Earnings",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "last6Months": "Last 6 Months",
+      "bestDay": "Best Day",
+      "streak": "Day Streak",
+      "streakDays": "{{count}} days in a row!",
+      "weeklyTrend": "Weekly Trend",
+      "vsPrevWeek": "vs Last Week",
+      "earned": "You earned Rs. {{amount}}!",
+      "noDataYet": "Complete jobs to see your earnings here",
+      "quickInsights": "Quick Insights",
+      "hatTrick": "Hat trick! {{count}} jobs today!"
     },
     "loadingLocation": "Loading location...",
     "yourLocation": "Your Location"
@@ -352,7 +369,13 @@
     "platinumClient": "💎 Platinum Client",
     "activeCategories": "Active service categories",
     "version": "ApnaUstad v2.4.0",
-    "identitySub": "CNIC & profile validation"
+    "identitySub": "CNIC & profile validation",
+    "favoriteUstads": "Favorite Ustads",
+    "favoriteUstadsSub": "Quickly find and hire your favorite workers",
+    "favoritesTitle": "My Favorites",
+    "favoritesSub": "Ustads you have saved for quick access",
+    "noFavorites": "No favorite Ustads yet",
+    "noFavoritesDesc": "Tap the heart icon on any Ustad's profile to save them here for quick access."
   },
   "settings": {
     "title": "App Settings",
@@ -1244,7 +1267,9 @@
     "defaultCategory": "Specialist",
     "noCity": "Pakistan",
     "hourlyRateValue": "Rs. {{rate}}/hr",
-    "detailsLabel": "Details"
+    "detailsLabel": "Details",
+    "favoriteAdded": "Added to favorites",
+    "favoriteRemoved": "Removed from favorites"
   },
   "workerList": {
     "title": "Available Ustads",

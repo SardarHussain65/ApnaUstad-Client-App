@@ -145,6 +145,16 @@ interface SupportRequestPayload {
   metadata?: Record<string, any>;
 }
 
+interface ToggleFavoritePayload {
+  userId: string;
+  workerId: string;
+}
+
+interface ToggleFavoriteResponse {
+  isFavorite: boolean;
+  favorites: string[];
+}
+
 // Mutation Functions
 const createJob = async (payload: JobCreationPayload): Promise<JobResponse> => {
   const response = await api.post('/jobs', payload);
@@ -253,6 +263,12 @@ const uploadJobImages = async (formData: FormData): Promise<JobMediaUploadRespon
       'Content-Type': 'multipart/form-data',
     },
   });
+  return response.data.data;
+};
+
+const toggleFavorite = async (payload: ToggleFavoritePayload): Promise<ToggleFavoriteResponse> => {
+  const { userId, workerId } = payload;
+  const response = await api.post(`/users/${userId}/favorites/toggle`, { workerId });
   return response.data.data;
 };
 
@@ -483,6 +499,22 @@ type JobMediaUploadResponse = { imageUrls: string[]; videoUrls: string[]; audioU
 export function useUploadJobImagesMutation(options?: Omit<UseMutationOptions<JobMediaUploadResponse, Error, FormData>, 'mutationFn'>) {
   return useMutation<JobMediaUploadResponse, Error, FormData>({
     mutationFn: uploadJobImages,
+    ...options,
+  });
+}
+
+export function useToggleFavoriteMutation(options?: Omit<UseMutationOptions<ToggleFavoriteResponse, Error, ToggleFavoritePayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<ToggleFavoriteResponse, Error, ToggleFavoritePayload>({
+    mutationFn: toggleFavorite,
+    onSuccess: (data, variables, context, mutation) => {
+      // Invalidate favorites list query
+      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.list(variables.userId) });
+      // Invalidate profile query
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.current() });
+      options?.onSuccess?.(data, variables, context, mutation);
+    },
     ...options,
   });
 }

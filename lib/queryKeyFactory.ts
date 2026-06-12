@@ -27,6 +27,7 @@ export const queryKeys = {
     homeSummary: () => [...queryKeys.bookings.all, 'home-summary'] as const,
     detail: (id: string) => [...queryKeys.bookings.all, 'detail', id] as const,
     byWorker: () => [...queryKeys.bookings.all, 'worker-bookings'] as const,
+    earningsAnalytics: () => [...queryKeys.bookings.all, 'earnings-analytics'] as const,
   },
 
   // Jobs
@@ -67,6 +68,12 @@ export const queryKeys = {
   profile: {
     all: ['profile'] as const,
     current: () => [...queryKeys.profile.all, 'current'] as const,
+  },
+
+  // Favorite Workers
+  favorites: {
+    all: ['favorites'] as const,
+    list: (userId: string) => [...queryKeys.favorites.all, 'list', userId] as const,
   },
 
   // Preferences

@@ -23,6 +23,7 @@ import {
   Camera,
   Settings,
   Layers3,
+  Heart,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -261,9 +262,9 @@ export default function ProfileTab() {
 
           <Animated.View entering={FadeInUp.delay(180).springify()} style={styles.nameBlock}>
             <View style={styles.nameRow}>
-              <Text style={styles.userName}>{workerProfile?.fullName || user?.fullName || 'User'}</Text>
+              <Text style={styles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} ellipsizeMode="tail">{workerProfile?.fullName || user?.fullName || 'User'}</Text>
               {isWorker && (workerProfile?.isVerified || (workerProfile?.rating ?? 0) >= 4.5) && (
-                <BadgeCheck size={20} color="#00F5FF" strokeWidth={2.5} style={{ marginLeft: 5 }} />
+                <BadgeCheck size={20} color="#00F5FF" strokeWidth={2.5} style={{ marginLeft: 5, flexShrink: 0 }} />
               )}
             </View>
             <Text style={styles.userSub}>{workerProfile?.email || user?.email || user?.phone || ''}</Text>
@@ -404,6 +405,9 @@ export default function ProfileTab() {
             )}
             <MenuItem icon={Shield} label={t('profile.security')} sublabel={t('profile.securitySub')} delay={700} accent="#BF5AF2" onPress={() => router.push('/profile/security')} />
             <MenuItem icon={Bell} label={t('profile.notifications')} sublabel={t('profile.notificationsSub')} delay={730} accent="#FF9F0A" onPress={() => router.push('/profile/notifications')} />
+            {!isWorker && (
+              <MenuItem icon={Heart} label={t('profile.favoriteUstads')} sublabel={t('profile.favoriteUstadsSub')} delay={745} accent="#FF4D8D" onPress={() => router.push('/profile/favorites')} />
+            )}
           </View>
 
           {/* Support */}
@@ -448,11 +452,12 @@ const styles = StyleSheet.create({
   },
 
   // Name
-  nameBlock: { alignItems: 'center', paddingHorizontal: 24 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  nameBlock: { alignItems: 'center', paddingHorizontal: 24, alignSelf: 'stretch' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, maxWidth: '100%' },
   userName: {
     fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
     textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
+    flexShrink: 1,
   },
   userSub: { fontSize: 13, color: 'rgba(255,255,255,0.48)', fontWeight: '500', marginBottom: 12 },
   badgesRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
