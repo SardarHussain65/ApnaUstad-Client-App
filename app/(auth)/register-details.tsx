@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { useTranslation } from 'react-i18next';
 import {
   Camera, MapPin, Building,
   Lock, CreditCard, Briefcase, Award, PenTool,
@@ -36,6 +37,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 
 export default function RegisterDetailsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { success, error: showError } = useToast();
   const params = useLocalSearchParams<{
     fullName: string;
@@ -189,18 +191,18 @@ export default function RegisterDetailsScreen() {
       
       if (!user) {
         console.error('Invalid registration response:', responseData);
-        showError('Registration Error', 'Invalid server response. Please try again.');
+        showError(t('registerDetails.errorTitle'), 'Invalid server response. Please try again.');
         return;
       }
       
-      success('Profile created', 'Your account is ready. Sign in to continue.');
+      success(t('registerDetails.profileCreated'), t('registerDetails.profileCreatedDesc'));
       router.replace({
         pathname: '/(auth)/login' as any,
         params: { role: params.role },
       });
     },
     onError: (error: any) => {
-      showError('Registration Error', error.message);
+      showError(t('registerDetails.errorTitle'), error.message);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   });
@@ -208,22 +210,22 @@ export default function RegisterDetailsScreen() {
   const handleCompleteProfile = async () => {
     // Basic Validation
     if (!address || !city || !password) {
-      showError('Missing Fields', 'Please fill in your address, city, and password.');
+      showError(t('registerDetails.missingFields'), t('registerDetails.fillRequired'));
       return;
     }
     if (password.length < 6) {
-      showError('Weak Password', 'Please use at least 6 characters for your password.');
+      showError(t('registerDetails.weakPassword'), t('registerDetails.useMinCharacters'));
       return;
     }
 
     // Worker Validation
     if (params.role === 'worker') {
       if (!cnicNumber || !category || !cnicFront || !cnicBack || !hourlyRate || !experience) {
-        showError('Missing Fields', 'All identity and professional fields are required.');
+        showError(t('registerDetails.missingFields'), t('registerDetails.missingWorkerFields'));
         return;
       }
       if (latitude === null || longitude === null) {
-        showError('Location Required', 'Please allow location access so nearby jobs can reach you.');
+        showError(t('registerDetails.locationRequired'), t('registerDetails.locationRequiredDesc'));
         return;
       }
     }
@@ -235,7 +237,7 @@ export default function RegisterDetailsScreen() {
       let cnicBackUrl = '';
 
       if (image) {
-        setUploadProgress('UPLOADING PROFILE PHOTO...');
+        setUploadProgress(t('registerDetails.uploadingProfile'));
         profileImageUrl = await uploadImageMutation.mutateAsync({
           uri: image,
           fieldName: 'profileImage',
@@ -245,7 +247,7 @@ export default function RegisterDetailsScreen() {
 
       if (params.role === 'worker') {
         if (cnicFront) {
-          setUploadProgress('UPLOADING CNIC FRONT...');
+          setUploadProgress(t('registerDetails.uploadingFront'));
           cnicFrontUrl = await uploadImageMutation.mutateAsync({
             uri: cnicFront,
             fieldName: 'cnicFrontImage',
@@ -253,7 +255,7 @@ export default function RegisterDetailsScreen() {
           });
         }
         if (cnicBack) {
-          setUploadProgress('UPLOADING CNIC BACK...');
+          setUploadProgress(t('registerDetails.uploadingBack'));
           cnicBackUrl = await uploadImageMutation.mutateAsync({
             uri: cnicBack,
             fieldName: 'cnicBackImage',
@@ -262,7 +264,7 @@ export default function RegisterDetailsScreen() {
         }
       }
 
-      setUploadProgress('FINALIZING PROFILE...');
+      setUploadProgress(t('registerDetails.finalizing'));
 
       const payload: any = {
         fullName: params.fullName,
@@ -289,7 +291,7 @@ export default function RegisterDetailsScreen() {
 
       registerMutation.mutate(payload);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Something went wrong during upload.');
+      Alert.alert(t('registerDetails.errorTitle'), error.message || t('registerDetails.uploadError'));
     } finally {
       setIsUploading(false);
       setUploadProgress('');
@@ -301,16 +303,16 @@ export default function RegisterDetailsScreen() {
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            <AuthHeader title="Profile setup" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('registerDetails.title')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthProgress currentStep={3} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
-              eyebrow={params.role === 'worker' ? 'Specialist details' : 'Almost there'}
-              title="Complete your"
-              highlight="profile"
+              eyebrow={params.role === 'worker' ? t('registerDetails.specialistDetails') : t('registerDetails.almostThere')}
+              title={t('registerDetails.completeYour')}
+              highlight={t('registerDetails.profile')}
               description={params.role === 'worker'
-                ? 'Add your professional details so nearby clients can confidently book your services.'
-                : 'Add your location and password to finish creating your ApnaUstad account.'}
+                ? t('registerDetails.workerDesc')
+                : t('registerDetails.clientDesc')}
             />
 
             <View style={styles.form}>
@@ -325,12 +327,12 @@ export default function RegisterDetailsScreen() {
                 ) : (
                   <View style={styles.imagePlaceholder}>
                     <Camera size={32} color={accentColor} />
-                    <Text style={[styles.pickerText, { color: accentColor }]}>ADD PHOTO</Text>
+                    <Text style={[styles.pickerText, { color: accentColor }]}>{t('registerDetails.addPhoto')}</Text>
                   </View>
                 )}
                 {image && <View style={[styles.imageGlow, { backgroundColor: accentColor }]} />}
               </TouchableOpacity>
-              <Text style={styles.photoHint}>Profile photo is optional, but it helps people recognize you.</Text>
+              <Text style={styles.photoHint}>{t('registerDetails.photoHint')}</Text>
 
               {/* Worker Specific Sections */}
               {params.role === 'worker' && (
@@ -338,10 +340,10 @@ export default function RegisterDetailsScreen() {
                   <GlassCard intensity={25} style={styles.formSection}>
                     <View style={styles.sectionHeader}>
                       <CreditCard size={18} color={accentColor} />
-                      <Text style={[styles.sectionTitle, { color: accentColor }]}>IDENTITY VERIFICATION</Text>
+                      <Text style={[styles.sectionTitle, { color: accentColor }]}>{t('registerDetails.identityVerification')}</Text>
                     </View>
 
-                    <Text style={styles.label}>CNIC NUMBER</Text>
+                    <Text style={styles.label}>{t('registerDetails.cnicNumber')}</Text>
                     <View style={styles.inputWrapper}>
                       <View style={styles.iconContainer}><CreditCard size={18} color={accentColor} /></View>
                       <TextInput
@@ -364,7 +366,7 @@ export default function RegisterDetailsScreen() {
                         ) : (
                           <>
                             <Camera size={20} color={accentColor} />
-                            <Text style={styles.cnicPickerText}>CNIC FRONT</Text>
+                            <Text style={styles.cnicPickerText}>{t('registerDetails.cnicFront')}</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -378,7 +380,7 @@ export default function RegisterDetailsScreen() {
                         ) : (
                           <>
                             <Camera size={20} color={accentColor} />
-                            <Text style={styles.cnicPickerText}>CNIC BACK</Text>
+                            <Text style={styles.cnicPickerText}>{t('registerDetails.cnicBack')}</Text>
                           </>
                         )}
                       </TouchableOpacity>
@@ -388,10 +390,10 @@ export default function RegisterDetailsScreen() {
                   <GlassCard intensity={25} style={[styles.formSection, { marginTop: 20 }]}>
                     <View style={styles.sectionHeader}>
                       <Briefcase size={18} color={accentColor} />
-                      <Text style={[styles.sectionTitle, { color: accentColor }]}>PROFESSIONAL DETAILS</Text>
+                      <Text style={[styles.sectionTitle, { color: accentColor }]}>{t('registerDetails.professionalDetails')}</Text>
                     </View>
 
-                    <Text style={styles.label}>SERVICE CATEGORY</Text>
+                    <Text style={styles.label}>{t('registerDetails.serviceCategory')}</Text>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -422,16 +424,16 @@ export default function RegisterDetailsScreen() {
                     <View style={[styles.categoryInfoBox, { borderColor: accentColor + '35', backgroundColor: accentColor + '10' }]}>
                       <Briefcase size={14} color={accentColor} />
                       <Text style={styles.categoryInfoText}>
-                        Your first category is free. After registration, go to Profile &gt; Skills & Categories to request more services. Extra categories require details, wallet balance, admin review, and automatic monthly fee deduction on approval.
+                        {t('registerDetails.categoryInfo')}
                       </Text>
                     </View>
 
-                    <Text style={styles.label}>SKILLS (COMMA-SEPARATED)</Text>
+                    <Text style={styles.label}>{t('registerDetails.skills')}</Text>
                     <View style={styles.inputWrapper}>
                       <View style={styles.iconContainer}><PenTool size={18} color={accentColor} /></View>
                       <TextInput
                         style={styles.input}
-                        placeholder="Plumbing, Painting, Repair"
+                        placeholder={t('registerDetails.skillsPlaceholderHint', 'Plumbing, Painting, Repair')}
                         placeholderTextColor="rgba(255,255,255,0.3)"
                         value={skills}
                         onChangeText={setSkills}
@@ -440,7 +442,7 @@ export default function RegisterDetailsScreen() {
 
                     <View style={styles.rowInputs}>
                       <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={styles.label}>RATE / HOUR</Text>
+                        <Text style={styles.label}>{t('registerDetails.ratePerHour')}</Text>
                         <View style={styles.inputWrapper}>
                           <View style={styles.iconContainer}><BadgeDollarSign size={18} color={accentColor} /></View>
                           <TextInput
@@ -454,7 +456,7 @@ export default function RegisterDetailsScreen() {
                         </View>
                       </View>
                       <View style={{ flex: 1, marginLeft: 8 }}>
-                        <Text style={styles.label}>EXPERIENCE</Text>
+                        <Text style={styles.label}>{t('registerDetails.experience')}</Text>
                         <View style={styles.inputWrapper}>
                           <View style={styles.iconContainer}><Award size={18} color={accentColor} /></View>
                           <TextInput
@@ -469,12 +471,12 @@ export default function RegisterDetailsScreen() {
                       </View>
                     </View>
 
-                    <Text style={[styles.label, { marginTop: 20 }]}>ABOUT YOUR WORK</Text>
+                    <Text style={[styles.label, { marginTop: 20 }]}>{t('registerDetails.aboutWork')}</Text>
                     <View style={[styles.inputWrapper, { alignItems: 'flex-start', paddingTop: 12, minHeight: 100 }]}>
                       <View style={[styles.iconContainer, { marginTop: 4 }]}><FileText size={18} color={accentColor} /></View>
                       <TextInput
                         style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-                        placeholder="Briefly describe your expertise..."
+                        placeholder={t('registerDetails.aboutPlaceholder')}
                         placeholderTextColor="rgba(255,255,255,0.3)"
                         multiline
                         value={bio}
@@ -488,27 +490,27 @@ export default function RegisterDetailsScreen() {
               <GlassCard intensity={25} style={[styles.formSection, { marginTop: 20 }]}>
                 <View style={styles.sectionHeader}>
                   <MapPin size={18} color={accentColor} />
-                  <Text style={[styles.sectionTitle, { color: accentColor }]}>ADDRESS DETAILS</Text>
+                  <Text style={[styles.sectionTitle, { color: accentColor }]}>{t('registerDetails.addressDetails')}</Text>
                 </View>
 
-                <Text style={styles.label}>STREET ADDRESS</Text>
+                <Text style={styles.label}>{t('registerDetails.streetAddress')}</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}><MapPin size={18} color={accentColor} /></View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your street address"
+                    placeholder={t('registerDetails.streetPlaceholder')}
                     placeholderTextColor="rgba(255,255,255,0.3)"
                     value={address}
                     onChangeText={setAddress}
                   />
                 </View>
 
-                <Text style={[styles.label, { marginTop: 20 }]}>CITY</Text>
+                <Text style={[styles.label, { marginTop: 20 }]}>{t('registerDetails.city')}</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}><Building size={18} color={accentColor} /></View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Karachi, Lahore, etc."
+                    placeholder={t('registerDetails.cityPlaceholder')}
                     placeholderTextColor="rgba(255,255,255,0.3)"
                     value={city}
                     onChangeText={setCity}
@@ -520,13 +522,13 @@ export default function RegisterDetailsScreen() {
                     <MapPin size={14} color={latitude !== null && longitude !== null ? Colors.success : Colors.textMuted} />
                     <Text style={styles.locationStatusText}>
                       {latitude !== null && longitude !== null
-                        ? 'Current location captured for nearby job matching.'
-                        : 'Allow location access to receive nearby jobs.'}
+                        ? t('registerDetails.locationCaptured')
+                        : t('registerDetails.allowLocation')}
                     </Text>
                   </View>
                 )}
 
-                <Text style={[styles.label, { marginTop: 20 }]}>PASSWORD</Text>
+                <Text style={[styles.label, { marginTop: 20 }]}>{t('registerDetails.password')}</Text>
                 <View style={styles.inputWrapper}>
                   <View style={styles.iconContainer}><Lock size={18} color={accentColor} /></View>
                   <TextInput
@@ -561,16 +563,16 @@ export default function RegisterDetailsScreen() {
                 {(isUploading || registerMutation.isPending) ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <ActivityIndicator color="#000" style={{ marginRight: 10 }} />
-                    <Text style={styles.completeBtnText}>{uploadProgress || 'UPLOADING...'}</Text>
+                    <Text style={styles.completeBtnText}>{uploadProgress || t('registerDetails.uploading')}</Text>
                   </View>
                 ) : (
                   <>
-                    <Text style={styles.completeBtnText}>CREATE PROFILE</Text>
+                    <Text style={styles.completeBtnText}>{t('registerDetails.createProfile')}</Text>
                     <CheckCircle size={20} color="#000" />
                   </>
                 )}
               </TouchableOpacity>
-              <SecurityNote accentColor={accentColor} />
+              <SecurityNote accentColor={accentColor} text={t('registerDetails.privacySecured')} />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

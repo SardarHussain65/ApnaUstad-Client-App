@@ -23,6 +23,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="help-center" options={{ title: 'Help Center' }} />
       <Stack.Screen name="identity-verification" options={{ title: 'Identity Verification' }} />
+      <Stack.Screen name="settings" options={{ title: 'App Settings' }} />
     </Stack>
   );
 }

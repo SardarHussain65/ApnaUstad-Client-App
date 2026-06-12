@@ -8,9 +8,11 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { socketService } from '../../services/socketService';
+import { useTranslation } from 'react-i18next';
 
 export function HomeHeader() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role, user } = useAuth();
   const { location } = useUserLocation();
   const { data: notificationsData, refetch: refetchNotifications } = useNotifications({ enabled: !!user?._id });
@@ -26,8 +28,8 @@ export function HomeHeader() {
 
   // Format location display
   const locationDisplay = location
-    ? `${location.address || location.city || 'Your Location'}`
-    : 'Loading location...';
+    ? `${location.address || location.city || t('home.yourLocation', 'Your Location')}`
+    : t('home.loadingLocation', 'Loading location...');
 
   return (
     <View style={styles.container}>
@@ -48,8 +50,8 @@ export function HomeHeader() {
             <View style={[styles.activeIndicator, { backgroundColor: Colors.success }]} />
           </TouchableOpacity>
           <View style={styles.welcomeText}>
-            <Text style={styles.greetingLabel}>{role === 'worker' ? 'Worker Name' : 'Client Name'}</Text>
-            <Text style={styles.greetingHeader}>{user?.fullName || 'Welcome Back'}</Text>
+            <Text style={styles.greetingLabel}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
+            <Text style={styles.greetingHeader}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
           </View>
         </View>
 

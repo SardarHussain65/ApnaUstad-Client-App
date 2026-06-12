@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, ActivityIndicator } from 'react-native';
 import { Bell, MessageSquare, Briefcase, Smartphone } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
@@ -12,6 +13,7 @@ import { usePreferences, useUpdatePreferencesMutation } from '../../hooks';
 export default function NotificationsScreen() {
   const { data: preferences, isLoading } = usePreferences();
   const { mutate: updatePreferences } = useUpdatePreferencesMutation();
+  const { t } = useTranslation();
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [jobAlerts, setJobAlerts] = useState(true);
@@ -37,7 +39,7 @@ export default function NotificationsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Scrollable Header */}
-        <ProfileHeader title="Notifications" />
+        <ProfileHeader title={t('notifications.title')} />
 
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
           <View style={styles.bellIconWrapper}>
@@ -49,15 +51,15 @@ export default function NotificationsScreen() {
               <Bell size={40} color="#fff" />
             </View>
           </View>
-          <Text style={[styles.screenTitle, Typography.threeD]}>Notifications</Text>
-          <Text style={styles.screenSubtitle}>Choose what you want to be notified about.</Text>
+          <Text style={[styles.screenTitle, Typography.threeD]}>{t('notifications.title')}</Text>
+          <Text style={styles.screenSubtitle}>{t('notifications.preferencesTitle')}</Text>
         </Animated.View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notification Types</Text>
+          <Text style={styles.sectionTitle}>{t('notifications.typesSection')}</Text>
           <NotificationToggle
             icon={Smartphone}
-            label="Push Notifications"
+            label={t('notifications.pushEnabled')}
             value={pushEnabled}
             onValueChange={(value) => {
               setPushEnabled(value);
@@ -68,7 +70,7 @@ export default function NotificationsScreen() {
           />
           <NotificationToggle
             icon={Briefcase}
-            label="Booking Updates"
+            label={t('notifications.bookingUpdates')}
             value={jobAlerts}
             onValueChange={(value) => {
               setJobAlerts(value);
@@ -79,7 +81,7 @@ export default function NotificationsScreen() {
           />
           <NotificationToggle
             icon={MessageSquare}
-            label="Chat Messages"
+            label={t('notifications.chatMessages')}
             value={messages}
             onValueChange={(value) => {
               setMessages(value);
@@ -94,7 +96,7 @@ export default function NotificationsScreen() {
           {isLoading ? (
             <ActivityIndicator color={Colors.primary} />
           ) : (
-            <Text style={styles.footerText}>You can update these settings anytime.</Text>
+            <Text style={styles.footerText}>{t('notifications.footerText')}</Text>
           )}
         </View>
       </ScrollView>

@@ -22,6 +22,7 @@ import {
   ChevronLeft,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +38,7 @@ export default function PersonalInfoScreen() {
   const insets = useSafeAreaInsets();
   const { success, error: showError } = useToast();
   const { user, role, updateUser } = useAuth();
+  const { t } = useTranslation();
   const userId = user?._id;
   const isWorker = role === 'worker';
 
@@ -88,7 +90,7 @@ export default function PersonalInfoScreen() {
     const response = await fetch(`${BASE_URL}/api/v1${endpoint}`, { method: 'POST', body: formData });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err?.message || 'Failed to upload profile image');
+      throw new Error(err?.message || t('personalInfo.failedToUpload'));
     }
     const data = await response.json();
     return data.data?.imageUrl || '';
@@ -97,7 +99,7 @@ export default function PersonalInfoScreen() {
   const handleSave = async () => {
     if (!userId || !role) return;
     if (!name.trim() || !phone.trim()) {
-      showError('Missing fields', 'Full name and phone number are required.');
+      showError(t('personalInfo.missingFields'), t('personalInfo.missingFieldsDesc'));
       return;
     }
     try {
@@ -123,10 +125,10 @@ export default function PersonalInfoScreen() {
 
       const updated = await updateProfile({ role, id: userId, data: payload });
       await updateUser(updated);
-      success('Profile updated', 'Your information has been saved.');
+      success(t('personalInfo.profileUpdated'), t('personalInfo.profileUpdatedDesc'));
       router.back();
     } catch (err: any) {
-      showError('Update failed', err?.message || 'Could not update your profile.');
+      showError(t('personalInfo.updateFailed'), err?.message || t('personalInfo.updateFailed'));
     } finally {
       setIsUploading(false);
     }
@@ -151,7 +153,7 @@ export default function PersonalInfoScreen() {
             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
               <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Personal Information</Text>
+            <Text style={styles.headerTitle}>{t('personalInfo.title')}</Text>
             <View style={{ width: 40 }} />
           </Animated.View>
 
@@ -173,28 +175,28 @@ export default function PersonalInfoScreen() {
                 }
               </TouchableOpacity>
             </View>
-            <Text style={styles.avatarTip}>Tap to change photo</Text>
+            <Text style={styles.avatarTip}>{t('personalInfo.tapToChange')}</Text>
             {!profileImage && !localImage && (
               <View style={styles.photoNudge}>
-                <Text style={styles.photoNudgeText}>📸 Adding a photo increases bookings by 40%</Text>
+                <Text style={styles.photoNudgeText}>{t('personalInfo.photoNudge')}</Text>
               </View>
             )}
           </Animated.View>
 
           {/* ── Section: Basic Info ── */}
-          <SectionHeading label="Basic Information" delay={160} />
+          <SectionHeading label={t('personalInfo.basicInfo')} delay={160} />
 
-          <FormField label="Full Name" value={name} onChangeText={setName} icon={User} delay={200} placeholder="Your full name" />
-          <FormField label="Email Address" value={email} onChangeText={setEmail} icon={Mail} delay={240} keyboardType="email-address" placeholder="your@email.com" autoCapitalize="none" />
-          <FormField label="Phone Number" value={phone} onChangeText={setPhone} icon={Phone} delay={280} keyboardType="phone-pad" placeholder="+92 300 0000000" />
-          <FormField label="Home Address" value={address} onChangeText={setAddress} icon={MapPin} delay={320} placeholder="Street, area, city" multiline />
+          <FormField label={t('personalInfo.fullName')} value={name} onChangeText={setName} icon={User} delay={200} placeholder={t('personalInfo.fullNamePlaceholder')} />
+          <FormField label={t('personalInfo.emailAddress')} value={email} onChangeText={setEmail} icon={Mail} delay={240} keyboardType="email-address" placeholder={t('personalInfo.emailPlaceholder')} autoCapitalize="none" />
+          <FormField label={t('personalInfo.phoneNumber')} value={phone} onChangeText={setPhone} icon={Phone} delay={280} keyboardType="phone-pad" placeholder="+92 300 0000000" />
+          <FormField label={t('personalInfo.homeAddress')} value={address} onChangeText={setAddress} icon={MapPin} delay={320} placeholder={t('personalInfo.addressPlaceholder')} multiline />
 
           {/* ── Section: Worker Service Location ── */}
           {isWorker && (
             <>
-              <SectionHeading label="Service Location" delay={380} />
+              <SectionHeading label={t('personalInfo.serviceLocation')} delay={380} />
 
-              <FormField label="City" value={city} onChangeText={setCity} icon={Building2} delay={400} placeholder="e.g. Lahore, Karachi, Islamabad" />
+              <FormField label={t('personalInfo.city')} value={city} onChangeText={setCity} icon={Building2} delay={400} placeholder={t('personalInfo.cityPlaceholder')} />
             </>
           )}
 
@@ -210,7 +212,7 @@ export default function PersonalInfoScreen() {
                   ? <ActivityIndicator color="#000" />
                   : <>
                     <Check size={20} color="#000" strokeWidth={3} />
-                    <Text style={styles.saveText}>Save Changes</Text>
+                    <Text style={styles.saveText}>{t('personalInfo.saveChanges')}</Text>
                   </>
                 }
               </LinearGradient>

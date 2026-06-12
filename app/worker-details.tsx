@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import {
   Award,
   BriefcaseBusiness,
@@ -57,13 +58,14 @@ const initialsFor = (name?: string) => {
   return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 };
 
-const formatDate = (value?: string) => {
+const formatDate = (value?: string, locale: string = 'en') => {
   const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return 'Recent';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (!date || Number.isNaN(date.getTime())) return locale === 'ur' ? 'حالیہ' : 'Recent';
+  return date.toLocaleDateString(locale === 'ur' ? 'ur-PK' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 export default function WorkerDetailsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
@@ -98,17 +100,24 @@ export default function WorkerDetailsScreen() {
   const hasActiveBooking = hasBooking && !isCommunicationLocked;
   const bookingWorker = typeof contextBooking?.worker === 'object' ? contextBooking.worker : null;
   const workerPhone = hasActiveBooking && bookingWorker?._id === workerId ? bookingWorker?.phone : '';
-  const primaryLabel = hasBid ? 'SELECT USTAD' : 'REQUEST SERVICE';
+  const primaryLabel = hasBid ? t('workerDetails.selectUstad') : t('workerDetails.requestService');
 
   const shareProfile = async () => {
+    const defaultName = t('workerDetails.defaultSpecialist', { defaultValue: 'ApnaUstad specialist' });
+    const defaultCategory = t('workerDetails.defaultCategory', { defaultValue: 'Service specialist' });
+    const cityInfo = worker?.city ? t('workerDetails.shareCity', { city: worker.city }) : '';
     await Share.share({
-      message: `${worker?.fullName || 'ApnaUstad specialist'} - ${worker?.category || 'Service specialist'}${worker?.city ? ` in ${worker.city}` : ''}.`,
+      message: t('workerDetails.shareMessage', {
+        name: worker?.fullName || defaultName,
+        category: worker?.category || defaultCategory,
+        cityInfo,
+      }),
     });
   };
 
   const callWorker = async () => {
     if (!workerPhone) {
-      Alert.alert('Phone unavailable', 'This Ustad has not shared a contact number.');
+      Alert.alert(t('workerDetails.phoneUnavailable'), t('workerDetails.phoneUnavailableDesc'));
       return;
     }
     await Linking.openURL(`tel:${workerPhone}`);
@@ -129,7 +138,7 @@ export default function WorkerDetailsScreen() {
       const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
       router.replace({ pathname: '/transaction-details', params: { id: response.data.data._id } });
     } catch (error: any) {
-      Alert.alert('Unable to select Ustad', error?.response?.data?.message || 'Please try again in a moment.');
+      Alert.alert(t('workerDetails.unableSelect'), error?.response?.data?.message || t('workerDetails.acceptError'));
     } finally {
       setIsAccepting(false);
     }
@@ -155,7 +164,7 @@ export default function WorkerDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.center}>
           <ActivityIndicator color={C.cyan} />
-          <Text style={styles.loadingText}>Loading Ustad profile</Text>
+          <Text style={styles.loadingText}>{t('workerDetails.loading')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -165,9 +174,9 @@ export default function WorkerDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.center}>
-          <Text style={styles.emptyTitle}>Ustad profile unavailable</Text>
+          <Text style={styles.emptyTitle}>{t('workerDetails.unavailable')}</Text>
           <TouchableOpacity style={styles.emptyAction} onPress={() => router.back()}>
-            <Text style={styles.emptyActionText}>GO BACK</Text>
+            <Text style={styles.emptyActionText}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -182,8 +191,8 @@ export default function WorkerDetailsScreen() {
             <ChevronLeft size={22} color={C.text} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>USTAD PROFILE</Text>
-            <Text style={styles.headerTitle}>Specialist Overview</Text>
+            <Text style={styles.headerEyebrow}>{t('workerDetails.headerEyebrow')}</Text>
+            <Text style={styles.headerTitle}>{t('workerDetails.headerTitle')}</Text>
           </View>
           <TouchableOpacity style={styles.headerButton} onPress={shareProfile} activeOpacity={0.8}>
             <Share2 size={18} color={C.muted} strokeWidth={2.3} />
@@ -218,15 +227,15 @@ export default function WorkerDetailsScreen() {
                   <View style={[styles.verificationPill, !worker.isVerified && styles.verificationPillPending]}>
                     <ShieldCheck size={12} color={worker.isVerified ? C.green : C.amber} />
                     <Text style={[styles.verificationText, !worker.isVerified && styles.verificationTextPending]}>
-                      {worker.isVerified ? 'VERIFIED USTAD' : 'VERIFICATION PENDING'}
+                      {worker.isVerified ? t('workerDetails.verifiedUstad') : t('workerDetails.verificationPending')}
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.workerName}>{worker.fullName}</Text>
-                <Text style={styles.workerCategory}>{worker.category || 'Service Specialist'}</Text>
+                <Text style={styles.workerCategory}>{worker.category || t('workerDetails.defaultCategory', { defaultValue: 'Service Specialist' })}</Text>
                 <View style={styles.locationLine}>
                   <MapPin size={13} color={C.pink} />
-                  <Text style={styles.locationText} numberOfLines={1}>{worker.city || 'Service area not added'}</Text>
+                  <Text style={styles.locationText} numberOfLines={1}>{worker.city || t('workerDetails.noCity', { defaultValue: 'Service area not added' })}</Text>
                 </View>
               </View>
             </View>
@@ -245,33 +254,33 @@ export default function WorkerDetailsScreen() {
                     />
                   ))}
                 </View>
-                <Text style={styles.ratingText}>{rating > 0 ? rating.toFixed(1) : 'New profile'}</Text>
-                <Text style={styles.ratingMeta}>{reviewCount} review{reviewCount === 1 ? '' : 's'}</Text>
+                <Text style={styles.ratingText}>{rating > 0 ? rating.toFixed(1) : t('workerDetails.newProfile')}</Text>
+                <Text style={styles.ratingMeta}>{t('workerDetails.reviewsCount', { count: reviewCount })}</Text>
               </View>
               <View style={[styles.availabilityPill, !isAvailable && styles.availabilityPillBusy]}>
                 <View style={[styles.availabilityMiniDot, !isAvailable && styles.availabilityDotBusy]} />
                 <Text style={[styles.availabilityLabel, !isAvailable && styles.availabilityLabelBusy]}>
-                  {isAvailable ? 'AVAILABLE FOR WORK' : 'CURRENTLY BUSY'}
+                  {isAvailable ? t('workerDetails.available') : t('workerDetails.busy')}
                 </Text>
               </View>
             </View>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(80).duration(520)} style={styles.statsStrip}>
-            <Metric icon={Award} value={experience > 0 ? `${experience} yrs` : 'New'} label="EXPERIENCE" color={C.amber} />
+            <Metric icon={Award} value={experience > 0 ? t('workerDetails.yrs', { count: experience }) : t('workerDetails.newExperience')} label={t('workerDetails.experienceLabel')} color={C.amber} />
             <View style={styles.metricDivider} />
-            <Metric icon={BriefcaseBusiness} value={String(completedJobs)} label="JOBS" color={C.green} />
+            <Metric icon={BriefcaseBusiness} value={String(completedJobs)} label={t('workerDetails.jobsLabel')} color={C.green} />
             <View style={styles.metricDivider} />
-            <Metric icon={Clock3} value={hourlyRate > 0 ? `Rs. ${hourlyRate.toLocaleString()}` : 'Open'} label="RATE / HR" color={C.cyan} />
+            <Metric icon={Clock3} value={hourlyRate > 0 ? t('workerDetails.hourlyRateValue', { rate: hourlyRate.toLocaleString() }) : t('workerDetails.openRate')} label={t('workerDetails.rateLabel')} color={C.cyan} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(130).duration(520)} style={styles.sectionCard}>
-            <SectionTitle icon={Sparkles} title="PROFESSIONAL SUMMARY" color={C.cyan} />
-            <Text style={styles.bioText}>{worker.bio || 'This Ustad has not added a professional summary yet.'}</Text>
+            <SectionTitle icon={Sparkles} title={t('workerDetails.bioTitle')} color={C.cyan} />
+            <Text style={styles.bioText}>{worker.bio || t('workerDetails.bioPlaceholder')}</Text>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(180).duration(520)} style={styles.sectionCard}>
-            <SectionTitle icon={Wrench} title="SKILLS & SERVICE" color={C.pink} />
+            <SectionTitle icon={Wrench} title={t('workerDetails.skillsTitle')} color={C.pink} />
             {skills.length > 0 ? (
               <View style={styles.skillsWrap}>
                 {skills.map((skill) => (
@@ -282,16 +291,16 @@ export default function WorkerDetailsScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.emptySectionText}>Skills have not been added yet.</Text>
+              <Text style={styles.emptySectionText}>{t('workerDetails.skillsPlaceholder')}</Text>
             )}
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(230).duration(520)} style={styles.sectionCard}>
             <SectionTitle
               icon={Star}
-              title="CLIENT REVIEWS"
+              title={t('workerDetails.reviewsTitle')}
               color={C.amber}
-              right={<Text style={styles.sectionCount}>{reviewCount} TOTAL</Text>}
+              right={<Text style={styles.sectionCount}>{t('workerDetails.totalReviews', { count: reviewCount })}</Text>}
             />
             {isLoadingReviews ? (
               <ActivityIndicator color={C.cyan} style={styles.reviewsLoader} />
@@ -302,7 +311,7 @@ export default function WorkerDetailsScreen() {
             ) : (
               <View style={styles.emptyReviews}>
                 <Star size={18} color={C.dim} />
-                <Text style={styles.emptySectionText}>No client reviews yet.</Text>
+                <Text style={styles.emptySectionText}>{t('workerDetails.noReviews')}</Text>
               </View>
             )}
           </Animated.View>
@@ -391,6 +400,8 @@ function SectionTitle({
 }
 
 function ReviewItem({ review, isLast }: { review: any; isLast: boolean }) {
+  const { t, i18n } = useTranslation();
+  const clientName = review.customer?.fullName || t('jobDetails.client');
   return (
     <View style={[styles.reviewItem, !isLast && styles.reviewDivider]}>
       <View style={styles.reviewHeader}>
@@ -398,12 +409,12 @@ function ReviewItem({ review, isLast }: { review: any; isLast: boolean }) {
           {review.customer?.profileImage ? (
             <Image source={{ uri: review.customer.profileImage }} style={styles.reviewAvatarImage} />
           ) : (
-            <Text style={styles.reviewAvatarText}>{initialsFor(review.customer?.fullName || 'Client')}</Text>
+            <Text style={styles.reviewAvatarText}>{initialsFor(clientName)}</Text>
           )}
         </View>
         <View style={styles.reviewCopy}>
-          <Text style={styles.reviewerName}>{review.customer?.fullName || 'Client'}</Text>
-          <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+          <Text style={styles.reviewerName}>{clientName}</Text>
+          <Text style={styles.reviewDate}>{formatDate(review.createdAt, i18n.language)}</Text>
         </View>
         <View style={styles.reviewRating}>
           <Star size={12} color={C.amber} fill={C.amber} />

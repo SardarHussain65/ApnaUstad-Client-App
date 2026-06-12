@@ -4,6 +4,8 @@ import { GlassCard } from './GlassCard';
 import { Colors, Typography } from '../../constants/Theme';
 import { Zap, Calendar } from 'lucide-react-native';
 
+import { useTranslation } from 'react-i18next';
+
 interface WorkerStatusCardProps {
   isInstantOnline: boolean;
   onToggleInstant: (val: boolean) => void;
@@ -17,6 +19,7 @@ export const WorkerStatusCard = React.memo(({
   isScheduledOnline, 
   onToggleScheduled 
 }: WorkerStatusCardProps) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <GlassCard 
@@ -35,8 +38,8 @@ export const WorkerStatusCard = React.memo(({
             style={styles.miniSwitch}
           />
         </View>
-        <Text style={[styles.statusTitle, Typography.threeD]}>INSTANT</Text>
-        <Text style={styles.statusSub}>REAL-TIME</Text>
+        <Text style={[styles.statusTitle, Typography.threeD]}>{t('home.worker.instant').toUpperCase()}</Text>
+        <Text style={styles.statusSub}>{t('home.worker.realTime', 'REAL-TIME')}</Text>
       </GlassCard>
 
       <GlassCard 
@@ -55,12 +58,14 @@ export const WorkerStatusCard = React.memo(({
             style={styles.miniSwitch}
           />
         </View>
-        <Text style={[styles.statusTitle, Typography.threeD]}>SCHEDULED</Text>
-        <Text style={styles.statusSub}>PLANNED</Text>
+        <Text style={[styles.statusTitle, Typography.threeD]}>{t('home.worker.scheduled').toUpperCase()}</Text>
+        <Text style={styles.statusSub}>{t('home.worker.planned', 'PLANNED')}</Text>
       </GlassCard>
     </View>
   );
 });
+
+WorkerStatusCard.displayName = 'WorkerStatusCard';
 
 const styles = StyleSheet.create({
   container: {

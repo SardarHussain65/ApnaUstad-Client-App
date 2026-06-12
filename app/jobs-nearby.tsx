@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, Spacing, Typography } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
@@ -31,6 +32,7 @@ const { width } = Dimensions.get('window');
 
 export default function JobsNearbyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { location } = useUserLocation();
   const { data: jobs = [], isLoading, refetch } = useNearbyJobs(location?.longitude, location?.latitude);
@@ -48,9 +50,9 @@ export default function JobsNearbyScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, Typography.threeD]}>NEARBY MISSIONS</Text>
+            <Text style={[styles.headerTitle, Typography.threeD]}>{t('jobsNearby.title').toUpperCase()}</Text>
             <Text style={styles.headerSub}>
-              {isLoading ? 'Scanning...' : `${jobs.length} active opportunities`}
+              {isLoading ? t('jobsNearby.scanning') : t('jobsNearby.activeOpportunities', { count: jobs.length })}
             </Text>
           </View>
 
@@ -67,7 +69,7 @@ export default function JobsNearbyScreen() {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color={Colors.cyan} size="large" />
-              <Text style={styles.loadingText}>Scanning local frequency...</Text>
+              <Text style={styles.loadingText}>{t('jobsNearby.scanningLocalFrequency')}</Text>
             </View>
           ) : jobs.length > 0 ? (
             <View style={styles.list}>
@@ -102,9 +104,9 @@ export default function JobsNearbyScreen() {
                         <Text style={styles.jobDesc} numberOfLines={2}>{job.description}</Text>
                         <View style={styles.jobMeta}>
                           <MapPin size={12} color={Colors.textDim} />
-                          <Text style={styles.metaText}>{job.address || 'Nearby'}</Text>
+                          <Text style={styles.metaText}>{job.address || t('common.nearby')}</Text>
                           <View style={styles.dot} />
-                          <Text style={styles.distanceText}>1.2 km away</Text>
+                          <Text style={styles.distanceText}>{t('jobsNearby.distanceAway', { defaultValue: '1.2 km away' })}</Text>
                         </View>
                       </View>
 
@@ -121,12 +123,12 @@ export default function JobsNearbyScreen() {
               <View style={styles.emptyIconContainer}>
                 <Briefcase size={48} color={Colors.textDim} />
               </View>
-              <Text style={styles.emptyTitle}>No Missions Found</Text>
+              <Text style={styles.emptyTitle}>{t('jobsNearby.noMissionsFound')}</Text>
               <Text style={styles.emptySub}>
-                We couldn't detect any active jobs in your current orbit. Try refreshing or expanding your range.
+                {t('jobsNearby.emptyDescription')}
               </Text>
               <TouchableOpacity style={styles.refreshBtn} onPress={() => refetch()}>
-                <Text style={styles.refreshBtnText}>REFRESH SCAN</Text>
+                <Text style={styles.refreshBtnText}>{t('jobsNearby.refreshScan')}</Text>
               </TouchableOpacity>
             </View>
           )}

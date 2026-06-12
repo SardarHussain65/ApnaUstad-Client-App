@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Banknote, Briefcase, Calendar, ChevronRight, Clock, MapPin, ShieldCheck, User, X } from 'lucide-react-native';
 import { Booking } from '../../hooks/queries/useData';
 import { Colors, Typography } from '../../constants/Theme';
@@ -43,14 +44,14 @@ const STATUS_META = {
   },
 };
 
-function formatMissionTime(booking: Booking) {
-  if (booking.bookingType === 'instant') return 'Immediate job';
+function formatMissionTime(booking: Booking, t: any) {
+  if (booking.bookingType === 'instant') return t('incomingJobModal.immediateResponse', 'Immediate job');
 
   const dateLabel = booking.scheduledDate
     ? new Date(booking.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : 'Scheduled';
+    : t('home.worker.scheduled', 'Scheduled');
 
-  return booking.scheduledTime ? `${dateLabel} at ${booking.scheduledTime}` : dateLabel;
+  return booking.scheduledTime ? t('home.worker.scheduledAt', '{{date}} at {{time}}', { date: dateLabel, time: booking.scheduledTime }) : dateLabel;
 }
 
 export const WorkerActiveMissionCard = React.memo(function WorkerActiveMissionCard({
@@ -60,10 +61,11 @@ export const WorkerActiveMissionCard = React.memo(function WorkerActiveMissionCa
   onCancel,
   isCancelling = false,
 }: WorkerActiveMissionCardProps) {
+  const { t } = useTranslation();
   const meta = STATUS_META[booking.status] || STATUS_META.accepted;
   const amount = booking.workerEarning || booking.totalAmount || 0;
-  const customerName = booking.customer?.fullName || 'Client';
-  const missionTime = useMemo(() => formatMissionTime(booking), [booking]);
+  const customerName = booking.customer?.fullName || t('common.client', 'Client');
+  const missionTime = useMemo(() => formatMissionTime(booking, t), [booking, t]);
   const canCancel = booking.status === 'accepted' || booking.status === 'ongoing' || booking.status === 'pending';
 
   return (
@@ -100,10 +102,10 @@ export const WorkerActiveMissionCard = React.memo(function WorkerActiveMissionCa
           </View>
           <View style={styles.titleCopy}>
             <Text style={[styles.category, Typography.threeD]} numberOfLines={1}>
-              {booking.category || 'Active Job'}
+              {booking.category || t('home.worker.activeJob', 'Active Job')}
             </Text>
             <Text style={styles.description} numberOfLines={2}>
-              {booking.description || 'Job details are ready.'}
+              {booking.description || t('home.worker.jobDetailsReady', 'Job details are ready.')}
             </Text>
           </View>
         </View>
@@ -121,13 +123,13 @@ export const WorkerActiveMissionCard = React.memo(function WorkerActiveMissionCa
           </View>
           <View style={[styles.metaItem, styles.locationItem]}>
             <MapPin size={14} color="rgba(255,255,255,0.58)" />
-            <Text style={styles.metaText} numberOfLines={1}>{booking.address || 'Service location'}</Text>
+            <Text style={styles.metaText} numberOfLines={1}>{booking.address || t('incomingJobModal.serviceLocation', 'Service location')}</Text>
           </View>
         </View>
 
         <View style={styles.actionRow}>
           <TouchableOpacity activeOpacity={0.84} style={styles.detailsButton} onPress={() => onDetails(booking)}>
-            <Text style={styles.detailsText}>Details</Text>
+            <Text style={styles.detailsText}>{t('workerDetails.detailsLabel', 'Details')}</Text>
             <ChevronRight size={16} color="#001015" />
           </TouchableOpacity>
 
@@ -143,7 +145,7 @@ export const WorkerActiveMissionCard = React.memo(function WorkerActiveMissionCa
               ) : (
                 <>
                   <X size={15} color={Colors.error} />
-                  <Text style={styles.cancelText}>Cancel</Text>
+                  <Text style={styles.cancelText}>{t('common.cancel', 'Cancel')}</Text>
                 </>
               )}
             </TouchableOpacity>

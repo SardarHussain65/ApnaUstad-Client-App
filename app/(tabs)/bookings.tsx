@@ -12,6 +12,7 @@ import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
 import { SkeletonList } from '../../components/ui';
+import { useTranslation } from 'react-i18next';
 
 const TABS = ['Active', 'Completed', 'Cancelled'] as const;
 type TabType = typeof TABS[number];
@@ -69,6 +70,7 @@ const isWithinJobResponseWindow = (bookingCreatedAt: string, jobCreatedAt: strin
 
 export default function BookingsTab() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const router = useRouter();
   const { role } = useAuth();
   const isWorker = role === 'worker';
@@ -191,14 +193,15 @@ export default function BookingsTab() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>My Bookings</Text>
-          <Text style={styles.headerSubtitle}>View all your service requests and bookings</Text>
+          <Text style={[styles.headerTitle, Typography.threeD]}>{t('bookings.myBookings')}</Text>
+          <Text style={styles.headerSubtitle}>{t('bookings.subtitle')}</Text>
         </View>
 
         {/* Custom Tab Bar */}
         <View style={styles.tabContainer}>
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
+            const tabKey = tab === 'Active' ? 'activeTab' : tab === 'Completed' ? 'completedTab' : 'cancelledTab';
             return (
               <TouchableOpacity
                 key={tab}
@@ -222,7 +225,7 @@ export default function BookingsTab() {
                   styles.tabText,
                   isActive && styles.activeTabText
                 ]}>
-                  {tab}
+                  {t(`bookings.${tabKey}`)}
                 </Text>
               </TouchableOpacity>
             )
@@ -269,8 +272,24 @@ export default function BookingsTab() {
               const amountValue = Number(meta?.financial?.amount ?? (isBooking
                 ? Number(isWorker ? booking.workerEarning : booking.totalAmount || 0)
                 : Number(job.amount || 0)));
-              const amountLabel = meta?.financial?.label || (isBooking ? (isWorker ? 'Earning' : 'Total') : 'Budget');
-              const actionLabel = isAwaitingProposals
+              const getLocalizedAmountLabel = (label: string) => {
+                if (label === 'Total') return t('bookings.totalLabel', 'Total');
+                if (label === 'Earning') return t('bookings.earningLabel', 'Earning');
+                if (label === 'Budget') return t('bookings.budgetLabel', 'Budget');
+                return label;
+              };
+              const amountLabel = getLocalizedAmountLabel(meta?.financial?.label || (isBooking ? (isWorker ? 'Earning' : 'Total') : 'Budget'));
+              
+              const getLocalizedActionLabel = (label: string) => {
+                if (label === 'View details' || label === 'View Details') return t('bookings.actionViewDetails', 'View Details');
+                if (label === 'View Receipt') return t('bookings.actionViewReceipt', 'View Receipt');
+                if (label === 'Track Live Job') return t('bookings.actionTrackLiveJob', 'Track Live Job');
+                if (label === 'Track Job') return t('bookings.actionTrackJob', 'Track Job');
+                if (label === 'Review Proposals') return t('bookings.actionReviewProposals', 'Review Proposals');
+                if (label === 'Resume Search') return t('bookings.actionResumeSearch', 'Resume Search');
+                return label;
+              };
+              const actionLabel = getLocalizedActionLabel(isAwaitingProposals
                 ? Number(job.bidCount || 0) > 0 ? 'Review Proposals' : 'Resume Search'
                 : status === 'completed' || status === 'closed'
                 ? 'View Receipt'
@@ -280,11 +299,16 @@ export default function BookingsTab() {
                     ? 'Track Live Job'
                     : status === 'assigned' || status === 'accepted'
                       ? 'Track Job'
-                      : 'View Details';
+                      : 'View Details');
 
+              const getLocalizedRole = (role: string) => {
+                if (role === 'Ustad') return t('common.ustad', 'Ustad');
+                if (role === 'Client') return t('common.client', 'Client');
+                return role;
+              };
               let counterPartyName = meta?.counterParty?.fullName || 'Searching...';
               let counterPartyImage = meta?.primaryImageUrl || meta?.counterParty?.profileImage || '';
-              let counterPartyRole = meta?.counterParty?.roleLabel || (isWorker ? 'Client' : 'Ustad');
+              let counterPartyRole = getLocalizedRole(meta?.counterParty?.roleLabel || (isWorker ? 'Client' : 'Ustad'));
               if (isBooking) {
                 const person = isWorker ? booking.customer : booking.worker;
                 counterPartyName = meta?.counterParty?.fullName || person?.fullName || 'Searching...';
@@ -346,12 +370,12 @@ export default function BookingsTab() {
                       <View style={styles.cardTopStrip}>
                         <View style={styles.missionTypePill}>
                           {isInstant ? <Zap size={12} color={Colors.cyan} /> : <Calendar size={12} color={Colors.cyan} />}
-                          <Text style={styles.missionTypeText}>{isInstant ? 'Instant' : 'Scheduled'}</Text>
+                          <Text style={styles.missionTypeText}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
                         </View>
                         <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
                           {getStatusIcon(status, statusColor)}
                           <Text style={[styles.statusText, { color: statusColor }]}>
-                            {statusLabel(status)}
+                            {t(`bookingStatus.${status}.label`, statusLabel(status))}
                           </Text>
                         </View>
                       </View>
@@ -421,7 +445,7 @@ export default function BookingsTab() {
                       <View style={styles.locationBox}>
                         <MapPin size={15} color={Colors.textMuted} />
                         <Text style={styles.locationText} numberOfLines={2}>
-                          {address || 'Open details to view the service location'}
+                          {address || t('bookings.openDetailsToViewLocation', 'Open details to view the service location')}
                         </Text>
                       </View>
 
@@ -466,7 +490,7 @@ export default function BookingsTab() {
                             style={styles.reviewGradient}
                           >
                             <Star size={15} color="#000" fill="#000" />
-                            <Text style={styles.reviewBtnText}>RATE USTAD</Text>
+                            <Text style={styles.reviewBtnText}>{t('bookings.rateUstad', 'RATE USTAD')}</Text>
                           </LinearGradient>
                         </TouchableOpacity>
                       )}
@@ -477,20 +501,18 @@ export default function BookingsTab() {
             })}
             {filteredData.length === 0 && (() => {
               const tabColor = activeTab === 'Active' ? Colors.cyan : activeTab === 'Completed' ? Colors.success : Colors.error;
+              const emptyTitleKey = activeTab === 'Active' ? 'noActiveBookings' : activeTab === 'Completed' ? 'noCompletedBookings' : 'noCancelledBookings';
+              const emptySubKey = activeTab === 'Active' ? 'activeEmpty' : activeTab === 'Completed' ? 'completedEmpty' : 'cancelledEmpty';
               return (
                 <Animated.View entering={FadeInDown.duration(600)} style={styles.emptyContainer}>
                   <View style={[styles.emptyIconCircle, { borderColor: tabColor + '38', backgroundColor: tabColor + '10', shadowColor: tabColor }]}>
                     <Inbox size={42} color={tabColor} />
                   </View>
                   <Text style={[styles.emptyTitle, Typography.threeD]}>
-                    NO {activeTab.toUpperCase()} BOOKINGS
+                    {t(`bookings.${emptyTitleKey}`).toUpperCase()}
                   </Text>
                   <Text style={styles.emptySub}>
-                    {activeTab === 'Active'
-                      ? 'You do not have any active bookings at the moment.'
-                      : activeTab === 'Completed'
-                        ? 'You do not have any completed bookings.'
-                        : 'You do not have any cancelled bookings.'}
+                    {t(`bookings.${emptySubKey}`)}
                   </Text>
                 </Animated.View>
               );

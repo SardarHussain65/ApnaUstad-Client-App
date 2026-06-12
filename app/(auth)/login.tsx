@@ -25,9 +25,11 @@ import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
 import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role: urlRole } = useLocalSearchParams<{ role?: string }>();
   const { setAuth } = useAuth();
   const isWorker = urlRole === 'worker';
@@ -76,7 +78,7 @@ export default function LoginScreen() {
       const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
 
       if (!token || !refreshToken || !user) {
-        Alert.alert('Login error', 'The server returned an incomplete response. Please try again.');
+        Alert.alert(t('auth.loginError', 'Login error'), t('auth.incompleteResponse', 'The server returned an incomplete response. Please try again.'));
         return;
       }
 
@@ -85,7 +87,7 @@ export default function LoginScreen() {
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Unable to sign in', error.message);
+      Alert.alert(t('auth.unableSignIn', 'Unable to sign in'), error.message);
     },
   });
 
@@ -95,15 +97,19 @@ export default function LoginScreen() {
     setPasswordError('');
 
     if (!normalizedIdentifier) {
-      setIdentifierError(`Enter your ${loginType === 'email' ? 'email address' : 'phone number'}.`);
+      setIdentifierError(
+        loginType === 'email'
+          ? t('auth.enterEmail', 'Enter your email address.')
+          : t('auth.enterPhone', 'Enter your phone number.')
+      );
       return;
     }
     if (loginType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedIdentifier)) {
-      setIdentifierError('Enter a valid email address.');
+      setIdentifierError(t('auth.enterValidEmail', 'Enter a valid email address.'));
       return;
     }
     if (!password) {
-      setPasswordError('Enter your password.');
+      setPasswordError(t('auth.enterPassword', 'Enter your password.'));
       return;
     }
 
@@ -123,13 +129,13 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title="Secure sign in" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('auth.secureSignIn')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
-              eyebrow={`${roleLabel} access`}
-              title="Welcome"
-              highlight="back"
-              description={`Sign in to manage your ${isWorker ? 'work, bookings, and earnings' : 'service requests and bookings'}.`}
+              eyebrow={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+              title={t('home.client.welcomeBack')}
+              highlight=""
+              description={isWorker ? t('auth.workerDesc') : t('auth.clientDesc')}
             />
 
             <GlassCard
@@ -143,14 +149,14 @@ export default function LoginScreen() {
                   active={loginType === 'email'}
                   accentColor={accentColor}
                   icon={<Mail size={15} color={loginType === 'email' ? accentColor : Colors.textDim} />}
-                  label="Email"
+                  label={t('auth.emailTab', 'Email')}
                   onPress={() => handleTabChange('email')}
                 />
                 <LoginTab
                   active={loginType === 'phone'}
                   accentColor={accentColor}
                   icon={<Phone size={15} color={loginType === 'phone' ? accentColor : Colors.textDim} />}
-                  label="Phone"
+                  label={t('auth.phoneTab', 'Phone')}
                   onPress={() => handleTabChange('phone')}
                 />
               </View>
@@ -164,12 +170,12 @@ export default function LoginScreen() {
                   ? <Mail size={18} color={accentColor} />
                   : <Phone size={18} color={accentColor} />}
                 keyboardType={loginType === 'email' ? 'email-address' : 'phone-pad'}
-                label={loginType === 'email' ? 'Email address' : 'Phone number'}
+                label={loginType === 'email' ? t('auth.email') : t('auth.phone')}
                 onChangeText={(value) => {
                   setIdentifier(value);
                   if (identifierError) setIdentifierError('');
                 }}
-                placeholder={loginType === 'email' ? 'name@example.com' : '+92 300 0000000'}
+                placeholder={loginType === 'email' ? t('auth.emailPlaceholder', 'name@example.com') : t('auth.phonePlaceholder', '+92 300 0000000')}
                 value={identifier}
               />
 
@@ -179,12 +185,12 @@ export default function LoginScreen() {
                 autoComplete="password"
                 error={passwordError}
                 icon={<Lock size={18} color={accentColor} />}
-                label="Password"
+                label={t('auth.password')}
                 onChangeText={(value) => {
                   setPassword(value);
                   if (passwordError) setPasswordError('');
                 }}
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 rightIcon={
                   <TouchableOpacity
                     accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
@@ -208,14 +214,14 @@ export default function LoginScreen() {
                 })}
                 style={styles.forgotButton}
               >
-                <Text style={[styles.forgotText, { color: accentColor }]}>Forgot password?</Text>
+                <Text style={[styles.forgotText, { color: accentColor }]}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
 
               <AnimatedButton
                 isLoading={loginMutation.isPending}
                 onPress={handleLogin}
                 style={styles.submitButton}
-                title="Sign in securely"
+                title={t('auth.signInButton')}
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
@@ -226,7 +232,7 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>New to ApnaUstad?</Text>
+              <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.push({
@@ -234,7 +240,7 @@ export default function LoginScreen() {
                   params: { role: urlRole },
                 })}
               >
-                <Text style={[styles.footerLink, { color: accentColor }]}> Create an account</Text>
+                <Text style={[styles.footerLink, { color: accentColor }]}> {t('auth.signUp')}</Text>
               </TouchableOpacity>
             </View>
 

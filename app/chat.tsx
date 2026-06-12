@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import {
   CheckCheck,
   ChevronLeft,
@@ -55,6 +56,7 @@ const formatSeconds = (seconds: number) => {
 function VoiceMessageBubble({ item }: { item: Message }) {
   const player = useAudioPlayer(item.audioUrl || null);
   const status = useAudioPlayerStatus(player);
+  const { t } = useTranslation();
   const togglePlayback = async () => {
     if (status.playing) {
       player.pause();
@@ -74,7 +76,7 @@ function VoiceMessageBubble({ item }: { item: Message }) {
       <View style={styles.voiceCopy}>
         <View style={styles.voiceTitleRow}>
           <Volume2 size={13} color={Colors.cyan} strokeWidth={2.4} />
-          <Text style={styles.voiceTitle}>Voice message</Text>
+          <Text style={styles.voiceTitle}>{t('chat.voiceMessage')}</Text>
         </View>
         <Text style={styles.voiceDuration}>
           {formatSeconds(status.currentTime)} / {formatSeconds(status.duration || item.audioDurationSeconds || 0)}
@@ -88,6 +90,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
+  const { t } = useTranslation();
   const { bookingId, recipientName } = useLocalSearchParams<{
     bookingId: string;
     recipientName: string;
@@ -176,7 +179,7 @@ export default function ChatScreen() {
     try {
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Microphone access needed', 'Allow microphone access to send a voice message.');
+        Alert.alert(t('chat.micAccessNeeded'), t('chat.allowMic'));
         return;
       }
 
@@ -187,7 +190,7 @@ export default function ChatScreen() {
       recorder.record();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Could not start recording', text2: 'Please try again.' });
+      Toast.show({ type: 'error', text1: t('chat.couldNotStart'), text2: t('bidSubmission.tryAgain') });
     }
   };
 
@@ -201,13 +204,13 @@ export default function ChatScreen() {
       if (!recorder.uri || recordedDuration < 500) {
         setVoiceUri(null);
         setVoiceDurationMillis(0);
-        Toast.show({ type: 'info', text1: 'Voice note was too short', text2: 'Hold your thought for a moment longer and record again.' });
+        Toast.show({ type: 'info', text1: t('chat.tooShort'), text2: t('chat.holdThought') });
         return;
       }
       setVoiceUri(recorder.uri);
       setVoiceDurationMillis(recordedDuration);
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Could not finish recording', text2: 'Please try again.' });
+      Toast.show({ type: 'error', text1: t('chat.couldNotFinish'), text2: t('bidSubmission.tryAgain') });
     }
   };
 
@@ -272,8 +275,8 @@ export default function ChatScreen() {
     } catch (error: any) {
       Toast.show({
         type: 'error',
-        text1: 'Voice message not sent',
-        text2: error.response?.data?.message || 'Please check your connection and try again.',
+        text1: t('chat.notSent'),
+        text2: error.response?.data?.message || t('chat.checkConnection'),
       });
     } finally {
       setIsUploadingVoice(false);
@@ -337,11 +340,11 @@ export default function ChatScreen() {
               </View>
             </View>
             <View style={styles.userMeta}>
-              <Text style={styles.userName}>{recipientName || 'Mission Partner'}</Text>
+              <Text style={styles.userName}>{recipientName || t('transactionDetails.servicePartner')}</Text>
               <View style={styles.statusRow}>
                 <View style={[styles.activeDot, !canSendMessages && styles.inactiveDot]} />
                 <Text style={[styles.statusText, !canSendMessages && styles.inactiveStatusText]}>
-                  {isLoadingBooking ? 'CHECKING ACCESS' : canSendMessages ? 'SECURE LINE ACTIVE' : 'CHAT HISTORY ONLY'}
+                  {isLoadingBooking ? t('chat.checkingAccess') : canSendMessages ? t('chat.secureLine') : t('chat.historyOnly')}
                 </Text>
               </View>
             </View>
@@ -371,8 +374,8 @@ export default function ChatScreen() {
                 ListEmptyComponent: (
                   <View style={styles.emptyChat}>
                     <View style={styles.emptyChatIcon}><MessageCircle size={24} color={Colors.cyan} /></View>
-                    <Text style={styles.emptyChatTitle}>Secure conversation ready</Text>
-                    <Text style={styles.emptyChatText}>Send a message or a voice note while this booking is active.</Text>
+                    <Text style={styles.emptyChatTitle}>{t('chat.secureReady')}</Text>
+                    <Text style={styles.emptyChatText}>{t('chat.bookingActiveDesc')}</Text>
                   </View>
                 ),
               } as any)}
@@ -385,11 +388,11 @@ export default function ChatScreen() {
           <View style={[styles.lockedContainer, { paddingBottom: insets.bottom + 12 }]}>
             <ShieldCheck size={16} color={Colors.textMuted} />
             <View style={styles.lockedCopy}>
-              <Text style={styles.lockedTitle}>{isLoadingBooking ? 'CHECKING CHAT ACCESS' : 'CHAT CLOSED'}</Text>
+              <Text style={styles.lockedTitle}>{isLoadingBooking ? t('chat.checkingChatAccess') : t('chat.chatClosed')}</Text>
               <Text style={styles.lockedText}>
                 {isLoadingBooking
-                  ? 'Confirming the current booking status.'
-                  : 'This booking has ended. Previous messages remain available as history.'}
+                  ? t('chat.confirmingStatus')
+                  : t('chat.bookingEnded')}
               </Text>
             </View>
           </View>
@@ -408,7 +411,7 @@ export default function ChatScreen() {
                     <View style={styles.recordingCopy}>
                       <View style={styles.recordingTitleRow}>
                         <View style={[styles.recordingDot, !isRecording && styles.voiceReadyDot]} />
-                        <Text style={styles.recordingTitle}>{isRecording ? 'Recording voice note' : 'Voice note ready'}</Text>
+                        <Text style={styles.recordingTitle}>{isRecording ? t('chat.recordingVoice') : t('chat.voiceReady')}</Text>
                       </View>
                       <Text style={styles.recordingDuration}>
                         {formatSeconds((isRecording ? recorderState.durationMillis : voiceDurationMillis) / 1000)}
@@ -433,7 +436,7 @@ export default function ChatScreen() {
                   <View style={styles.inputInner}>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="Type a message..."
+                      placeholder={t('chat.placeholder')}
                       placeholderTextColor="rgba(255,255,255,0.4)"
                       value={inputText}
                       onChangeText={setInputText}
@@ -460,7 +463,7 @@ export default function ChatScreen() {
 
               <View style={styles.securitySeal}>
                 <ShieldCheck size={10} color="rgba(255,255,255,0.3)" />
-                <Text style={styles.securityTxt}>BOOKING CHAT PROTECTED</Text>
+                <Text style={styles.securityTxt}>{t('chat.protected')}</Text>
               </View>
             </View>
           </KeyboardAvoidingView>

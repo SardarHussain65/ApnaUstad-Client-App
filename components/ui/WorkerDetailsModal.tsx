@@ -5,6 +5,7 @@ import { BeautifulModal } from './BeautifulModal';
 import { useWorker } from '../../hooks';
 import { Colors, Spacing, Typography } from '../../constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 interface WorkerDetailsModalProps {
   visible: boolean;
@@ -23,6 +24,7 @@ export function WorkerDetailsModal({
   themeColor = Colors.cyan,
   onDeploy,
 }: WorkerDetailsModalProps) {
+  const { t } = useTranslation();
   const { data: worker, isLoading } = useWorker(workerId || undefined, category);
   const [imageError, setImageError] = React.useState(false);
 
@@ -37,7 +39,7 @@ export function WorkerDetailsModal({
     <BeautifulModal
       visible={visible}
       onClose={onClose}
-      title="Ustad Details"
+      title={t('workerDetailsModal.title', 'Ustad Details')}
       height="85%"
       glowColor={themeColor}
       showCloseButton
@@ -45,7 +47,7 @@ export function WorkerDetailsModal({
       {isLoading || !worker ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={themeColor} />
-          <Text style={styles.loadingText}>Fetching profile...</Text>
+          <Text style={styles.loadingText}>{t('workerDetailsModal.fetchingProfile', 'Fetching profile...')}</Text>
         </View>
       ) : (
         <View style={styles.container}>
@@ -69,7 +71,7 @@ export function WorkerDetailsModal({
                 <View style={styles.statusRow}>
                   <View style={[styles.statusDot, { backgroundColor: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]} />
                   <Text style={[styles.statusText, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
-                    {worker.isAvailable ? 'AVAILABLE NOW' : 'BUSY NOW'}
+                    {worker.isAvailable ? t('common.availableNow', 'AVAILABLE NOW') : t('common.busyNow', 'BUSY NOW')}
                   </Text>
                 </View>
               </View>
@@ -80,23 +82,23 @@ export function WorkerDetailsModal({
               <View style={styles.statBox}>
                 <TrendingUp size={16} color={themeColor} style={styles.statIcon} />
                 <Text style={styles.statValue}>{worker.totalJobs ?? 0}</Text>
-                <Text style={styles.statLabel}>Jobs Done</Text>
+                <Text style={styles.statLabel}>{t('workerDetailsModal.jobsDone', 'Jobs Done')}</Text>
               </View>
               <View style={styles.statBox}>
                 <Award size={16} color={themeColor} style={styles.statIcon} />
-                <Text style={styles.statValue}>{worker.experience ?? 0}yr</Text>
-                <Text style={styles.statLabel}>Experience</Text>
+                <Text style={styles.statValue}>{t('workerDetailsModal.experienceYears', '{{count}}yr', { count: worker.experience ?? 0 })}</Text>
+                <Text style={styles.statLabel}>{t('workerDetailsModal.experience', 'Experience')}</Text>
               </View>
               <View style={styles.statBox}>
                 <Star size={16} color="#FFD700" style={styles.statIcon} />
                 <Text style={styles.statValue}>{(worker.rating ?? 5.0).toFixed(1)}</Text>
-                <Text style={styles.statLabel}>{worker.totalReviews ?? 0} Reviews</Text>
+                <Text style={styles.statLabel}>{t('workerDetailsModal.reviewsCount', '{{count}} Reviews', { count: worker.totalReviews ?? 0 })}</Text>
               </View>
             </View>
 
             {/* Contact Info */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>CONTACT DETAILS</Text>
+              <Text style={styles.sectionTitle}>{t('workerDetailsModal.contactDetails', 'CONTACT DETAILS')}</Text>
               <View style={styles.infoRow}>
                 <Phone size={14} color={Colors.textDim} />
                 <Text style={styles.infoText}>{worker.phone}</Text>
@@ -114,7 +116,7 @@ export function WorkerDetailsModal({
             {/* Bio */}
             {!!worker.bio && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>PROFILE DATA</Text>
+                <Text style={styles.sectionTitle}>{t('workerDetailsModal.profileData', 'PROFILE DATA')}</Text>
                 <Text style={styles.bioText}>{worker.bio}</Text>
               </View>
             )}
@@ -122,7 +124,7 @@ export function WorkerDetailsModal({
             {/* Skills */}
             {(worker.skills?.length ?? 0) > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>SKILLS</Text>
+                <Text style={styles.sectionTitle}>{t('workerDetailsModal.skills', 'SKILLS')}</Text>
                 <View style={styles.skillsRow}>
                   {worker.skills?.map((skill) => (
                     <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35' }]}>
@@ -137,8 +139,8 @@ export function WorkerDetailsModal({
           {/* Fixed Footer: Rate and Deploy */}
           <View style={[styles.footer, { borderColor: 'rgba(255,255,255,0.1)' }]}>
             <View style={styles.rateBlock}>
-              <Text style={styles.rateLabel}>Hourly Rate</Text>
-              <Text style={styles.rateValue}>Rs. {worker.hourlyRate ?? '—'}</Text>
+              <Text style={styles.rateLabel}>{t('workerDetailsModal.hourlyRate', 'Hourly Rate')}</Text>
+              <Text style={styles.rateValue}>{t('common.rupeesFormat', 'Rs. {{amount}}', { amount: worker.hourlyRate ?? '—' })}</Text>
             </View>
             <TouchableOpacity
               style={styles.deployBtn}
@@ -152,7 +154,7 @@ export function WorkerDetailsModal({
                 style={styles.deployBtnGradient}
               >
                 <Zap size={16} color="#000" fill="#000" />
-                <Text style={styles.deployBtnText}>HIRE USTAD</Text>
+                <Text style={styles.deployBtnText}>{t('workerDetailsModal.hireUstad', 'HIRE USTAD')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>

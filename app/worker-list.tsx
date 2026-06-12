@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 import { Colors, Typography, Spacing, Shadows } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
@@ -55,6 +56,7 @@ interface WorkerCardProps {
 }
 
 const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetails }: WorkerCardProps) => {
+  const { t } = useTranslation();
   const ratingStr = worker.rating ? worker.rating.toFixed(1) : '5.0';
   const ratingNum = worker.rating ?? 5.0;
 
@@ -172,7 +174,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
                       or undefined — NOT when it's 0 or ''. Safer than ||.
                   ──────────────────────────────────────────────────────── */}
                   <Text style={styles.metaChipText}>
-                    {worker.city ?? 'Remote'}
+                    {worker.city ?? t('common.remote', { defaultValue: 'Remote' })}
                   </Text>
                 </View>
               </View>
@@ -197,21 +199,21 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
             <View style={styles.statItem}>
               <TrendingUp size={12} color={themeColor} />
               <Text style={styles.statValue}>{worker.totalJobs ?? 0}</Text>
-              <Text style={styles.statLabel}>Jobs</Text>
+              <Text style={styles.statLabel}>{t('workerDetails.jobsLabel')}</Text>
             </View>
             <View style={[styles.statDivider]} />
             <View style={styles.statItem}>
               <Award size={12} color={themeColor} />
               <Text style={styles.statValue}>{worker.totalReviews ?? 0}</Text>
-              <Text style={styles.statLabel}>Reviews</Text>
+              <Text style={styles.statLabel}>{t('workerDetails.reviews')}</Text>
             </View>
             <View style={[styles.statDivider]} />
             <View style={styles.statItem}>
               <Zap size={12} color={themeColor} />
               <Text style={[styles.statValue, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
-                {worker.isAvailable ? 'Open' : 'Busy'}
+                {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
               </Text>
-              <Text style={styles.statLabel}>Status</Text>
+              <Text style={styles.statLabel}>{t('common.status')}</Text>
             </View>
           </View>
 
@@ -260,14 +262,14 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
               style={styles.deployBtnGradient}
             >
               <View style={styles.deployBtnLeft}>
-                <Text style={styles.deployRateLabel}>Total Earnings</Text>
+                <Text style={styles.deployRateLabel}>{t('wallet.totalEarnings')}</Text>
                 <Text style={styles.deployRateValue}>
                   Rs. {worker.totalEarnings ?? '0'}
                 </Text>
               </View>
               <View style={styles.deployBtnRight}>
                 <Zap size={14} color="#000" fill="#000" />
-                <Text style={styles.deployBtnText}>HIRE</Text>
+                <Text style={styles.deployBtnText}>{t('workerList.hire')}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -283,6 +285,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, onHire, onViewDetail
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function WorkerListScreen() {
+  const { t } = useTranslation();
   // ─── LEARNING: useSafeAreaInsets ─────────────────────────────────────────
   // Returns { top, bottom, left, right } pixel values of the device's safe area
   // (notch, home indicator, status bar). We add insets.top to our header padding
@@ -371,8 +374,8 @@ export default function WorkerListScreen() {
             <Text style={styles.headerTitle}>{category.toUpperCase()}</Text>
             <Text style={styles.headerSub}>
               {isLoading
-                ? 'Searching for Ustads...'
-                : `${filtered.length} Ustad${filtered.length !== 1 ? 's' : ''} available`}
+                ? t('workerList.searchingUstads')
+                : t('workerList.availableCount', { count: filtered.length })}
             </Text>
           </View>
 
@@ -386,7 +389,7 @@ export default function WorkerListScreen() {
             <Search size={15} color={Colors.textDim} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name, skill, city..."
+              placeholder={t('workerList.searchPlaceholder')}
               placeholderTextColor={Colors.textDim}
               value={search}
               onChangeText={setSearch}
@@ -432,15 +435,15 @@ export default function WorkerListScreen() {
           ) : (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyTitle}>No Ustads Found</Text>
+              <Text style={styles.emptyTitle}>{t('workerList.noUstadsFound')}</Text>
               <Text style={styles.emptySub}>
                 {search
-                  ? 'Try a different search term.'
-                  : 'No workers available in this category yet.'}
+                  ? t('workerList.tryDifferentSearch')
+                  : t('workerList.noWorkersCategory')}
               </Text>
               {search ? (
                 <TouchableOpacity style={[styles.clearBtn, { borderColor: themeColor }]} onPress={() => setSearch('')}>
-                  <Text style={[styles.clearBtnText, { color: themeColor }]}>Clear Search</Text>
+                  <Text style={[styles.clearBtnText, { color: themeColor }]}>{t('workerList.clearSearch')}</Text>
                 </TouchableOpacity>
               ) : null}
             </Animated.View>

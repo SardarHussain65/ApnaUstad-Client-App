@@ -4,6 +4,7 @@ import { Camera, PlayCircle, X, Plus } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { SectionLabel, P } from './shared';
+import { useTranslation } from 'react-i18next';
 
 type EvidenceAsset = { uri: string; type: 'image' | 'video' };
 
@@ -12,6 +13,7 @@ interface MediaEvidencePickerProps {
   onPickMedia: () => void;
   onRemoveMedia: (index: number) => void;
   onClearAll: () => void;
+  hideLabel?: boolean;
 }
 
 export function MediaEvidencePicker({
@@ -19,7 +21,9 @@ export function MediaEvidencePicker({
   onPickMedia,
   onRemoveMedia,
   onClearAll,
+  hideLabel = false,
 }: MediaEvidencePickerProps) {
+  const { t } = useTranslation();
   const selectedImageCount = selectedMedia.filter((asset) => asset.type === 'image').length;
   const selectedVideoCount = selectedMedia.filter((asset) => asset.type === 'video').length;
 
@@ -29,8 +33,8 @@ export function MediaEvidencePicker({
   };
 
   return (
-    <View style={styles.section}>
-      <SectionLabel icon={Camera} label="PHOTOS OR VIDEO" color={P.purple} badge="Optional" />
+    <View style={hideLabel ? null : styles.section}>
+      {!hideLabel && <SectionLabel icon={Camera} label={t('jobCreation.photosOrVideo', 'PHOTOS OR VIDEO')} color={P.purple} badge={t('common.optional', 'Optional')} />}
 
       {selectedMedia.length === 0 ? (
         <TouchableOpacity activeOpacity={0.75} onPress={onPickMedia} style={styles.dropzone}>
@@ -40,8 +44,8 @@ export function MediaEvidencePicker({
             <View style={[styles.cameraIconWrap, { borderColor: P.purple + '40', backgroundColor: P.purpleMuted }]}>
               <Camera size={26} color={P.purple} strokeWidth={1.5} />
             </View>
-            <Text style={styles.dropzoneTitle}>Add photos or a short video</Text>
-            <Text style={styles.dropzoneSubtitle}>Help the Ustad understand the work before accepting</Text>
+            <Text style={styles.dropzoneTitle}>{t('jobCreation.dropzoneTitle', 'Add photos or a short video')}</Text>
+            <Text style={styles.dropzoneSubtitle}>{t('jobCreation.dropzoneSubtitle', 'Help the Ustad understand the work before accepting')}</Text>
           </View>
           {/* Corner brackets */}
           <View style={[styles.bracket, styles.bracketTL, { borderColor: P.purple + '50' }]} />
@@ -63,7 +67,7 @@ export function MediaEvidencePicker({
                 ) : (
                   <View style={styles.videoThumb}>
                     <PlayCircle size={28} color={P.purple} strokeWidth={1.7} />
-                    <Text style={styles.videoThumbText}>Video</Text>
+                    <Text style={styles.videoThumbText}>{t('common.video', 'Video')}</Text>
                   </View>
                 )}
                 <LinearGradient
@@ -74,7 +78,7 @@ export function MediaEvidencePicker({
                   <Text style={styles.thumbIndex}>{i + 1}</Text>
                 </View>
                 <View style={styles.thumbTypeBadge}>
-                  <Text style={styles.thumbTypeText}>{asset.type === 'video' ? 'VID' : 'IMG'}</Text>
+                  <Text style={styles.thumbTypeText}>{asset.type === 'video' ? t('jobCreation.vidBadge', 'VID') : t('jobCreation.imgBadge', 'IMG')}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.removeMediaBtn}
@@ -88,17 +92,17 @@ export function MediaEvidencePicker({
             {selectedMedia.length < 5 && (
               <TouchableOpacity onPress={onPickMedia} style={styles.addMoreBtn} activeOpacity={0.7}>
                 <Plus size={20} color={P.textSecondary} />
-                <Text style={styles.addMoreText}>Add</Text>
+                <Text style={styles.addMoreText}>{t('common.add', 'Add')}</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
           <View style={styles.mediaSummaryRow}>
-            <Text style={styles.mediaSummaryText}>{selectedImageCount} photos</Text>
+            <Text style={styles.mediaSummaryText}>{t('jobCreation.photosCount', '{{count}} photos', { count: selectedImageCount })}</Text>
             <Text style={styles.mediaSummaryDot}>•</Text>
-            <Text style={styles.mediaSummaryText}>{selectedVideoCount} videos</Text>
+            <Text style={styles.mediaSummaryText}>{t('jobCreation.videosCount', '{{count}} videos', { count: selectedVideoCount })}</Text>
           </View>
           <TouchableOpacity onPress={onClearAll} style={styles.clearImages} activeOpacity={0.7}>
-            <Text style={styles.clearImagesText}>Clear all media</Text>
+            <Text style={styles.clearImagesText}>{t('jobCreation.clearAllMedia', 'Clear all media')}</Text>
           </TouchableOpacity>
         </View>
       )}

@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { ChevronUp, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { P } from './shared';
+import { useTranslation } from 'react-i18next';
 
 interface SchedulePickerModalProps {
   visible: boolean;
@@ -20,6 +21,7 @@ export function SchedulePickerModal({
   initialDate,
   initialTime,
 }: SchedulePickerModalProps) {
+  const { t, i18n } = useTranslation();
   const [tempDate, setTempDate] = useState<Date>(initialDate);
   const [tempTime, setTempTime] = useState<string>(initialTime);
 
@@ -81,11 +83,11 @@ export function SchedulePickerModal({
       <View style={styles.backdrop}>
         <BlurView intensity={35} style={StyleSheet.absoluteFill} tint="dark" />
         <View style={styles.container}>
-          <Text style={styles.title}>Schedule Visit</Text>
-          <Text style={styles.subtitle}>Choose a date and time for the service</Text>
+          <Text style={styles.title}>{t('jobCreation.scheduleVisit', 'Schedule Visit')}</Text>
+          <Text style={styles.subtitle}>{t('jobCreation.chooseDateTime', 'Choose a date and time for the service')}</Text>
 
           {/* Date Horizontal Picker */}
-          <Text style={styles.sectionTitle}>Select Date</Text>
+          <Text style={styles.sectionTitle}>{t('jobCreation.selectDate', 'Select Date')}</Text>
           <View style={styles.dateScrollWrapper}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
               {getNext14Days().map((day, idx) => {
@@ -94,20 +96,20 @@ export function SchedulePickerModal({
                   <TouchableOpacity
                     key={idx}
                     style={[
-                      styles.dateCard,
-                      isSelected && { borderColor: P.orange, backgroundColor: 'rgba(255, 107, 0, 0.15)' },
+                       styles.dateCard,
+                       isSelected && { borderColor: P.orange, backgroundColor: 'rgba(255, 107, 0, 0.15)' },
                     ]}
                     onPress={() => handleDateSelect(day)}
                     activeOpacity={0.75}
                   >
                     <Text style={[styles.dateDayText, isSelected && { color: P.orange }]}>
-                      {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                      {day.toLocaleDateString(i18n.language === 'ur' ? 'ur-PK' : 'en-US', { weekday: 'short' })}
                     </Text>
                     <Text style={[styles.dateNumText, isSelected && { color: P.orange }]}>
                       {day.getDate()}
                     </Text>
                     <Text style={styles.dateMonthText}>
-                      {day.toLocaleDateString('en-US', { month: 'short' })}
+                      {day.toLocaleDateString(i18n.language === 'ur' ? 'ur-PK' : 'en-US', { month: 'short' })}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -116,7 +118,7 @@ export function SchedulePickerModal({
           </View>
 
           {/* Time Picker Block */}
-          <Text style={styles.sectionTitle}>Adjust Time (24h)</Text>
+          <Text style={styles.sectionTitle}>{t('jobCreation.adjustTime', 'Adjust Time (24h)')}</Text>
           <View style={styles.timeRow}>
             {/* Hours Column */}
             <View style={styles.timeCol}>
@@ -148,12 +150,12 @@ export function SchedulePickerModal({
             {isScheduleValid ? (
               <View style={[styles.statusPill, { backgroundColor: 'rgba(0, 230, 118, 0.08)', borderColor: 'rgba(0, 230, 118, 0.2)' }]}>
                 <CheckCircle2 size={13} color={P.success} />
-                <Text style={[styles.statusText, { color: P.success }]}>SCHEDULE IS AVAILABLE</Text>
+                <Text style={[styles.statusText, { color: P.success }]}>{t('jobCreation.scheduleAvailable', 'SCHEDULE IS AVAILABLE')}</Text>
               </View>
             ) : (
               <View style={[styles.statusPill, { backgroundColor: 'rgba(255, 107, 0, 0.08)', borderColor: 'rgba(255, 107, 0, 0.2)' }]}>
                 <AlertCircle size={13} color={P.orange} />
-                <Text style={[styles.statusText, { color: P.orange }]}>CHOOSE AT LEAST 1 HOUR FROM NOW</Text>
+                <Text style={[styles.statusText, { color: P.orange }]}>{t('jobCreation.chooseOneHourLater', 'CHOOSE AT LEAST 1 HOUR FROM NOW')}</Text>
               </View>
             )}
           </View>
@@ -165,7 +167,7 @@ export function SchedulePickerModal({
               onPress={onDismiss}
               activeOpacity={0.75}
             >
-              <Text style={styles.btnCancelText}>Cancel</Text>
+              <Text style={styles.btnCancelText}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -177,7 +179,7 @@ export function SchedulePickerModal({
               onPress={handleSave}
               activeOpacity={0.75}
             >
-              <Text style={styles.btnSaveText}>Lock Schedule</Text>
+              <Text style={styles.btnSaveText}>{t('jobCreation.lockSchedule', 'Lock Schedule')}</Text>
             </TouchableOpacity>
           </View>
         </View>

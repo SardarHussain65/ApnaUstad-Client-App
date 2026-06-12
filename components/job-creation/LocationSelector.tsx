@@ -1,7 +1,8 @@
-import React from 'react';
-import { StyleSheet, View, Text, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { MapPin, Target } from 'lucide-react-native';
-import { SectionLabel, GlassInput, P } from './shared';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { GlassInput, P, SectionLabel } from './shared';
+import { useTranslation } from 'react-i18next';
 
 interface LocationSelectorProps {
   address: string;
@@ -20,9 +21,10 @@ export function LocationSelector({
   onAddressChange,
   onGetLiveLocation,
 }: LocationSelectorProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
-      <SectionLabel icon={MapPin} label="SERVICE LOCATION" badge="Required" />
+      <SectionLabel icon={MapPin} label={t('jobCreation.serviceLocation', 'SERVICE LOCATION')} badge={t('common.required', 'Required')} />
       <GlassInput glowColor={P.cyan}>
         {/* Coordinates status row */}
         <View style={styles.coordRow}>
@@ -41,7 +43,7 @@ export function LocationSelector({
         <View style={styles.locationRow}>
           <TextInput
             style={styles.locationInput}
-            placeholder="Enter the address where service is needed"
+            placeholder={t('jobCreation.locationPlaceholder', 'Enter the address where service is needed')}
             placeholderTextColor={P.textMuted}
             value={address}
             onChangeText={onAddressChange}
@@ -58,7 +60,7 @@ export function LocationSelector({
         >
           <Target size={13} color={P.cyanDim} />
           <Text style={styles.locationActionText}>
-            {isGettingLocation ? 'Updating current location...' : 'Use my current location'}
+            {isGettingLocation ? t('jobCreation.updatingLocation', 'Updating current location...') : t('jobCreation.useCurrentLocation', 'Use my current location')}
           </Text>
         </TouchableOpacity>
       </GlassInput>

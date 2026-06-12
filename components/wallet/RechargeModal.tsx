@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { XCircle, Copy, Upload, Smartphone, Landmark, Banknote, FileImage } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { BlurView } from 'expo-blur';
 
@@ -114,6 +115,7 @@ export function RechargeModal({
   onConfirm,
   onCopy,
 }: RechargeModalProps) {
+  const { t } = useTranslation();
   const selectedMethod = paymentMethods.find((m) => m.method === selectedMethodKey) || paymentMethods[0];
   const selectedMethodIsConfigured = selectedMethod ? selectedMethod.isConfigured !== false : false;
 
@@ -124,7 +126,7 @@ export function RechargeModal({
         <View style={styles.container}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, Typography.threeD]}>Prepaid Top-Up</Text>
+            <Text style={[styles.modalTitle, Typography.threeD]}>{t('wallet.prepaidTopUp')}</Text>
             <TouchableOpacity onPress={onDismiss}>
               <XCircle size={22} color={Colors.textMuted} />
             </TouchableOpacity>
@@ -132,7 +134,7 @@ export function RechargeModal({
 
           {/* Amount input */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Enter Amount (PKR)</Text>
+            <Text style={styles.sectionLabel}>{t('wallet.enterAmountPkr')}</Text>
             <TextInput
               style={styles.amountInput}
               placeholder="e.g. 1000"
@@ -145,9 +147,9 @@ export function RechargeModal({
             <View style={styles.quickSelectRow}>
               {[500, 1000, 2000, 5000].map((val) => (
                 <TouchableOpacity
-                  key={val}
-                  onPress={() => onAmountChange(val.toString())}
-                  style={[styles.quickSelectChip, amount === val.toString() && styles.quickSelectChipActive]}
+                   key={val}
+                   onPress={() => onAmountChange(val.toString())}
+                   style={[styles.quickSelectChip, amount === val.toString() && styles.quickSelectChipActive]}
                 >
                   <Text style={[styles.quickSelectText, amount === val.toString() && styles.quickSelectTextActive]}>
                     +{val}
@@ -159,7 +161,7 @@ export function RechargeModal({
 
           {/* Payment Methods */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Select Method</Text>
+            <Text style={styles.sectionLabel}>{t('wallet.selectMethod')}</Text>
             <View style={styles.methodList}>
               {paymentMethods.map((method) => {
                 const isSelected = selectedMethodKey === method.method || (!selectedMethodKey && paymentMethods[0]?.method === method.method);
@@ -183,20 +185,20 @@ export function RechargeModal({
           {/* Dynamic Instructions */}
           {selectedMethod && (
             <View style={styles.instructionsBox}>
-              <Text style={styles.instructionsTitle}>Transfer Instructions</Text>
+              <Text style={styles.instructionsTitle}>{t('wallet.transferInstructions')}</Text>
               <Text style={styles.instructionsText}>
-                {selectedMethod.instructions || `Please transfer the selected amount to the following ${selectedMethod.label} account, then upload a screenshot of your transaction proof.`}
+                {selectedMethod.instructions || t('wallet.transferFallback', { method: selectedMethod.label })}
               </Text>
 
               <View style={styles.accountDetails}>
                 {selectedMethod.bankName && (
-                  <CopyRow label="Bank Name" value={selectedMethod.bankName} onCopy={onCopy} />
+                  <CopyRow label={t('wallet.bankName')} value={selectedMethod.bankName} onCopy={onCopy} />
                 )}
                 {selectedMethod.accountNumber && (
-                  <CopyRow label="Account Number" value={selectedMethod.accountNumber} onCopy={onCopy} />
+                  <CopyRow label={t('wallet.accountNumber')} value={selectedMethod.accountNumber} onCopy={onCopy} />
                 )}
                 {selectedMethod.accountName && (
-                  <CopyRow label="Account Name" value={selectedMethod.accountName} onCopy={onCopy} />
+                  <CopyRow label={t('wallet.accountName')} value={selectedMethod.accountName} onCopy={onCopy} />
                 )}
               </View>
             </View>
@@ -204,20 +206,20 @@ export function RechargeModal({
 
           {/* Proof upload */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Deposit Screenshot / Receipt</Text>
+            <Text style={styles.sectionLabel}>{t('wallet.depositScreenshot')}</Text>
             {proofImageUri ? (
               <View style={styles.proofPreviewWrapper}>
                 <Image source={{ uri: proofImageUri }} style={styles.proofPreview} />
                 <TouchableOpacity style={styles.changeProofBtn} onPress={onPickProofImage}>
                   <Upload size={14} color="#fff" style={{ marginRight: 6 }} />
-                  <Text style={styles.changeProofText}>Replace Screen</Text>
+                  <Text style={styles.changeProofText}>{t('wallet.replaceScreenshot')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity style={styles.uploadBtn} onPress={onPickProofImage}>
                 <FileImage size={24} color={Colors.textMuted} style={{ marginBottom: 6 }} />
-                <Text style={styles.uploadText}>Select Payment Screenshot</Text>
-                <Text style={styles.uploadSub}>JPEG/PNG receipts supported</Text>
+                <Text style={styles.uploadText}>{t('wallet.selectScreenshot')}</Text>
+                <Text style={styles.uploadSub}>{t('wallet.supportedReceipts')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -234,7 +236,7 @@ export function RechargeModal({
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#001014" />
             ) : (
-              <Text style={styles.confirmBtnText}>Submit Proof & Top Up</Text>
+              <Text style={styles.confirmBtnText}>{t('wallet.submitProof')}</Text>
             )}
           </TouchableOpacity>
         </View>

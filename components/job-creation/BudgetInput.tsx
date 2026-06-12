@@ -2,24 +2,27 @@ import React from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { Banknote } from 'lucide-react-native';
 import { SectionLabel, GlassInput, P } from './shared';
+import { useTranslation } from 'react-i18next';
 
 interface BudgetInputProps {
   amount: string;
   onChangeAmount: (value: string) => void;
+  hideLabel?: boolean;
 }
 
-export function BudgetInput({ amount, onChangeAmount }: BudgetInputProps) {
+export function BudgetInput({ amount, onChangeAmount, hideLabel = false }: BudgetInputProps) {
+  const { t } = useTranslation();
   return (
-    <View style={styles.section}>
-      <SectionLabel icon={Banknote} label="YOUR OFFER" color={P.success} badge="Required" />
+    <View style={hideLabel ? null : styles.section}>
+      {!hideLabel && <SectionLabel icon={Banknote} label={t('jobCreation.yourOffer', 'YOUR OFFER')} color={P.success} badge={t('common.required', 'Required')} />}
       <GlassInput glowColor={amount ? P.success : undefined}>
         <View style={styles.budgetRow}>
           <View style={styles.currencyBadge}>
-            <Text style={styles.currencySymbol}>PKR</Text>
+            <Text style={styles.currencySymbol}>{t('common.pkr', 'PKR')}</Text>
           </View>
           <TextInput
             style={styles.budgetInput}
-            placeholder="Enter your offered amount"
+            placeholder={t('jobCreation.budgetPlaceholder', 'Enter your offered amount')}
             placeholderTextColor={P.textMuted}
             keyboardType="numeric"
             value={amount}
@@ -35,7 +38,7 @@ export function BudgetInput({ amount, onChangeAmount }: BudgetInputProps) {
               activeOpacity={0.75}
             >
               <Text style={[styles.quickBudgetText, amount === value && styles.quickBudgetTextActive]}>
-                Rs. {Number(value).toLocaleString()}
+                {t('common.rupeesFormat', 'Rs. {{amount}}', { amount: Number(value).toLocaleString() })}
               </Text>
             </TouchableOpacity>
           ))}

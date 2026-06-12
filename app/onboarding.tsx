@@ -25,43 +25,47 @@ import { OnboardingSlide } from '../components/OnboardingSlide';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { BorderRadius, Colors, Spacing } from '../constants/Theme';
 
+import { useTranslation } from 'react-i18next';
+
 const { width } = Dimensions.get('window');
 
-const DATA = [
-  {
-    id: '1',
-    eyebrow: 'Services, simplified',
-    title: 'The right help, right when you need it',
-    description: 'Explore trusted professionals for everyday tasks, urgent repairs, and everything in between.',
-    benefit: 'Find skilled specialists near you in a few taps.',
-    image: require('../assets/images/onboarding1.png'),
-    accent: Colors.cyan,
-  },
-  {
-    id: '2',
-    eyebrow: 'Built for specialists',
-    title: 'Turn your skills into new opportunities',
-    description: 'Showcase your expertise, discover nearby work, and build a reputation clients can trust.',
-    benefit: 'Manage jobs, bids, and earnings from one place.',
-    image: require('../assets/images/onboarding2.png'),
-    accent: Colors.worker,
-  },
-  {
-    id: '3',
-    eyebrow: 'Book with confidence',
-    title: 'A smoother path from request to result',
-    description: 'Stay informed from booking to completion with clear progress updates and secure account access.',
-    benefit: 'Every step is designed to feel simple and reliable.',
-    image: require('../assets/images/onboarding3.png'),
-    accent: Colors.success,
-  },
-];
-
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  const DATA = [
+    {
+      id: '1',
+      eyebrow: t('onboarding.slide1.eyebrow'),
+      title: t('onboarding.slide1.title'),
+      description: t('onboarding.slide1.description'),
+      benefit: t('onboarding.slide1.benefit'),
+      image: require('../assets/images/onboarding1.png'),
+      accent: Colors.cyan,
+    },
+    {
+      id: '2',
+      eyebrow: t('onboarding.slide2.eyebrow'),
+      title: t('onboarding.slide2.title'),
+      description: t('onboarding.slide2.description'),
+      benefit: t('onboarding.slide2.benefit'),
+      image: require('../assets/images/onboarding2.png'),
+      accent: Colors.worker,
+    },
+    {
+      id: '3',
+      eyebrow: t('onboarding.slide3.eyebrow'),
+      title: t('onboarding.slide3.title'),
+      description: t('onboarding.slide3.description'),
+      benefit: t('onboarding.slide3.benefit'),
+      image: require('../assets/images/onboarding3.png'),
+      accent: Colors.success,
+    },
+  ];
+
   const currentSlide = DATA[currentIndex];
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -101,7 +105,7 @@ export default function OnboardingScreen() {
           </View>
           {currentIndex < DATA.length - 1 && (
             <TouchableOpacity activeOpacity={0.7} onPress={completeOnboarding} style={styles.skipButton}>
-              <Text style={styles.skipText}>Skip</Text>
+              <Text style={styles.skipText}>{t('common.skip')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -147,7 +151,7 @@ export default function OnboardingScreen() {
             icon={<ArrowRight size={18} color="#000" strokeWidth={2.8} />}
             onPress={handleNext}
             style={styles.nextButton}
-            title={currentIndex === DATA.length - 1 ? 'Get started' : 'Continue'}
+            title={currentIndex === DATA.length - 1 ? t('common.getStarted') : t('common.continue')}
             variant="cyan"
           />
         </View>

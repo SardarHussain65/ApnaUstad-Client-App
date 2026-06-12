@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -69,6 +70,7 @@ export default function ReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const { t } = useTranslation();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -79,9 +81,9 @@ export default function ReviewScreen() {
 
   const assignedWorker = booking?.worker as any;
   const workerId = typeof assignedWorker === 'string' ? assignedWorker : assignedWorker?._id;
-  const workerName = typeof assignedWorker === 'object' ? assignedWorker?.fullName : 'Your Ustad';
+  const workerName = typeof assignedWorker === 'object' ? assignedWorker?.fullName : t('review.assignedUstad', 'Your Ustad');
   const workerImage = typeof assignedWorker === 'object' ? assignedWorker?.profileImage : '';
-  const workerCategory = typeof assignedWorker === 'object' ? assignedWorker?.category : (booking?.category || 'Specialist');
+  const workerCategory = typeof assignedWorker === 'object' ? assignedWorker?.category : (booking?.category || t('findingWorker.specialist', 'Specialist'));
   const isVerified = typeof assignedWorker === 'object' ? assignedWorker?.isVerified : false;
 
   const canSubmit = !!bookingId && !!workerId && booking?.status === 'completed' && !booking?.isReviewed && rating >= 1 && !isPending;
@@ -95,6 +97,21 @@ export default function ReviewScreen() {
       .slice(0, 2)
       .map(part => part[0]?.toUpperCase())
       .join('');
+  };
+
+  const getTagTranslationKey = (tag: string) => {
+    if (tag.includes('On time')) return 'tagOnTime';
+    if (tag.includes('polite')) return 'tagPolite';
+    if (tag.includes('quality')) return 'tagQuality';
+    if (tag.includes('pricing')) return 'tagPricing';
+    if (tag.includes('neat')) return 'tagNeat';
+    if (tag.includes('honest')) return 'tagHonest';
+    return '';
+  };
+
+  const getTranslatedTag = (tag: string) => {
+    const key = getTagTranslationKey(tag);
+    return key ? t(`review.${key}`, tag) : tag;
   };
 
   const handleTagPress = (tagLabel: string) => {
@@ -125,12 +142,12 @@ export default function ReviewScreen() {
       {
         onSuccess: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          toast.success('Review submitted', 'Thanks for helping other customers choose confidently.');
+          toast.success(t('review.successTitle', 'Review submitted'), t('review.successDesc', 'Thanks for helping other customers choose confidently.'));
           router.replace({ pathname: '/transaction-details', params: { id: bookingId } });
         },
         onError: (error: any) => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          toast.error('Review failed', error?.response?.data?.message || error?.message || 'Please try again.');
+          toast.error(t('review.failedTitle', 'Review failed'), error?.response?.data?.message || error?.message || t('common.tryAgain', 'Please try again.'));
           refetch();
         },
       }
@@ -142,7 +159,7 @@ export default function ReviewScreen() {
       <BackgroundWrapper>
         <View style={styles.loading}>
           <ActivityIndicator color={P.cyan} size="large" />
-          <Text style={styles.loadingText}>Preparing review console...</Text>
+          <Text style={styles.loadingText}>{t('review.preparingConsole', 'Preparing review console...')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -159,8 +176,8 @@ export default function ReviewScreen() {
             <ChevronLeft color="#fff" size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>JOB FEEDBACK</Text>
-            <Text style={[styles.headerTitle, Typography.threeD]}>Rate Your Ustad</Text>
+            <Text style={styles.headerEyebrow}>{t('review.jobFeedback', 'JOB FEEDBACK')}</Text>
+            <Text style={[styles.headerTitle, Typography.threeD]}>{t('review.rateYourUstad', 'Rate Your Ustad')}</Text>
           </View>
           <View style={{ width: 44 }} />
         </View>
@@ -170,10 +187,10 @@ export default function ReviewScreen() {
             <Animated.View entering={FadeInUp.duration(500)}>
               <GlassCard intensity={25} style={styles.doneCard}>
                 <CheckCircle2 size={50} color={Colors.success} />
-                <Text style={styles.doneTitle}>Review Already Submitted</Text>
-                <Text style={styles.doneText}>This completed job already has customer feedback attached.</Text>
+                <Text style={styles.doneTitle}>{t('review.alreadySubmitted', 'Review Already Submitted')}</Text>
+                <Text style={styles.doneText}>{t('review.alreadySubmittedDesc', 'This completed job already has customer feedback attached.')}</Text>
                 <TouchableOpacity onPress={() => router.replace({ pathname: '/transaction-details', params: { id: bookingId } })} style={styles.doneBtn}>
-                  <Text style={styles.doneBtnText}>BACK TO DETAILS</Text>
+                  <Text style={styles.doneBtnText}>{t('review.backToDetails', 'BACK TO DETAILS')}</Text>
                 </TouchableOpacity>
               </GlassCard>
             </Animated.View>
@@ -181,10 +198,10 @@ export default function ReviewScreen() {
             <Animated.View entering={FadeInUp.duration(500)}>
               <GlassCard intensity={25} style={styles.doneCard}>
                 <MessageSquareText size={50} color={Colors.orange} />
-                <Text style={styles.doneTitle}>Review Unlocks After Completion</Text>
-                <Text style={styles.doneText}>Once the job is completed, you can rate the service and share your experience.</Text>
+                <Text style={styles.doneTitle}>{t('review.unlocksAfterCompletion', 'Review Unlocks After Completion')}</Text>
+                <Text style={styles.doneText}>{t('review.unlocksAfterCompletionDesc', 'Once the job is completed, you can rate the service and share your experience.')}</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn}>
-                  <Text style={styles.doneBtnText}>GO BACK</Text>
+                  <Text style={styles.doneBtnText}>{t('review.goBack', 'GO BACK')}</Text>
                 </TouchableOpacity>
               </GlassCard>
             </Animated.View>
@@ -215,11 +232,11 @@ export default function ReviewScreen() {
                   </View>
                   <View style={styles.workerMeta}>
                     <View style={styles.roleRow}>
-                      <Text style={styles.workerLabel}>ASSIGNED USTAD</Text>
+                      <Text style={styles.workerLabel}>{t('review.assignedUstad', 'ASSIGNED USTAD')}</Text>
                       {isVerified && (
                         <View style={styles.verifiedLabel}>
                           <Sparkles size={8} color={P.cyan} />
-                          <Text style={styles.verifiedLabelText}>Verified Specialist</Text>
+                          <Text style={styles.verifiedLabelText}>{t('review.verifiedSpecialist', 'Verified Specialist')}</Text>
                         </View>
                       )}
                     </View>
@@ -236,7 +253,7 @@ export default function ReviewScreen() {
                     colors={['rgba(255,255,255,0.02)', 'rgba(9,12,32,0.85)']}
                     style={StyleSheet.absoluteFillObject}
                   />
-                  <Text style={styles.sectionTitle}>HOW WAS THE SERVICE?</Text>
+                  <Text style={styles.sectionTitle}>{t('review.howWasService', 'HOW WAS THE SERVICE?')}</Text>
                   <View style={styles.starRow}>
                     {[1, 2, 3, 4, 5].map((value) => {
                       const active = value <= rating;
@@ -262,7 +279,7 @@ export default function ReviewScreen() {
                   </View>
 
                   <View style={[styles.ratingBadge, { borderColor: `${P.gold}30`, backgroundColor: `${P.gold}10` }]}>
-                    <Text style={styles.ratingLabel}>{RATING_LABELS[rating]}</Text>
+                    <Text style={styles.ratingLabel}>{t(`review.label${rating}`, RATING_LABELS[rating])}</Text>
                   </View>
                 </View>
               </Animated.View>
@@ -270,16 +287,17 @@ export default function ReviewScreen() {
               {/* Smart Feedback Tags */}
               <Animated.View entering={FadeInDown.delay(180).duration(450)}>
                 <View style={styles.tagsCard}>
-                  <Text style={styles.sectionTitle}>QUICK COMPLEMENTS</Text>
-                  <Text style={styles.tagsHint}>Tap tags to instantly add them to your review</Text>
+                  <Text style={styles.sectionTitle}>{t('review.quickComplements', 'QUICK COMPLEMENTS')}</Text>
+                  <Text style={styles.tagsHint}>{t('review.tagsHint', 'Tap tags to instantly add them to your review')}</Text>
 
                   <View style={styles.tagsWrapper}>
                     {FEEDBACK_TAGS.map((tag) => {
-                      const active = comment.includes(tag);
+                      const translatedTag = getTranslatedTag(tag);
+                      const active = comment.includes(translatedTag);
                       return (
                         <TouchableOpacity
                           key={tag}
-                          onPress={() => handleTagPress(tag)}
+                          onPress={() => handleTagPress(translatedTag)}
                           activeOpacity={0.8}
                           style={[
                             styles.tagChip,
@@ -289,7 +307,7 @@ export default function ReviewScreen() {
                             },
                           ]}
                         >
-                          <Text style={[styles.tagText, active && { color: P.cyan }]}>{tag}</Text>
+                          <Text style={[styles.tagText, active && { color: P.cyan }]}>{translatedTag}</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -307,7 +325,7 @@ export default function ReviewScreen() {
                   }
                 ]}>
                   <View style={styles.commentHeader}>
-                    <Text style={styles.sectionTitle}>PUBLIC REVIEW</Text>
+                    <Text style={styles.sectionTitle}>{t('review.publicReview', 'PUBLIC REVIEW')}</Text>
                     <View style={[
                       styles.counterPanel,
                       {
@@ -328,7 +346,7 @@ export default function ReviewScreen() {
                     textAlignVertical="top"
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
-                    placeholder="Share what went well, punctuality, quality of work, or anything future customers should know..."
+                    placeholder={t('review.commentPlaceholder', 'Share what went well, punctuality, quality of work, or anything future customers should know...')}
                     placeholderTextColor="rgba(255,255,255,0.26)"
                     style={styles.input}
                   />
@@ -351,7 +369,7 @@ export default function ReviewScreen() {
                   <ActivityIndicator color="#000" />
                 ) : (
                   <>
-                    <Text style={[styles.submitText, !canSubmit && { color: P.textDim }]}>SUBMIT REVIEW</Text>
+                    <Text style={[styles.submitText, !canSubmit && { color: P.textDim }]}>{t('review.submitReviewBtn', 'SUBMIT REVIEW')}</Text>
                     <Send size={15} color={canSubmit ? '#000' : P.textDim} strokeWidth={2.5} />
                   </>
                 )}

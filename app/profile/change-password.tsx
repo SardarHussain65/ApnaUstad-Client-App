@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, KeyboardAvoidingView, Platform } from 'react-na
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Lock, ShieldCheck } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -14,6 +15,7 @@ import { useChangePasswordMutation, useToast } from '../../hooks';
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user, role } = useAuth();
   const { success, error: showError } = useToast();
   const { mutateAsync: changePassword, isPending } = useChangePasswordMutation();
@@ -26,12 +28,12 @@ export default function ChangePasswordScreen() {
     if (!user?._id || !role) return;
 
     if (!oldPassword || !newPassword) {
-      showError('Missing fields', 'Please fill in all password fields.');
+      showError(t('changePassword.missingFields'), t('changePassword.fillAllFields'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showError('Mismatch', 'New password and confirmation do not match.');
+      showError(t('changePassword.mismatch'), t('changePassword.mismatchDesc'));
       return;
     }
 
@@ -42,10 +44,10 @@ export default function ChangePasswordScreen() {
         oldPassword,
         newPassword,
       });
-      success('Password updated', 'Your password has been changed successfully.');
+      success(t('changePassword.updatedTitle'), t('changePassword.updatedDesc'));
       router.back();
     } catch (err: any) {
-      showError('Update failed', err?.message || 'Could not change your password.');
+      showError(t('changePassword.updateFailed'), err?.message || t('changePassword.updating'));
     }
   };
 
@@ -55,7 +57,7 @@ export default function ChangePasswordScreen() {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ProfileHeader title="Change Password" />
+        <ProfileHeader title={t('changePassword.title')} />
 
         <View style={styles.headerSection}>
           <View style={styles.iconWrap}>
@@ -64,32 +66,32 @@ export default function ChangePasswordScreen() {
               <ShieldCheck size={28} color="#fff" />
             </View>
           </View>
-          <Text style={[styles.title, Typography.threeD]}>Secure Access</Text>
-          <Text style={styles.subtitle}>Update your password to keep your account protected.</Text>
+          <Text style={[styles.title, Typography.threeD]}>{t('changePassword.secureAccessTitle')}</Text>
+          <Text style={styles.subtitle}>{t('changePassword.secureAccessSubtitle')}</Text>
         </View>
 
         <GlassCard style={styles.formCard} intensity={20} padding={Spacing.l}>
           <InputField
-            label="Current Password"
+            label={t('changePassword.currentPassword')}
             value={oldPassword}
             onChangeText={setOldPassword}
-            placeholder="Enter current password"
+            placeholder={t('changePassword.currentPlaceholder')}
             secureTextEntry
             icon={<Lock size={18} color={Colors.primary} />}
           />
           <InputField
-            label="New Password"
+            label={t('changePassword.newPassword')}
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="Enter new password"
+            placeholder={t('changePassword.newPlaceholder')}
             secureTextEntry
             icon={<Lock size={18} color={Colors.cyan} />}
           />
           <InputField
-            label="Confirm New Password"
+            label={t('changePassword.confirmNewPassword')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            placeholder="Confirm new password"
+            placeholder={t('changePassword.confirmPlaceholder')}
             secureTextEntry
             icon={<Lock size={18} color={Colors.cyan} />}
           />
@@ -97,7 +99,7 @@ export default function ChangePasswordScreen() {
 
         <View style={styles.footer}>
           <CustomButton
-            title={isPending ? 'Updating...' : 'Update Password'}
+            title={isPending ? t('changePassword.updating') : t('changePassword.updateBtn')}
             onPress={handleSubmit}
             loading={isPending}
           />

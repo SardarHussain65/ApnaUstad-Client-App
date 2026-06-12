@@ -7,11 +7,14 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -34,13 +37,15 @@ import {
   ShieldCheck,
   Star,
   UserRound,
+  Volume2,
   XCircle,
   Zap,
 } from 'lucide-react-native';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { Typography } from '../constants/Theme';
-import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation } from '../hooks';
+import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
 import { AlertModal } from '../components/ui/BeautifulModal';
@@ -67,17 +72,17 @@ const P = {
 
 const STATUS_MAP: Record<string, { color: string; muted: string; label: string; title: string; Icon: React.ComponentType<any> }> = {
   pending: { color: P.orange, muted: P.orangeMuted, label: 'Pending', title: 'Request sent', Icon: Clock3 },
-  accepted: { color: P.cyan, muted: P.cyanMuted, label: 'Accepted', title: 'Ustad assigned', Icon: ShieldCheck },
+  accepted: { color: P.cyan, muted: P.cyanMuted, label: 'Assigned', title: 'Ustad assigned', Icon: ShieldCheck },
   ongoing: { color: P.cyan, muted: P.cyanMuted, label: 'Ongoing', title: 'Work in progress', Icon: Navigation },
   completed: { color: P.green, muted: P.greenMuted, label: 'Completed', title: 'Job completed', Icon: CheckCircle2 },
   cancelled: { color: P.red, muted: P.redMuted, label: 'Cancelled', title: 'Job cancelled', Icon: XCircle },
 };
 
 const STEPS = [
-  { value: 'pending', label: 'Request' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'ongoing', label: 'On site' },
-  { value: 'completed', label: 'Done' },
+  { value: 'pending', label: 'Posted' },
+  { value: 'accepted', label: 'Assigned' },
+  { value: 'ongoing', label: 'Started' },
+  { value: 'completed', label: 'Completed' },
 ] as const;
 
 const formatCurrency = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString()}`;
@@ -224,15 +229,23 @@ function FloatingAction({
 }
 
 export default function TransactionDetailsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const { id, amount: initialAmount } = useLocalSearchParams<{ id: string; amount?: string }>();
   const { role, user } = useAuth();
   const isWorker = role === 'worker';
 
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
   const bypassBeforeRemoveRef = useRef(false);
+
+  const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
+  const galleryCardWidth = windowWidth - 72;
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
@@ -261,7 +274,7 @@ export default function TransactionDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.loading}>
           <ActivityIndicator color={P.cyan} size="large" />
-          <Text style={styles.loadingText}>Loading booking details</Text>
+          <Text style={styles.loadingText}>{t('transactionDetails.loadingDetails', 'Loading booking details')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -271,9 +284,9 @@ export default function TransactionDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loading}>
-          <Text style={styles.emptyTitle}>Booking not found</Text>
+          <Text style={styles.emptyTitle}>{t('transactionDetails.bookingNotFound', 'Booking not found')}</Text>
           <TouchableOpacity onPress={() => router.back()} style={styles.emptyButton}>
-            <Text style={styles.emptyButtonText}>Go back</Text>
+            <Text style={styles.emptyButtonText}>{t('transactionDetails.goBack', 'Go back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -285,15 +298,17 @@ export default function TransactionDetailsScreen() {
   const isCommunicationLocked = status === 'completed' || status === 'cancelled';
   const statusInfo = STATUS_MAP[status] || STATUS_MAP.accepted;
   const StatusIcon = statusInfo.Icon;
+  const statusLabel = t(`bookingStatus.${status}.label`, statusInfo.label);
+  const statusTitle = t(`bookingStatus.${status}.title`, statusInfo.title);
   const partner = isWorker ? booking.customer : booking.worker;
   const customerId = typeof booking.customer === 'object' ? booking.customer._id : booking.customer;
   const workerId = typeof booking.worker === 'object' ? booking.worker._id : booking.worker;
-  const partnerName = meta?.counterParty?.fullName || partner?.fullName || 'Service partner';
-  const partnerRole = isWorker ? 'Client' : 'Assigned Ustad';
+  const partnerName = meta?.counterParty?.fullName || partner?.fullName || t('transactionDetails.servicePartner', 'Service partner');
+  const partnerRole = isWorker ? t('transactionDetails.client', 'Client') : t('transactionDetails.assignedUstad', 'Assigned Ustad');
   const partnerImage = meta?.counterParty?.profileImage || partner?.profileImage || '';
   const partnerProfileId = isWorker ? customerId : workerId;
   const partnerPhone = isCommunicationLocked ? '' : meta?.counterParty?.phone || partner?.phone || '';
-  const partnerCategory = meta?.counterParty?.category || partner?.category || (isWorker ? 'Service client' : 'Ustad specialist');
+  const partnerCategory = meta?.counterParty?.category || partner?.category || (isWorker ? t('transactionDetails.activeClient', 'Service client') : t('findingWorker.ustadSpecialist', 'Ustad specialist'));
   const partnerCity = meta?.counterParty?.city || partner?.city || '';
   const partnerAddress = meta?.counterParty?.address || partner?.address || partnerCity || '';
   const partnerRating = Number(meta?.counterParty?.rating ?? partner?.rating ?? 0);
@@ -302,34 +317,54 @@ export default function TransactionDetailsScreen() {
   const partnerHourlyRate = Number(meta?.counterParty?.hourlyRate ?? partner?.hourlyRate ?? booking.hourlyRate ?? 0);
   const partnerExperience = Number(meta?.counterParty?.experience ?? partner?.experience ?? 0);
   const partnerJoinedAt = meta?.counterParty?.joinedAt || partner?.createdAt;
+
+  const formatSince = (value?: string) => {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return t('transactionDetails.newMember', 'New member');
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    return t('transactionDetails.memberSince', `Since ${dateStr}`, { date: dateStr });
+  };
+
   const partnerStatusText = isWorker
-    ? (meta?.counterParty?.isActive === false || partner?.isActive === false ? 'Inactive account' : 'Active client')
-    : (meta?.counterParty?.isVerified || partner?.isVerified ? 'Verified Ustad' : 'Verification pending');
+    ? (meta?.counterParty?.isActive === false || partner?.isActive === false 
+        ? t('transactionDetails.inactiveAccount', 'Inactive account') 
+        : t('transactionDetails.activeClient', 'Active client'))
+    : (meta?.counterParty?.isVerified || partner?.isVerified 
+        ? t('transactionDetails.verifiedUstad', 'Verified Ustad') 
+        : t('transactionDetails.verificationPending', 'Verification pending'));
   const partnerSubtitle = isWorker
-    ? (partnerAddress || partnerPhone || 'Client profile available')
-    : `${partnerCategory}${partnerExperience > 0 ? ` • ${partnerExperience}y exp` : ''}`;
+    ? (partnerAddress || partnerPhone || t('transactionDetails.clientProfileAvailable', 'Client profile available'))
+    : `${partnerCategory}${partnerExperience > 0 ? ` • ${t('transactionDetails.yearsExp', '{{count}}y exp', { count: partnerExperience })}` : ''}`;
   const canTrackMission = Boolean(customerId && workerId);
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking.workerEarning : booking.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
-  const amountLabel = isWorker ? 'Your Earning' : 'Booking Value';
-  const serviceTitle = meta?.title || booking.category || 'Service Booking';
-  const serviceDescription = meta?.description || booking.description || 'Service request details';
-  const dateLabel = meta?.schedule?.dateLabel || formatDate(booking.scheduledDate);
-  const timeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
-  const addressLabel = meta?.location?.address || booking.address || 'Service location';
+  const amountLabel = isWorker ? t('transactionDetails.yourEarning', 'Your Earning') : t('transactionDetails.bookingValue', 'Booking Value');
+  const serviceTitle = meta?.title || booking.category || t('transactionDetails.jobDetails', 'Service Booking');
+  const serviceDescription = meta?.description || booking.description || t('transactionDetails.serviceDescription', 'Service request details');
+  
+  const rawDateLabel = meta?.schedule?.dateLabel || formatDate(booking.scheduledDate);
+  const dateLabel = rawDateLabel === 'Today' ? t('transactionDetails.today', 'Today') : rawDateLabel;
+
+  const rawTimeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
+  const timeLabel = rawTimeLabel === 'ASAP' ? t('transactionDetails.asap', 'ASAP') : rawTimeLabel;
+
+  const addressLabel = meta?.location?.address || booking.address || t('transactionDetails.serviceLocation', 'Service location');
   const workerLocation = (isWorker
     ? (booking.worker?.address || (user as any)?.address || booking.worker?.city || (user as any)?.city)
     : (booking.worker?.address || booking.worker?.city || meta?.counterParty?.address || '')
   ) || '';
-  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? 'Instant visit' : 'Scheduled visit');
-  const paymentStatusLabel = booking.paymentStatus === 'paid' ? 'Paid' : 'Cash pending';
+  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? t('transactionDetails.instantVisit', 'Instant visit') : t('transactionDetails.scheduledVisit', 'Scheduled visit'));
+  const paymentStatusLabel = booking.paymentStatus === 'paid' ? t('transactionDetails.paid', 'Paid') : t('transactionDetails.cashPending', 'Cash pending');
   const stepIndex = STEPS.findIndex(step => step.value === status);
   const visibleStepIndex = stepIndex < 0 ? 0 : stepIndex;
   const latitude = typeof booking.location === 'object' && booking.location.coordinates ? booking.location.coordinates[1] : 0;
   const longitude = typeof booking.location === 'object' && booking.location.coordinates ? booking.location.coordinates[0] : 0;
-  const visualMedia = buildJobEvidenceItems({
+  const photosAndVideos = buildJobEvidenceItems({
     images: booking.imageUrls || [],
     videos: booking.videoUrls || [],
+  });
+
+  const voiceBriefs = buildJobEvidenceItems({
     audios: booking.audioUrls || [],
   });
 
@@ -380,8 +415,8 @@ export default function TransactionDetailsScreen() {
             <ChevronLeft color={P.text} size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerEyebrow}>Booking Details</Text>
-            <Text style={styles.headerTitle}>Overview</Text>
+            <Text style={styles.headerEyebrow}>{t('transactionDetails.bookingDetails', 'Booking Details')}</Text>
+            <Text style={styles.headerTitle}>{t('transactionDetails.overview', 'Overview')}</Text>
           </View>
           <TouchableOpacity onPress={shareMission} style={styles.headerButton} activeOpacity={0.8}>
             <Share2 color={P.textMuted} size={19} strokeWidth={2.3} />
@@ -400,7 +435,7 @@ export default function TransactionDetailsScreen() {
             <View style={styles.heroTop}>
               <View style={[styles.statusPill, { backgroundColor: statusInfo.muted, borderColor: `${statusInfo.color}50` }]}>
                 <PulseDot color={statusInfo.color} />
-                <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
+                <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusLabel}</Text>
               </View>
               <View style={styles.kindPill}>
                 <Zap size={12} color={booking.bookingType === 'instant' ? P.orange : P.cyan} />
@@ -413,7 +448,7 @@ export default function TransactionDetailsScreen() {
                 <StatusIcon size={22} color={statusInfo.color} strokeWidth={2.5} />
               </View>
               <View style={styles.heroTitleCopy}>
-                <Text style={styles.heroStage}>{statusInfo.title}</Text>
+                <Text style={styles.heroStage}>{statusTitle}</Text>
                 <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{serviceTitle}</Text>
                 <Text style={styles.heroDescription} numberOfLines={2}>{serviceDescription}</Text>
               </View>
@@ -444,7 +479,9 @@ export default function TransactionDetailsScreen() {
                         ]}>
                           {current ? <View style={styles.timelineDot} /> : active ? <CheckCircle2 size={10} color="#001014" strokeWidth={3} /> : null}
                         </View>
-                        <Text style={[styles.timelineText, active && { color: P.cyan }]}>{step.label}</Text>
+                        <Text style={[styles.timelineText, active && { color: P.cyan }]}>
+                          {t('transactionDetails.step' + step.label, step.label)}
+                        </Text>
                       </View>
                       {index < STEPS.length - 1 && <View style={[styles.timelineLine, index < visibleStepIndex && { backgroundColor: P.cyan }]} />}
                     </React.Fragment>
@@ -455,9 +492,9 @@ export default function TransactionDetailsScreen() {
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(80).duration(450)} style={styles.quickGrid}>
-            <InfoTile icon={CalendarDays} label="Date" value={dateLabel} />
-            <InfoTile icon={Clock3} label="Time" value={timeLabel} color={P.orange} />
-            <InfoTile icon={MapPin} label="Service Loc" value={addressLabel} color={P.green} />
+            <InfoTile icon={CalendarDays} label={t('transactionDetails.date', 'Date')} value={dateLabel} />
+            <InfoTile icon={Clock3} label={t('transactionDetails.time', 'Time')} value={timeLabel} color={P.orange} />
+            <InfoTile icon={MapPin} label={t('transactionDetails.serviceLoc', 'Service Loc')} value={addressLabel} color={P.green} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(140).duration(450)} style={styles.section}>
@@ -492,15 +529,13 @@ export default function TransactionDetailsScreen() {
               <View style={styles.partnerInsightRow}>
                 {isWorker ? (
                   <>
-                    <PartnerInsight icon={Phone} label="Contact" value={isCommunicationLocked ? 'Closed after job completion' : partnerPhone || 'In app'} />
-                    <PartnerInsight icon={MapPin} label="Area" value={partnerCity || partnerAddress || 'Not shared'} color={P.green} />
-                    <PartnerInsight icon={CalendarDays} label="Member" value={formatSince(partnerJoinedAt)} color={P.orange} />
+                    <PartnerInsight icon={Phone} label={t('transactionDetails.contact', 'Contact')} value={isCommunicationLocked ? t('transactionDetails.closedAfterCompletion', 'Closed after job completion') : partnerPhone || t('chat.inApp', 'In app')} />
+                    <PartnerInsight icon={MapPin} label={t('transactionDetails.area', 'Area')} value={partnerCity || partnerAddress || t('common.notShared', 'Not shared')} color={P.green} />
+                    <PartnerInsight icon={CalendarDays} label={t('transactionDetails.member', 'Member')} value={formatSince(partnerJoinedAt)} color={P.orange} />
                   </>
                 ) : (
                   <>
-                    <PartnerInsight icon={Star} label="Rating" value={partnerRating > 0 ? `${partnerRating.toFixed(1)} (${partnerReviews})` : 'New'} color={P.gold} />
-                    <PartnerInsight icon={BriefcaseBusiness} label="Jobs" value={`${partnerJobs || 0} done`} color={P.green} />
-                    <PartnerInsight icon={Banknote} label="Rate" value={formatCurrency(partnerHourlyRate)} />
+                    <PartnerInsight icon={Banknote} label={t('transactionDetails.rate', 'Rate')} value={formatCurrency(partnerHourlyRate)} />
                   </>
                 )}
               </View>
@@ -510,49 +545,171 @@ export default function TransactionDetailsScreen() {
                 <Text style={styles.partnerStatusText} numberOfLines={1}>{partnerStatusText}</Text>
                 <View style={styles.partnerProfileLink}>
                   <Eye size={13} color={P.cyan} strokeWidth={2.4} />
-                  <Text style={styles.partnerProfileText}>{isWorker ? 'View client profile' : 'View Ustad profile'}</Text>
+                  <Text style={styles.partnerProfileText}>
+                    {isWorker ? t('transactionDetails.viewClientProfile', 'View client profile') : t('transactionDetails.viewUstadProfile', 'View Ustad profile')}
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>
           </Animated.View>
 
-          {visualMedia.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(200).duration(450)} style={styles.section}>
-              <SectionHeader icon={ImageIcon} title="Work Evidence" />
-              <JobEvidenceGallery items={visualMedia} />
-            </Animated.View>
-          )}
+          {/* Unified Collapsible Job Details Card */}
+          {(voiceBriefs.length > 0 || photosAndVideos.length > 0 || !!booking.description || !!booking.category) && (
+            <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
+              <SectionHeader icon={BriefcaseBusiness} title={t('transactionDetails.jobDetails', 'Job Details')} />
+              
+              <View style={styles.unifiedJobCard}>
+                <LinearGradient
+                  colors={['rgba(9, 12, 32, 0.94)', 'rgba(12, 16, 42, 0.98)']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                
+                {/* Primary Info: Written Description (Always visible, max 3 lines when collapsed) */}
+                {!!booking.description && (
+                  <View style={styles.primaryDescBlock}>
+                    <Text style={styles.primaryDescLabel}>{t('transactionDetails.descriptionLabel', 'DESCRIPTION')}</Text>
+                    <Text 
+                      style={styles.primaryDescText} 
+                      numberOfLines={isDetailsExpanded ? undefined : 3}
+                    >
+                      {booking.description}
+                    </Text>
+                  </View>
+                )}
 
-          <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
-            <SectionHeader icon={BriefcaseBusiness} title="Job Details" />
-            <View style={styles.detailCard}>
-              <InfoRow icon={BriefcaseBusiness} label="Category" value={booking.category || serviceTitle} />
-              <InfoRow icon={MapPin} label="Service Location" value={addressLabel} />
-              {!!workerLocation && (
-                <InfoRow icon={MapPin} label="Worker Location" value={workerLocation} />
-              )}
-              <InfoRow icon={Clock3} label="Estimated Hours" value={`${booking.estimatedHours || 1} hour${booking.estimatedHours === 1 ? '' : 's'}`} />
-              <InfoRow icon={Banknote} label={isWorker ? 'Hourly Rate' : 'Quoted Rate'} value={formatCurrency(booking.hourlyRate)} />
-            </View>
-          </Animated.View>
+                {/* Primary Specifications: Category & Duration Badges */}
+                <View style={styles.primaryBadgesRow}>
+                  <View style={styles.primaryBadge}>
+                    <BriefcaseBusiness size={11} color={P.cyan} />
+                    <Text style={styles.primaryBadgeText} numberOfLines={1}>
+                      {booking.category || serviceTitle}
+                    </Text>
+                  </View>
+                  <View style={[styles.primaryBadge, { borderColor: 'rgba(255, 140, 0, 0.25)' }]}>
+                    <Clock3 size={11} color={P.orange} />
+                    <Text style={styles.primaryBadgeText} numberOfLines={1}>
+                      {booking.estimatedHours === 1 
+                        ? t('transactionDetails.durationHours', { count: 1 }) 
+                        : t('transactionDetails.durationHoursPlural', { count: booking.estimatedHours || 1 })}
+                    </Text>
+                  </View>
+                </View>
 
-          {!!booking.description && (
-            <Animated.View entering={FadeInDown.delay(380).duration(450)} style={styles.section}>
-              <SectionHeader icon={ShieldCheck} title="Job Description" />
-              <View style={styles.briefCard}>
-                <Text style={styles.briefText}>{booking.description}</Text>
+                {/* Collapsed Preview Item Indicators (Photo pile, Voice, Specs) */}
+                {!isDetailsExpanded && (
+                  <View style={styles.collapsedPreviewContainer}>
+                    {/* Photos/Videos stack preview */}
+                    {photosAndVideos.length > 0 && (
+                      <View style={styles.previewItem}>
+                        <View style={styles.thumbnailPile}>
+                          {photosAndVideos.slice(0, 3).map((item, idx) => (
+                            <Image 
+                              key={idx}
+                              source={{ uri: item.url }} 
+                              style={[
+                                styles.previewThumbnail, 
+                                { marginLeft: idx > 0 ? -12 : 0, zIndex: 3 - idx }
+                              ]} 
+                            />
+                          ))}
+                        </View>
+                        <Text style={styles.previewItemText}>
+                          {photosAndVideos.length === 1 
+                            ? t('transactionDetails.filesCount', { count: 1 }) 
+                            : t('transactionDetails.filesCountPlural', { count: photosAndVideos.length })}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Voice Brief indicator preview */}
+                    {voiceBriefs.length > 0 && (
+                      <View style={styles.previewItem}>
+                        <View style={styles.voicePreviewIcon}>
+                          <Volume2 size={10} color={P.orange} strokeWidth={2.5} />
+                        </View>
+                        <Text style={[styles.previewItemText, { color: P.orange }]}>
+                          {t('transactionDetails.voiceBrief', 'Voice Brief')}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Spec Indicators preview */}
+                    <View style={styles.previewItem}>
+                      <View style={styles.specsPreviewIcon}>
+                        <MapPin size={10} color={P.cyan} strokeWidth={2.5} />
+                      </View>
+                      <Text style={[styles.previewItemText, { color: P.cyan }]}>
+                        {t('transactionDetails.locRates', 'Loc & Rates')}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Collapsible Content */}
+                {isDetailsExpanded && (
+                  <Animated.View entering={FadeInDown.duration(300)} style={styles.expandedContentBlock}>
+                    
+                    {/* 1. Photos & Videos section (if any) */}
+                    {photosAndVideos.length > 0 && (
+                      <View style={styles.detailsSubSection}>
+                        <Text style={styles.detailsSubSectionTitle}>{t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}</Text>
+                        <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} cardWidth={galleryCardWidth} />
+                      </View>
+                    )}
+
+                    {/* 2. Voice brief player (if any) */}
+                    {voiceBriefs.length > 0 && (
+                      <View style={styles.detailsSubSection}>
+                        <Text style={styles.detailsSubSectionTitle}>
+                          {isWorker ? t('transactionDetails.clientVoiceBrief', "CLIENT'S VOICE BRIEF") : t('transactionDetails.yourVoiceBrief', "YOUR VOICE BRIEF")}
+                        </Text>
+                        <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} cardWidth={galleryCardWidth} />
+                      </View>
+                    )}
+
+                    {/* 3. Fully detailed specifications (Location & Rates) */}
+                    <View style={styles.detailsSubSection}>
+                      <Text style={styles.detailsSubSectionTitle}>{t('transactionDetails.additionalDetails', 'ADDITIONAL DETAILS')}</Text>
+                      <View style={styles.detailSpecsCard}>
+                        <InfoRow icon={MapPin} label={t('transactionDetails.serviceLocation', 'Service Location')} value={addressLabel} />
+                        <InfoRow 
+                          icon={Banknote} 
+                          label={isWorker ? t('transactionDetails.hourlyRate', 'Hourly Rate') : t('transactionDetails.quotedRate', 'Quoted Rate')} 
+                          value={formatCurrency(booking.hourlyRate)} 
+                        />
+                      </View>
+                    </View>
+
+                  </Animated.View>
+                )}
+
+                {/* Expansion Toggle Button */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setIsDetailsExpanded(prev => !prev)}
+                  style={styles.unifiedCardToggle}
+                >
+                  <Text style={styles.unifiedCardToggleText}>
+                    {isDetailsExpanded ? t('transactionDetails.showLess', 'Show Less') : t('transactionDetails.showMoreDetails', 'Show More Details')}
+                  </Text>
+                  <ChevronRight
+                    size={14}
+                    color={P.cyan}
+                    style={{ transform: [{ rotate: isDetailsExpanded ? '270deg' : '90deg' }] }}
+                  />
+                </TouchableOpacity>
               </View>
             </Animated.View>
           )}
 
           {isWorker && status !== 'completed' && status !== 'cancelled' && (
             <Animated.View entering={FadeInDown.delay(500).duration(450)} style={styles.section}>
-              <SectionHeader icon={ShieldCheck} title="Worker Controls" color={status === 'ongoing' ? P.green : P.cyan} />
+              <SectionHeader icon={ShieldCheck} title={t('transactionDetails.workerControls', 'Worker Controls')} color={status === 'ongoing' ? P.green : P.cyan} />
               {status === 'accepted' && (
                 <ActionButton
                   color={P.cyan}
                   icon={Zap}
-                  label="Start Job"
+                  label={t('transactionDetails.startJob', 'Start Job')}
                   loading={isUpdating}
                   onPress={() => updateStatus({ bookingId: id as string, status: 'ongoing' })}
                 />
@@ -561,7 +718,7 @@ export default function TransactionDetailsScreen() {
                 <ActionButton
                   color={P.green}
                   icon={CheckCircle2}
-                  label="Complete Job"
+                  label={t('transactionDetails.completeJob', 'Complete Job')}
                   loading={isUpdating}
                   onPress={() => updateStatus({ bookingId: id as string, status: 'completed' })}
                 />
@@ -571,11 +728,11 @@ export default function TransactionDetailsScreen() {
 
           {!isWorker && status === 'completed' && booking.paymentStatus !== 'paid' && (
             <Animated.View entering={FadeInDown.delay(500).duration(450)} style={styles.section}>
-              <SectionHeader icon={CreditCard} title="Cash Settlement" color={P.green} />
+              <SectionHeader icon={CreditCard} title={t('transactionDetails.cashSettlement', 'Cash Settlement')} color={P.green} />
               <ActionButton
                 color={P.green}
                 icon={CheckCircle2}
-                label="Confirm Cash Payment"
+                label={t('transactionDetails.confirmCash', 'Confirm Cash Payment')}
                 loading={isPaying}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -599,23 +756,95 @@ export default function TransactionDetailsScreen() {
 
           {!isWorker && status === 'completed' && (
             <Animated.View entering={FadeInDown.delay(560).duration(450)} style={styles.section}>
-              <SectionHeader icon={Star} title="Service Review" color={booking.isReviewed ? P.green : P.gold} />
+              <SectionHeader icon={Star} title={t('transactionDetails.serviceReview', 'Service Review')} color={booking.isReviewed ? P.green : P.gold} />
               {booking.isReviewed ? (
                 <View style={styles.noticeCard}>
                   <CheckCircle2 size={18} color={P.green} />
-                  <Text style={styles.noticeText}>Your feedback has been recorded for this job.</Text>
+                  <Text style={styles.noticeText}>{t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}</Text>
                 </View>
               ) : (
-                <View style={styles.reviewCard}>
-                  <View style={styles.reviewIcon}>
-                    <Star size={22} color={P.gold} fill={P.gold} />
+                <View style={styles.inlineReviewCard}>
+                  <Text style={styles.inlineReviewTitle}>{t('transactionDetails.ratePartner', `Rate ${partnerName}`, { name: partnerName })}</Text>
+                  <Text style={styles.inlineReviewSubtitle}>
+                    {t('transactionDetails.reviewSubtitle', 'A quick review helps improve service quality for future customers.')}
+                  </Text>
+
+                  {/* 5-Star Selection Row */}
+                  <View style={styles.starsRowContainer}>
+                    {[1, 2, 3, 4, 5].map((num) => {
+                      const active = num <= selectedRating;
+                      return (
+                        <TouchableOpacity 
+                          key={num} 
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setSelectedRating(num);
+                          }}
+                          activeOpacity={0.7}
+                          style={styles.starTouch}
+                        >
+                          <Star 
+                            size={32} 
+                            color={active ? P.gold : 'rgba(255,255,255,0.15)'} 
+                            fill={active ? P.gold : 'transparent'} 
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
-                  <View style={styles.reviewCopy}>
-                    <Text style={styles.reviewTitle}>Rate {partnerName}</Text>
-                    <Text style={styles.reviewText}>A quick review helps improve service quality for future customers.</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => router.push({ pathname: '/review', params: { bookingId: id } })} style={styles.reviewButton} activeOpacity={0.86}>
-                    <Text style={styles.reviewButtonText}>Rate</Text>
+
+                  {/* Comment Input */}
+                  <TextInput
+                    style={styles.reviewInput}
+                    placeholder={t('transactionDetails.commentPlaceholder', 'Write a comment about their work... (optional)')}
+                    placeholderTextColor={P.textDim}
+                    value={reviewComment}
+                    onChangeText={setReviewComment}
+                    multiline
+                    numberOfLines={3}
+                  />
+
+                  {/* Submit Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.reviewSubmitBtn,
+                      (selectedRating === 0 || isCreatingReview) && styles.reviewSubmitBtnDisabled
+                    ]}
+                    disabled={selectedRating === 0 || isCreatingReview}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      createReview({
+                        booking: id as string,
+                        worker: workerId as string,
+                        rating: selectedRating,
+                        comment: reviewComment.trim() || undefined,
+                      }, {
+                        onSuccess: () => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          Toast.show({
+                            type: 'success',
+                            text1: t('review.successTitle', 'Review Submitted'),
+                            text2: t('review.successDesc', 'Thank you for your feedback!'),
+                          });
+                          refetch();
+                        },
+                        onError: (err: any) => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                          Toast.show({
+                            type: 'error',
+                            text1: t('review.failedTitle', 'Failed to Submit Review'),
+                            text2: err.response?.data?.message || t('common.tryAgain', 'Please try again.'),
+                          });
+                        }
+                      });
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    {isCreatingReview ? (
+                      <ActivityIndicator size="small" color="#001014" />
+                    ) : (
+                      <Text style={styles.reviewSubmitBtnText}>{t('transactionDetails.submitReview', 'Submit Review')}</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -625,15 +854,15 @@ export default function TransactionDetailsScreen() {
           {status === 'completed' && booking.paymentStatus === 'paid' && (
             <View style={styles.noticeCard}>
               <CheckCircle2 size={18} color={P.green} />
-              <Text style={styles.noticeText}>Cash payment has been confirmed for this job.</Text>
+              <Text style={styles.noticeText}>{t('transactionDetails.paymentConfirmed', 'Cash payment has been confirmed for this job.')}</Text>
             </View>
           )}
         </ScrollView>
         {status !== 'completed' && status !== 'cancelled' && (
           <Animated.View entering={FadeInDown.delay(620).duration(420)} style={[styles.floatingActions, { bottom: insets.bottom + 20 }]}>
-            <FloatingAction icon={Navigation} label="Track" onPress={openRoute} color={P.green} disabled={!canTrackMission} />
-            <FloatingAction icon={MessageCircle} label="Chat" onPress={navigateToChat} color={P.cyan} disabled={!partnerProfileId} />
-            <FloatingAction icon={Phone} label="Call" onPress={callPartner} primary disabled={!partnerPhone} />
+            <FloatingAction icon={Navigation} label={t('transactionDetails.track', 'Track')} onPress={openRoute} color={P.green} disabled={!canTrackMission} />
+            <FloatingAction icon={MessageCircle} label={t('transactionDetails.chat', 'Chat')} onPress={navigateToChat} color={P.cyan} disabled={!partnerProfileId} />
+            <FloatingAction icon={Phone} label={t('transactionDetails.call', 'Call')} onPress={callPartner} primary disabled={!partnerPhone} />
           </Animated.View>
         )}
       </View>
@@ -643,9 +872,9 @@ export default function TransactionDetailsScreen() {
           setShowPaymentSuccess(false);
           router.replace('/(tabs)' as any);
         }}
-        title="Settlement Confirmed"
-        message={`You have successfully settled the payment of ${formatCurrency(booking.hourlyRate)} with your Ustad ${partnerName} for the ${booking.category} job.\n\nThank you for choosing Apna Ustad!`}
-        buttonText="Back to Home"
+        title={t('transactionDetails.settlementConfirmed', 'Settlement Confirmed')}
+        message={t('transactionDetails.settlementMsg', `You have successfully settled the payment of {{amount}} with your Ustad {{ustad}} for the {{category}} job.\n\nThank you for choosing Apna Ustad!`, { amount: formatCurrency(booking.hourlyRate), ustad: partnerName, category: booking.category })}
+        buttonText={t('transactionDetails.backToHome', 'Back to Home')}
         type="success"
       />
     </BackgroundWrapper>
@@ -1438,5 +1667,195 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  unifiedJobCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: P.surfaceStrong,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  primaryDescBlock: {
+    marginBottom: 12,
+  },
+  primaryDescLabel: {
+    color: P.cyan,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  primaryDescText: {
+    color: P.text,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  primaryBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
+  primaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  primaryBadgeText: {
+    color: P.text,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  expandedContentBlock: {
+    marginTop: 16,
+    gap: 16,
+  },
+  detailsSubSection: {
+    gap: 8,
+  },
+  detailsSubSectionTitle: {
+    color: P.textDim,
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginLeft: 4,
+  },
+  detailSpecsCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    overflow: 'hidden',
+  },
+  unifiedCardToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    marginHorizontal: -16,
+    marginBottom: -16,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  unifiedCardToggleText: {
+    color: P.cyan,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  collapsedPreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  previewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  thumbnailPile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewThumbnail: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: P.surfaceStrong,
+    backgroundColor: '#000',
+  },
+  previewItemText: {
+    color: P.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  voicePreviewIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 140, 0, 0.12)',
+  },
+  specsPreviewIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 245, 255, 0.12)',
+  },
+  inlineReviewCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.18)',
+    backgroundColor: 'rgba(255,215,0,0.04)',
+    padding: 16,
+    gap: 12,
+  },
+  inlineReviewTitle: {
+    color: P.text,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  inlineReviewSubtitle: {
+    color: P.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  starsRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 6,
+  },
+  starTouch: {
+    padding: 4,
+  },
+  reviewInput: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: P.border,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    color: P.text,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 12,
+    minHeight: 64,
+    textAlignVertical: 'top',
+  },
+  reviewSubmitBtn: {
+    borderRadius: 14,
+    backgroundColor: P.gold,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  reviewSubmitBtnDisabled: {
+    opacity: 0.5,
+  },
+  reviewSubmitBtnText: {
+    color: '#201600',
+    fontSize: 13,
+    fontWeight: '900',
   },
 });

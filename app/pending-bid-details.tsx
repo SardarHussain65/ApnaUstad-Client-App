@@ -13,6 +13,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import {
   Banknote,
   BriefcaseBusiness,
@@ -66,23 +67,23 @@ const initialsFor = (name?: string) => {
     .join('');
 };
 
-const formatDate = (value?: string) => {
+const formatDate = (value?: string, t?: any) => {
   const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return 'Today';
+  if (!date || Number.isNaN(date.getTime())) return t ? t('common.today') : 'Today';
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 const formatMoney = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString()}`;
 
-const formatSubmittedAt = (value?: string) => {
+const formatSubmittedAt = (value?: string, t?: any) => {
   const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return 'Recently submitted';
+  if (!date || Number.isNaN(date.getTime())) return t ? t('pendingBidDetails.recentlySubmitted') : 'Recently submitted';
 
   const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-  if (minutes < 1) return 'Submitted just now';
-  if (minutes < 60) return `Submitted ${minutes}m ago`;
-  if (minutes < 24 * 60) return `Submitted ${Math.floor(minutes / 60)}h ago`;
-  return `Submitted ${formatDate(value)}`;
+  if (minutes < 1) return t ? t('pendingBidDetails.submittedJustNow') : 'Submitted just now';
+  if (minutes < 60) return t ? t('pendingBidDetails.submittedMinutesAgo', { count: minutes }) : `Submitted ${minutes}m ago`;
+  if (minutes < 24 * 60) return t ? t('pendingBidDetails.submittedHoursAgo', { count: Math.floor(minutes / 60) }) : `Submitted ${Math.floor(minutes / 60)}h ago`;
+  return t ? t('pendingBidDetails.submittedDate', { date: formatDate(value, t) }) : `Submitted ${formatDate(value)}`;
 };
 
 function SectionHeader({
@@ -136,6 +137,7 @@ function DetailPill({
 export default function PendingBidDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string; pendingBidId?: string }>();
   const { data: bids, isLoading: isLoadingBids, refetch: refetchBids } = useWorkerBids();
   const bid = bids?.find(item => item._id === params.pendingBidId);
@@ -191,7 +193,7 @@ export default function PendingBidDetailsScreen() {
             <Hourglass size={26} color={Colors.worker} strokeWidth={2.2} />
           </View>
           <ActivityIndicator color={Colors.cyan} />
-          <Text style={styles.loadingText}>Loading proposal details</Text>
+          <Text style={styles.loadingText}>{t('pendingBidDetails.loading')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -204,11 +206,11 @@ export default function PendingBidDetailsScreen() {
           <View style={styles.emptyIcon}>
             <FileText size={27} color={Colors.worker} strokeWidth={2.1} />
           </View>
-          <Text style={styles.emptyTitle}>Proposal unavailable</Text>
-          <Text style={styles.emptyText}>This job may have been closed or assigned to another Ustad.</Text>
+          <Text style={styles.emptyTitle}>{t('pendingBidDetails.unavailable')}</Text>
+          <Text style={styles.emptyText}>{t('pendingBidDetails.unavailableDesc')}</Text>
           <TouchableOpacity style={styles.backHomeButton} onPress={() => router.back()} activeOpacity={0.82}>
             <ChevronLeft size={17} color="#001014" strokeWidth={2.8} />
-            <Text style={styles.backHomeText}>Go back</Text>
+            <Text style={styles.backHomeText}>{t('pendingBidDetails.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -217,31 +219,31 @@ export default function PendingBidDetailsScreen() {
 
   const isInstant = (meta?.missionKind || displayJob.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
-  const title = meta?.title || displayJob.category || 'Service request';
-  const description = meta?.description || displayJob.description || 'No additional job details were provided.';
-  const missionKindLabel = meta?.missionKindLabel || (isInstant ? 'Instant visit' : 'Scheduled visit');
-  const dateLabel = meta?.schedule?.dateLabel || formatDate(displayJob.scheduledDate);
-  const timeLabel = meta?.schedule?.timeLabel || displayJob.scheduledTime || 'ASAP';
-  const locationLabel = meta?.location?.address || displayJob.address || 'Service location not shared';
+  const title = meta?.title || displayJob.category || t('jobDetails.defaultTitle');
+  const description = meta?.description || displayJob.description || t('jobDetails.defaultDescription');
+  const missionKindLabel = meta?.missionKindLabel || (isInstant ? t('transactionDetails.instantVisit') : t('transactionDetails.scheduledVisit'));
+  const dateLabel = meta?.schedule?.dateLabel || formatDate(displayJob.scheduledDate, t);
+  const timeLabel = meta?.schedule?.timeLabel || displayJob.scheduledTime || t('common.asap');
+  const locationLabel = meta?.location?.address || displayJob.address || t('pendingBidDetails.serviceLocationNotShared');
   const quoteText = meta?.financial?.amountText || formatMoney(bid?.proposedPrice || displayJob.amount);
-  const clientName = clientMeta?.fullName || 'Client';
+  const clientName = clientMeta?.fullName || t('common.client');
   const clientImage = clientMeta?.profileImage || '';
   const clientJobs = Number((clientMeta as any)?.completedJobs || (clientMeta as any)?.totalJobs || 0);
   const clientId = clientMeta?._id || customer?._id;
-  const submittedText = formatSubmittedAt(meta?.submittedAt || bid?.createdAt);
+  const submittedText = formatSubmittedAt(meta?.submittedAt || bid?.createdAt, t);
   const estimatedTime = Number(bid?.estimatedDays || 0) > 0
-    ? `${bid?.estimatedDays} day${bid?.estimatedDays === 1 ? '' : 's'}`
-    : 'Flexible';
+    ? t('pendingBidDetails.daysCount', { count: bid?.estimatedDays })
+    : t('common.flexible');
   const handleWithdraw = () => {
     if (!bid || isWithdrawing) return;
 
     Alert.alert(
-      'Withdraw proposal?',
-      'Your offer will be removed from this job. The client will no longer be able to accept it.',
+      t('pendingBidDetails.withdrawConfirmTitle'),
+      t('pendingBidDetails.withdrawConfirmMsg'),
       [
-        { text: 'Keep proposal', style: 'cancel' },
+        { text: t('pendingBidDetails.keepProposal'), style: 'cancel' },
         {
-          text: 'Withdraw',
+          text: t('pendingBidDetails.withdraw'),
           style: 'destructive',
           onPress: () => {
             withdrawBid(
@@ -251,7 +253,7 @@ export default function PendingBidDetailsScreen() {
                   refetchBids();
                   router.back();
                 },
-                onError: () => Alert.alert('Unable to withdraw', 'Please try again in a moment.'),
+                onError: () => Alert.alert(t('pendingBidDetails.unableWithdraw'), t('pendingBidDetails.tryAgain')),
               }
             );
           },
@@ -274,8 +276,8 @@ export default function PendingBidDetailsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>Active Bid</Text>
-            <Text style={styles.headerTitle}>Proposal Details</Text>
+            <Text style={styles.headerEyebrow}>{t('pendingBidDetails.activeBid')}</Text>
+            <Text style={styles.headerTitle}>{t('pendingBidDetails.proposalDetails')}</Text>
           </View>
 
           <View style={styles.headerSpacer} />
@@ -305,7 +307,7 @@ export default function PendingBidDetailsScreen() {
               <View style={styles.heroTopRow}>
                 <View style={styles.pendingBadge}>
                   <Hourglass size={12} color={Colors.worker} strokeWidth={2.4} />
-                  <Text style={styles.pendingBadgeText}>Awaiting client</Text>
+                  <Text style={styles.pendingBadgeText}>{t('pendingBidDetails.awaitingClient')}</Text>
                 </View>
                 <View style={styles.submittedBadge}>
                   <Radio size={11} color={Colors.cyan} strokeWidth={2.4} />
@@ -318,7 +320,7 @@ export default function PendingBidDetailsScreen() {
                   <BriefcaseBusiness size={24} color={Colors.cyan} strokeWidth={2.2} />
                 </View>
                 <View style={styles.heroTitleCopy}>
-                  <Text style={styles.heroLabel}>Proposal sent</Text>
+                  <Text style={styles.heroLabel}>{t('pendingBidDetails.proposalSent')}</Text>
                   <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{title}</Text>
                   <Text style={styles.heroDescription} numberOfLines={3}>{description}</Text>
                 </View>
@@ -326,12 +328,12 @@ export default function PendingBidDetailsScreen() {
 
               <View style={styles.heroBottomRow}>
                 <View>
-                  <Text style={styles.heroValueLabel}>Your quoted value</Text>
+                  <Text style={styles.heroValueLabel}>{t('pendingBidDetails.yourQuotedValue')}</Text>
                   <Text style={styles.heroValue}>{quoteText}</Text>
                 </View>
                 <View style={styles.heroStatusNote}>
                   <ShieldCheck size={14} color={Colors.green} strokeWidth={2.5} />
-                  <Text style={styles.heroStatusText}>Offer active</Text>
+                  <Text style={styles.heroStatusText}>{t('pendingBidDetails.offerActive')}</Text>
                 </View>
               </View>
             </GlassCard>
@@ -340,13 +342,13 @@ export default function PendingBidDetailsScreen() {
           <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
             <SectionHeader
               icon={Clock3}
-              title="Visit Overview"
-              subtitle="The timing and service location shared by the client."
+              title={t('pendingBidDetails.visitOverview')}
+              subtitle={t('pendingBidDetails.visitOverviewDesc')}
             />
             <View style={styles.detailGrid}>
-              <DetailPill icon={MissionIcon} label="Visit type" value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
-              <DetailPill icon={CalendarDays} label="Date" value={dateLabel} />
-              <DetailPill icon={Clock3} label="Time" value={timeLabel} color={Colors.worker} />
+              <DetailPill icon={MissionIcon} label={t('pendingBidDetails.visitType')} value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
+              <DetailPill icon={CalendarDays} label={t('pendingBidDetails.date')} value={dateLabel} />
+              <DetailPill icon={Clock3} label={t('pendingBidDetails.time')} value={timeLabel} color={Colors.worker} />
             </View>
              <GlassCard padding={14} intensity={35} style={styles.locationCard}>
               <View style={styles.locationRow}>
@@ -354,7 +356,7 @@ export default function PendingBidDetailsScreen() {
                   <MapPin size={17} color={Colors.green} strokeWidth={2.5} />
                 </View>
                 <View style={styles.locationCopy}>
-                  <Text style={styles.locationLabel}>Service location</Text>
+                  <Text style={styles.locationLabel}>{t('pendingBidDetails.serviceLocation')}</Text>
                   <Text style={styles.locationValue}>{locationLabel}</Text>
                 </View>
               </View>
@@ -364,8 +366,8 @@ export default function PendingBidDetailsScreen() {
           <Animated.View entering={FadeInDown.delay(140).duration(460)} style={styles.section}>
             <SectionHeader
               icon={UserRound}
-              title="Client"
-              subtitle="Review who requested the service before the client responds."
+              title={t('pendingBidDetails.client')}
+              subtitle={t('pendingBidDetails.clientDesc')}
               color={Colors.worker}
             />
             <TouchableOpacity onPress={openClientProfile} disabled={!clientId} activeOpacity={0.84}>
@@ -387,10 +389,12 @@ export default function PendingBidDetailsScreen() {
                     )}
                   </View>
                   <View style={styles.clientCopy}>
-                    <Text style={styles.clientRole}>Service client</Text>
+                    <Text style={styles.clientRole}>{t('pendingBidDetails.serviceClient')}</Text>
                     <Text style={[styles.clientName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
                     <Text style={styles.clientHistory}>
-                      {clientJobs > 0 ? `${clientJobs} completed service request${clientJobs === 1 ? '' : 's'}` : 'New ApnaUstad client'}
+                      {clientJobs > 0 
+                        ? (clientJobs === 1 ? t('pendingBidDetails.completedServiceRequests_one') : t('pendingBidDetails.completedServiceRequests_other', { count: clientJobs }))
+                        : t('pendingBidDetails.newApnaUstadClient')}
                     </Text>
                   </View>
                   {clientId ? (
@@ -408,8 +412,8 @@ export default function PendingBidDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(210).duration(460)} style={styles.section}>
               <SectionHeader
                 icon={ImageIcon}
-                title="Work Evidence"
-                subtitle={`${media.length} attachment${media.length === 1 ? '' : 's'} added by the client.`}
+                title={t('pendingBidDetails.workEvidence')}
+                subtitle={media.length === 1 ? t('pendingBidDetails.attachmentsCount_one') : t('pendingBidDetails.attachmentsCount_other', { count: media.length })}
                 color={Colors.purple}
               />
               <JobEvidenceGallery items={media} />
@@ -419,8 +423,8 @@ export default function PendingBidDetailsScreen() {
           <Animated.View entering={FadeInDown.delay(280).duration(460)} style={styles.section}>
             <SectionHeader
               icon={FileText}
-              title="Your Proposal"
-              subtitle="This is the offer currently visible to the client."
+              title={t('pendingBidDetails.yourProposal')}
+              subtitle={t('pendingBidDetails.yourProposalDesc')}
               color={Colors.green}
             />
             <GlassCard padding={0} intensity={38} style={styles.proposalCard}>
@@ -429,7 +433,7 @@ export default function PendingBidDetailsScreen() {
                   <View style={[styles.proposalIcon, { backgroundColor: P.greenMuted }]}>
                     <Banknote size={18} color={Colors.green} strokeWidth={2.4} />
                   </View>
-                  <Text style={styles.proposalLabel}>Your quote</Text>
+                  <Text style={styles.proposalLabel}>{t('pendingBidDetails.yourQuote')}</Text>
                   <Text style={[styles.proposalValue, { color: Colors.green }]}>{quoteText}</Text>
                 </View>
                 <View style={styles.proposalDivider} />
@@ -437,14 +441,14 @@ export default function PendingBidDetailsScreen() {
                   <View style={[styles.proposalIcon, { backgroundColor: P.orangeMuted }]}>
                     <Clock3 size={18} color={Colors.worker} strokeWidth={2.4} />
                   </View>
-                  <Text style={styles.proposalLabel}>Estimated time</Text>
+                  <Text style={styles.proposalLabel}>{t('pendingBidDetails.estimatedTime')}</Text>
                   <Text style={[styles.proposalValue, { color: Colors.worker }]}>{estimatedTime}</Text>
                 </View>
               </View>
 
               <View style={styles.messageArea}>
-                <Text style={styles.messageLabel}>Message to client</Text>
-                <Text style={styles.messageText}>{bid?.message || 'No additional message was included with this proposal.'}</Text>
+                <Text style={styles.messageLabel}>{t('pendingBidDetails.messageToClient')}</Text>
+                <Text style={styles.messageText}>{bid?.message || t('pendingBidDetails.noMessage')}</Text>
               </View>
             </GlassCard>
           </Animated.View>
@@ -470,8 +474,8 @@ export default function PendingBidDetailsScreen() {
                     <Trash2 size={17} color={Colors.error} strokeWidth={2.5} />
                   </View>
                   <View style={styles.withdrawCopy}>
-                    <Text style={styles.withdrawTitle}>Withdraw proposal</Text>
-                    <Text style={styles.withdrawSubtitle}>Remove your offer from this job</Text>
+                    <Text style={styles.withdrawTitle}>{t('pendingBidDetails.withdrawProposal')}</Text>
+                    <Text style={styles.withdrawSubtitle}>{t('pendingBidDetails.removeOffer')}</Text>
                   </View>
                   <ChevronRight size={18} color={Colors.error} strokeWidth={2.6} />
                 </>

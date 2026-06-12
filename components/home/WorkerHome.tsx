@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 import { ChevronRight, ShieldCheck, Radio, Hourglass } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { useIncomingJob } from '../../context/IncomingJobContext';
 import { Colors, Spacing, Typography } from '../../constants/Theme';
 import { HomeHeader } from './HomeHeader';
@@ -35,6 +36,7 @@ type WorkerCoordinates = {
 
 export function WorkerHome() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { token, user } = useAuth();
   const {
     isInstantOnline,
@@ -292,12 +294,12 @@ export function WorkerHome() {
 
   const handleWithdrawBid = useCallback((bid: Bid) => {
     Alert.alert(
-      'Withdraw Bid',
-      'Are you sure you want to withdraw your bid for this job?',
+      t('home.worker.withdrawBidTitle', 'Withdraw Bid'),
+      t('home.worker.withdrawBidConfirm', 'Are you sure you want to withdraw your bid for this job?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
         {
-          text: 'Withdraw',
+          text: t('pendingBidDetails.withdraw', 'Withdraw'),
           style: 'destructive',
           onPress: () => {
             setWithdrawingBidId(bid._id);
@@ -305,13 +307,13 @@ export function WorkerHome() {
               { bidId: bid._id },
               {
                 onSuccess: () => {
-                  refetchBids();
-                  setWithdrawingBidId(null);
+                   refetchBids();
+                   setWithdrawingBidId(null);
                 },
                 onError: (error) => {
-                  console.error('Error withdrawing bid:', error);
-                  setWithdrawingBidId(null);
-                  Alert.alert('Error', 'Failed to withdraw the bid. Please try again.');
+                   console.error('Error withdrawing bid:', error);
+                   setWithdrawingBidId(null);
+                   Alert.alert(t('common.error', 'Error'), t('home.worker.withdrawBidFailed', 'Failed to withdraw the bid. Please try again.'));
                 },
               }
             );
@@ -319,7 +321,7 @@ export function WorkerHome() {
         },
       ]
     );
-  }, [withdrawBid, refetchBids]);
+  }, [withdrawBid, refetchBids, t]);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -359,7 +361,7 @@ export function WorkerHome() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Radio color="#FF8C00" size={22} />
-                <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Missed Jobs</Text>
+                <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>{t('home.worker.missedJobs')}</Text>
               </View>
             </View>
             <View style={styles.agendaList}>
@@ -372,16 +374,16 @@ export function WorkerHome() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Radio color="#FF8C00" size={22} />
-                  <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>Missed Jobs</Text>
+                  <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>{t('home.worker.missedJobs')}</Text>
                 </View>
                 {recentSignals.length > 3 ? (
                   <TouchableOpacity onPress={() => setShowAllSignals(!showAllSignals)}>
                     <Text style={[styles.seeAll, { color: '#FF8C00' }]}>
-                      {showAllSignals ? 'SHOW LESS' : `VIEW ALL (${recentSignals.length})`}
+                      {showAllSignals ? t('home.client.showLess') : `${t('home.client.viewAll')} (${recentSignals.length})`}
                     </Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={[styles.sectionMeta, { color: '#FF8C00' }]}>{recentSignals.length} MISSED</Text>
+                  <Text style={[styles.sectionMeta, { color: '#FF8C00' }]}>{recentSignals.length} {t('home.worker.missedJobs').toUpperCase()}</Text>
                 )}
               </View>
 
@@ -408,18 +410,18 @@ export function WorkerHome() {
             <View>
               <View style={styles.sectionTitleRow}>
                 <ShieldCheck color={Colors.cyan} size={24} />
-                <Text style={[styles.sectionTitle, Typography.threeD]}>Recent Bookings</Text>
+                <Text style={[styles.sectionTitle, Typography.threeD]}>{t('home.worker.recentBookings')}</Text>
               </View>
-              <Text style={styles.sectionSubtitle}>Your latest confirmed and pending work</Text>
+              <Text style={styles.sectionSubtitle}>{t('home.worker.latestActivity')}</Text>
             </View>
             {stats.missions > 3 ? (
               <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')} style={styles.seeAllRow}>
-                <Text style={styles.seeAll}>SEE ALL</Text>
+                <Text style={styles.seeAll}>{t('home.client.seeAll')}</Text>
                 <ChevronRight size={13} color={Colors.cyan} strokeWidth={2.6} />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={handleRefresh}>
-                <Text style={styles.seeAll}>REFRESH</Text>
+                <Text style={styles.seeAll}>{t('common.refresh', 'REFRESH')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -452,7 +454,7 @@ export function WorkerHome() {
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Hourglass color={Colors.worker} size={22} />
-                <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>Active Bids</Text>
+                <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>{t('home.worker.activeBids')}</Text>
               </View>
             </View>
             <View style={styles.agendaList}>
@@ -465,16 +467,16 @@ export function WorkerHome() {
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Hourglass color={Colors.worker} size={22} />
-                  <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>Active Bids</Text>
+                  <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>{t('home.worker.activeBids')}</Text>
                 </View>
                 {pendingBids.length > 3 ? (
                   <TouchableOpacity onPress={() => setShowAllBids(!showAllBids)}>
                     <Text style={[styles.seeAll, { color: Colors.worker }]}>
-                      {showAllBids ? 'SHOW LESS' : `VIEW ALL (${pendingBids.length})`}
+                      {showAllBids ? t('home.client.showLess') : `${t('home.client.viewAll')} (${pendingBids.length})`}
                     </Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={[styles.sectionMeta, { color: Colors.worker }]}>{pendingBids.length} ACTIVE</Text>
+                  <Text style={[styles.sectionMeta, { color: Colors.worker }]}>{pendingBids.length} {t('common.active').toUpperCase()}</Text>
                 )}
               </View>
 

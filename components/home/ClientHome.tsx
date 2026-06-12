@@ -30,6 +30,7 @@ import { ChevronRight, Search, CreditCard, Clock, CheckCircle2, Star, Briefcase 
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
 import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../../constants/Theme';
@@ -127,6 +128,7 @@ const EmptyServiceState = ({ isSearching }: { isSearching: boolean }) => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ClientHome() {
+  const { t } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -213,10 +215,10 @@ export function ClientHome() {
   const stats = homeSummary?.stats ?? EMPTY_HOME_STATS;
   const recentBookings: Booking[] = homeSummary?.recentBookings ?? [];
   const successPercent = stats.total > 0 ? Math.round(stats.successRate * 100) : 0;
-  const completedSummary = `${stats.completed}/${stats.total || 0} completed`;
+  const completedSummary = `${stats.completed}/${stats.total || 0} ${t('common.completed').toLowerCase()}`;
   const activeSummary = stats.active > 0
-    ? `${stats.active} active service${stats.active > 1 ? 's' : ''}`
-    : 'No active services';
+    ? `${stats.active} ${t('home.client.active').toLowerCase()}`
+    : t('home.client.noBookings');
 
   const activeMissions = useMemo<JobPost[]>(
     () =>
@@ -295,10 +297,10 @@ export function ClientHome() {
           <View style={styles.sectionHeader}>
             <View>
               <Text style={[styles.sectionTitle, Typography.threeD]}>
-                Services
+                {t('home.client.services')}
               </Text>
               <Text style={styles.sectionSub}>
-                What do you need help with?
+                {t('home.client.whatHelp')}
               </Text>
             </View>
 
@@ -308,7 +310,7 @@ export function ClientHome() {
                 hitSlop={styles.hitSlop}
               >
                 <Text style={styles.viewAll}>
-                  {showAllServices ? 'SHOW LESS' : 'VIEW ALL'}
+                  {showAllServices ? t('home.client.showLess') : t('home.client.viewAll')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -317,7 +319,7 @@ export function ClientHome() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search services..."
+            placeholder={t('home.client.searchPlaceholder')}
             variant="section"
           />
 
@@ -347,7 +349,7 @@ export function ClientHome() {
           style={styles.dashboardSection}
         >
           <Text style={[styles.sectionTitle, Typography.threeD, styles.dashboardLabel]}>
-            Your Activity
+            {t('home.client.yourActivity')}
           </Text>
 
           {homeSummaryLoading && !isRefreshing ? (
@@ -370,7 +372,7 @@ export function ClientHome() {
                     <CreditCard size={22} color={Colors.cyan} strokeWidth={2.5} />
                   </View>
                   <View style={styles.heroTextContainer}>
-                    <Text style={styles.heroLabel}>Total Spent</Text>
+                    <Text style={styles.heroLabel}>{t('home.client.totalSpent')}</Text>
                     <Text style={[styles.heroValue, Typography.threeD]}>
                       Rs. {stats.totalSpent.toLocaleString()}
                     </Text>
@@ -382,14 +384,14 @@ export function ClientHome() {
                   <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
                   <View>
                     <Text style={styles.successPercent}>{successPercent}%</Text>
-                    <Text style={styles.successLabel}>Success</Text>
+                    <Text style={styles.successLabel}>{t('common.success')}</Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.progressBlock}>
                 <View style={styles.progressHeader}>
-                  <Text style={styles.progressTitle}>Completion rate</Text>
+                  <Text style={styles.progressTitle}>{t('home.client.completionRate')}</Text>
                   <Text style={styles.progressValue}>{completedSummary}</Text>
                 </View>
                 <View style={styles.progressTrack}>
@@ -403,7 +405,7 @@ export function ClientHome() {
                     <Clock size={14} color={Colors.cyan} />
                   </View>
                   <Text style={styles.subStatVal}>{stats.active}</Text>
-                  <Text style={styles.subStatLab}>Active</Text>
+                  <Text style={styles.subStatLab}>{t('home.client.active')}</Text>
                 </View>
 
                 <View style={styles.activityStatTile}>
@@ -411,7 +413,7 @@ export function ClientHome() {
                     <CheckCircle2 size={14} color={Colors.green} />
                   </View>
                   <Text style={styles.subStatVal}>{stats.completed}</Text>
-                  <Text style={styles.subStatLab}>Completed</Text>
+                  <Text style={styles.subStatLab}>{t('home.client.completed')}</Text>
                 </View>
 
                 <View style={styles.activityStatTile}>
@@ -419,7 +421,7 @@ export function ClientHome() {
                     <Briefcase size={14} color={Colors.purple} />
                   </View>
                   <Text style={styles.subStatVal}>{stats.total}</Text>
-                  <Text style={styles.subStatLab}>Total Jobs</Text>
+                  <Text style={styles.subStatLab}>{t('home.client.totalJobs')}</Text>
                 </View>
               </View>
             </GlassCard>
@@ -432,9 +434,9 @@ export function ClientHome() {
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={[styles.sectionTitle, Typography.threeD]}>
-                  Recent Bookings
+                  {t('home.client.recentBookings', 'Recent Bookings')}
                 </Text>
-                <Text style={styles.sectionSub}>Your latest activity</Text>
+                <Text style={styles.sectionSub}>{t('home.client.latestActivity', 'Your latest activity')}</Text>
               </View>
             </View>
             <BookingCardSkeleton translateX={translateX} />
@@ -448,9 +450,9 @@ export function ClientHome() {
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={[styles.sectionTitle, Typography.threeD]}>
-                  Recent Bookings
+                  {t('home.client.recentBookings')}
                 </Text>
-                <Text style={styles.sectionSub}>Your latest activity</Text>
+                <Text style={styles.sectionSub}>{t('home.client.latestActivity')}</Text>
               </View>
 
               {stats.total > RECENT_BOOKINGS_LIMIT && (
@@ -459,7 +461,7 @@ export function ClientHome() {
                   hitSlop={styles.hitSlop}
                   style={styles.seeAllBtn}
                 >
-                  <Text style={styles.viewAll}>SEE ALL</Text>
+                  <Text style={styles.viewAll}>{t('home.client.seeAll')}</Text>
                   <ChevronRight size={12} color={Colors.cyan} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
@@ -476,7 +478,7 @@ export function ClientHome() {
             ) : (
               <View style={styles.emptyBookings}>
                 <Text style={styles.emptyBookingsText}>
-                  No bookings yet. Book a service to get started!
+                  {t('home.client.noBookings')}
                 </Text>
               </View>
             )}

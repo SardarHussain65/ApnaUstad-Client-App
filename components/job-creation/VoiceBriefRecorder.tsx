@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Mic, Square, Trash2 } from 'lucide-react-native';
 import { SectionLabel, GlassInput, P } from './shared';
+import { useTranslation } from 'react-i18next';
 
 interface VoiceBriefRecorderProps {
   isRecording: boolean;
@@ -10,6 +11,7 @@ interface VoiceBriefRecorderProps {
   onStartRecord: () => void;
   onStopRecord: () => void;
   onRemoveRecord: () => void;
+  hideLabel?: boolean;
 }
 
 const formatVoiceDuration = (durationMillis: number) => {
@@ -24,10 +26,12 @@ export function VoiceBriefRecorder({
   onStartRecord,
   onStopRecord,
   onRemoveRecord,
+  hideLabel = false,
 }: VoiceBriefRecorderProps) {
+  const { t } = useTranslation();
   return (
-    <View style={styles.section}>
-      <SectionLabel icon={Mic} label="VOICE BRIEF" color={P.orange} badge="Optional · Max 60s" />
+    <View style={hideLabel ? null : styles.section}>
+      {!hideLabel && <SectionLabel icon={Mic} label={t('jobCreation.voiceBrief', 'VOICE BRIEF')} color={P.orange} badge={t('jobCreation.voiceBriefBadge', 'Optional · Max 60s')} />}
       <GlassInput glowColor={isRecording || voiceNoteUri ? P.orange : undefined}>
         <View style={styles.voiceNoteRow}>
           <View style={[styles.voiceNoteIcon, isRecording && styles.voiceNoteIconRecording]}>
@@ -35,14 +39,14 @@ export function VoiceBriefRecorder({
           </View>
           <View style={styles.voiceNoteCopy}>
             <Text style={styles.voiceNoteTitle}>
-              {isRecording ? 'Recording job explanation' : voiceNoteUri ? 'Voice brief attached' : 'Explain the work in your own words'}
+              {isRecording ? t('jobCreation.recordingExplanation', 'Recording job explanation') : voiceNoteUri ? t('jobCreation.voiceBriefAttached', 'Voice brief attached') : t('jobCreation.explainWorkVoice', 'Explain the work in your own words')}
             </Text>
             <Text style={styles.voiceNoteSubtitle}>
               {isRecording
                 ? `${formatVoiceDuration(durationMillis)} / 1:00`
                 : voiceNoteUri
-                  ? 'Workers can listen before they respond'
-                  : 'Useful when the issue is easier to explain than type'}
+                  ? t('jobCreation.workersListenBefore', 'Workers can listen before they respond')
+                  : t('jobCreation.usefulExplainVoice', 'Useful when the issue is easier to explain than type')}
             </Text>
           </View>
           {isRecording ? (

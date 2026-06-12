@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
@@ -53,6 +54,7 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   onWithdraw,
   isWithdrawing = false,
 }: WorkerPendingBidCardProps) {
+  const { t } = useTranslation();
   const job = useMemo(() => getJobFromBid(bid), [bid]);
   const meta = bid.cardMeta;
   const workerPerson = bid.worker && typeof bid.worker === 'object' ? bid.worker : null;
@@ -60,18 +62,18 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const accentColor = meta?.statusInfo?.accentColor || Colors.worker;
   const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
-  const clientName = meta?.counterParty?.fullName || customer?.fullName || 'Client';
-  const clientRole = meta?.counterParty?.roleLabel || 'Client';
+  const clientName = meta?.counterParty?.fullName || customer?.fullName || t('common.client', 'Client');
+  const clientRole = meta?.counterParty?.roleLabel || t('common.client', 'Client');
   const clientAvatar = meta?.primaryImageUrl || meta?.counterParty?.profileImage || customer?.profileImage || '';
   const completedJobs = Number(meta?.counterParty?.completedJobs || 0);
-  const title = meta?.title || job?.category || 'Pending job';
-  const description = meta?.description || job?.description || bid.message || 'Your proposal is waiting for client review.';
-  const missionKindLabel = meta?.missionKindLabel || (isInstant ? 'Instant visit' : 'Scheduled visit');
+  const title = meta?.title || job?.category || t('home.worker.pendingJob', 'Pending job');
+  const description = meta?.description || job?.description || bid.message || t('home.worker.waitingClientReview', 'Your proposal is waiting for client review.');
+  const missionKindLabel = meta?.missionKindLabel || (isInstant ? t('home.worker.instant', 'Instant') : t('home.worker.scheduled', 'Scheduled'));
   const dateLabel = meta?.schedule?.dateLabel || fallbackDate(job?.scheduledDate);
   const timeLabel = meta?.schedule?.timeLabel || job?.scheduledTime || 'ASAP';
-  const locationLabel = meta?.location?.address || job?.address || 'Service location';
+  const locationLabel = meta?.location?.address || job?.address || t('incomingJobModal.serviceLocation', 'Service location');
   const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
-  const statusLabel = meta?.statusInfo?.label || 'Awaiting client';
+  const statusLabel = meta?.statusInfo?.label || t('pendingBidDetails.awaitingClient', 'Awaiting client');
 
   const gradientColors: [string, string, string] = [
     withAlpha(accentColor, '32'),
@@ -121,7 +123,7 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
             <Text style={styles.personRole}>{clientRole}</Text>
             <Text style={[styles.personName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
             <Text style={styles.clientHistory} numberOfLines={1}>
-              {completedJobs > 0 ? `${completedJobs} completed job${completedJobs === 1 ? '' : 's'}` : 'Proposal submitted'}
+              {completedJobs > 0 ? t('incomingJobModal.jobsCompletedCount', '{{count}} completed jobs', { count: completedJobs }) : t('home.worker.proposalSubmitted', 'Proposal submitted')}
             </Text>
           </View>
 

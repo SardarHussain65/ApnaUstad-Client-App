@@ -1,10 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { Wallet, CheckCircle2, Clock, AlertCircle, XCircle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, Typography, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../home/GlassCard';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { UserWalletTransaction } from '../../hooks';
 
@@ -39,14 +39,6 @@ interface ClientWalletViewProps {
   walletBalance?: number;
   walletTransactions?: UserWalletTransaction[];
 }
-
-const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  paid: { color: Colors.success, icon: CheckCircle2, label: 'Paid' },
-  payable: { color: '#00B8FF', icon: Clock, label: 'Payable' },
-  pending: { color: '#FF8C00', icon: AlertCircle, label: 'Pending' },
-  cancelled: { color: Colors.error, icon: XCircle, label: 'Cancelled' },
-  refund: { color: Colors.cyan, icon: CheckCircle2, label: 'Refunded' },
-};
 
 const formatMoney = (value = 0) => `Rs. ${Number(value || 0).toLocaleString(undefined, {
   maximumFractionDigits: 2,
@@ -86,8 +78,16 @@ export function ClientWalletView({
   walletBalance = 0,
   walletTransactions = [],
 }: ClientWalletViewProps) {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const STATUS_CONFIG: Record<string, { color: string; icon: any; labelKey: string }> = {
+    paid: { color: Colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },
+    payable: { color: '#00B8FF', icon: Clock, labelKey: 'wallet.payable' },
+    pending: { color: '#FF8C00', icon: AlertCircle, labelKey: 'wallet.pending' },
+    cancelled: { color: Colors.error, icon: XCircle, labelKey: 'wallet.cancelled' },
+    refund: { color: Colors.cyan, icon: CheckCircle2, labelKey: 'wallet.refunded' },
+  };
 
   // Create a unified chronological list of transactions (payments + dispute refunds)
   const unifiedHistory = React.useMemo(() => {
@@ -97,18 +97,18 @@ export function ClientWalletView({
         type: 'payment',
         status: p.status,
         amount: p.amount,
-        title: p.booking?.category || 'Service Booking',
+        title: p.booking?.category || t('wallet.serviceBooking'),
         date: new Date(p.updatedAt),
         rawDate: p.updatedAt,
         bookingId: p.booking?._id,
-        description: 'Payment recorded for home service',
+        description: t('wallet.paymentRecorded'),
       })),
       ...walletTransactions.map((tx) => ({
         _id: tx._id,
         type: 'refund',
         status: 'refund',
         amount: tx.amount,
-        title: 'Refund Credited',
+        title: t('wallet.refundCredited'),
         date: new Date(tx.createdAt),
         rawDate: tx.createdAt,
         bookingId: tx.reference?.booking,
@@ -118,7 +118,7 @@ export function ClientWalletView({
 
     // Sort by date descending
     return list.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [payments, walletTransactions]);
+  }, [payments, walletTransactions, t]);
 
   // Apply visual filters based on user selection
   const filteredItems = React.useMemo(() => {
@@ -132,7 +132,7 @@ export function ClientWalletView({
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.m }]}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: Spacing.m }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -144,8 +144,8 @@ export function ClientWalletView({
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, Typography.threeD]}>Wallet & History</Text>
-        <Text style={styles.headerSubtitle}>View credit balance and payment history</Text>
+        <Text style={[styles.headerTitle, Typography.threeD]}>{t('wallet.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('wallet.clientSub')}</Text>
       </View>
 
       {/* Available Credit / Refund Balance Hero Card */}
@@ -158,12 +158,12 @@ export function ClientWalletView({
         >
           <View style={styles.balanceContent}>
             <View style={styles.balanceTextGroup}>
-              <Text style={styles.balanceLabel}>AVAILABLE REFUNDS</Text>
+              <Text style={styles.balanceLabel}>{t('wallet.availableRefunds')}</Text>
               <Text style={[styles.balanceAmount, Typography.threeD]}>
                 Rs. {walletBalance.toLocaleString()}
               </Text>
               <Text style={styles.balanceSubtext}>
-                Total Spent: Rs. {summary.total.toLocaleString()}
+                {t('home.client.totalSpent')}: Rs. {summary.total.toLocaleString()}
               </Text>
             </View>
             <View style={styles.walletIconWrap}>
@@ -175,15 +175,15 @@ export function ClientWalletView({
 
       {/* Summary Chips */}
       <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.summaryRow}>
-        <SummaryChip label="Paid" value={summary.paid} color={Colors.success} />
-        <SummaryChip label="Payable" value={summary.payable} color="#00B8FF" />
-        <SummaryChip label="Pending" value={summary.pending} color="#FF8C00" />
+        <SummaryChip label={t('wallet.paid')} value={summary.paid} color={Colors.success} />
+        <SummaryChip label={t('wallet.payable')} value={summary.payable} color="#00B8FF" />
+        <SummaryChip label={t('wallet.pending')} value={summary.pending} color="#FF8C00" />
       </Animated.View>
 
       {/* Unified Transactions Ledger */}
       <View style={styles.transactionsSection}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, Typography.threeD]}>Transactions Ledger</Text>
+          <Text style={[styles.sectionTitle, Typography.threeD]}>{t('wallet.transactionsLedger')}</Text>
         </View>
 
         {/* Filter Pills */}
@@ -197,7 +197,7 @@ export function ClientWalletView({
                 style={[styles.filterPill, isActive && styles.activeFilterPill]}
               >
                 <Text style={[styles.filterText, isActive && styles.activeFilterText]}>
-                  {filter}
+                  {t('wallet.' + filter.toLowerCase())}
                 </Text>
               </TouchableOpacity>
             );
@@ -251,7 +251,7 @@ export function ClientWalletView({
                         <Text style={styles.txDate}>{dateStr}</Text>
                         <View style={[styles.txStatusBadge, { backgroundColor: statusConf.color + '15' }]}>
                           <Text style={[styles.txStatusText, { color: statusConf.color }]}>
-                            {statusConf.label}
+                            {t(statusConf.labelKey)}
                           </Text>
                         </View>
                       </View>
@@ -275,11 +275,11 @@ export function ClientWalletView({
           {filteredItems.length === 0 && (
             <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
               <Wallet size={40} color={Colors.textMuted} strokeWidth={1.2} />
-              <Text style={styles.emptyTitle}>No Transactions</Text>
+              <Text style={styles.emptyTitle}>{t('wallet.noTransactions')}</Text>
               <Text style={styles.emptySub}>
                 {activeFilter === 'All'
-                  ? 'Your transaction history is currently empty.'
-                  : `No ${activeFilter.toLowerCase()} records found.`}
+                  ? t('wallet.emptyAll')
+                  : t('wallet.emptyFilter', { filter: t('wallet.' + activeFilter.toLowerCase()) })}
               </Text>
             </Animated.View>
           )}

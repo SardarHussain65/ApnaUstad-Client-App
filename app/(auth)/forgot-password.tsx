@@ -11,6 +11,7 @@ import { useMutation } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mail, ShieldQuestion } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { AnimatedButton } from '../../components/AnimatedButton';
 import { InputField } from '../../components/InputField';
 import { AuthHeader } from '../../components/auth/AuthHeader';
@@ -23,6 +24,7 @@ import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const isWorker = role === 'worker';
   const accentColor = isWorker ? Colors.worker : Colors.cyan;
@@ -43,17 +45,17 @@ export default function ForgotPasswordScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to send the recovery code.');
+        throw new Error(data.message || t('forgotPassword.checkEmailError'));
       }
       return data;
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        'Recovery code sent',
-        'Check your email for the secure 6-digit password reset code.',
+        t('forgotPassword.recoveryCodeSent'),
+        t('forgotPassword.checkEmail'),
         [{
-          text: 'Continue',
+          text: t('forgotPassword.continue'),
           onPress: () => router.push({
             pathname: '/(auth)/reset-password' as never,
             params: { email: email.trim().toLowerCase(), role },
@@ -63,7 +65,7 @@ export default function ForgotPasswordScreen() {
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Unable to send code', error.message || 'Please check the email address and try again.');
+      Alert.alert(t('forgotPassword.unableSendCode'), error.message || t('forgotPassword.checkEmailError'));
     },
   });
 
@@ -72,11 +74,11 @@ export default function ForgotPasswordScreen() {
     setEmailError('');
 
     if (!normalizedEmail) {
-      setEmailError('Enter the email linked to your account.');
+      setEmailError(t('forgotPassword.emailRequired'));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setEmailError('Enter a valid email address.');
+      setEmailError(t('forgotPassword.validEmail'));
       return;
     }
 
@@ -96,14 +98,14 @@ export default function ForgotPasswordScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title="Password recovery" onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('forgotPassword.title')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
               align="center"
-              description="Enter your registered email and we will send a secure code to reset your password."
-              highlight="your account"
+              description={t('forgotPassword.recoverDesc')}
+              highlight={t('forgotPassword.highlight')}
               icon={<ShieldQuestion size={36} color={accentColor} strokeWidth={1.8} />}
-              title="Recover"
+              title={t('forgotPassword.recover')}
             />
 
             <GlassCard
@@ -119,26 +121,26 @@ export default function ForgotPasswordScreen() {
                 error={emailError}
                 icon={<Mail size={18} color={accentColor} />}
                 keyboardType="email-address"
-                label="Registered email"
+                label={t('forgotPassword.registeredEmail')}
                 onChangeText={(value) => {
                   setEmail(value);
                   if (emailError) setEmailError('');
                 }}
-                placeholder="name@example.com"
+                placeholder={t('auth.emailPlaceholder', 'name@example.com')}
                 value={email}
               />
               <AnimatedButton
                 isLoading={sendOtpMutation.isPending}
                 onPress={handleSendCode}
                 style={styles.actionButton}
-                title="Send recovery code"
+                title={t('forgotPassword.sendCode')}
                 variant={isWorker ? 'orange' : 'cyan'}
               />
             </GlassCard>
 
             <SecurityNote
               accentColor={accentColor}
-              text="For your security, recovery codes are short-lived and can only be used once."
+              text={t('forgotPassword.securityNote')}
             />
           </ScrollView>
         </KeyboardAvoidingView>

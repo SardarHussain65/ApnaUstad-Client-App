@@ -25,6 +25,7 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import AnimatedRN, { FadeInDown, FadeInUp, SlideInLeft } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Colors, Spacing } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -126,6 +127,7 @@ function StatChip({ icon: Icon, label, color }: { icon: any; label: string; colo
 
 // ─── Main Screen ────────────────────────────────────────────────────────────────
 export default function BidsListScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
@@ -169,8 +171,8 @@ export default function BidsListScreen() {
               <Target size={24} color={NEON_CYAN} />
             </View>
           </View>
-          <Text style={styles.loadingTitle}>FINDING USTADS</Text>
-          <Text style={styles.loadingSub}>Fetching Ustad bids...</Text>
+          <Text style={styles.loadingTitle}>{t('bidsList.findingUstads')}</Text>
+          <Text style={styles.loadingSub}>{t('bidsList.fetchingBids')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -201,11 +203,11 @@ export default function BidsListScreen() {
           </TouchableOpacity>
 
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarTitle}>USTAD BIDS</Text>
+            <Text style={styles.topBarTitle}>{t('bidsList.headerTitle')}</Text>
             <View style={[styles.countPill, { borderColor: `${NEON_CYAN}35`, backgroundColor: `${NEON_CYAN}10` }]}>
               <Users size={10} color={NEON_CYAN} />
               <Text style={[styles.countPillText, { color: NEON_CYAN }]}>
-                {bids.length} USTAD{bids.length !== 1 ? 'S' : ''}
+                {t('bidsList.countLabel', { count: bids.length })}
               </Text>
             </View>
           </View>
@@ -229,8 +231,8 @@ export default function BidsListScreen() {
               <View style={styles.emptyIconRing}>
                 <TrendingUp size={28} color="rgba(255,255,255,0.2)" />
               </View>
-              <Text style={styles.emptyTitle}>NO BIDS YET</Text>
-              <Text style={styles.emptySub}>Ustads will submit bids shortly. Please check back soon.</Text>
+              <Text style={styles.emptyTitle}>{t('bidsList.noBidsYet')}</Text>
+              <Text style={styles.emptySub}>{t('bidsList.noBidsSub')}</Text>
             </AnimatedRN.View>
           )}
 
@@ -262,7 +264,7 @@ export default function BidsListScreen() {
                       <View style={{ flex: 1 }}>
                         <View style={styles.workerNameRow}>
                           <Text style={styles.workerName} numberOfLines={1}>
-                            {bid.worker?.fullName || 'Anonymous'}
+                            {bid.worker?.fullName || t('common.anonymous', { defaultValue: 'Anonymous' })}
                           </Text>
                           <RankBadge rank={index + 1} />
                         </View>
@@ -272,7 +274,7 @@ export default function BidsListScreen() {
 
                     {/* Price */}
                     <View style={styles.priceBlock}>
-                      <Text style={styles.priceLabel}>QUOTED</Text>
+                      <Text style={styles.priceLabel}>{t('bidsList.quotedPrice')}</Text>
                       <Text style={[styles.priceValue, { color: accentColor }]}>
                         Rs. {bid.proposedPrice}
                       </Text>
@@ -285,16 +287,16 @@ export default function BidsListScreen() {
                   {/* ── Message ──────────────────────────────────────── */}
                   <View style={styles.msgBox}>
                     <Text style={styles.msgText} numberOfLines={3}>
-                      {bid.message || 'No message provided.'}
+                      {bid.message || t('bidsList.noMessage')}
                     </Text>
                   </View>
 
                   {/* ── Chips ────────────────────────────────────────── */}
                   <View style={styles.chipsRow}>
-                    <StatChip icon={ShieldCheck} label="VERIFIED" color={NEON_GREEN} />
-                    <StatChip icon={Clock} label="AVAILABLE" color={NEON_AMBER} />
+                    <StatChip icon={ShieldCheck} label={t('findingWorker.verified', { defaultValue: 'VERIFIED' })} color={NEON_GREEN} />
+                    <StatChip icon={Clock} label={t('findingWorker.available', { defaultValue: 'AVAILABLE' })} color={NEON_AMBER} />
                     {bid.estimatedDays && (
-                      <StatChip icon={Banknote} label={`${bid.estimatedDays}D EST.`} color={NEON_CYAN} />
+                      <StatChip icon={Banknote} label={t('bidsList.estDaysLabel', { count: bid.estimatedDays })} color={NEON_CYAN} />
                     )}
                   </View>
 
@@ -309,7 +311,7 @@ export default function BidsListScreen() {
                       })}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.reviewBtnText}>PROFILE</Text>
+                      <Text style={styles.reviewBtnText}>{t('bidsList.profileBtn')}</Text>
                       <ChevronRight size={13} color="rgba(255,255,255,0.5)" />
                     </TouchableOpacity>
 
@@ -338,7 +340,7 @@ export default function BidsListScreen() {
                       ) : (
                         <>
                           <Zap size={15} color="#fff" fill="#fff" />
-                          <Text style={styles.deployText}>HIRE USTAD</Text>
+                          <Text style={styles.deployText}>{t('bidsList.hireUstad')}</Text>
                         </>
                       )}
                     </TouchableOpacity>

@@ -3,6 +3,7 @@ import { Image, StyleSheet, View, Text, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Briefcase } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { RoleCard } from '../components/RoleCard';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { BorderRadius, Colors, Spacing, Typography } from '../constants/Theme';
@@ -11,6 +12,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [selectedRole, setSelectedRole] = useState<'client' | 'worker' | null>(null);
 
   const handleContinue = () => {
@@ -32,17 +34,17 @@ export default function RoleSelectionScreen() {
           <View style={styles.header}>
             <View style={styles.brandPill}>
               <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
-              <Text style={styles.brandText}>WELCOME TO APNAUSTAD</Text>
+              <Text style={styles.brandText}>{t('roleSelection.welcome')}</Text>
             </View>
-            <Text style={[styles.title, Typography.threeD]}>How will you use{'\n'}<Text style={styles.highlight}>ApnaUstad?</Text></Text>
-            <Text style={styles.subtitle}>Choose your starting point. You can sign in or create the right account on the next screen.</Text>
+            <Text style={[styles.title, Typography.threeD]}>{t('roleSelection.title')}</Text>
+            <Text style={styles.subtitle}>{t('roleSelection.subtitle')}</Text>
           </View>
 
           <View style={styles.cardsContainer}>
             <RoleCard 
-              label="I need a service"
-              title="Continue as a client"
-              description="Find skilled people, book services, and keep track of your requests."
+              label={t('roleSelection.client.label')}
+              title={t('roleSelection.client.title')}
+              description={t('roleSelection.client.description')}
               icon={<User color={Colors.cyan} size={28} />}
               variant="client"
               isSelected={selectedRole === 'client'}
@@ -50,9 +52,9 @@ export default function RoleSelectionScreen() {
             />
 
             <RoleCard 
-              label="I provide services"
-              title="Continue as a specialist"
-              description="Discover nearby jobs, manage bookings, and grow your professional profile."
+              label={t('roleSelection.worker.label')}
+              title={t('roleSelection.worker.title')}
+              description={t('roleSelection.worker.description')}
               icon={<Briefcase color={Colors.worker} size={28} />}
               variant="worker"
               isSelected={selectedRole === 'worker'}
@@ -62,7 +64,7 @@ export default function RoleSelectionScreen() {
 
           <View style={styles.footer}>
             <AnimatedButton 
-              title="Continue"
+              title={t('common.continue')}
               variant={selectedRole === 'worker' ? 'orange' : 'cyan'}
               onPress={handleContinue}
               style={styles.button}
