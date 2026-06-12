@@ -15,6 +15,7 @@ import { WorkerAlertJobCard } from './WorkerAlertJobCard';
 import { WorkerEarningsChart } from './WorkerEarningsChart';
 import { WorkerQuickInsights } from './WorkerQuickInsights';
 import { IncomingJobModal } from './IncomingJobModal';
+import { WorkerAvailabilityToggle } from './WorkerAvailabilityToggle';
 import {
   SkeletonBox,
   useShimmerTranslateX,
@@ -42,6 +43,8 @@ export function WorkerHome() {
     dismissedJobs,
     clearDismissedJob,
     acceptDismissedJob,
+    isOnline,
+    toggleOnline,
   } = useIncomingJob();
 
   // ─── State ───────────────────────────────────────────────────────────────────
@@ -330,6 +333,10 @@ export function WorkerHome() {
       >
         <HomeHeader />
 
+        <View style={styles.toggleSection}>
+          <WorkerAvailabilityToggle isOnline={isOnline} onToggle={toggleOnline} />
+        </View>
+
         {/* ── Worker Earnings Dashboard ── */}
         <View style={styles.dashboardSection}>
           {analyticsData?.summary ? (
@@ -530,6 +537,10 @@ export function WorkerHome() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
+  },
+  toggleSection: {
+    paddingHorizontal: Spacing.l,
+    marginTop: Spacing.xs,
   },
   dashboardSection: {
     paddingHorizontal: Spacing.l,

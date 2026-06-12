@@ -16,6 +16,7 @@ interface IncomingJobContextType {
   availabilityHydrated: boolean;
   /** Legacy support or computed master state */
   isOnline: boolean;
+  toggleOnline: (enabled: boolean) => Promise<void>;
   /** Jobs that arrived via socket but were dismissed from the modal without accepting */
   dismissedJobs: any[];
   /** Remove a single job from the dismissed list */
@@ -444,6 +445,36 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     }
   }, [router, clearDismissedJob]);
 
+  const toggleOnline = useCallback(async (enabled: boolean) => {
+    if (role !== 'worker' || !user?._id) return;
+
+    const previousInstant = instantOnlineRef.current;
+    const previousScheduled = scheduledOnlineRef.current;
+
+    instantOnlineRef.current = enabled;
+    scheduledOnlineRef.current = enabled;
+    setInstantOnlineState(enabled);
+    setScheduledOnlineState(enabled);
+
+    try {
+      const response = await api.patch(`/workers/${user._id}`, {
+        isInstantAvailable: enabled,
+        isScheduledAvailable: enabled,
+      });
+      await updateUser({ ...user, ...(response.data.data || {}) });
+    } catch (error: any) {
+      instantOnlineRef.current = previousInstant;
+      scheduledOnlineRef.current = previousScheduled;
+      setInstantOnlineState(previousInstant);
+      setScheduledOnlineState(previousScheduled);
+      Toast.show({
+        type: 'error',
+        text1: 'Availability not updated',
+        text2: error.response?.data?.message || 'Please check your connection and try again.',
+      });
+    }
+  }, [role, updateUser, user]);
+
   return (
     <IncomingJobContext.Provider value={{
       isInstantOnline,
@@ -452,6 +483,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       setIsScheduledOnline,
       availabilityHydrated,
       isOnline: isInstantOnline || isScheduledOnline,
+      toggleOnline,
       dismissedJobs,
       clearDismissedJob,
       acceptDismissedJob,
