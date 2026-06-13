@@ -14,7 +14,7 @@ import Animated, {
   withTiming,
   LinearTransition,
 } from 'react-native-reanimated';
-import { Colors, Spacing } from '../../constants/Theme';
+import { Spacing, useTheme } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +31,7 @@ export function SkeletonLoader({
   borderRadius = 8,
   style,
 }: SkeletonProps) {
+  const theme = useTheme();
   const shimmerValue = useSharedValue(0);
 
   useEffect(() => {
@@ -58,6 +59,8 @@ export function SkeletonLoader({
           width: skeletonWidth as any,
           height,
           borderRadius,
+          backgroundColor: theme.colors.skeleton.base,
+          borderColor: theme.colors.border.subtle,
         },
         animatedStyle,
         style,
@@ -72,8 +75,18 @@ interface SkeletonCardProps {
 }
 
 export function SkeletonCard({ lines = 3, style }: SkeletonCardProps) {
+  const theme = useTheme();
   return (
-    <View style={[styles.skeletonCard, style] as any}>
+    <View
+      style={[
+        styles.skeletonCard,
+        {
+          backgroundColor: theme.colors.surface.cardMuted,
+          borderColor: theme.colors.border.subtle,
+        },
+        style,
+      ] as any}
+    >
       {/* Header skeleton */}
       <View style={styles.skeletonHeader}>
         <SkeletonLoader width={50} height={50} borderRadius={25} />
@@ -183,16 +196,12 @@ export function SkeletonText({
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
   },
   skeletonCard: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 16,
     padding: Spacing.m,
     marginBottom: Spacing.m,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
   },
   skeletonHeader: {

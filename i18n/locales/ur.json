@@ -391,7 +391,19 @@
     "saveReload": "تبدیلیاں لاگو کرنے کے لیے ایپ دوبارہ لوڈ ہوگی۔",
     "confirmButton": "تصدیق کریں اور لاگو کریں",
     "appliedInstantly": "تبدیلیاں فوری طور پر لاگو ہو جاتی ہیں۔",
-    "languageUpdated": "زبان کامیابی کے ساتھ تبدیل ہو گئی!"
+    "languageUpdated": "زبان کامیابی کے ساتھ تبدیل ہو گئی!",
+    "theme": "ایپ تھیم",
+    "selectTheme": "اپنے لیے بہترین ظاہری انداز منتخب کریں۔",
+    "themeCurrent": "موجودہ تھیم",
+    "themeCurrentDesc": "اپنا استاد کا اصل کاسمک انداز۔",
+    "themeLight": "لائٹ تھیم",
+    "themeLightDesc": "صاف، روشن، اور پروفیشنل انداز۔",
+    "themeDark": "ڈارک تھیم",
+    "themeDarkDesc": "نرم کنٹراسٹ کے ساتھ جدید ڈارک انٹرفیس۔",
+    "themeUpdatedTitle": "تھیم تبدیل ہو گئی",
+    "themeUpdatedMessage": "ایپ کا ظاہری انداز تبدیل کر دیا گیا ہے۔",
+    "themeUpdateFailedTitle": "تھیم تبدیل نہیں ہوئی",
+    "themeUpdateFailedMessage": "براہ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔"
   },
   "verify": {
     "title": "ای میل کی تصدیق",

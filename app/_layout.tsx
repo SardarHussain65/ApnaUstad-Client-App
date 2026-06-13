@@ -1,5 +1,7 @@
 import { Stack } from "expo-router";
 import { useEffect, useMemo } from "react";
+import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import { useRouter, useSegments } from "expo-router";
 import '../i18n';
 import { QueryClient, QueryClientProvider, DefaultOptions } from "@tanstack/react-query";
@@ -7,6 +9,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { ThemeProvider, useTheme } from "../constants/Theme";
 
 
 const shouldRetryRequest = (failureCount: number, error: unknown) => {
@@ -32,6 +35,23 @@ const queryConfig: DefaultOptions = {
 };
 
 const queryClient = new QueryClient({ defaultOptions: queryConfig });
+
+function ThemeSystemChrome() {
+  const theme = useTheme();
+
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(theme.colors.background.app).catch((error) => {
+      console.warn('Failed to update system background color:', error);
+    });
+  }, [theme.colors.background.app]);
+
+  return (
+    <StatusBar
+      style={theme.isDark ? 'light' : 'dark'}
+      backgroundColor={theme.colors.background.app}
+    />
+  );
+}
 
 function AccountRestrictionGate() {
   const router = useRouter();
@@ -75,10 +95,13 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <RootLayoutNav />
-      </QueryClientProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <ThemeSystemChrome />
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <RootLayoutNav />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

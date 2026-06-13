@@ -391,7 +391,19 @@
     "saveReload": "Saving changes will reload the app.",
     "confirmButton": "Confirm & Apply",
     "appliedInstantly": "Changes are applied instantly without reloading.",
-    "languageUpdated": "Language updated successfully!"
+    "languageUpdated": "Language updated successfully!",
+    "theme": "App Theme",
+    "selectTheme": "Choose the appearance that feels best for you.",
+    "themeCurrent": "Current Theme",
+    "themeCurrentDesc": "Original cosmic ApnaUstad style.",
+    "themeLight": "Light Theme",
+    "themeLightDesc": "Clean, bright, and professional.",
+    "themeDark": "Dark Theme",
+    "themeDarkDesc": "Modern dark interface with softer contrast.",
+    "themeUpdatedTitle": "Theme updated",
+    "themeUpdatedMessage": "Your app appearance has been changed.",
+    "themeUpdateFailedTitle": "Theme not updated",
+    "themeUpdateFailedMessage": "Please try again in a moment."
   },
   "verify": {
     "title": "Email verification",

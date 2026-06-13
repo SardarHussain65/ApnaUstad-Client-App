@@ -3,22 +3,23 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/Theme';
+import { useTheme } from '../../constants/Theme';
 
 interface ProfileHeaderProps {
   title: string;
 }
 
 export const ProfileHeader = ({ title }: ProfileHeaderProps) => {
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <ChevronLeft color="#fff" size={28} />
+        <ChevronLeft color={theme.colors.text.primary} size={28} />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
+      <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{title}</Text>
       <View style={{ width: 44 }} />
     </View>
   );
@@ -40,7 +41,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 17,
-    color: '#fff',
     fontWeight: '700',
     letterSpacing: 0.5,
     textAlign: 'center',

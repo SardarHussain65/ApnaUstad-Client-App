@@ -1,5 +1,4 @@
 import Toast from 'react-native-toast-message';
-import { Colors } from '../constants/Theme';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
