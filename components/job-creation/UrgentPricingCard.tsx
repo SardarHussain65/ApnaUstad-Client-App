@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Clock, ShieldCheck, Zap } from 'lucide-react-native';
 import { SectionLabel, GlassInput, P } from './shared';
 import { calculateUrgentPrice, getRateForCategory } from '../../constants/UrgentPricing';
@@ -10,9 +10,11 @@ interface UrgentPricingCardProps {
   category: string;
   estimatedHours: number;
   onChangeHours: (hours: number) => void;
+  amount: string;
+  onChangeAmount: (amount: string) => void;
 }
 
-export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: UrgentPricingCardProps) {
+export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amount, onChangeAmount }: UrgentPricingCardProps) {
   const { t } = useTranslation();
   const rateInfo = getRateForCategory(category);
   const baseRate = rateInfo.baseRatePerHour;
@@ -31,6 +33,9 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
     }
   };
 
+  const currentPrice = Number(amount) || 0;
+  const isBelowMin = currentPrice < minPrice;
+  const isBelowRecommended = currentPrice < fixedPrice;
   const rawCalculation = baseRate * estimatedHours;
   const showMinPriceApplied = rawCalculation < minPrice;
 
@@ -38,7 +43,7 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
     <View style={styles.section}>
       <SectionLabel icon={Zap} label={t('jobCreation.urgentFixedPricing', 'URGENT FIXED PRICING')} color={P.cyan} badge={t('jobCreation.locked', 'Locked')} />
       
-      <GlassInput glowColor={P.cyan}>
+      <GlassInput glowColor={isBelowMin ? P.error : (isBelowRecommended ? P.orange : P.cyan)}>
         <View style={styles.container}>
           {/* Header section explaining fixed pricing */}
           <View style={styles.headerRow}>
@@ -76,25 +81,55 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours }: U
             </View>
           </View>
 
-          {/* Locked Price Banner */}
-          <View style={styles.priceBanner}>
-            <Zap size={18} color={P.cyan} fill={P.cyan} style={styles.zapIcon} />
+          {/* Editable Price Banner */}
+          <View style={[
+            styles.priceBanner, 
+            isBelowMin && styles.priceBannerError, 
+            isBelowRecommended && !isBelowMin && styles.priceBannerWarning
+          ]}>
+            <Zap 
+              size={18} 
+              color={isBelowMin ? P.error : (isBelowRecommended ? P.orange : P.cyan)} 
+              fill={isBelowMin ? P.error : (isBelowRecommended ? P.orange : P.cyan)} 
+              style={styles.zapIcon} 
+            />
             <View style={styles.bannerTextColumn}>
-              <Text style={styles.bannerLabel}>{t('jobCreation.lockedFixedPrice', 'Locked Fixed Price')}</Text>
-              <Text style={styles.priceText}>{t('common.rupeesFormat', 'Rs. {{amount}}', { amount: fixedPrice.toLocaleString() })}</Text>
+              <Text style={styles.bannerLabel}>{t('jobCreation.offeredUrgentPrice', 'Your Offered Price')}</Text>
+              <View style={styles.inputRow}>
+                <Text style={styles.currencyPrefix}>Rs.</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  value={amount}
+                  onChangeText={onChangeAmount}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  maxLength={6}
+                />
+              </View>
             </View>
           </View>
 
-          {/* Pricing Breakdown & Security message */}
+          {/* Feedback messages */}
+          {isBelowMin ? (
+            <Text style={[styles.feedbackText, { color: P.error }]}>
+              {t('jobCreation.minPriceRequired', 'Minimum price required is Rs. {{price}}', { price: minPrice })}
+            </Text>
+          ) : isBelowRecommended ? (
+            <Text style={[styles.feedbackText, { color: P.orange }]}>
+              {t('jobCreation.lowOfferWarning', 'Offer is below the recommended estimate. Ustads might take longer to accept.')}
+            </Text>
+          ) : currentPrice > fixedPrice ? (
+            <Text style={[styles.feedbackText, { color: P.success }]}>
+              {t('jobCreation.highOfferTip', 'Higher offers attract Ustads faster! 🚀')}
+            </Text>
+          ) : null}
+
+          {/* Recommended Estimate Display */}
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>{t('jobCreation.pricingFormula', 'Pricing Formula:')}</Text>
+            <Text style={styles.breakdownLabel}>{t('jobCreation.recommendedEstimate', 'Recommended Estimate:')}</Text>
             <Text style={styles.breakdownValue}>
-              {t('jobCreation.pricingFormulaValue', 'Rs. {{rate}}/hr × {{hours}} {{hoursText}} = Rs. {{total}}', {
-                rate: baseRate,
-                hours: estimatedHours,
-                hoursText: estimatedHours === 1 ? t('jobCreation.hr', 'hr') : t('jobCreation.hrs', 'hrs'),
-                total: rawCalculation.toLocaleString()
-              })}
+              {t('common.rupeesFormat', 'Rs. {{amount}}', { amount: fixedPrice.toLocaleString() })}
             </Text>
           </View>
 
@@ -211,11 +246,39 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  priceText: {
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  currencyPrefix: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+    marginRight: 6,
+  },
+  priceInput: {
     fontSize: 22,
     fontWeight: '900',
     color: P.cyan,
-    marginTop: 2,
+    flex: 1,
+    padding: 0,
+  },
+  priceBannerWarning: {
+    borderColor: addAlpha(P.orange, '35'),
+    backgroundColor: addAlpha(P.orange, '10'),
+  },
+  priceBannerError: {
+    borderColor: addAlpha(P.error, '35'),
+    backgroundColor: addAlpha(P.error, '10'),
+  },
+  feedbackText: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: -4,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+    lineHeight: 16,
   },
   breakdownRow: {
     flexDirection: 'row',

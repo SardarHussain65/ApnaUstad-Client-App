@@ -308,6 +308,12 @@ export default function BidSubmissionScreen() {
     }
   }, [budget, isCounterProposal, proposedPrice]);
 
+  useEffect(() => {
+    if (isInstant && isCounterProposal && !message) {
+      setMessage(t('incomingJobModal.counterOffer', 'Counter Offer'));
+    }
+  }, [isInstant, isCounterProposal, message, t]);
+
   const quoteSuggestions = useMemo(() => {
     const values = budget > 0
       ? [Math.round(budget * 0.9), budget, Math.round(budget * 1.1)]

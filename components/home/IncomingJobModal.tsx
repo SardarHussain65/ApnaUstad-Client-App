@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -43,6 +44,7 @@ import {
   PauseCircle,
   PlayCircle,
   Radio,
+  Send,
   ShieldAlert,
   ShieldCheck,
   Star,
@@ -55,6 +57,8 @@ import {
 
 import { Colors, Shadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
+import Toast from 'react-native-toast-message';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - 24, 520);
@@ -235,6 +239,76 @@ function JobDecisionCard({
   const client = getClientMeta(job);
   const [secondsRemaining, setSecondsRemaining] = useState(() => resolveSecondsRemaining(job));
   const glow = useSharedValue(0.35);
+
+  const [counterPrice, setCounterPrice] = useState('');
+  const [submittingCounter, setSubmittingCounter] = useState(false);
+  const [activeCounterPrice, setActiveCounterPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkExistingBid = async () => {
+      try {
+        const response = await api.get('/jobs/my-bids', { params: { limit: 50, status: 'pending' } });
+        if (response.data?.success && isMounted) {
+          const matchedBid = response.data.data.find((b: any) => String(b.jobPost?._id || b.jobPost) === String(job._id));
+          if (matchedBid) {
+            setActiveCounterPrice(matchedBid.proposedPrice);
+          }
+        }
+      } catch (err) {
+        console.log('Error checking existing bids:', err);
+      }
+    };
+    if (job?._id) {
+      checkExistingBid();
+    }
+    return () => { isMounted = false; };
+  }, [job?._id]);
+
+  const handleSubmitCounter = async () => {
+    const parsedPrice = Number(counterPrice);
+    if (!parsedPrice || parsedPrice <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: t('bidSubmission.addYourQuote', 'Add Your Quote'),
+        text2: t('bidSubmission.enterQuoteAmount', 'Enter the amount you want to charge.'),
+      });
+      return;
+    }
+
+    try {
+      setSubmittingCounter(true);
+      await api.post(`/jobs/${job._id}/bids`, {
+        proposedPrice: parsedPrice,
+        message: "Urgent Counter-Offer",
+      });
+      Toast.show({
+        type: 'success',
+        text1: t('bidSubmission.proposalSent', 'Proposal Sent'),
+        text2: t('bidSubmission.proposalSentDesc', 'The client can now review your offer.'),
+      });
+      setCounterPrice('');
+      setActiveCounterPrice(parsedPrice);
+    } catch (err: any) {
+      if (err.response?.status === 402) {
+        const required = Number(err.response?.data?.requiredBalance || 500);
+        Toast.show({
+          type: 'error',
+          text1: t('bidSubmission.topUpRequired', 'Top-Up Required'),
+          text2: t('bidSubmission.keepRequiredBalance', 'Keep at least {{amount}} in your wallet to continue.', { amount: `Rs. ${required}` }),
+        });
+        onWalletPress();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: t('bidSubmission.couldNotSend', 'Could Not Send Proposal'),
+          text2: err.response?.data?.message || 'Please try again.',
+        });
+      }
+    } finally {
+      setSubmittingCounter(false);
+    }
+  };
 
   useEffect(() => {
     setSecondsRemaining(resolveSecondsRemaining(job));
@@ -437,9 +511,60 @@ function JobDecisionCard({
               </Text>
             </View>
           </View>
+
+          {isInstant && (
+            <View style={styles.inlineCounterSection}>
+              <View style={styles.sectionHeaderTitle}>
+                <CircleDollarSign size={14} color={accent} strokeWidth={2.4} />
+                <Text style={[styles.sectionTitle, { color: accent }]}>
+                  {t('incomingJobModal.counterOffer', 'Counter Offer')}
+                </Text>
+              </View>
+
+              {activeCounterPrice !== null && (
+                <Text style={styles.inlineActiveCounterText}>
+                  {t('incomingJobModal.activeCounterOffer', 'Your Active Counter-Offer')}: <Text style={{ color: Colors.green, fontWeight: '900' }}>Rs. {activeCounterPrice.toLocaleString()}</Text>
+                </Text>
+              )}
+
+              <View style={styles.inlineCounterRow}>
+                <View style={styles.inlineCounterInputWrapper}>
+                  <Text style={styles.inlineCounterPrefix}>PKR</Text>
+                  <TextInput
+                    style={styles.inlineCounterInputField}
+                    value={counterPrice}
+                    onChangeText={(val) => setCounterPrice(val.replace(/[^\d]/g, ''))}
+                    keyboardType="number-pad"
+                    placeholder={String(activeCounterPrice ?? offerAmount)}
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.inlineCounterSubmitButton, submittingCounter && { opacity: 0.8 }]}
+                  onPress={handleSubmitCounter}
+                  disabled={submittingCounter}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={[accent, accentSecondary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.inlineCounterSubmitGradient}
+                  >
+                    {submittingCounter ? (
+                      <ActivityIndicator color="#001014" size="small" />
+                    ) : (
+                      <Text style={styles.inlineCounterSubmitText}>
+                        {activeCounterPrice !== null ? t('common.save', 'Save') : t('incomingJobModal.counterOffer', 'Counter')}
+                      </Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </ScrollView>
-
-
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.skipButton} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
@@ -1255,6 +1380,24 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
   },
+  counterButton: {
+    flex: 1,
+    height: 54,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.34)',
+    backgroundColor: 'rgba(0,240,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  counterButtonText: {
+    color: Colors.cyan,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   primaryButton: {
     flex: 1,
     height: 54,
@@ -1293,5 +1436,64 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 13,
     textAlign: 'center',
+  },
+  inlineCounterSection: {
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  inlineActiveCounterText: {
+    color: 'rgba(255, 255, 255, 0.52)',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  inlineCounterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  inlineCounterInputWrapper: {
+    width: '63%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  inlineCounterPrefix: {
+    color: '#00F0FF',
+    fontSize: 13,
+    fontWeight: '900',
+    marginRight: 6,
+  },
+  inlineCounterInputField: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    flex: 1,
+    padding: 0,
+    textAlign: 'left',
+  },
+  inlineCounterSubmitButton: {
+    width: '33%',
+    height: 48,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  inlineCounterSubmitGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineCounterSubmitText: {
+    color: '#001014',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
 });

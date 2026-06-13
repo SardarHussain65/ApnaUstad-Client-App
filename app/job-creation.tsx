@@ -63,7 +63,7 @@ import { GlassInput, P, SectionLabel, StatBadge } from '../components/job-creati
 import { UrgencyToggle } from '../components/job-creation/UrgencyToggle';
 import { VoiceBriefRecorder } from '../components/job-creation/VoiceBriefRecorder';
 import { UrgentPricingCard } from '../components/job-creation/UrgentPricingCard';
-import { calculateUrgentPrice } from '../constants/UrgentPricing';
+import { calculateUrgentPrice, getRateForCategory } from '../constants/UrgentPricing';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Urgency = 'instant' | 'scheduled';
@@ -183,6 +183,16 @@ export default function JobCreationScreen() {
     media: false,
     voice: false,
   });
+
+  // ─── Initialize Urgent Price on mount/urgency toggle ─────────────────────
+  useEffect(() => {
+    if (urgency === 'instant') {
+      const calculated = calculateUrgentPrice(title ?? 'General', estimatedHours);
+      setAmount(calculated.toString());
+    } else {
+      setAmount('');
+    }
+  }, [urgency, title, estimatedHours]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -368,11 +378,22 @@ export default function JobCreationScreen() {
       showError(t('jobCreation.invalidLocation'), t('jobCreation.invalidLocationDesc'));
       return;
     }
-    if (!isInstant && amount && Number(amount) <= 0) {
-      showError(t('jobCreation.invalidOffer'), t('jobCreation.invalidOfferDesc'));
-      return;
-    }
-    if (!isInstant) {
+    if (isInstant) {
+      const rateInfo = getRateForCategory(title ?? 'General');
+      const minPrice = rateInfo.minimumPrice;
+      const currentPrice = Number(amount) || 0;
+      if (currentPrice < minPrice) {
+        showError(
+          t('common.error', 'Error'),
+          t('jobCreation.minPriceRequired', 'Minimum price required is Rs. {{price}}', { price: minPrice })
+        );
+        return;
+      }
+    } else {
+      if (amount && Number(amount) <= 0) {
+        showError(t('jobCreation.invalidOffer'), t('jobCreation.invalidOfferDesc'));
+        return;
+      }
       if (!validateSchedule(scheduledDate, scheduledTime)) {
         showError(t('jobCreation.invalidSchedule'), t('jobCreation.invalidScheduleDesc'));
         return;
@@ -433,7 +454,7 @@ export default function JobCreationScreen() {
       }
 
       const fixedPrice = isInstant
-        ? calculateUrgentPrice(title ?? 'General', estimatedHours)
+        ? (amount && Number(amount) > 0 ? parseFloat(amount) : calculateUrgentPrice(title ?? 'General', estimatedHours))
         : (amount && Number(amount) > 0) ? parseFloat(amount) : 500;
 
       const payload = {
@@ -656,6 +677,8 @@ export default function JobCreationScreen() {
                   category={title ?? 'General'}
                   estimatedHours={estimatedHours}
                   onChangeHours={setEstimatedHours}
+                  amount={amount}
+                  onChangeAmount={setAmount}
                 />
               </Animated.View>
             ) : (
@@ -838,7 +861,7 @@ export default function JobCreationScreen() {
           onCancel={closeConfirm}
           title={isInstant ? t('jobCreation.postUrgentConfirmQuestion') : t('jobCreation.postJobConfirmQuestion')}
           message={isInstant 
-            ? t('jobCreation.postUrgentAlertConfirm', { price: calculateUrgentPrice(title ?? 'General', estimatedHours).toLocaleString() })
+            ? t('jobCreation.postUrgentAlertConfirm', { price: (amount && Number(amount) > 0 ? parseFloat(amount) : calculateUrgentPrice(title ?? 'General', estimatedHours)).toLocaleString() })
             : t('jobCreation.postJobAlertConfirm')
           }
           confirmText={t('jobCreation.yesPostJob')}

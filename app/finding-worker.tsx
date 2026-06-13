@@ -64,26 +64,40 @@ export default function FindingWorkerScreen() {
   const isInstant = job?.urgency === 'instant';
 
   const getRemainingTimeForEscalation = () => {
-    if (!job?.createdAt) return 600;
-    const createdTime = new Date(job.createdAt).getTime();
+    if (!job?.expiresAt) return 600;
+    const expiresTime = new Date(job.expiresAt).getTime();
     const nowTime = Date.now();
-    const elapsedMs = nowTime - createdTime;
-    
-    const version = job.urgencyPricingVersion || 1;
-    if (version === 1) {
-      // 10 minutes countdown to next escalation
-      const limitMs = 10 * 60 * 1000;
-      const remainingMs = Math.max(0, limitMs - elapsedMs);
-      return Math.floor(remainingMs / 1000);
-    } else {
-      // 10 minutes countdown (total 20 min)
-      const limitMs = 20 * 60 * 1000;
-      const remainingMs = Math.max(0, limitMs - elapsedMs);
-      return Math.floor(remainingMs / 1000);
-    }
+    const remainingMs = Math.max(0, expiresTime - nowTime);
+    return Math.floor(remainingMs / 1000);
   };
 
   const [remainingSeconds, setRemainingSeconds] = useState<number>(600);
+  const [isBoosting, setIsBoosting] = useState(false);
+
+  const elapsedMs = job?.createdAt ? Date.now() - new Date(job.createdAt).getTime() : 0;
+  const isEscalationSuggested = isInstant && (job?.urgencyPricingVersion === 1) && (elapsedMs >= 10 * 60 * 1000);
+
+  const handleBoostPrice = async () => {
+    try {
+      setIsBoosting(true);
+      const res = await api.post(`/jobs/${jobId}/escalate`);
+      if (res.data?.success) {
+        Toast.show({
+          type: 'success',
+          text1: t('findingWorker.boosterApplied', 'Price boosted by 15%! Re-broadcasting...'),
+        });
+        await refetchJob();
+      }
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: t('findingWorker.cancelError', 'Could Not Cancel Request'),
+        text2: err.response?.data?.message || 'Please try again.',
+      });
+    } finally {
+      setIsBoosting(false);
+    }
+  };
 
   useEffect(() => {
     if (!isInstant) return;
@@ -263,11 +277,20 @@ export default function FindingWorkerScreen() {
           text2: t('findingWorker.searchTimeoutDesc', 'No Ustads accepted yet. Keep searching or cancel.'),
           visibilityTime: 6000
         });
+        refetchJob();
+      } else if (data?.suggestEscalation) {
+        Toast.show({
+          type: 'info',
+          text1: t('findingWorker.boosterTitle', "Ustads Aren't Satisfied"),
+          text2: t('findingWorker.boosterDesc', "Ustads near you are active but haven't accepted this price. Boost your offer by 15% to attract them quickly!"),
+          visibilityTime: 6000
+        });
+        refetchJob();
       } else {
         Toast.show({
           type: 'info',
           text1: t('findingWorker.searchExpandedTitle', 'Searching Expanded! ⚡'),
-          text2: t('findingWorker.searchExpandedDesc', 'Increasing fixed price to Rs. {{price}} for wider search.', { price: data.newPrice.toLocaleString() }),
+          text2: t('findingWorker.searchExpandedDesc', 'Increasing fixed price to Rs. {{price}} for wider search.', { price: data.newPrice ? data.newPrice.toLocaleString() : '' }),
           visibilityTime: 6000
         });
         refetchJob();
@@ -279,8 +302,9 @@ export default function FindingWorkerScreen() {
       if (bidJobId && bidJobId !== String(jobId)) return;
 
       setApplicants(prev => {
-        // Avoid duplicates
-        if (prev.some(a => a._id === newBid._id)) return prev;
+        if (prev.some(a => a._id === newBid._id)) {
+          return prev.map(a => a._id === newBid._id ? newBid : a);
+        }
         return [...prev, newBid];
       });
       setStatus(t('findingWorker.offersLabel'));
@@ -320,9 +344,12 @@ export default function FindingWorkerScreen() {
     setShowModal(true);
   };
 
-  const handleReviewFirstProposal = () => {
-    if (applicants.length > 0) {
-      handleWorkerPress(applicants[0]);
+  const handleDirectSelectFirst = () => {
+    if (applicants.length > 0 && !isAccepting) {
+      acceptBid({
+        jobId: jobId as string,
+        bidId: applicants[0]._id,
+      });
     }
   };
 
@@ -487,6 +514,15 @@ export default function FindingWorkerScreen() {
                   </Text>
                 </View>
 
+                {!!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
+                  <View style={styles.notifiedContainer}>
+                    <View style={styles.pulsingGreenDot} />
+                    <Text style={styles.notifiedText}>
+                      {t('findingWorker.notifiedCount', 'Notified {{count}} active Ustads nearby...', { count: job.notifiedWorkersCount })}
+                    </Text>
+                  </View>
+                )}
+
                 <Text style={[styles.statusText, Typography.threeD]}>{t('findingWorker.searchingUstads')}</Text>
                 <Text style={styles.subText}>
                   {t('findingWorker.broadcastDesc')}
@@ -551,6 +587,49 @@ export default function FindingWorkerScreen() {
                     ? t('findingWorker.searchDesc')
                     : t('findingWorker.compareProfiles')}
                 </Text>
+              </LinearGradient>
+            </Animated.View>
+          )}
+
+          {isEscalationSuggested && (
+            <Animated.View entering={FadeIn.duration(500)} style={styles.boosterCard}>
+              <LinearGradient
+                colors={['rgba(255, 140, 0, 0.16)', 'rgba(255, 59, 48, 0.12)', 'rgba(15, 15, 26, 0.95)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.boosterGradient}
+              >
+                <View style={styles.boosterHeadingRow}>
+                  <View style={[styles.boosterIconContainer, { backgroundColor: addAlpha(Colors.orange, '20') }]}>
+                    <Zap size={18} color={Colors.orange} fill={Colors.orange} />
+                  </View>
+                  <View style={styles.boosterHeadingCopy}>
+                    <Text style={styles.boosterEyebrow}>🔥 {t('findingWorker.boosterTitle', "Ustads Aren't Satisfied")}</Text>
+                    <Text style={styles.boosterUrduTitle}>استاد اس ریٹ پر راضی نہیں ہیں</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.boosterDescription}>
+                  {t('findingWorker.boosterDesc', "Workers near you are active but haven't accepted this price. Boost your offer by 15% to attract them quickly!")}
+                </Text>
+                
+                <TouchableOpacity 
+                  style={styles.boostButton} 
+                  onPress={handleBoostPrice} 
+                  disabled={isBoosting}
+                  activeOpacity={0.78}
+                >
+                  {isBoosting ? (
+                    <ActivityIndicator size="small" color="#050510" />
+                  ) : (
+                    <>
+                      <Zap size={16} color="#050510" fill="#050510" style={{ marginRight: 6 }} />
+                      <Text style={styles.boostButtonText}>
+                        {t('findingWorker.boosterBtn', "Boost Price (+15%)")} • ریٹ بڑھائیں (+15%)
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
           )}
@@ -629,7 +708,7 @@ export default function FindingWorkerScreen() {
             </Animated.View>
           )}
 
-          {!isInstant && applicants.length > 0 ? (
+          {applicants.length > 0 ? (
             <Animated.View entering={SlideInDown.springify().damping(16)} style={styles.responseCard}>
               <LinearGradient
                 colors={['rgba(0,255,127,0.15)', 'rgba(0,245,255,0.08)']}
@@ -664,9 +743,20 @@ export default function FindingWorkerScreen() {
                     </TouchableOpacity>
                   ))}
                 </View>
-                <TouchableOpacity style={styles.reviewButton} onPress={handleReviewFirstProposal} activeOpacity={0.78}>
-                  <Text style={styles.reviewButtonText}>{t('findingWorker.reviewFirstOffer')}</Text>
-                  <ChevronRight size={17} color="#001014" strokeWidth={2.8} />
+                <TouchableOpacity 
+                  style={[styles.reviewButton, isAccepting && { opacity: 0.8 }]} 
+                  onPress={handleDirectSelectFirst} 
+                  disabled={isAccepting}
+                  activeOpacity={0.78}
+                >
+                  {isAccepting ? (
+                    <ActivityIndicator color="#001014" size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.reviewButtonText}>{t('findingWorker.selectUstadDirectly', 'Select Ustad Directly')}</Text>
+                      <ChevronRight size={17} color="#001014" strokeWidth={2.8} />
+                    </>
+                  )}
                 </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
@@ -1011,6 +1101,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
+  notifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: -8,
+    marginBottom: 20,
+    backgroundColor: 'rgba(52, 199, 89, 0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 199, 89, 0.25)',
+    alignSelf: 'center',
+  },
+  pulsingGreenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#34C759',
+  },
+  notifiedText: {
+    color: '#00FF7F',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   fixedPriceContainer: {
     alignItems: 'center',
     paddingVertical: 10,
@@ -1189,6 +1305,77 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '600',
     maxWidth: 300,
+  },
+  boosterCard: {
+    marginTop: 14,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.3)',
+    backgroundColor: 'rgba(4,9,29,0.85)',
+    shadowColor: Colors.orange,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  boosterGradient: {
+    padding: 16,
+  },
+  boosterHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    marginBottom: 10,
+  },
+  boosterIconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,140,0,0.4)',
+  },
+  boosterHeadingCopy: {
+    flex: 1,
+  },
+  boosterEyebrow: {
+    color: '#FF8C00',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  boosterUrduTitle: {
+    color: '#FFD700',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  boosterDescription: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
+    marginBottom: 14,
+  },
+  boostButton: {
+    backgroundColor: '#FF8C00',
+    height: 48,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF8C00',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  boostButtonText: {
+    color: '#050510',
+    fontSize: 14,
+    fontWeight: '800',
   },
   jobBriefCard: {
     marginTop: 14,
