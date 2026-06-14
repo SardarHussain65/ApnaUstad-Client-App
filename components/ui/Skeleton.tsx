@@ -6,12 +6,9 @@ import {
   useWindowDimensions,
   StyleProp,
   ViewStyle,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing, useTheme } from '../../constants/Theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ─── Shared Shimmer Translation Hook ──────────────────────────────────────────
 export function useShimmerTranslateX(duration = 1200): RNAnimated.AnimatedInterpolation<string | number> {

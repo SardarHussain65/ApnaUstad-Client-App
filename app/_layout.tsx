@@ -1,8 +1,7 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
-import { useRouter, useSegments } from "expo-router";
 import '../i18n';
 import { QueryClient, QueryClientProvider, DefaultOptions } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "../context/AuthContext";

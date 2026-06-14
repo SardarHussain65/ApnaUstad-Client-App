@@ -3,7 +3,7 @@ import { Share, Platform, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
-import { Colors, Typography } from '../../constants/Theme';
+import { useTheme, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +35,8 @@ interface WalletSkeletonProps {
 }
 
 function WalletSkeleton({ isWorker, insets }: WalletSkeletonProps) {
+  const theme = useTheme();
+  const typography = useThemeTypography();
   const translateX = useShimmerTranslateX();
   const { t } = useTranslation();
 
@@ -42,10 +44,10 @@ function WalletSkeleton({ isWorker, insets }: WalletSkeletonProps) {
     <View style={{ gap: 16, padding: 16, paddingTop: insets.top + 16 }}>
       {/* Static Header shown immediately while content shimmers load */}
       <View style={{ marginBottom: 8 }}>
-        <Text style={[{ fontSize: 28, fontWeight: '900', color: '#fff', letterSpacing: 0.5 }, Typography.threeD]}>
+        <Text style={[{ fontSize: 28, fontWeight: '900', color: theme.colors.text.primary, letterSpacing: 0.5 }, typography.threeD]}>
           {t('wallet.title')}
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.textMuted, fontWeight: '600', marginTop: 4 }}>
+        <Text style={{ fontSize: 13, color: theme.colors.text.muted, fontWeight: '600', marginTop: 4 }}>
           {isWorker
             ? t('wallet.workerSub')
             : t('wallet.clientSub')}

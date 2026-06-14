@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { alpha, useTheme } from '../../constants/Theme';
 import { addAlpha } from '../../utils/colorUtils';
 
 // ─── Design Tokens Placeholder (or reuse parent) ──────────────────────────────
@@ -27,6 +28,38 @@ export const P = {
   purpleMuted: 'rgba(123,97,255,0.12)',
 } as const;
 
+export type JobCreationPalette = { [Key in keyof typeof P]: string };
+
+export function useJobCreationPalette(): JobCreationPalette {
+  const theme = useTheme();
+
+  if (theme.id === 'current') return P;
+
+  return {
+    bg: theme.colors.background.screen,
+    surface: theme.colors.surface.card,
+    surfaceRaised: theme.colors.surface.raised,
+    surfaceHigh: theme.colors.surface.selected,
+    border: theme.colors.border.subtle,
+    borderMedium: theme.colors.border.default,
+    cyan: theme.colors.brand.primary,
+    cyanDim: theme.colors.text.secondary,
+    cyanMuted: alpha(theme.colors.brand.primary, 0.1),
+    cyanGlow: alpha(theme.colors.brand.primary, 0.18),
+    orange: theme.colors.brand.worker,
+    orangeDim: theme.id === 'light' ? '#C2410C' : '#FDBA74',
+    orangeMuted: alpha(theme.colors.brand.worker, 0.1),
+    white: theme.colors.text.primary,
+    textPrimary: theme.colors.text.primary,
+    textSecondary: theme.colors.text.secondary,
+    textMuted: theme.colors.text.muted,
+    success: theme.colors.status.success,
+    error: theme.colors.status.error,
+    purple: theme.colors.brand.secondary,
+    purpleMuted: alpha(theme.colors.brand.secondary, 0.12),
+  };
+}
+
 // ─── SectionLabel ──────────────────────────────────────────────────────────────
 interface SectionLabelProps {
   icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }>;
@@ -35,16 +68,21 @@ interface SectionLabelProps {
   badge?: string;
 }
 
-export const SectionLabel = ({ icon: Icon, label, color = P.cyan, badge }: SectionLabelProps) => (
-  <View style={sectionStyles.row}>
-    <View style={[sectionStyles.iconWrap, { backgroundColor: addAlpha(color, '18') }]}>
-      <Icon size={11} color={color} strokeWidth={2.5} />
+export const SectionLabel = ({ icon: Icon, label, color, badge }: SectionLabelProps) => {
+  const palette = useJobCreationPalette();
+  const resolvedColor = color ?? palette.cyan;
+
+  return (
+    <View style={sectionStyles.row}>
+      <View style={[sectionStyles.iconWrap, { backgroundColor: addAlpha(resolvedColor, '18') }]}>
+        <Icon size={11} color={resolvedColor} strokeWidth={2.5} />
+      </View>
+      <Text style={[sectionStyles.label, { color: resolvedColor }]}>{label}</Text>
+      <View style={[sectionStyles.line, { backgroundColor: addAlpha(resolvedColor, '22') }]} />
+      {!!badge && <Text style={[sectionStyles.badge, { color: resolvedColor }]}>{badge}</Text>}
     </View>
-    <Text style={[sectionStyles.label, { color }]}>{label}</Text>
-    <View style={[sectionStyles.line, { backgroundColor: addAlpha(color, '22') }]} />
-    {!!badge && <Text style={[sectionStyles.badge, { color }]}>{badge}</Text>}
-  </View>
-);
+  );
+};
 
 const sectionStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
@@ -64,22 +102,29 @@ interface GlassInputProps {
   glowColor?: string;
 }
 
-export const GlassInput = ({ children, style, glowColor }: GlassInputProps) => (
-  <View style={[
-    glassStyles.card,
-    glowColor ? { borderColor: addAlpha(glowColor, '30'), shadowColor: glowColor, shadowOpacity: 0.15, shadowRadius: 12 } : {},
-    style,
-  ]}>
-    {children}
-  </View>
-);
+export const GlassInput = ({ children, style, glowColor }: GlassInputProps) => {
+  const palette = useJobCreationPalette();
+  const theme = useTheme();
+
+  return (
+    <View style={[
+      glassStyles.card,
+      {
+        backgroundColor: palette.surfaceRaised,
+        borderColor: palette.border,
+      },
+      glowColor ? { borderColor: addAlpha(glowColor, '30'), shadowColor: glowColor, shadowOpacity: theme.id === 'current' ? 0.15 : 0.08, shadowRadius: 12 } : {},
+      style,
+    ]}>
+      {children}
+    </View>
+  );
+};
 
 const glassStyles = StyleSheet.create({
   card: {
-    backgroundColor: P.surfaceRaised,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: P.border,
     overflow: 'hidden',
   },
 });
@@ -91,17 +136,21 @@ interface StatBadgeProps {
   color: string;
 }
 
-export const StatBadge = ({ label, value, color }: StatBadgeProps) => (
-  <View style={badgeStyles.wrap}>
-    <Text style={[badgeStyles.value, { color }]}>{value}</Text>
-    <Text style={badgeStyles.label}>{label}</Text>
-  </View>
-);
+export const StatBadge = ({ label, value, color }: StatBadgeProps) => {
+  const palette = useJobCreationPalette();
+
+  return (
+    <View style={badgeStyles.wrap}>
+      <Text style={[badgeStyles.value, { color }]}>{value}</Text>
+      <Text style={[badgeStyles.label, { color: palette.textMuted }]}>{label}</Text>
+    </View>
+  );
+};
 
 const badgeStyles = StyleSheet.create({
   wrap: {
     flex: 1, paddingVertical: 7, alignItems: 'center', gap: 2,
   },
   value: { fontSize: 15, fontWeight: '800' },
-  label: { fontSize: 9, color: P.textMuted, fontWeight: '700', letterSpacing: 1 },
+  label: { fontSize: 9, fontWeight: '700', letterSpacing: 1 },
 });

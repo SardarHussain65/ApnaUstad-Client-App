@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import { alpha, AppTheme, Colors, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
@@ -44,7 +44,15 @@ const entityId = (entity?: string | { _id?: string } | null) => {
   return typeof entity === 'string' ? entity : entity._id || '';
 };
 
-const getMissionCardGradient = (status: string, isInstant: boolean): [string, string, string] => {
+const getMissionCardGradient = (status: string, isInstant: boolean, theme: AppTheme, statusColor: string): [string, string, string] => {
+  if (theme.id !== 'current') {
+    return [
+      alpha(statusColor, theme.id === 'light' ? 0.08 : 0.14),
+      theme.colors.surface.card,
+      theme.colors.surface.cardMuted,
+    ];
+  }
+
   if (status === 'completed' || status === 'closed') {
     return ['rgba(0,255,127,0.28)', 'rgba(5,16,29,0.94)', 'rgba(0,245,255,0.14)'];
   }
@@ -71,6 +79,9 @@ const isWithinJobResponseWindow = (bookingCreatedAt: string, jobCreatedAt: strin
 export default function BookingsTab() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const themedTypography = useThemeTypography();
   const router = useRouter();
   const { role } = useAuth();
   const isWorker = role === 'worker';
@@ -121,16 +132,16 @@ export default function BookingsTab() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ongoing': 
-      case 'in-progress': return Colors.cyan;
+      case 'in-progress': return colors.cyan;
       case 'accepted': 
-      case 'assigned': return Colors.orange;
+      case 'assigned': return colors.orange;
       case 'completed': 
-      case 'closed': return Colors.success;
-      case 'cancelled': return Colors.error;
+      case 'closed': return colors.success;
+      case 'cancelled': return colors.error;
       case 'pending':
       case 'open':
-      case 'reviewing': return Colors.primary;
-      default: return Colors.primary;
+      case 'reviewing': return colors.primary;
+      default: return colors.primary;
     }
   };
 
@@ -193,12 +204,20 @@ export default function BookingsTab() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>{t('bookings.myBookings')}</Text>
-          <Text style={styles.headerSubtitle}>{t('bookings.subtitle')}</Text>
+          <Text style={[styles.headerTitle, themedTypography.threeD, { color: theme.colors.text.primary }]}>{t('bookings.myBookings')}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.text.muted }]}>{t('bookings.subtitle')}</Text>
         </View>
 
         {/* Custom Tab Bar */}
-        <View style={styles.tabContainer}>
+        <View
+          style={[
+            styles.tabContainer,
+            {
+              backgroundColor: theme.colors.surface.subtle,
+              borderColor: theme.colors.border.subtle,
+            },
+          ]}
+        >
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
             const tabKey = tab === 'Active' ? 'activeTab' : tab === 'Completed' ? 'completedTab' : 'cancelledTab';
@@ -214,7 +233,9 @@ export default function BookingsTab() {
                     style={StyleSheet.absoluteFillObject}
                   >
                     <LinearGradient
-                      colors={['rgba(0,245,255,0.4)', 'rgba(255,20,147,0.4)']}
+                      colors={theme.id === 'current'
+                        ? ['rgba(0,245,255,0.4)', 'rgba(255,20,147,0.4)']
+                        : [alpha(theme.colors.brand.primary, 0.16), alpha(theme.colors.brand.secondary, 0.12)]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.activeTabGradient}
@@ -223,6 +244,7 @@ export default function BookingsTab() {
                 )}
                 <Text style={[
                   styles.tabText,
+                  { color: isActive ? theme.colors.text.primary : theme.colors.text.muted },
                   isActive && styles.activeTabText
                 ]}>
                   {t(`bookings.${tabKey}`)}
@@ -243,7 +265,7 @@ export default function BookingsTab() {
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={handleRefresh}
-                tintColor={Colors.cyan}
+                tintColor={colors.cyan}
               />
             }
           >
@@ -348,7 +370,7 @@ export default function BookingsTab() {
                     intensity={30}
                     glowColor={statusColor}
                     hasGlow
-                    gradient={getMissionCardGradient(status, isInstant)}
+                    gradient={getMissionCardGradient(status, isInstant, theme, statusColor)}
                     padding={0}
                     onPress={openDetails}
                   >
@@ -368,9 +390,17 @@ export default function BookingsTab() {
                     <View style={[styles.cardSideAccent, { backgroundColor: statusColor }]} />
                     <View style={styles.cardBody}>
                       <View style={styles.cardTopStrip}>
-                        <View style={styles.missionTypePill}>
-                          {isInstant ? <Zap size={12} color={Colors.cyan} /> : <Calendar size={12} color={Colors.cyan} />}
-                          <Text style={styles.missionTypeText}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
+                        <View
+                          style={[
+                            styles.missionTypePill,
+                            {
+                              backgroundColor: alpha(colors.cyan, theme.id === 'current' ? 0.08 : 0.1),
+                              borderColor: alpha(colors.cyan, 0.18),
+                            },
+                          ]}
+                        >
+                          {isInstant ? <Zap size={12} color={colors.cyan} /> : <Calendar size={12} color={colors.cyan} />}
+                          <Text style={[styles.missionTypeText, { color: colors.cyan }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
                         </View>
                         <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
                           {getStatusIcon(status, statusColor)}
@@ -395,36 +425,36 @@ export default function BookingsTab() {
                         </View>
 
                         <View style={styles.identityTextGroup}>
-                          <Text style={styles.personRole}>{counterPartyRole}</Text>
-                          <Text style={[styles.personName, Typography.threeD]} numberOfLines={1}>
+                          <Text style={[styles.personRole, { color: theme.colors.text.dim }]}>{counterPartyRole}</Text>
+                          <Text style={[styles.personName, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
                             {counterPartyName}
                           </Text>
                         </View>
 
                         {!!amountValue && (
-                          <View style={styles.amountPill}>
-                            <Banknote size={13} color={Colors.success} />
+                          <View style={[styles.amountPill, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.22) }]}>
+                            <Banknote size={13} color={colors.success} />
                             <View>
-                              <Text style={styles.amountLabel}>{amountLabel}</Text>
-                              <Text style={styles.amountValue}>Rs. {amountValue.toLocaleString()}</Text>
+                              <Text style={[styles.amountLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
+                              <Text style={[styles.amountValue, { color: colors.success }]}>Rs. {amountValue.toLocaleString()}</Text>
                             </View>
                           </View>
                         )}
                       </View>
 
                       <LinearGradient
-                        colors={['rgba(255,255,255,0.075)', statusColor + '0D']}
+                        colors={theme.id === 'current' ? ['rgba(255,255,255,0.075)', statusColor + '0D'] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.serviceBlock}
                       >
                         <View style={styles.serviceIconBox}>
-                          <BriefcaseBusiness size={19} color={Colors.cyan} />
+                          <BriefcaseBusiness size={19} color={colors.cyan} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.itemTitle, Typography.threeD]} numberOfLines={1}>{title}</Text>
+                          <Text style={[styles.itemTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
                           {!!description && (
-                            <Text style={styles.descriptionText} numberOfLines={2}>
+                            <Text style={[styles.descriptionText, { color: theme.colors.text.muted }]} numberOfLines={2}>
                               {description}
                             </Text>
                           )}
@@ -433,18 +463,18 @@ export default function BookingsTab() {
 
                       <View style={styles.detailGrid}>
                         <View style={styles.detailChip}>
-                          <Calendar size={14} color={Colors.cyan} />
-                          <Text style={styles.detailText}>{formatMissionDate(scheduledDate)}</Text>
+                          <Calendar size={14} color={colors.cyan} />
+                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{formatMissionDate(scheduledDate)}</Text>
                         </View>
                         <View style={styles.detailChip}>
-                          <Clock size={14} color={Colors.orange} />
-                          <Text style={styles.detailText}>{scheduledTime || 'ASAP'}</Text>
+                          <Clock size={14} color={colors.orange} />
+                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{scheduledTime || 'ASAP'}</Text>
                         </View>
                       </View>
 
-                      <View style={styles.locationBox}>
-                        <MapPin size={15} color={Colors.textMuted} />
-                        <Text style={styles.locationText} numberOfLines={2}>
+                      <View style={[styles.locationBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                        <MapPin size={15} color={theme.colors.text.muted} />
+                        <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={2}>
                           {address || t('bookings.openDetailsToViewLocation', 'Open details to view the service location')}
                         </Text>
                       </View>
@@ -463,11 +493,11 @@ export default function BookingsTab() {
                           onPress={openDetails}
                         >
                           <View style={styles.actionLabelGroup}>
-                            <Radio size={14} color={Colors.cyan} />
-                            <Text style={styles.actionBtnText}>{actionLabel}</Text>
+                            <Radio size={14} color={colors.cyan} />
+                            <Text style={[styles.actionBtnText, { color: theme.colors.text.primary }]}>{actionLabel}</Text>
                           </View>
-                          <View style={styles.actionCircle}>
-                            <ChevronRight size={16} color="#001014" />
+                          <View style={[styles.actionCircle, { backgroundColor: colors.cyan }]}>
+                            <ChevronRight size={16} color={theme.colors.button.primaryText} />
                           </View>
                         </TouchableOpacity>
                       </LinearGradient>
@@ -500,7 +530,7 @@ export default function BookingsTab() {
               )
             })}
             {filteredData.length === 0 && (() => {
-              const tabColor = activeTab === 'Active' ? Colors.cyan : activeTab === 'Completed' ? Colors.success : Colors.error;
+              const tabColor = activeTab === 'Active' ? colors.cyan : activeTab === 'Completed' ? colors.success : colors.error;
               const emptyTitleKey = activeTab === 'Active' ? 'noActiveBookings' : activeTab === 'Completed' ? 'noCompletedBookings' : 'noCancelledBookings';
               const emptySubKey = activeTab === 'Active' ? 'activeEmpty' : activeTab === 'Completed' ? 'completedEmpty' : 'cancelledEmpty';
               return (
@@ -508,10 +538,10 @@ export default function BookingsTab() {
                   <View style={[styles.emptyIconCircle, { borderColor: tabColor + '38', backgroundColor: tabColor + '10', shadowColor: tabColor }]}>
                     <Inbox size={42} color={tabColor} />
                   </View>
-                  <Text style={[styles.emptyTitle, Typography.threeD]}>
+                  <Text style={[styles.emptyTitle, themedTypography.threeD, { color: theme.colors.text.primary }]}>
                     {t(`bookings.${emptyTitleKey}`).toUpperCase()}
                   </Text>
-                  <Text style={styles.emptySub}>
+                  <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>
                     {t(`bookings.${emptySubKey}`)}
                   </Text>
                 </Animated.View>
@@ -575,7 +605,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   activeTabText: {
-    color: '#fff',
     fontWeight: '900',
   },
   scrollContent: {

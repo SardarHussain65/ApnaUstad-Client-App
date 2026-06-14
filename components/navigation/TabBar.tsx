@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import Animated, { 

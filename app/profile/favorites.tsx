@@ -202,6 +202,7 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
     </Animated.View>
   );
 });
+WorkerCard.displayName = 'FavoriteWorkerCard';
 
 export default function FavoritesScreen() {
   const { t } = useTranslation();

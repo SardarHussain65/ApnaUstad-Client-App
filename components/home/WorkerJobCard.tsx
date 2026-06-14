@@ -113,6 +113,7 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
     </Animated.View>
   );
 });
+WorkerJobCard.displayName = 'WorkerJobCard';
 
 const styles = StyleSheet.create({
   jobCard: {

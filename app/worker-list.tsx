@@ -281,6 +281,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
     </Animated.View>
   );
 });
+WorkerCard.displayName = 'WorkerListCard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🧩 MAIN SCREEN

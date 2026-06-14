@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
-import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 import { alpha, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react-native';
 import { GlassCard } from '../home/GlassCard';

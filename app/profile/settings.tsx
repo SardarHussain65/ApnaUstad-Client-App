@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Globe, Check, Moon, Palette, Sparkles, Sun } from 'lucide-react-native';
+import { Globe, Moon, Palette, Sparkles, Sun } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
@@ -70,12 +70,12 @@ export default function SettingsScreen() {
   };
 
   const isRTL = i18n.language === 'ur';
-  const themeOptions: Array<{
+  const themeOptions: {
     id: ThemeId;
     label: string;
     description: string;
     Icon: typeof Palette;
-  }> = [
+  }[] = [
     {
       id: 'current',
       label: t('settings.themeCurrent'),

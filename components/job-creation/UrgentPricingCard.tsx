@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { Clock, ShieldCheck, Zap } from 'lucide-react-native';
-import { SectionLabel, GlassInput, P } from './shared';
+import { ShieldCheck, Zap } from 'lucide-react-native';
+import { SectionLabel, GlassInput, P, useJobCreationPalette } from './shared';
 import { calculateUrgentPrice, getRateForCategory } from '../../constants/UrgentPricing';
 import { addAlpha } from '../../utils/colorUtils';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ interface UrgentPricingCardProps {
 
 export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amount, onChangeAmount }: UrgentPricingCardProps) {
   const { t } = useTranslation();
+  const palette = useJobCreationPalette();
   const rateInfo = getRateForCategory(category);
   const baseRate = rateInfo.baseRatePerHour;
   const minPrice = rateInfo.minimumPrice;
@@ -41,15 +42,15 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
 
   return (
     <View style={styles.section}>
-      <SectionLabel icon={Zap} label={t('jobCreation.urgentFixedPricing', 'URGENT FIXED PRICING')} color={P.cyan} badge={t('jobCreation.locked', 'Locked')} />
+      <SectionLabel icon={Zap} label={t('jobCreation.urgentFixedPricing', 'URGENT FIXED PRICING')} color={palette.cyan} badge={t('jobCreation.locked', 'Locked')} />
       
-      <GlassInput glowColor={isBelowMin ? P.error : (isBelowRecommended ? P.orange : P.cyan)}>
+      <GlassInput glowColor={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)}>
         <View style={styles.container}>
           {/* Header section explaining fixed pricing */}
           <View style={styles.headerRow}>
             <View style={styles.textColumn}>
-              <Text style={styles.titleText}>{t('jobCreation.jobDuration', 'Job Duration (Hours)')}</Text>
-              <Text style={styles.subtitleText}>
+              <Text style={[styles.titleText, { color: palette.textPrimary }]}>{t('jobCreation.jobDuration', 'Job Duration (Hours)')}</Text>
+              <Text style={[styles.subtitleText, { color: palette.textSecondary }]}>
                 {t('jobCreation.estimateHoursDesc', 'Estimate the hours needed. Rate is Rs. {{rate}}/hr.', { rate: baseRate })}
               </Text>
             </View>
@@ -89,8 +90,8 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
           ]}>
             <Zap 
               size={18} 
-              color={isBelowMin ? P.error : (isBelowRecommended ? P.orange : P.cyan)} 
-              fill={isBelowMin ? P.error : (isBelowRecommended ? P.orange : P.cyan)} 
+              color={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)} 
+              fill={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)} 
               style={styles.zapIcon} 
             />
             <View style={styles.bannerTextColumn}>
@@ -103,7 +104,7 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
                   onChangeText={onChangeAmount}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
+                  placeholderTextColor={palette.textMuted}
                   maxLength={6}
                 />
               </View>
@@ -112,38 +113,38 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
 
           {/* Feedback messages */}
           {isBelowMin ? (
-            <Text style={[styles.feedbackText, { color: P.error }]}>
+            <Text style={[styles.feedbackText, { color: palette.error }]}>
               {t('jobCreation.minPriceRequired', 'Minimum price required is Rs. {{price}}', { price: minPrice })}
             </Text>
           ) : isBelowRecommended ? (
-            <Text style={[styles.feedbackText, { color: P.orange }]}>
+            <Text style={[styles.feedbackText, { color: palette.orange }]}>
               {t('jobCreation.lowOfferWarning', 'Offer is below the recommended estimate. Ustads might take longer to accept.')}
             </Text>
           ) : currentPrice > fixedPrice ? (
-            <Text style={[styles.feedbackText, { color: P.success }]}>
+            <Text style={[styles.feedbackText, { color: palette.success }]}>
               {t('jobCreation.highOfferTip', 'Higher offers attract Ustads faster! 🚀')}
             </Text>
           ) : null}
 
           {/* Recommended Estimate Display */}
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>{t('jobCreation.recommendedEstimate', 'Recommended Estimate:')}</Text>
-            <Text style={styles.breakdownValue}>
+            <Text style={[styles.breakdownLabel, { color: palette.textSecondary }]}>{t('jobCreation.recommendedEstimate', 'Recommended Estimate:')}</Text>
+            <Text style={[styles.breakdownValue, { color: palette.cyan }]}>
               {t('common.rupeesFormat', 'Rs. {{amount}}', { amount: fixedPrice.toLocaleString() })}
             </Text>
           </View>
 
           {showMinPriceApplied && (
             <View style={styles.minPriceAlert}>
-              <ShieldCheck size={12} color={P.success} />
-              <Text style={styles.minPriceAlertText}>
+              <ShieldCheck size={12} color={palette.success} />
+              <Text style={[styles.minPriceAlertText, { color: palette.textSecondary }]}>
                 {t('jobCreation.minPriceApplied', 'Platform minimum booking rate (Rs. {{price}}) applied.', { price: minPrice })}
               </Text>
             </View>
           )}
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
+          <View style={[styles.infoBox, { borderColor: palette.border }]}>
+            <Text style={[styles.infoText, { color: palette.textSecondary }]}>
               {t('jobCreation.urgentFixedPriceInfo', '⚡ Clients and Ustads are matched instantly. The price is locked before posting and cannot be negotiated. The first Ustad to accept is hired instantly.')}
             </Text>
           </View>

@@ -53,6 +53,7 @@ export const ClientToast = React.memo(({ toast, onDismiss }: ClientToastProps) =
     </RNAnimated.View>
   );
 });
+ClientToast.displayName = 'ClientToast';
 
 const styles = StyleSheet.create({
   container: {

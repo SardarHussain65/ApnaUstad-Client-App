@@ -35,7 +35,7 @@ import Animated, {
   withSpring,
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-import { Colors, Spacing, Shadows, BorderRadius } from '../../constants/Theme';
+import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -65,24 +65,35 @@ type ProfileSpecialty = {
 // ─── Stats Row ─────────────────────────────────────────────────────────────────
 function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number; successRate: number }) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
   return (
-    <Animated.View entering={FadeInDown.delay(320).springify()} style={styles.statsCard}>
-      <LinearGradient colors={['rgba(255,255,255,0.04)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
+    <Animated.View
+      entering={FadeInDown.delay(320).springify()}
+      style={[
+        styles.statsCard,
+        {
+          backgroundColor: theme.colors.surface.subtle,
+          borderColor: theme.colors.border.subtle,
+        },
+      ]}
+    >
+      <LinearGradient colors={theme.id === 'current' ? ['rgba(255,255,255,0.04)', 'transparent'] : [alpha(theme.colors.surface.raised, 0.5), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNum, { color: '#00F5FF' }]}>{jobs}</Text>
-        <Text style={styles.statLbl}>{t('profile.jobs')}</Text>
+        <Text style={[styles.statNum, { color: colors.cyan }]}>{jobs}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.jobs')}</Text>
       </View>
-      <View style={styles.statDivider} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNum, { color: '#FFD60A' }]}>
+        <Text style={[styles.statNum, { color: colors.yellow }]}>
           {rating > 0 ? rating.toFixed(1) : '—'}
         </Text>
-        <Text style={styles.statLbl}>{t('profile.rating')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.rating')}</Text>
       </View>
-      <View style={styles.statDivider} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNum, { color: '#34C759' }]}>{successRate}%</Text>
-        <Text style={styles.statLbl}>{t('profile.success')}</Text>
+        <Text style={[styles.statNum, { color: colors.success }]}>{successRate}%</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.success')}</Text>
       </View>
     </Animated.View>
   );
@@ -91,22 +102,33 @@ function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number;
 // ─── Client Stats Row ──────────────────────────────────────────────────────────
 function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing: number; completed: number }) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
   return (
-    <Animated.View entering={FadeInDown.delay(320).springify()} style={styles.statsCard}>
-      <LinearGradient colors={['rgba(255,255,255,0.04)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
+    <Animated.View
+      entering={FadeInDown.delay(320).springify()}
+      style={[
+        styles.statsCard,
+        {
+          backgroundColor: theme.colors.surface.subtle,
+          borderColor: theme.colors.border.subtle,
+        },
+      ]}
+    >
+      <LinearGradient colors={theme.id === 'current' ? ['rgba(255,255,255,0.04)', 'transparent'] : [alpha(theme.colors.surface.raised, 0.5), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNum, { color: '#00F5FF' }]}>{total}</Text>
-        <Text style={styles.statLbl}>{t('profile.bookings')}</Text>
+        <Text style={[styles.statNum, { color: colors.cyan }]}>{total}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.bookings')}</Text>
       </View>
-      <View style={styles.statDivider} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNum, { color: '#FF9F0A' }]}>{ongoing}</Text>
-        <Text style={styles.statLbl}>{t('profile.ongoing')}</Text>
+        <Text style={[styles.statNum, { color: colors.orange }]}>{ongoing}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.ongoing')}</Text>
       </View>
-      <View style={styles.statDivider} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNum, { color: '#34C759' }]}>{completed}</Text>
-        <Text style={styles.statLbl}>{t('profile.completed')}</Text>
+        <Text style={[styles.statNum, { color: colors.success }]}>{completed}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.completed')}</Text>
       </View>
     </Animated.View>
   );
@@ -114,6 +136,7 @@ function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing:
 
 // ─── Menu Item ─────────────────────────────────────────────────────────────────
 function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { icon: any; label: string; sublabel?: string; delay: number; accent: string; onPress?: () => void }) {
+  const theme = useTheme();
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
@@ -122,19 +145,19 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}>
         {Platform.OS === 'ios'
-          ? <BlurView intensity={16} tint="dark" style={StyleSheet.absoluteFill} />
-          : <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(12,12,32,0.85)' }]} />}
+          ? <BlurView intensity={theme.id === 'current' ? 16 : 8} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
+          : <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface.card }]} />}
         <View style={[styles.menuAccentBar, { backgroundColor: accent }]} />
         <View style={styles.menuLeft}>
           <View style={[styles.menuIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}30` }]}>
             <Icon size={17} color={accent} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.menuLabel}>{label}</Text>
-            {sublabel ? <Text style={styles.menuSub}>{sublabel}</Text> : null}
+            <Text style={[styles.menuLabel, { color: theme.colors.text.primary }]}>{label}</Text>
+            {sublabel ? <Text style={[styles.menuSub, { color: theme.colors.text.muted }]}>{sublabel}</Text> : null}
           </View>
         </View>
-        <ChevronRight size={15} color="rgba(255,255,255,0.2)" />
+        <ChevronRight size={15} color={theme.colors.text.dim} />
       </Pressable>
     </Animated.View>
   );
@@ -144,6 +167,8 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
 export default function ProfileTab() {
   const { logout, role, user } = useAuth();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const themedTypography = useThemeTypography();
   const router = useRouter();
   const scrollY = useSharedValue(0);
 
@@ -253,34 +278,56 @@ export default function ProfileTab() {
         {/* ── Avatar Block ── */}
         <Animated.View style={[styles.avatarSection, avatarParallax]}>
           <View style={styles.avatarWrap}>
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            <Image source={{ uri: avatarUri }} style={[styles.avatar, { borderColor: theme.id === 'light' ? '#FFFFFF' : alpha('#FFFFFF', 0.9) }]} />
             <TouchableOpacity style={styles.cameraBtn} onPress={() => router.push('/profile/personal-info')}>
-              <LinearGradient colors={['#BF5AF2', '#00F5FF']} style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]} />
-              <Camera size={12} color="#fff" strokeWidth={2.5} />
+              <LinearGradient colors={theme.colors.gradients.primary} style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]} />
+              <Camera size={12} color={theme.colors.text.onBrand} strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
 
           <Animated.View entering={FadeInUp.delay(180).springify()} style={styles.nameBlock}>
             <View style={styles.nameRow}>
-              <Text style={styles.userName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} ellipsizeMode="tail">{workerProfile?.fullName || user?.fullName || 'User'}</Text>
+              <Text
+                style={[
+                  styles.userName,
+                  themedTypography.threeD,
+                  { color: theme.colors.text.primary },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+                ellipsizeMode="tail"
+              >
+                {workerProfile?.fullName || user?.fullName || 'User'}
+              </Text>
               {isWorker && (workerProfile?.isVerified || (workerProfile?.rating ?? 0) >= 4.5) && (
-                <BadgeCheck size={20} color="#00F5FF" strokeWidth={2.5} style={{ marginLeft: 5, flexShrink: 0 }} />
+                <BadgeCheck size={20} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginLeft: 5, flexShrink: 0 }} />
               )}
             </View>
-            <Text style={styles.userSub}>{workerProfile?.email || user?.email || user?.phone || ''}</Text>
+            <Text style={[styles.userSub, { color: theme.colors.text.muted }]}>{workerProfile?.email || user?.email || user?.phone || ''}</Text>
 
             <View style={styles.badgesRow}>
               <LinearGradient
-                colors={isWorker ? ['#FF8C00', '#FF5E00'] : ['#00F5FF', '#007AFF']}
+                colors={isWorker ? theme.colors.gradients.worker : theme.colors.gradients.primary}
                 style={styles.rolePill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Text style={styles.rolePillText}>{isWorker ? t('profile.eliteUstad') : t('profile.platinumClient')}</Text>
+                <Text style={[styles.rolePillText, { color: theme.colors.button.primaryText }]}>{isWorker ? t('profile.eliteUstad') : t('profile.platinumClient')}</Text>
               </LinearGradient>
             </View>
           </Animated.View>
         </Animated.View>
 
         {/* ── Content ── */}
-        <View style={styles.card}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.colors.surface.card,
+              borderColor: theme.colors.border.subtle,
+              shadowColor: theme.colors.shadow.color,
+              shadowOpacity: theme.colors.shadow.cardOpacity,
+            },
+          ]}
+        >
 
           {/* Stats */}
           {isWorker ? (
@@ -291,7 +338,16 @@ export default function ProfileTab() {
 
           {/* Worker Details */}
           {isWorker && workerProfile && (
-            <Animated.View entering={FadeInDown.delay(420)} style={styles.workerSummary}>
+            <Animated.View
+              entering={FadeInDown.delay(420)}
+              style={[
+                styles.workerSummary,
+                {
+                  backgroundColor: theme.colors.surface.subtle,
+                  borderColor: theme.colors.border.subtle,
+                },
+              ]}
+            >
               {!!(workerProfile.city || workerProfile.address) && (
                 <View style={styles.locationPill}>
                   <MapPin size={13} color="#BF5AF2" strokeWidth={2.3} />
@@ -380,7 +436,7 @@ export default function ProfileTab() {
 
           {/* Account */}
           <View style={styles.menuSection}>
-            <Text style={styles.sectionLabel}>{t('profile.account')}</Text>
+            <Text style={[styles.sectionLabel, { color: theme.colors.text.dim }]}>{t('profile.account')}</Text>
             <MenuItem icon={User} label={t('profile.personalInfo')} sublabel={t('profile.personalInfoSub')} delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
             {isWorker && (
               <MenuItem icon={Layers3} label={t('profile.skills')} sublabel={t('profile.skillsSub')} delay={655} accent="#FF8C00" onPress={() => router.push('/profile/specialties' as any)} />
@@ -412,7 +468,7 @@ export default function ProfileTab() {
 
           {/* Support */}
           <View style={styles.menuSection}>
-            <Text style={styles.sectionLabel}>{t('profile.support')}</Text>
+            <Text style={[styles.sectionLabel, { color: theme.colors.text.dim }]}>{t('profile.support')}</Text>
             <MenuItem icon={HelpCircle} label={t('profile.helpCenter')} sublabel={t('profile.helpCenterSub')} delay={760} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
             <MenuItem icon={Star} label={t('profile.rateApp')} sublabel={t('profile.rateAppSub')} delay={790} accent="#FFD60A" />
             <MenuItem icon={Settings} label={t('profile.appSettings')} sublabel={t('profile.appSettingsSub')} delay={820} accent="#8E8E93" onPress={() => router.push('/profile/settings')} />
@@ -420,13 +476,13 @@ export default function ProfileTab() {
 
           {/* Logout */}
           <Animated.View entering={FadeInDown.delay(820)}>
-            <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+            <Pressable style={[styles.logoutBtn, { backgroundColor: alpha(theme.colors.status.error, 0.08), borderColor: alpha(theme.colors.status.error, 0.18) }]} onPress={handleLogout}>
               <LogOut size={16} color="#FF3B30" strokeWidth={2.3} />
-              <Text style={styles.logoutText}>{t('profile.signOut')}</Text>
+              <Text style={[styles.logoutText, { color: theme.colors.status.error }]}>{t('profile.signOut')}</Text>
             </Pressable>
           </Animated.View>
 
-          <Text style={styles.version}>{t('profile.version', 'ApnaUstad v2.4.0')}</Text>
+          <Text style={[styles.version, { color: theme.colors.text.dim }]}>{t('profile.version', 'ApnaUstad v2.4.0')}</Text>
         </View>
       </Animated.ScrollView>
     </BackgroundWrapper>
