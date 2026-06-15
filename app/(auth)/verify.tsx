@@ -24,7 +24,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Colors, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -38,7 +38,9 @@ export default function VerifyScreen() {
     role?: string;
   }>();
   const isWorker = role === 'worker';
-  const accentColor = isWorker ? Colors.worker : Colors.cyan;
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const accentColor = isWorker ? colors.worker : colors.cyan;
 
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -141,10 +143,10 @@ export default function VerifyScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={styles.otpCard}
-              gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
+              style={[styles.otpCard, { borderColor: theme.colors.border.subtle }]}
+              gradient={[alpha(accentColor, 0.14), alpha(theme.colors.brand.secondary, 0.05)]}
             >
-              <Text style={styles.otpLabel}>{t('verify.otpLabel')}</Text>
+              <Text style={[styles.otpLabel, { color: theme.colors.text.muted }]}>{t('verify.otpLabel')}</Text>
               <OtpInput
                 numberOfDigits={6}
                 focusColor={accentColor}
@@ -183,7 +185,7 @@ export default function VerifyScreen() {
                 <Text
                   style={[
                     styles.resendButton,
-                    { color: resendCooldown > 0 ? Colors.textDim : accentColor },
+                    { color: resendCooldown > 0 ? theme.colors.text.dim : accentColor },
                   ]}
                 >
                   {isResending ? t('verify.sending') : resendCooldown > 0 ? t('verify.resendIn', { seconds: resendCooldown }) : t('verify.resendNow')}
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
   },
   otpCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
   },
   otpLabel: {
     color: Colors.textMuted,

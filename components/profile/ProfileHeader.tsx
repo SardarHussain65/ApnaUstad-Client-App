@@ -16,7 +16,10 @@ export const ProfileHeader = ({ title }: ProfileHeaderProps) => {
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={[styles.backBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}
+      >
         <ChevronLeft color={theme.colors.text.primary} size={28} />
       </TouchableOpacity>
       <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{title}</Text>
@@ -36,8 +39,10 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 44,
     height: 44,
+    borderRadius: 16,
     alignItems: 'flex-start',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   headerTitle: {
     fontSize: 17,

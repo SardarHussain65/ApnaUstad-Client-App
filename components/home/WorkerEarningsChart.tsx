@@ -7,20 +7,19 @@ import Animated, {
   withTiming,
   withDelay,
   Easing,
-  FadeIn,
   FadeInDown,
 } from 'react-native-reanimated';
 import { TrendingUp, TrendingDown, Trophy, Flame, Calendar, BarChart3 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './GlassCard';
-import { Colors, Typography } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { EarningsDataPoint, EarningsSummary } from '../../hooks/useWorkerAnalytics';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CHART_PADDING_H = 20;
-const CHART_WIDTH = SCREEN_WIDTH - 48 - CHART_PADDING_H * 2; // card padding + chart padding
+const CHART_WIDTH = SCREEN_WIDTH - 48 - CHART_PADDING_H * 2;
 const CHART_HEIGHT = 140;
 const BAR_GAP = 6;
 
@@ -78,6 +77,9 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
   summary,
 }: WorkerEarningsChartProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const [period, setPeriod] = useState<Period>('daily');
 
   const data = period === 'daily' ? daily : period === 'weekly' ? weekly : monthly;
@@ -128,8 +130,8 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
     <Animated.View entering={FadeInDown.delay(200).duration(400)}>
       <GlassCard
         intensity={35}
-        glowColor="rgba(0,245,255,0.25)"
-        gradient={['rgba(0,245,255,0.08)', 'rgba(191,90,242,0.06)', 'rgba(5,5,16,0.96)']}
+        glowColor={colors.cyan}
+        gradient={[alpha(colors.cyan, 0.08), alpha(theme.colors.brand.secondary, 0.06), alpha(theme.colors.surface.card, 0.18)]}
         padding={0}
         style={styles.card}
         contentStyle={styles.cardContent}
@@ -137,28 +139,36 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <BarChart3 size={18} color={Colors.cyan} strokeWidth={2.5} />
-            <Text style={[styles.headerTitle, Typography.threeD]}>
+            <BarChart3 size={18} color={colors.cyan} strokeWidth={2.5} />
+            <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>
               {t('home.worker.earningsChart', 'Earnings Overview')}
             </Text>
           </View>
           <View style={styles.periodTotal}>
-            <Text style={styles.periodTotalLabel}>{periodLabel}</Text>
-            <Text style={[styles.periodTotalValue, Typography.threeD]}>
+            <Text style={[styles.periodTotalLabel, { color: theme.colors.text.muted }]}>{periodLabel}</Text>
+            <Text style={[styles.periodTotalValue, typography.threeD, { color: colors.success }]}>
               Rs. {periodTotal.toLocaleString()}
             </Text>
           </View>
         </View>
 
         {/* ── Period Tabs ── */}
-        <View style={styles.tabs}>
+        <View style={[styles.tabs, {
+          backgroundColor: alpha(theme.colors.text.primary, 0.04),
+        }]}>
           {(['daily', 'weekly', 'monthly'] as Period[]).map((p) => (
             <TouchableOpacity
               key={p}
               onPress={() => setPeriod(p)}
-              style={[styles.tab, period === p && styles.tabActive]}
+              style={[styles.tab, period === p && styles.tabActive, {
+                backgroundColor: period === p ? alpha(colors.cyan, 0.15) : 'transparent',
+                borderColor: period === p ? alpha(colors.cyan, 0.25) : 'transparent',
+              }]}
             >
-              <Text style={[styles.tabText, period === p && styles.tabTextActive]}>
+              <Text style={[styles.tabText, {
+                color: period === p ? colors.cyan : theme.colors.text.muted,
+                fontWeight: period === p ? '900' : '700',
+              }]}>
                 {p === 'daily'
                   ? t('home.worker.daily', 'Daily')
                   : p === 'weekly'
@@ -177,13 +187,13 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
           >
             <Defs>
               <SvgLinearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={Colors.cyan} stopOpacity="0.9" />
-                <Stop offset="1" stopColor={Colors.cyan} stopOpacity="0.3" />
+                <Stop offset="0" stopColor={colors.cyan} stopOpacity="0.9" />
+                <Stop offset="1" stopColor={colors.cyan} stopOpacity="0.3" />
               </SvgLinearGradient>
               <SvgLinearGradient id="barGradientMax" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={Colors.green} stopOpacity="1" />
-                <Stop offset="0.5" stopColor={Colors.cyan} stopOpacity="0.9" />
-                <Stop offset="1" stopColor={Colors.cyan} stopOpacity="0.4" />
+                <Stop offset="0" stopColor={colors.success} stopOpacity="1" />
+                <Stop offset="0.5" stopColor={colors.cyan} stopOpacity="0.9" />
+                <Stop offset="1" stopColor={colors.cyan} stopOpacity="0.4" />
               </SvgLinearGradient>
             </Defs>
 
@@ -197,7 +207,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
                     y1={y}
                     x2={CHART_WIDTH + CHART_PADDING_H}
                     y2={y}
-                    stroke="rgba(255,255,255,0.06)"
+                    stroke={alpha(theme.colors.text.primary, 0.06)}
                     strokeWidth={1}
                     strokeDasharray="4,4"
                   />
@@ -205,7 +215,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
                     <SvgText
                       x={CHART_PADDING_H - 4}
                       y={y + 3}
-                      fill="rgba(255,255,255,0.3)"
+                      fill={alpha(theme.colors.text.primary, 0.3)}
                       fontSize={8}
                       textAnchor="end"
                     >
@@ -241,7 +251,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
                   key={`label-${period}-${i}`}
                   x={x}
                   y={CHART_HEIGHT + 16}
-                  fill={i === maxBarIndex ? Colors.cyan : 'rgba(255,255,255,0.45)'}
+                  fill={i === maxBarIndex ? colors.cyan : alpha(theme.colors.text.primary, 0.45)}
                   fontSize={9}
                   fontWeight={i === maxBarIndex ? '800' : '600'}
                   textAnchor="middle"
@@ -254,28 +264,30 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
         </View>
 
         {/* ── Summary Row ── */}
-        <View style={styles.summaryRow}>
+        <View style={[styles.summaryRow, {
+          borderTopColor: alpha(theme.colors.text.primary, 0.06),
+        }]}>
           <View style={styles.summaryItem}>
-            <View style={[styles.summaryIcon, { backgroundColor: 'rgba(0,255,127,0.1)' }]}>
-              <Trophy size={13} color={Colors.green} strokeWidth={2.5} />
+            <View style={[styles.summaryIcon, { backgroundColor: alpha(colors.success, 0.1) }]}>
+              <Trophy size={13} color={colors.success} strokeWidth={2.5} />
             </View>
             <View>
-              <Text style={styles.summaryValue}>
+              <Text style={[styles.summaryValue, { color: theme.colors.text.primary }]}>
                 Rs. {(summary.bestDay?.earnings || 0).toLocaleString()}
               </Text>
-              <Text style={styles.summaryLabel}>
+              <Text style={[styles.summaryLabel, { color: theme.colors.text.muted }]}>
                 {t('home.worker.bestDay', 'Best Day')}
               </Text>
             </View>
           </View>
 
           <View style={styles.summaryItem}>
-            <View style={[styles.summaryIcon, { backgroundColor: 'rgba(255,140,0,0.1)' }]}>
-              <Flame size={13} color={Colors.orange} strokeWidth={2.5} />
+            <View style={[styles.summaryIcon, { backgroundColor: alpha(colors.worker, 0.1) }]}>
+              <Flame size={13} color={colors.worker} strokeWidth={2.5} />
             </View>
             <View>
-              <Text style={styles.summaryValue}>{summary.streak || 0}</Text>
-              <Text style={styles.summaryLabel}>
+              <Text style={[styles.summaryValue, { color: theme.colors.text.primary }]}>{summary.streak || 0}</Text>
+              <Text style={[styles.summaryLabel, { color: theme.colors.text.muted }]}>
                 {t('home.worker.streak', 'Day Streak')}
               </Text>
             </View>
@@ -283,21 +295,21 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
 
           <View style={styles.summaryItem}>
             <View style={[styles.summaryIcon, {
-              backgroundColor: summary.trendPercent >= 0 ? 'rgba(0,245,255,0.1)' : 'rgba(255,59,48,0.1)'
+              backgroundColor: summary.trendPercent >= 0 ? alpha(colors.cyan, 0.1) : alpha(colors.error, 0.1)
             }]}>
               {summary.trendPercent >= 0 ? (
-                <TrendingUp size={13} color={Colors.cyan} strokeWidth={2.5} />
+                <TrendingUp size={13} color={colors.cyan} strokeWidth={2.5} />
               ) : (
-                <TrendingDown size={13} color={Colors.error} strokeWidth={2.5} />
+                <TrendingDown size={13} color={colors.error} strokeWidth={2.5} />
               )}
             </View>
             <View>
               <Text style={[styles.summaryValue, {
-                color: summary.trendPercent >= 0 ? Colors.green : Colors.error
+                color: summary.trendPercent >= 0 ? colors.success : colors.error
               }]}>
                 {summary.trendPercent >= 0 ? '+' : ''}{summary.trendPercent || 0}%
               </Text>
-              <Text style={styles.summaryLabel}>
+              <Text style={[styles.summaryLabel, { color: theme.colors.text.muted }]}>
                 {t('home.worker.vsPrevWeek', 'vs Last Week')}
               </Text>
             </View>
@@ -333,7 +345,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#fff',
   },
   periodTotal: {
     alignItems: 'flex-end',
@@ -341,19 +352,16 @@ const styles = StyleSheet.create({
   periodTotalLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   periodTotalValue: {
     fontSize: 16,
     fontWeight: '900',
-    color: Colors.green,
     marginTop: 1,
   },
   tabs: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 12,
     padding: 3,
     marginBottom: 14,
@@ -365,18 +373,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: {
-    backgroundColor: 'rgba(0,245,255,0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.25)',
   },
   tabText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textMuted,
-  },
-  tabTextActive: {
-    color: Colors.cyan,
-    fontWeight: '900',
   },
   chartContainer: {
     alignItems: 'center',
@@ -387,7 +388,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
   },
   summaryItem: {
     flexDirection: 'row',
@@ -404,12 +404,10 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#fff',
   },
   summaryLabel: {
     fontSize: 8,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     marginTop: 1,
   },

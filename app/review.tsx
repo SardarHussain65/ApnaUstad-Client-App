@@ -29,7 +29,7 @@ import {
 } from 'lucide-react-native';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Colors, Spacing, Typography } from '../constants/Theme';
+import { Spacing, Typography, useThemeColors } from '../constants/Theme';
 import { useBookingDetails, useCreateReviewMutation, useToast } from '../hooks';
 
 const RATING_LABELS: Record<number, string> = {
@@ -72,6 +72,7 @@ export default function ReviewScreen() {
   const toast = useToast();
   const { t } = useTranslation();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const colors = useThemeColors();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -186,7 +187,7 @@ export default function ReviewScreen() {
           {booking?.isReviewed ? (
             <Animated.View entering={FadeInUp.duration(500)}>
               <GlassCard intensity={25} style={styles.doneCard}>
-                <CheckCircle2 size={50} color={Colors.success} />
+                <CheckCircle2 size={50} color={colors.success} />
                 <Text style={styles.doneTitle}>{t('review.alreadySubmitted', 'Review Already Submitted')}</Text>
                 <Text style={styles.doneText}>{t('review.alreadySubmittedDesc', 'This completed job already has customer feedback attached.')}</Text>
                 <TouchableOpacity onPress={() => router.replace({ pathname: '/transaction-details', params: { id: bookingId } })} style={styles.doneBtn}>
@@ -197,7 +198,7 @@ export default function ReviewScreen() {
           ) : booking?.status !== 'completed' ? (
             <Animated.View entering={FadeInUp.duration(500)}>
               <GlassCard intensity={25} style={styles.doneCard}>
-                <MessageSquareText size={50} color={Colors.orange} />
+                <MessageSquareText size={50} color={colors.orange} />
                 <Text style={styles.doneTitle}>{t('review.unlocksAfterCompletion', 'Review Unlocks After Completion')}</Text>
                 <Text style={styles.doneText}>{t('review.unlocksAfterCompletionDesc', 'Once the job is completed, you can rate the service and share your experience.')}</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn}>

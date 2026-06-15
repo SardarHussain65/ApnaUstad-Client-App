@@ -24,7 +24,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Colors, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -33,7 +33,9 @@ export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const { email, role } = useLocalSearchParams<{ email: string; role?: string }>();
   const isWorker = role === 'worker';
-  const accentColor = isWorker ? Colors.worker : Colors.cyan;
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const accentColor = isWorker ? colors.worker : colors.cyan;
 
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -125,13 +127,13 @@ export default function ResetPasswordScreen() {
               title={t('resetPassword.createNew')}
             />
 
-            <GlassCard
-              intensity={25}
-              padding={Spacing.l}
-              style={styles.formCard}
-              gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
-            >
-              <Text style={styles.otpLabel}>{t('resetPassword.recoveryCode')}</Text>
+<GlassCard
+               intensity={25}
+               padding={Spacing.l}
+               style={[styles.otpCard, { borderColor: theme.colors.border.subtle }]}
+               gradient={[alpha(accentColor, 0.14), alpha(theme.colors.brand.secondary, 0.05)]}
+             >
+              <Text style={[styles.otpLabel, { color: theme.colors.text.muted }]}>{t('resetPassword.recoveryCode')}</Text>
               <OtpInput
                 numberOfDigits={6}
                 focusColor={accentColor}
@@ -192,13 +194,13 @@ export default function ResetPasswordScreen() {
                 value={confirmPassword}
               />
 
-              <AnimatedButton
-                isLoading={resetMutation.isPending}
-                onPress={handleResetPassword}
-                style={styles.resetButton}
-                title={t('resetPassword.updatePassword')}
-                variant={isWorker ? 'orange' : 'cyan'}
-              />
+<AnimatedButton
+                 isLoading={resetMutation.isPending}
+                 onPress={handleResetPassword}
+                 style={styles.verifyButton}
+                 title={t('resetPassword.updatePassword')}
+                 variant={isWorker ? 'orange' : 'cyan'}
+               />
             </GlassCard>
 
             <SecurityNote accentColor={accentColor} text={t('resetPassword.securityNote')} />
@@ -215,6 +217,7 @@ interface PasswordVisibilityButtonProps {
 }
 
 function PasswordVisibilityButton({ isVisible, onPress }: PasswordVisibilityButtonProps) {
+  const theme = useTheme();
   return (
     <TouchableOpacity
       accessibilityLabel={isVisible ? 'Hide password' : 'Show password'}
@@ -222,8 +225,8 @@ function PasswordVisibilityButton({ isVisible, onPress }: PasswordVisibilityButt
       onPress={onPress}
     >
       {isVisible
-        ? <EyeOff size={18} color={Colors.textMuted} />
-        : <Eye size={18} color={Colors.textMuted} />}
+        ? <EyeOff size={18} color={theme.colors.text.muted} />
+        : <Eye size={18} color={theme.colors.text.muted} />}
     </TouchableOpacity>
   );
 }
@@ -237,9 +240,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.l,
     paddingBottom: Spacing.xl,
   },
-  formCard: {
+  otpCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
   },
   otpLabel: {
     color: Colors.textMuted,
@@ -253,12 +256,11 @@ const styles = StyleSheet.create({
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.xl,
     width: '100%',
   },
   otpCell: {
     width: (width - 48 - 64 - 40) / 6,
-    height: 56,
+    height: 58,
     borderRadius: BorderRadius.m,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.11)',
@@ -279,8 +281,22 @@ const styles = StyleSheet.create({
     width: 2,
     height: 24,
   },
-  resetButton: {
-    marginTop: Spacing.s,
+  verifyButton: {
+    marginTop: Spacing.xl,
     width: '100%',
+  },
+  resendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: Spacing.xl,
+  },
+  resendHint: {
+    color: 'rgba(255,255,255,0.46)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  resendButton: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

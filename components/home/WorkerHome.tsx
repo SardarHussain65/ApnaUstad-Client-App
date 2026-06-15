@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useIncomingJob } from '../../context/IncomingJobContext';
-import { Colors, Spacing, Typography } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
 import { HomeHeader } from './HomeHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
@@ -39,6 +39,10 @@ export function WorkerHome() {
   const router = useRouter();
   const { t } = useTranslation();
   const { token, user } = useAuth();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
   const {
     dismissedJobs,
     clearDismissedJob,
@@ -322,14 +326,14 @@ export function WorkerHome() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.cyan}
-            colors={[Colors.cyan]}
-          />
-        }
+refreshControl={
+           <RefreshControl
+             refreshing={isRefreshing}
+             onRefresh={handleRefresh}
+             tintColor={colors.cyan}
+             colors={[colors.cyan]}
+           />
+         }
       >
         <HomeHeader />
 
@@ -382,8 +386,8 @@ export function WorkerHome() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
-                <Radio color="#FF8C00" size={22} />
-                <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>{t('home.worker.missedJobs')}</Text>
+                <Radio color={colors.worker} size={22} />
+                <Text style={[styles.sectionTitle, typography.threeD, { color: colors.worker }]}>{t('home.worker.missedJobs')}</Text>
               </View>
             </View>
             <View style={styles.agendaList}>
@@ -395,17 +399,17 @@ export function WorkerHome() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
-                  <Radio color="#FF8C00" size={22} />
-                  <Text style={[styles.sectionTitle, Typography.threeD, { color: '#FF8C00' }]}>{t('home.worker.missedJobs')}</Text>
+                  <Radio color={colors.worker} size={22} />
+                  <Text style={[styles.sectionTitle, typography.threeD, { color: colors.worker }]}>{t('home.worker.missedJobs')}</Text>
                 </View>
                 {recentSignals.length > 3 ? (
                   <TouchableOpacity onPress={() => setShowAllSignals(!showAllSignals)}>
-                    <Text style={[styles.seeAll, { color: '#FF8C00' }]}>
+                    <Text style={[styles.seeAll, { color: colors.worker }]}>
                       {showAllSignals ? t('home.client.showLess') : `${t('home.client.viewAll')} (${recentSignals.length})`}
                     </Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={[styles.sectionMeta, { color: '#FF8C00' }]}>{recentSignals.length} {t('home.worker.missedJobs').toUpperCase()}</Text>
+                  <Text style={[styles.sectionMeta, { color: colors.worker }]}>{recentSignals.length} {t('home.worker.missedJobs').toUpperCase()}</Text>
                 )}
               </View>
 
@@ -431,19 +435,19 @@ export function WorkerHome() {
           <View style={styles.sectionHeader}>
             <View>
               <View style={styles.sectionTitleRow}>
-                <ShieldCheck color={Colors.cyan} size={24} />
-                <Text style={[styles.sectionTitle, Typography.threeD]}>{t('home.worker.recentBookings')}</Text>
+                <ShieldCheck color={colors.cyan} size={24} />
+                <Text style={[styles.sectionTitle, typography.threeD, { color: colors.cyan }]}>{t('home.worker.recentBookings')}</Text>
               </View>
-              <Text style={styles.sectionSubtitle}>{t('home.worker.latestActivity')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.colors.text.muted }]}>{t('home.worker.latestActivity')}</Text>
             </View>
             {stats.missions > 3 ? (
               <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')} style={styles.seeAllRow}>
-                <Text style={styles.seeAll}>{t('home.client.seeAll')}</Text>
-                <ChevronRight size={13} color={Colors.cyan} strokeWidth={2.6} />
+                <Text style={[styles.seeAll, { color: colors.cyan }]}>{t('home.client.seeAll')}</Text>
+                <ChevronRight size={13} color={colors.cyan} strokeWidth={2.6} />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={handleRefresh}>
-                <Text style={styles.seeAll}>{t('common.refresh', 'REFRESH')}</Text>
+                <Text style={[styles.seeAll, { color: theme.colors.text.primary }]}>{t('common.refresh', 'REFRESH')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -464,7 +468,7 @@ export function WorkerHome() {
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No bookings yet.{'\n'}Accepted bookings will appear here.</Text>
+                <Text style={[styles.emptyText, { color: theme.colors.text.primary }]}>No bookings yet.{'\n'}Accepted bookings will appear here.</Text>
               </View>
             )}
           </View>
@@ -475,8 +479,8 @@ export function WorkerHome() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
-                <Hourglass color={Colors.worker} size={22} />
-                <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>{t('home.worker.activeBids')}</Text>
+                <Hourglass color={colors.worker} size={22} />
+                <Text style={[styles.sectionTitle, typography.threeD, { color: colors.worker }]}>{t('home.worker.activeBids')}</Text>
               </View>
             </View>
             <View style={styles.agendaList}>
@@ -488,17 +492,17 @@ export function WorkerHome() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionTitleRow}>
-                  <Hourglass color={Colors.worker} size={22} />
-                  <Text style={[styles.sectionTitle, Typography.threeD, { color: Colors.worker }]}>{t('home.worker.activeBids')}</Text>
+                  <Hourglass color={colors.worker} size={22} />
+                  <Text style={[styles.sectionTitle, typography.threeD, { color: colors.worker }]}>{t('home.worker.activeBids')}</Text>
                 </View>
                 {pendingBids.length > 3 ? (
                   <TouchableOpacity onPress={() => setShowAllBids(!showAllBids)}>
-                    <Text style={[styles.seeAll, { color: Colors.worker }]}>
+                    <Text style={[styles.seeAll, { color: colors.worker }]}>
                       {showAllBids ? t('home.client.showLess') : `${t('home.client.viewAll')} (${pendingBids.length})`}
                     </Text>
                   </TouchableOpacity>
                 ) : (
-                  <Text style={[styles.sectionMeta, { color: Colors.worker }]}>{pendingBids.length} {t('common.active').toUpperCase()}</Text>
+                  <Text style={[styles.sectionMeta, { color: colors.worker }]}>{pendingBids.length} {t('common.active').toUpperCase()}</Text>
                 )}
               </View>
 
@@ -571,22 +575,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#fff',
   },
   sectionSubtitle: {
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
   },
   sectionMeta: {
-    color: Colors.green,
     fontWeight: '900',
     fontSize: 11,
     letterSpacing: 0,
   },
   seeAll: {
-    color: Colors.primary,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0,
@@ -609,7 +609,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
-    color: Colors.textDim,
     fontSize: 14,
     textAlign: 'center',
     fontWeight: '600',

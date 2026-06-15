@@ -37,7 +37,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Colors, Spacing, Typography } from '../constants/Theme';
+import { Spacing, Typography, useTheme } from '../constants/Theme';
 import { useMarkNotificationReadMutation, useNotifications, type AppNotification } from '../hooks';
 import { socketService } from '../services/socketService';
 
@@ -54,6 +54,8 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = theme.legacy;
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data, isLoading, isRefetching, refetch } = useNotifications();
   const { mutate: markRead, isPending: isMarkingRead } = useMarkNotificationReadMutation();
@@ -120,7 +122,7 @@ export default function NotificationsScreen() {
               colors={['rgba(0,245,255,0.28)', 'rgba(191,90,242,0.14)']}
               style={StyleSheet.absoluteFill}
             />
-            <Text style={styles.unreadText}>{unreadCount}</Text>
+            <Text style={[styles.unreadText, { color: theme.colors.brand.primary }]}>{unreadCount}</Text>
           </View>
         </Animated.View>
 
@@ -129,17 +131,17 @@ export default function NotificationsScreen() {
             padding={0}
             intensity={28}
             hasGlow={unreadCount > 0}
-            glowColor={Colors.cyan}
+            glowColor={colors.cyan}
             style={styles.summaryCard}
             contentStyle={styles.summaryContent}
           >
             <View style={styles.summaryLeft}>
               <View style={styles.summaryIcon}>
-                <Sparkles size={18} color={Colors.cyan} />
+                <Sparkles size={18} color={theme.colors.brand.primary} />
               </View>
               <View style={styles.summaryCopy}>
                 <Text style={styles.summaryTitle}>{t('notifications.updatesTitle')}</Text>
-                <Text style={styles.summaryText}>
+                <Text style={[styles.summaryText, { color: theme.colors.text.muted }]}>
                   {unreadCount > 0
                     ? (unreadCount === 1 ? t('notifications.waitingSingular') : t('notifications.waitingPlural', { count: unreadCount }))
                     : t('notifications.upToDate')}
@@ -148,8 +150,8 @@ export default function NotificationsScreen() {
             </View>
             {unreadCount > 0 && (
               <TouchableOpacity disabled={isMarkingRead} onPress={markAllRead} style={styles.markAllBtn} activeOpacity={0.8}>
-                <CheckCircle2 size={13} color={Colors.cyan} />
-                <Text style={styles.markAllText}>{t('notifications.readBtn')}</Text>
+                <CheckCircle2 size={13} color={theme.colors.brand.primary} />
+                <Text style={[styles.markAllText, { color: theme.colors.brand.primary }]}>{t('notifications.readBtn')}</Text>
               </TouchableOpacity>
             )}
           </GlassCard>
@@ -183,8 +185,8 @@ export default function NotificationsScreen() {
 
         {isLoading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={Colors.cyan} size="large" />
-            <Text style={styles.loadingText}>{t('notifications.loading')}</Text>
+            <ActivityIndicator color={theme.colors.brand.primary} size="large" />
+            <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('notifications.loading')}</Text>
           </View>
         ) : (
           <ScrollView
@@ -194,7 +196,7 @@ export default function NotificationsScreen() {
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={refetch}
-                tintColor={Colors.cyan}
+                tintColor={theme.colors.brand.primary}
               />
             }
           >
@@ -204,7 +206,7 @@ export default function NotificationsScreen() {
                 entering={FadeInDown.delay(index * 55).springify().damping(16)}
                 layout={Layout.springify().damping(18)}
               >
-                <NotificationCard notification={notification} onPress={() => openNotification(notification)} />
+                <NotificationCard notification={notification} onPress={() => openNotification(notification)} theme={theme} />
               </Animated.View>
             ))}
 
@@ -212,10 +214,10 @@ export default function NotificationsScreen() {
               <Animated.View entering={FadeInDown.duration(420)}>
                 <GlassCard intensity={20} style={styles.emptyCard}>
                   <View style={styles.emptyIcon}>
-                    <Bell size={34} color={Colors.cyan} />
+                    <Bell size={34} color={theme.colors.brand.primary} />
                   </View>
                   <Text style={styles.emptyTitle}>{t('notifications.emptyTitle')}</Text>
-                  <Text style={styles.emptyText}>{t('notifications.emptyDesc')}</Text>
+                  <Text style={[styles.emptyText, { color: theme.colors.text.muted }]}>{t('notifications.emptyDesc')}</Text>
                 </GlassCard>
               </Animated.View>
             )}
@@ -226,9 +228,9 @@ export default function NotificationsScreen() {
   );
 }
 
-function NotificationCard({ notification, onPress }: { notification: AppNotification; onPress: () => void }) {
+function NotificationCard({ notification, onPress, theme }: { notification: AppNotification; onPress: () => void; theme: ReturnType<typeof useTheme> }) {
   const Icon = getNotificationIcon(notification.type);
-  const accent = notification.color || getNotificationColor(notification.type);
+  const accent = notification.color || getNotificationColor(notification.type, theme);
   const unread = !notification.isRead;
   const { t } = useTranslation();
 
@@ -255,7 +257,7 @@ function NotificationCard({ notification, onPress }: { notification: AppNotifica
 
         <View style={styles.notificationBody}>
           <View style={styles.notificationTop}>
-            <Text style={styles.typeLabel}>{getTypeLabel(notification.type, t)}</Text>
+            <Text style={[styles.typeLabel, { color: theme.colors.brand.primary }]}>{getTypeLabel(notification.type, t)}</Text>
             <Text style={styles.notificationTime}>{formatNotificationTime(notification.createdAt, t)}</Text>
           </View>
 
@@ -272,8 +274,8 @@ function NotificationCard({ notification, onPress }: { notification: AppNotifica
             </Text>
             {notification.booking && (
               <View style={styles.openHint}>
-                <Text style={styles.openHintText}>{t('notifications.hintOpen')}</Text>
-                <ChevronRight size={13} color={Colors.cyan} />
+                <Text style={[styles.openHintText, { color: theme.colors.brand.primary }]}>{t('notifications.hintOpen')}</Text>
+                <ChevronRight size={13} color={theme.colors.brand.primary} />
               </View>
             )}
           </View>
@@ -326,16 +328,15 @@ function getNotificationIcon(type: AppNotification['type']) {
   }
 }
 
-// Function gets local colors
-function getNotificationColor(type: AppNotification['type']) {
+function getNotificationColor(type: AppNotification['type'], theme: ReturnType<typeof useTheme>) {
   switch (type) {
-    case 'booking_cancelled': return Colors.error;
+    case 'booking_cancelled': return theme.colors.status.error;
     case 'job_completed':
-    case 'worker_verified': return Colors.success;
+    case 'worker_verified': return theme.colors.status.success;
     case 'payment_received':
-    case 'new_review': return Colors.yellow;
-    case 'job_started': return Colors.orange;
-    default: return Colors.cyan;
+    case 'new_review': return theme.legacy.yellow;
+    case 'job_started': return theme.legacy.orange;
+    default: return theme.colors.brand.primary;
   }
 }
 
@@ -405,7 +406,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   unreadText: {
-    color: Colors.cyan,
     fontSize: 19,
     fontWeight: '900',
   },
@@ -446,7 +446,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   summaryText: {
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '700',
     marginTop: 4,
@@ -465,7 +464,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   markAllText: {
-    color: Colors.cyan,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0,
@@ -490,7 +488,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,245,255,0.32)',
   },
   filterText: {
-    color: Colors.textMuted,
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
     fontWeight: '900',
   },
@@ -504,7 +502,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0,
@@ -573,7 +570,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   typeLabel: {
-    color: Colors.cyan,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0,
@@ -634,7 +630,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,245,255,0.22)',
   },
   openHintText: {
-    color: Colors.cyan,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0,
@@ -662,7 +657,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   emptyText: {
-    color: Colors.textMuted,
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 20,

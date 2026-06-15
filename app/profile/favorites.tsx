@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -27,7 +26,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { SkeletonCard } from '../../components/ui';
 import { useFavoriteWorkers, type Worker } from '../../hooks';
@@ -44,7 +43,9 @@ interface WorkerCardProps {
 
 const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerCardProps) => {
   const { t } = useTranslation();
-  const themeColor = Colors.cyan;
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const themeColor = colors.cyan;
   const ratingStr = worker.rating ? worker.rating.toFixed(1) : '5.0';
   const ratingNum = worker.rating ?? 5.0;
 
@@ -68,9 +69,9 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
     >
       <View style={[styles.cardGlow, { shadowColor: themeColor }]} />
 
-      <View style={styles.workerCard}>
+      <View style={[styles.workerCard, { borderColor: theme.colors.border.subtle }]}>
         <LinearGradient
-          colors={[themeColor + '22', 'transparent']}
+          colors={[alpha(themeColor, 0.15), 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.cardTopGradient}
@@ -85,7 +86,7 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
         >
           <View style={styles.topRow}>
             <View style={styles.avatarContainer}>
-              <View style={[styles.avatarRing, { borderColor: themeColor + '60' }]}>
+              <View style={[styles.avatarRing, { borderColor: alpha(themeColor, 0.4) }]}>
                 <Image
                   source={{ uri: avatarUri }}
                   style={styles.avatar}
@@ -93,39 +94,31 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
                 />
               </View>
               <View
-                style={[
-                  styles.availabilityDot,
-                  {
-                    backgroundColor: worker.isAvailable
-                      ? '#00E5A0'
-                      : '#FF4C6A',
-                    borderColor: '#0a0a1a',
-                  },
-                ]}
+                style={[styles.availabilityDot, { backgroundColor: worker.isAvailable ? theme.colors.status.success : theme.colors.status.error, borderColor: theme.colors.surface.card }]}
               />
             </View>
 
             <View style={styles.nameBlock}>
               <View style={styles.nameRow}>
-                <Text style={styles.workerName} numberOfLines={1}>
+                <Text style={[styles.workerName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                   {worker.fullName}
                 </Text>
                 {worker.isVerified && (
-                  <BadgeCheck size={16} color={themeColor} fill={themeColor + '30'} />
+                  <BadgeCheck size={16} color={themeColor} fill={alpha(themeColor, 0.2)} />
                 )}
-                <Heart size={14} color="#FF4D8D" fill="#FF4D8D" style={{ marginLeft: 'auto' }} />
+                <Heart size={14} color={theme.colors.status.error} fill={theme.colors.status.error} style={{ marginLeft: 'auto' }} />
               </View>
 
               <View style={styles.metaRow}>
-                <View style={styles.metaChip}>
+                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
                   <Briefcase size={9} color={themeColor} />
                   <Text style={[styles.metaChipText, { color: themeColor }]}>
                     {worker.category.toUpperCase()}
                   </Text>
                 </View>
-                <View style={styles.metaChip}>
-                  <MapPin size={9} color={Colors.textDim} />
-                  <Text style={styles.metaChipText}>
+                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
+                  <MapPin size={9} color={theme.colors.text.muted} />
+                  <Text style={[styles.metaChipText, { color: theme.colors.text.primary }]}>
                     {worker.city ?? t('common.remote', { defaultValue: 'Remote' })}
                   </Text>
                 </View>
@@ -136,39 +129,39 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
                   <Star
                     key={i}
                     size={11}
-                    color="#FFD700"
-                    fill={type === 'full' ? '#FFD700' : type === 'half' ? '#FFD70080' : 'transparent'}
+                    color={theme.colors.brand.accent}
+                    fill={type === 'full' ? theme.colors.brand.accent : type === 'half' ? alpha(theme.colors.brand.accent, 0.5) : 'transparent'}
                   />
                 ))}
-                <Text style={styles.ratingText}>{ratingStr}</Text>
+                <Text style={[styles.ratingText, { color: theme.colors.brand.accent }]}>{ratingStr}</Text>
               </View>
             </View>
           </View>
 
-          <View style={styles.statsBar}>
+          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
             <View style={styles.statItem}>
               <Star size={12} color={themeColor} />
-              <Text style={styles.statValue}>{(worker.rating ?? 0) > 0 ? worker.rating!.toFixed(1) : '—'}</Text>
-              <Text style={styles.statLabel}>{t('profile.rating')}</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{(worker.rating ?? 0) > 0 ? worker.rating!.toFixed(1) : '—'}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('profile.rating')}</Text>
             </View>
-            <View style={[styles.statDivider]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
               <Briefcase size={12} color={themeColor} />
-              <Text style={styles.statValue}>{worker.totalJobs ?? 0}</Text>
-              <Text style={styles.statLabel}>{t('workerDetails.jobsLabel')}</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.jobsLabel')}</Text>
             </View>
-            <View style={[styles.statDivider]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
               <Zap size={12} color={themeColor} />
-              <Text style={[styles.statValue, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
+              <Text style={[styles.statValue, { color: worker.isAvailable ? theme.colors.status.success : theme.colors.status.error }]}>
                 {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
               </Text>
-              <Text style={styles.statLabel}>{t('common.status')}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('common.status')}</Text>
             </View>
           </View>
 
           {!!worker.bio && (
-            <Text style={styles.bioText} numberOfLines={2}>
+            <Text style={[styles.bioText, { color: theme.colors.text.muted }]} numberOfLines={2}>
               {worker.bio}
             </Text>
           )}
@@ -179,20 +172,20 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
             activeOpacity={0.78}
           >
             <LinearGradient
-              colors={[themeColor, themeColor + 'CC']}
+              colors={[themeColor, alpha(themeColor, 0.8)]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.deployBtnGradient}
             >
               <View style={styles.deployBtnLeft}>
-                <Text style={styles.deployRateLabel}>{t('workerDetails.ratePerHour')}</Text>
-                <Text style={styles.deployRateValue}>
+                <Text style={[styles.deployRateLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.ratePerHour')}</Text>
+                <Text style={[styles.deployRateValue, { color: theme.colors.text.primary }]}>
                   Rs. {worker.hourlyRate ?? '0'}/hr
                 </Text>
               </View>
-              <View style={styles.deployBtnRight}>
-                <Zap size={14} color="#000" fill="#000" />
-                <Text style={styles.deployBtnText}>{t('workerList.hire')}</Text>
+              <View style={[styles.deployBtnRight, { borderLeftColor: alpha(theme.colors.text.primary, 0.1) }]}>
+                <Zap size={14} color={theme.colors.text.primary} fill={theme.colors.text.primary} />
+                <Text style={[styles.deployBtnText, { color: theme.colors.text.primary }]}>{t('workerList.hire')}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -209,6 +202,8 @@ export default function FavoritesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
+  const theme = useTheme();
+  const colors = useThemeColors();
 
   const { data: workers = [], isLoading, refetch } = useFavoriteWorkers(user?._id);
 
@@ -233,21 +228,21 @@ export default function FavoritesScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.container}>
-        <View style={[styles.blobTop, { backgroundColor: Colors.cyan + '14' }]} />
-        <View style={[styles.blobBottom, { backgroundColor: Colors.purple + '10' }]} />
+        <View style={[styles.blobTop, { backgroundColor: alpha(colors.cyan, 0.08) }]} />
+        <View style={[styles.blobBottom, { backgroundColor: alpha(colors.purple, 0.06) }]} />
 
         {/* HEADER */}
         <Animated.View
           entering={SlideInDown.duration(450).springify()}
           style={[styles.header, { paddingTop: insets.top + 16 }]}
         >
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ChevronLeft color="#fff" size={22} />
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
+            <ChevronLeft color={theme.colors.text.primary} size={22} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{t('profile.favoritesTitle').toUpperCase()}</Text>
-            <Text style={styles.headerSub}>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('profile.favoritesTitle').toUpperCase()}</Text>
+            <Text style={[styles.headerSub, { color: theme.colors.text.muted }]}>
               {isLoading
                 ? t('workerList.searchingUstads')
                 : t('workerList.availableCount', { count: workers.length })}
@@ -279,15 +274,15 @@ export default function FavoritesScreen() {
             ))
           ) : (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
-                <Heart size={48} color={Colors.textDim} strokeWidth={1.5} />
+              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <Heart size={48} color={theme.colors.text.muted} strokeWidth={1.5} />
               </View>
-              <Text style={styles.emptyTitle}>{t('profile.noFavorites')}</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('profile.noFavorites')}</Text>
+              <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>
                 {t('profile.noFavoritesDesc')}
               </Text>
-              <TouchableOpacity style={styles.exploreBtn} onPress={() => router.replace('/(tabs)')}>
-                <Text style={styles.exploreBtnText}>{t('common.getStarted')}</Text>
+              <TouchableOpacity style={[styles.exploreBtn, { backgroundColor: theme.colors.brand.primary }]} onPress={() => router.replace('/(tabs)')}>
+                <Text style={[styles.exploreBtnText, { color: theme.colors.text.inverse }]}>{t('common.getStarted')}</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -330,11 +325,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
   },
   iconBtnPlaceholder: {
     width: 42,
@@ -347,12 +340,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 2,
   },
   headerSub: {
     fontSize: 11,
-    color: Colors.textDim,
     fontWeight: '600',
     marginTop: 2,
     letterSpacing: 0.5,
@@ -376,9 +367,7 @@ const styles = StyleSheet.create({
   },
   workerCard: {
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
     overflow: 'hidden',
     flexDirection: 'row',
   },
@@ -414,7 +403,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 2,
     padding: 2,
-    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   avatar: {
     width: '100%',
@@ -440,7 +428,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   workerName: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -455,7 +442,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
@@ -463,7 +449,6 @@ const styles = StyleSheet.create({
   metaChipText: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textDim,
     letterSpacing: 0.3,
   },
   starsRow: {
@@ -472,17 +457,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ratingText: {
-    color: '#FFD700',
     fontSize: 11,
     fontWeight: '800',
     marginLeft: 4,
   },
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
     paddingVertical: 10,
   },
   statItem: {
@@ -492,22 +474,18 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     marginVertical: 4,
   },
   statValue: {
-    color: '#fff',
     fontSize: 13,
     fontWeight: '800',
   },
   statLabel: {
-    color: Colors.textDim,
     fontSize: 9,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
   bioText: {
-    color: Colors.textDim,
     fontSize: 12,
     lineHeight: 18,
     marginTop: -4,
@@ -528,13 +506,11 @@ const styles = StyleSheet.create({
   deployRateLabel: {
     fontSize: 8,
     fontWeight: '700',
-    color: 'rgba(0,0,0,0.55)',
     letterSpacing: 0.5,
   },
   deployRateValue: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#000',
   },
   deployBtnRight: {
     flexDirection: 'row',
@@ -542,13 +518,11 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 18,
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(0,0,0,0.12)',
     height: '100%',
   },
   deployBtnText: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#000',
     letterSpacing: 1.5,
   },
   emptyState: {
@@ -560,20 +534,16 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.02)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   emptyTitle: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '800',
     marginTop: 8,
   },
   emptySub: {
-    color: Colors.textDim,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 18,
@@ -584,10 +554,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: Colors.cyan,
   },
   exploreBtnText: {
-    color: '#000',
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 0.5,

@@ -25,7 +25,7 @@ import {
   Star,
   ChevronRight,
 } from 'lucide-react-native';
-import { Colors } from '../../constants/Theme';
+import { alpha, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 
 interface WorkerAlertJobCardProps {
@@ -40,16 +40,19 @@ export const WorkerAlertJobCard = React.memo(
   function WorkerAlertJobCard({ job, index, onAccept, onDismiss, isAccepting }: WorkerAlertJobCardProps) {
     const { user } = useAuth();
     const { t } = useTranslation();
+    const theme = useTheme();
+    const colors = useThemeColors();
+    const typography = useThemeTypography();
     const workerLoc = (user as any)?.address || (user as any)?.city || '';
     const isInstant = job.urgency === 'instant';
-    const accentColor = isInstant ? '#00F0FF' : '#FF8C00';
-    const accentDim = isInstant ? 'rgba(0,240,255,0.12)' : 'rgba(255,140,0,0.12)';
+    const accentColor = isInstant ? colors.cyan : colors.worker;
+    const accentDim = isInstant ? alpha(colors.cyan, 0.12) : alpha(colors.worker, 0.12);
 
     const gradientColors: [string, string, ...string[]] = isInstant
-      ? ['#001A1A', '#001030', '#000A20']
-      : ['#1A0A00', '#200D00', '#0F0700'];
+      ? [alpha(theme.colors.background.screen, 0.9), alpha(theme.colors.brand.primary, 0.8), alpha(theme.colors.background.screen, 0.7)]
+      : [alpha(colors.worker, 0.7), alpha(theme.colors.background.screen, 0.8), alpha(theme.colors.surface.card, 0.7)];
 
-    const borderColor = isInstant ? 'rgba(0,240,255,0.35)' : 'rgba(255,140,0,0.35)';
+    const borderColor = isInstant ? alpha(colors.cyan, 0.35) : alpha(colors.worker, 0.35);
     const media = useMemo(() => {
       const images = Array.isArray(job.media?.images)
         ? job.media.images
@@ -88,9 +91,8 @@ export const WorkerAlertJobCard = React.memo(
           end={{ x: 1, y: 1 }}
           style={[styles.card, { borderColor }]}
         >
-          {/* Top row: badge + time */}
           <View style={styles.topRow}>
-            <View style={[styles.badge, { backgroundColor: accentDim, borderColor: accentColor + '40' }]}>
+            <View style={[styles.badge, { backgroundColor: accentDim, borderColor: alpha(accentColor, 0.25) }]}>
               <View style={[styles.pulseDot, { backgroundColor: accentColor }]} />
               {isInstant ? (
                 <Zap size={11} color={accentColor} fill={accentColor} />
@@ -103,8 +105,8 @@ export const WorkerAlertJobCard = React.memo(
             </View>
 
             <View style={styles.timeRow}>
-              <Radio size={10} color={accentColor + '99'} />
-              <Text style={[styles.timeText, { color: accentColor + 'AA' }]}>{timeAgo}</Text>
+              <Radio size={10} color={alpha(accentColor, 0.6)} />
+              <Text style={[styles.timeText, { color: alpha(accentColor, 0.65) }]}>{timeAgo}</Text>
             </View>
           </View>
 
@@ -112,24 +114,24 @@ export const WorkerAlertJobCard = React.memo(
             <View style={styles.mediaPreview}>
               <Image source={{ uri: media.coverUrl }} style={styles.mediaImage} />
               <LinearGradient
-                colors={['rgba(0,0,0,0.04)', 'rgba(0,0,0,0.78)']}
+                colors={[alpha(theme.colors.background.screen, 0.02), alpha(theme.colors.background.screen, 0.6)]}
                 style={StyleSheet.absoluteFillObject}
               />
-              <View style={[styles.mediaBadge, { borderColor: accentColor + '55', backgroundColor: accentDim }]}>
+              <View style={[styles.mediaBadge, { borderColor: alpha(accentColor, 0.35), backgroundColor: accentDim }]}>
                 <ImageIcon size={11} color={accentColor} />
                 <Text style={[styles.mediaBadgeText, { color: accentColor }]}>
                   {t('incomingJobModal.evidenceLabel', '{{count}} Evidence', { count: media.totalCount })}
                 </Text>
               </View>
               {media.videos.length > 0 && (
-                <View style={styles.videoBadge}>
-                  <PlayCircle size={11} color="#FFFFFF" />
-                  <Text style={styles.videoBadgeText}>{t('incomingJobModal.video', 'Video')}</Text>
+                <View style={[styles.videoBadge, { backgroundColor: alpha(theme.colors.background.screen, 0.4), borderColor: alpha(theme.colors.text.primary, 0.1) }]}>
+                  <PlayCircle size={11} color={theme.colors.text.primary} />
+                  <Text style={[styles.videoBadgeText, { color: theme.colors.text.primary }]}>{t('incomingJobModal.video', 'Video')}</Text>
                 </View>
               )}
             </View>
           ) : media.totalCount > 0 ? (
-            <View style={[styles.noImageEvidence, { borderColor: accentColor + '25' }]}>
+            <View style={[styles.noImageEvidence, { borderColor: alpha(accentColor, 0.15) }]}>
               <PlayCircle size={16} color={accentColor} />
               <Text style={[styles.noImageEvidenceText, { color: accentColor }]}>
                 {t('incomingJobModal.attachmentsLabelCount', '{{count}} evidence files attached', { count: media.totalCount })}
@@ -137,31 +139,30 @@ export const WorkerAlertJobCard = React.memo(
             </View>
           ) : null}
 
-          {/* Category + description + budget */}
           <View style={styles.body}>
             <View style={styles.infoCol}>
-              <Text style={styles.category} numberOfLines={1}>
+              <Text style={[styles.category, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
                 {job.category || t('home.worker.newJob', 'New Job')}
               </Text>
               {job.description ? (
-                <Text style={styles.description} numberOfLines={2}>
+                <Text style={[styles.description, { color: alpha(theme.colors.text.primary, 0.55) }]} numberOfLines={2}>
                   {job.description}
                 </Text>
               ) : null}
               {client ? (
                 <View style={styles.clientRow}>
                   {client.profileImage ? (
-                    <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
+                    <Image source={{ uri: client.profileImage }} style={[styles.clientAvatar, { borderColor: alpha(theme.colors.text.primary, 0.25) }]} />
                   ) : (
-                    <View style={[styles.clientAvatarFallback, { borderColor: accentColor + '35' }]}>
+                    <View style={[styles.clientAvatarFallback, { borderColor: alpha(accentColor, 0.25), backgroundColor: alpha(theme.colors.text.primary, 0.03) }]}>
                       <UserRound size={12} color={accentColor} />
                     </View>
                   )}
                   <View style={styles.clientTextWrap}>
-                    <Text style={styles.clientName} numberOfLines={1}>{client.fullName || t('common.client', 'Client')}</Text>
+                    <Text style={[styles.clientName, { color: theme.colors.text.primary }]} numberOfLines={1}>{client.fullName || t('common.client', 'Client')}</Text>
                     <View style={styles.clientMetaRow}>
                       <Star size={9} color="#FFD700" fill="#FFD700" />
-                      <Text style={styles.clientMetaText}>
+                      <Text style={[styles.clientMetaText, { color: alpha(theme.colors.text.primary, 0.48) }]}>
                         {client.rating ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: Number(client.rating).toFixed(1) }) : t('incomingJobModal.jobsCount', '{{count}} jobs', { count: client.completedJobs || client.totalJobs || 0 })}
                       </Text>
                     </View>
@@ -170,34 +171,31 @@ export const WorkerAlertJobCard = React.memo(
               ) : null}
             </View>
 
-            <View style={[styles.budgetBadge, { backgroundColor: 'rgba(0,255,127,0.1)', borderColor: 'rgba(0,255,127,0.25)' }]}>
-              <Banknote size={13} color={Colors.green} />
-              <Text style={styles.budgetText}>
+            <View style={[styles.budgetBadge, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.15) }]}>
+              <Banknote size={13} color={colors.success} />
+              <Text style={[styles.budgetText, { color: colors.success }]}>
                 {isInstant ? amountText : amount > 0 ? amountText : t('incomingJobModal.openBudget', 'Open Bid')}
               </Text>
             </View>
           </View>
 
-          {/* Location */}
           {job.address ? (
             <View style={styles.locationRow}>
-              <MapPin size={11} color="rgba(255,255,255,0.4)" />
-              <Text style={styles.locationText} numberOfLines={1}>{job.address}</Text>
+              <MapPin size={11} color={alpha(theme.colors.text.primary, 0.4)} />
+              <Text style={[styles.locationText, { color: alpha(theme.colors.text.primary, 0.45) }]} numberOfLines={1}>{job.address}</Text>
             </View>
           ) : null}
 
-          {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: accentColor + '20' }]} />
+          <View style={[styles.divider, { backgroundColor: alpha(accentColor, 0.13) }]} />
 
-          {/* Action buttons */}
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[styles.dismissBtn, { borderColor: 'rgba(255,255,255,0.15)' }]}
+              style={[styles.dismissBtn, { borderColor: alpha(theme.colors.text.primary, 0.1), backgroundColor: alpha(theme.colors.text.primary, 0.03) }]}
               onPress={() => onDismiss(job._id)}
               disabled={isAccepting}
               activeOpacity={0.7}
             >
-              <X size={16} color="rgba(255,255,255,0.5)" strokeWidth={2.5} />
+              <X size={16} color={alpha(theme.colors.text.primary, 0.5)} strokeWidth={2.5} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -209,20 +207,20 @@ export const WorkerAlertJobCard = React.memo(
               <LinearGradient
                 colors={
                   isInstant
-                    ? ['#00F0FF', '#008FFF', '#0055FF']
-                    : ['#FF8C00', '#FF5E00', '#FF3D00']
+                    ? [colors.cyan, alpha(theme.colors.brand.secondary, 0.8), '#0055FF']
+                    : [colors.worker, alpha(colors.worker, 0.8), alpha(colors.worker, 0.6)]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.acceptBtn}
               >
                 {isAccepting ? (
-                  <ActivityIndicator color="#000" size="small" />
+                  <ActivityIndicator color={theme.colors.text.primary} size="small" />
                 ) : (
                   <>
-                    <Check size={15} color="#000" strokeWidth={3} />
-                    <Text style={styles.acceptText}>{t('home.worker.viewDetails', 'VIEW DETAILS')}</Text>
-                    <ChevronRight size={15} color="#000" strokeWidth={3} />
+                    <Check size={15} color={theme.colors.text.primary} strokeWidth={3} />
+                    <Text style={[styles.acceptText, { color: theme.colors.text.primary }]}>{t('home.worker.viewDetails', 'VIEW DETAILS')}</Text>
+                    <ChevronRight size={15} color={theme.colors.text.primary} strokeWidth={3} />
                   </>
                 )}
               </LinearGradient>
@@ -240,11 +238,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: 4,
-    shadowColor: '#00F0FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
   },
   topRow: {
     flexDirection: 'row',
@@ -291,8 +284,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: alpha('#fff', 0.08),
+    backgroundColor: alpha('#fff', 0.025),
   },
   mediaImage: {
     width: '100%',
@@ -325,12 +318,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.62)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
   },
   videoBadgeText: {
-    color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '900',
   },
@@ -344,7 +334,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   noImageEvidenceText: {
     fontSize: 11,
@@ -365,16 +354,11 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#FFFFFF',
     letterSpacing: 0.5,
     marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   description: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.55)',
     lineHeight: 17,
     fontWeight: '500',
   },
@@ -389,7 +373,6 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
   },
   clientAvatarFallback: {
     width: 30,
@@ -398,14 +381,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   clientTextWrap: {
     flex: 1,
     minWidth: 0,
   },
   clientName: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
   },
@@ -416,7 +397,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   clientMetaText: {
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -430,7 +410,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   budgetText: {
-    color: Colors.green,
     fontWeight: '900',
     fontSize: 13,
   },
@@ -443,7 +422,6 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.45)',
     fontWeight: '600',
     flex: 1,
   },
@@ -466,7 +444,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   acceptWrapper: {
     flex: 1,
@@ -484,7 +461,6 @@ const styles = StyleSheet.create({
   acceptText: {
     fontSize: 13,
     fontWeight: '900',
-    color: '#000',
     letterSpacing: 1,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },

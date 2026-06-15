@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 interface AuthHeaderProps {
   title: string;
@@ -9,21 +9,31 @@ interface AuthHeaderProps {
   accentColor?: string;
 }
 
-export function AuthHeader({ title, onBack, accentColor = Colors.cyan }: AuthHeaderProps) {
+export function AuthHeader({ title, onBack, accentColor }: AuthHeaderProps) {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const resolvedAccentColor = accentColor ?? colors.cyan;
+
   return (
     <View style={styles.header}>
       <TouchableOpacity
         accessibilityLabel="Go back"
         activeOpacity={0.75}
         onPress={onBack}
-        style={styles.backButton}
+        style={[styles.backButton, {
+          backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.05 : 0.07),
+          borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.14),
+        }]}
       >
-        <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
+        <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
       </TouchableOpacity>
 
-      <View style={styles.titleWrap}>
-        <View style={[styles.statusDot, { backgroundColor: accentColor, shadowColor: accentColor }]} />
-        <Text style={styles.title}>{title}</Text>
+      <View style={[styles.titleWrap, {
+        backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.04),
+        borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.08),
+      }]}>
+        <View style={[styles.statusDot, { backgroundColor: resolvedAccentColor, shadowColor: resolvedAccentColor }]} />
+        <Text style={[styles.title, { color: theme.colors.text.muted }]}>{title}</Text>
       </View>
 
       <View style={styles.placeholder} />
@@ -42,9 +52,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.07)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -54,9 +62,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   statusDot: {
     width: 7,
@@ -67,7 +73,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   title: {
-    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1.7,

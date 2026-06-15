@@ -46,7 +46,7 @@ export const InputField: React.FC<InputFieldProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={[typography.caption, styles.label, { color: theme.colors.text.muted }]}>{label}</Text>}
+      {label && <Text style={[typography.caption, styles.label, { color: focused ? resolvedAccentColor : theme.colors.text.muted }]}>{label}</Text>}
       <Animated.View
         style={[
           styles.inputWrapper,

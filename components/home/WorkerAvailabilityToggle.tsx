@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Switch, ActivityIndicator, Platform } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
 import { GlassCard } from './GlassCard';
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import { alpha, useTheme, useThemeColors, useThemeTypography, Spacing } from '../../constants/Theme';
 import { useTranslation } from 'react-i18next';
 
 interface WorkerAvailabilityToggleProps {
@@ -17,6 +17,9 @@ export const WorkerAvailabilityToggle = React.memo(({
   isLoading = false
 }: WorkerAvailabilityToggleProps) => {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const pulseScale = useSharedValue(1);
   const pulseOpacity = useSharedValue(0.4);
 
@@ -51,7 +54,7 @@ export const WorkerAvailabilityToggle = React.memo(({
     };
   });
 
-  const glowColor = isOnline ? Colors.green : Colors.error;
+  const glowColor = isOnline ? colors.success : colors.error;
 
   return (
     <GlassCard
@@ -64,19 +67,19 @@ export const WorkerAvailabilityToggle = React.memo(({
       <View style={styles.leftSection}>
         <View style={styles.titleRow}>
           <View style={styles.indicatorContainer}>
-            <View style={[styles.staticDot, { backgroundColor: isOnline ? Colors.green : Colors.error }]} />
+            <View style={[styles.staticDot, { backgroundColor: isOnline ? colors.success : colors.error }]} />
             {isOnline && (
-              <Animated.View style={[styles.pulseCircle, { backgroundColor: Colors.green }, pulseStyle]} />
+              <Animated.View style={[styles.pulseCircle, { backgroundColor: colors.success }, pulseStyle]} />
             )}
           </View>
-          <Text style={[styles.statusTitle, Typography.threeD]}>
-            {isOnline 
-              ? t('home.worker.online', 'ONLINE / ACTIVE').toUpperCase() 
+          <Text style={[styles.statusTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+            {isOnline
+              ? t('home.worker.online', 'ONLINE / ACTIVE').toUpperCase()
               : t('home.worker.offline', 'OFFLINE / INACTIVE').toUpperCase()}
           </Text>
         </View>
-        <Text style={styles.statusSub}>
-          {isOnline 
+        <Text style={[styles.statusSub, { color: theme.colors.text.muted }]}>
+          {isOnline
             ? t('home.worker.availableSubtitle', 'Available for Jobs • کام کے لیے دستیاب')
             : t('home.worker.offlineSubtitle', 'Not receiving new bookings • نئے آرڈر بند ہیں')}
         </Text>
@@ -84,13 +87,13 @@ export const WorkerAvailabilityToggle = React.memo(({
 
       <View style={styles.rightSection}>
         {isLoading ? (
-          <ActivityIndicator size="small" color={isOnline ? Colors.green : '#fff'} />
+          <ActivityIndicator size="small" color={isOnline ? colors.success : theme.colors.text.primary} />
         ) : (
           <Switch
             value={isOnline}
             onValueChange={onToggle}
-            trackColor={{ false: 'rgba(255,255,255,0.08)', true: Colors.green + '40' }}
-            thumbColor={isOnline ? Colors.green : '#fff'}
+            trackColor={{ false: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.15 : 0.08), true: alpha(colors.success, 0.4) }}
+            thumbColor={isOnline ? colors.success : theme.colors.text.primary}
             style={styles.switch}
           />
         )}
@@ -149,12 +152,10 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 0.5,
   },
   statusSub: {
     fontSize: 11,
-    color: Colors.textMuted,
     fontWeight: '700',
     marginTop: 5,
   },

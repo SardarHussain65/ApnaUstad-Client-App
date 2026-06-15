@@ -6,13 +6,16 @@ import { User, Briefcase } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { RoleCard } from '../components/RoleCard';
 import { AnimatedButton } from '../components/AnimatedButton';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const [selectedRole, setSelectedRole] = useState<'client' | 'worker' | null>(null);
 
   const handleContinue = () => {
@@ -32,12 +35,15 @@ export default function RoleSelectionScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <View style={styles.brandPill}>
+            <View style={[styles.brandPill, {
+              backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.05),
+              borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.1),
+            }]}>
               <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
-              <Text style={styles.brandText}>{t('roleSelection.welcome')}</Text>
+              <Text style={[styles.brandText, { color: colors.cyan }]}>{t('roleSelection.welcome')}</Text>
             </View>
-            <Text style={[styles.title, Typography.threeD]}>{t('roleSelection.title')}</Text>
-            <Text style={styles.subtitle}>{t('roleSelection.subtitle')}</Text>
+            <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{t('roleSelection.title')}</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text.muted }]}>{t('roleSelection.subtitle')}</Text>
           </View>
 
           <View style={styles.cardsContainer}>
@@ -45,7 +51,7 @@ export default function RoleSelectionScreen() {
               label={t('roleSelection.client.label')}
               title={t('roleSelection.client.title')}
               description={t('roleSelection.client.description')}
-              icon={<User color={Colors.cyan} size={28} />}
+              icon={<User color={colors.cyan} size={28} />}
               variant="client"
               isSelected={selectedRole === 'client'}
               onPress={() => setSelectedRole('client')}
@@ -55,7 +61,7 @@ export default function RoleSelectionScreen() {
               label={t('roleSelection.worker.label')}
               title={t('roleSelection.worker.title')}
               description={t('roleSelection.worker.description')}
-              icon={<Briefcase color={Colors.worker} size={28} />}
+              icon={<Briefcase color={colors.worker} size={28} />}
               variant="worker"
               isSelected={selectedRole === 'worker'}
               onPress={() => setSelectedRole('worker')}
@@ -98,9 +104,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     marginBottom: Spacing.l,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   brandLogo: {
     width: 22,
@@ -108,7 +112,6 @@ const styles = StyleSheet.create({
     marginRight: 7,
   },
   brandText: {
-    color: Colors.cyan,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.2,
@@ -116,16 +119,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 38,
     fontWeight: '900',
-    color: '#fff',
     lineHeight: 43,
     marginBottom: 15,
   },
-  highlight: {
-    color: Colors.cyan,
-  },
   subtitle: {
     fontSize: 14,
-    color: Colors.textMuted,
     lineHeight: 22,
     fontWeight: '600',
     maxWidth: 340,

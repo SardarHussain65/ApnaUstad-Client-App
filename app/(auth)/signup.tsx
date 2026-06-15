@@ -23,15 +23,17 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
 import { useTranslation } from 'react-i18next';
 
 export default function SignupScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
+  const theme = useTheme();
+  const typography = useThemeTypography();
   const isWorker = role === 'worker';
-  const accentColor = isWorker ? Colors.worker : Colors.cyan;
+  const accentColor = isWorker ? theme.colors.brand.worker : theme.colors.brand.primary;
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -154,8 +156,8 @@ export default function SignupScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={styles.formCard}
-              gradient={[`${accentColor}16`, 'rgba(191,90,242,0.06)']}
+              style={[styles.formCard, { borderColor: theme.colors.border.subtle }]}
+              gradient={[`${accentColor}16`, alpha(theme.colors.brand.secondary, 0.06)]}
             >
               <InputField
                 accentColor={accentColor}
@@ -215,7 +217,7 @@ export default function SignupScreen() {
             )}
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>{t('auth.hasAccount')}</Text>
+              <Text style={[styles.footerText, { color: theme.colors.text.dim }]}>{t('auth.hasAccount')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.push({
@@ -246,7 +248,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
   },
   submitButton: {
     marginTop: Spacing.s,
@@ -258,7 +260,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   footerText: {
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 13,
     fontWeight: '600',
   },

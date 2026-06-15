@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { GlassCard } from '../../components/home/GlassCard';
-import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeShadows, useThemeTypography } from '../../constants/Theme';
 import api from '../../services/api';
 
 export default function PrivacyScreen() {
@@ -13,6 +13,9 @@ export default function PrivacyScreen() {
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>('privacy');
   const [loading, setLoading] = useState(false);
   const [dynamicContent, setDynamicContent] = useState<{ privacy?: string; terms?: string }>({});
+  const theme = useTheme();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
 
   useEffect(() => {
     // Attempt to load live policy paragraphs from backend/website
@@ -55,49 +58,49 @@ export default function PrivacyScreen() {
 
         <View style={styles.headerSection}>
           <View style={styles.iconWrap}>
-            <View style={styles.iconCircle}>
-              <Eye size={28} color={Colors.primary} />
+            <View style={[styles.iconCircle, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+              <Eye size={28} color={theme.colors.brand.primary} />
             </View>
           </View>
-          <Text style={[styles.title, Typography.threeD]}>{t('privacy.legalTitle')}</Text>
-          <Text style={styles.subtitle}>{t('privacy.legalSubtitle')}</Text>
+          <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{t('privacy.legalTitle')}</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.text.muted }]}>{t('privacy.legalSubtitle')}</Text>
         </View>
 
         {/* Tab Selector */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === 'privacy' && styles.activeTabBtn]} 
+        <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'privacy' && { backgroundColor: theme.colors.brand.primary }]}
             onPress={() => setActiveTab('privacy')}
           >
-            <ShieldAlert size={14} color={activeTab === 'privacy' ? '#000' : 'rgba(255,255,255,0.48)'} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'privacy' && styles.activeTabText]}>{t('privacy.privacyTab')}</Text>
+            <ShieldAlert size={14} color={activeTab === 'privacy' ? theme.colors.text.inverse : theme.colors.text.muted} style={styles.tabIcon} />
+            <Text style={[styles.tabText, activeTab === 'privacy' && { color: theme.colors.button.primaryText }]}>{t('privacy.privacyTab')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === 'terms' && styles.activeTabBtn]} 
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === 'terms' && { backgroundColor: theme.colors.brand.primary }]}
             onPress={() => setActiveTab('terms')}
           >
-            <FileText size={14} color={activeTab === 'terms' ? '#000' : 'rgba(255,255,255,0.48)'} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'terms' && styles.activeTabText]}>{t('privacy.termsTab')}</Text>
+            <FileText size={14} color={activeTab === 'terms' ? theme.colors.text.inverse : theme.colors.text.muted} style={styles.tabIcon} />
+            <Text style={[styles.tabText, activeTab === 'terms' && { color: theme.colors.button.primaryText }]}>{t('privacy.termsTab')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Content Card */}
-        <GlassCard style={styles.policyCard} intensity={20} padding={Spacing.l}>
+        <GlassCard style={[styles.policyCard, shadows.depth]} intensity={20} padding={Spacing.l}>
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.loadingText}>{t('privacy.loadingText')}</Text>
+              <ActivityIndicator size="large" color={theme.colors.brand.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('privacy.loadingText')}</Text>
             </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
               {policyText.split('\n\n').map((paragraph, index) => {
                 const isHeading = paragraph.match(/^\d+\.\s/) || paragraph.match(/^[۱۲۳۴۵]\.\s/);
                 return (
-                  <Text 
-                    key={index} 
+                  <Text
+                    key={index}
                     style={[
-                      styles.paragraphText, 
-                      isHeading ? styles.headingText : styles.bodyText
+                      styles.paragraphText,
+                      isHeading ? [styles.headingText, { color: theme.colors.brand.primary }] : [styles.bodyText, { color: theme.colors.text.primary }]
                     ]}
                   >
                     {paragraph}
@@ -108,7 +111,7 @@ export default function PrivacyScreen() {
           )}
         </GlassCard>
 
-        <Text style={styles.footerNote}>{t('privacy.footerNote')}</Text>
+        <Text style={[styles.footerNote, { color: theme.colors.text.dim }]}>{t('privacy.footerNote')}</Text>
       </ScrollView>
     </BackgroundWrapper>
   );
@@ -128,12 +131,8 @@ const styles = StyleSheet.create({
     height: 88,
     marginBottom: 16,
     borderRadius: 44,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.glow,
   },
   iconCircle: {
     width: 72,
@@ -141,16 +140,14 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
   },
   title: {
     fontSize: 26,
-    color: '#fff',
     marginBottom: 6,
     fontWeight: '800',
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
     fontSize: 13,
     lineHeight: 18,
@@ -158,11 +155,9 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: BorderRadius.m,
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
     marginBottom: 16,
   },
   tabBtn: {
@@ -173,25 +168,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: BorderRadius.m - 2,
   },
-  activeTabBtn: {
-    backgroundColor: Colors.primary,
-  },
+  activeTabBtn: {},
   tabIcon: {
     marginRight: 6,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.48)',
   },
-  activeTabText: {
-    color: '#000',
-  },
+  activeTabText: {},
   policyCard: {
     minHeight: 320,
     maxHeight: 460,
     borderRadius: BorderRadius.l,
-    ...Shadows.depth,
   },
   loadingContainer: {
     flex: 1,
@@ -200,7 +189,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 13,
     marginTop: 12,
     fontWeight: '600',
@@ -212,17 +200,14 @@ const styles = StyleSheet.create({
   headingText: {
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.primary,
     marginTop: 6,
   },
   bodyText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
     fontWeight: '500',
   },
   footerNote: {
     textAlign: 'center',
-    color: 'rgba(255,255,255,0.22)',
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',

@@ -24,9 +24,9 @@ import {
   Target,
   TrendingUp,
 } from 'lucide-react-native';
-import AnimatedRN, { FadeInDown, FadeInUp, SlideInLeft } from 'react-native-reanimated';
+import AnimatedRN, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Colors, Spacing } from '../constants/Theme';
+import { Spacing } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';

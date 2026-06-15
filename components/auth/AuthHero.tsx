@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { BorderRadius, Colors, Spacing, Typography } from '../../constants/Theme';
+import { BorderRadius, Spacing, Typography, alpha, useTheme, useThemeTypography } from '../../constants/Theme';
 
 interface AuthHeroProps {
   accentColor?: string;
@@ -14,7 +14,7 @@ interface AuthHeroProps {
 }
 
 export function AuthHero({
-  accentColor = Colors.cyan,
+  accentColor,
   align = 'left',
   description,
   eyebrow,
@@ -22,6 +22,10 @@ export function AuthHero({
   icon,
   title,
 }: AuthHeroProps) {
+  const theme = useTheme();
+  const typography = useThemeTypography();
+  const colors = theme.legacy;
+  const resolvedAccentColor = accentColor ?? colors.cyan;
   const centered = align === 'center';
 
   return (
@@ -35,9 +39,9 @@ export function AuthHero({
           style={[
             styles.iconWrap,
             {
-              backgroundColor: `${accentColor}18`,
-              borderColor: `${accentColor}45`,
-              shadowColor: accentColor,
+              backgroundColor: alpha(resolvedAccentColor, theme.id === 'light' ? 0.08 : 0.18),
+              borderColor: alpha(resolvedAccentColor, theme.id === 'light' ? 0.3 : 0.45),
+              shadowColor: resolvedAccentColor,
             },
           ]}
         >
@@ -46,17 +50,17 @@ export function AuthHero({
       )}
 
       {eyebrow && (
-        <View style={[styles.eyebrow, { borderColor: `${accentColor}45` }]}>
-          <View style={[styles.eyebrowDot, { backgroundColor: accentColor }]} />
-          <Text style={[styles.eyebrowText, { color: accentColor }]}>{eyebrow}</Text>
+        <View style={[styles.eyebrow, { borderColor: alpha(resolvedAccentColor, theme.id === 'light' ? 0.3 : 0.45) }]}>
+          <View style={[styles.eyebrowDot, { backgroundColor: resolvedAccentColor }]} />
+          <Text style={[styles.eyebrowText, { color: resolvedAccentColor }]}>{eyebrow}</Text>
         </View>
       )}
 
-      <Text style={[styles.title, Typography.threeD, centered && styles.centeredText]}>
+      <Text style={[styles.title, typography.threeD, centered && styles.centeredText, { color: theme.colors.text.primary }]}>
         {title}{'\n'}
-        <Text style={{ color: accentColor }}>{highlight}</Text>
+        <Text style={{ color: resolvedAccentColor }}>{highlight}</Text>
       </Text>
-      <Text style={[styles.description, centered && styles.centeredText]}>{description}</Text>
+      <Text style={[styles.description, centered && styles.centeredText, { color: theme.colors.text.secondary }]}>{description}</Text>
     </Animated.View>
   );
 }
@@ -92,7 +96,6 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     marginBottom: 14,
   },
   eyebrowDot: {
@@ -108,14 +111,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: '#fff',
     fontSize: 39,
     fontWeight: '900',
     letterSpacing: -1,
     lineHeight: 43,
   },
   description: {
-    color: 'rgba(255,255,255,0.55)',
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 21,

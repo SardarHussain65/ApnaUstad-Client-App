@@ -13,7 +13,7 @@ import Animated, {
   SlideInDown,
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Colors, Typography } from '../constants/Theme';
+import { useTheme, useThemeColors, useThemeTypography, Colors } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { socketService } from '../services/socketService';
 import { BlurView } from 'expo-blur';
@@ -45,6 +45,9 @@ export default function FindingWorkerScreen() {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const [status, setStatus] = useState(t('findingWorker.searchingUstads'));
   const [applicants, setApplicants] = useState<any[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<any>(null);
@@ -492,8 +495,8 @@ export default function FindingWorkerScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.searchHeroGradient}
               >
-                <View style={[styles.searchStatusBadge, { borderColor: addAlpha(Colors.cyan, '30') }]}>
-                  <Radio size={13} color={Colors.cyan} />
+                <View style={[styles.searchStatusBadge, { borderColor: addAlpha(colors.cyan, '30') }]}>
+                  <Radio size={13} color={colors.cyan} />
                   <Text style={styles.searchStatusText}>{t('findingWorker.waitingAccept')}</Text>
                 </View>
 
@@ -523,7 +526,7 @@ export default function FindingWorkerScreen() {
                   </View>
                 )}
 
-                <Text style={[styles.statusText, Typography.threeD]}>{t('findingWorker.searchingUstads')}</Text>
+                <Text style={[styles.statusText, typography.threeD]}>{t('findingWorker.searchingUstads')}</Text>
                 <Text style={styles.subText}>
                   {t('findingWorker.broadcastDesc')}
                 </Text>
@@ -538,7 +541,7 @@ export default function FindingWorkerScreen() {
                 style={styles.searchHeroGradient}
               >
                 <View style={styles.searchStatusBadge}>
-                  <Radio size={13} color={Colors.cyan} />
+                  <Radio size={13} color={colors.cyan} />
                   <Text style={styles.searchStatusText}>{isSearching ? t('findingWorker.searchingStatus') : (applicants.length === 1 ? t('findingWorker.offersReceived', { count: applicants.length }) : t('findingWorker.offersReceivedPlural', { count: applicants.length }))}</Text>
                 </View>
 
@@ -577,11 +580,11 @@ export default function FindingWorkerScreen() {
                     <View style={styles.orbitNode} />
                   </Animated.View>
                   <View style={styles.centerNode}>
-                    {isBidsLoading ? <ActivityIndicator size="small" color={Colors.cyan} /> : <Search color={Colors.cyan} size={28} />}
+                    {isBidsLoading ? <ActivityIndicator size="small" color={colors.cyan} /> : <Search color={colors.cyan} size={28} />}
                   </View>
                 </View>
 
-                <Text style={[styles.statusText, Typography.threeD]}>{status}</Text>
+                <Text style={[styles.statusText, typography.threeD]}>{status}</Text>
                 <Text style={styles.subText}>
                   {isSearching
                     ? t('findingWorker.searchDesc')
@@ -600,8 +603,8 @@ export default function FindingWorkerScreen() {
                 style={styles.boosterGradient}
               >
                 <View style={styles.boosterHeadingRow}>
-                  <View style={[styles.boosterIconContainer, { backgroundColor: addAlpha(Colors.orange, '20') }]}>
-                    <Zap size={18} color={Colors.orange} fill={Colors.orange} />
+                  <View style={[styles.boosterIconContainer, { backgroundColor: addAlpha(colors.orange, '20') }]}>
+                    <Zap size={18} color={colors.orange} fill={colors.orange} />
                   </View>
                   <View style={styles.boosterHeadingCopy}>
                     <Text style={styles.boosterEyebrow}>🔥 {t('findingWorker.boosterTitle', "Ustads Aren't Satisfied")}</Text>
@@ -644,7 +647,7 @@ export default function FindingWorkerScreen() {
               >
                 <View style={styles.sectionHeadingRow}>
                   <View style={styles.sectionIcon}>
-                    <Briefcase size={15} color={Colors.cyan} />
+                    <Briefcase size={15} color={colors.cyan} />
                   </View>
                   <View style={styles.sectionHeadingCopy}>
                     <Text style={styles.sectionEyebrow}>{t('findingWorker.yourJob')}</Text>
@@ -664,7 +667,7 @@ export default function FindingWorkerScreen() {
                 {!isInstant && (
                   <View style={styles.scheduleRow}>
                     <View style={styles.scheduleItem}>
-                      <CalendarDays size={14} color={Colors.orange} />
+                      <CalendarDays size={14} color={colors.orange} />
                       <View style={styles.scheduleCopy}>
                         <Text style={styles.scheduleLabel}>{t('findingWorker.visitDate')}</Text>
                         <Text style={styles.scheduleValue}>{scheduledDateLabel}</Text>
@@ -672,7 +675,7 @@ export default function FindingWorkerScreen() {
                     </View>
                     <View style={styles.scheduleDivider} />
                     <View style={styles.scheduleItem}>
-                      <Clock size={14} color={Colors.orange} />
+                      <Clock size={14} color={colors.orange} />
                       <View style={styles.scheduleCopy}>
                         <Text style={styles.scheduleLabel}>{t('findingWorker.visitTime')}</Text>
                         <Text style={styles.scheduleValue}>{scheduledTimeLabel}</Text>
@@ -690,7 +693,7 @@ export default function FindingWorkerScreen() {
                   <View style={styles.requestMetaItem}>
                     <Text style={styles.requestMetaLabel}>{t('findingWorker.photosVideos')}</Text>
                     <View style={styles.inlineMeta}>
-                      <ImageIcon size={13} color={Colors.purple} />
+                      <ImageIcon size={13} color={colors.purple} />
                       <Text style={styles.requestMetaValue}>
                         {evidenceCount === 1 ? t('findingWorker.photosAdded', { count: evidenceCount }) : t('findingWorker.photosAddedPlural', { count: evidenceCount })}
                       </Text>
@@ -700,7 +703,7 @@ export default function FindingWorkerScreen() {
 
                 {!!job.address && (
                   <View style={styles.locationRow}>
-                    <MapPin size={14} color={Colors.pink} />
+                    <MapPin size={14} color={colors.pink} />
                     <Text style={styles.locationText} numberOfLines={1}>{job.address}</Text>
                   </View>
                 )}
@@ -739,7 +742,7 @@ export default function FindingWorkerScreen() {
                         </Text>
                         <Text style={styles.responseProfilePrice}>{formatMoney(applicant.proposedPrice)}</Text>
                       </View>
-                      <ChevronRight size={15} color={Colors.cyan} />
+                      <ChevronRight size={15} color={colors.cyan} />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -762,26 +765,26 @@ export default function FindingWorkerScreen() {
             </Animated.View>
           ) : (
             <View style={styles.waitingNote}>
-              <Clock size={15} color={Colors.textMuted} />
+              <Clock size={15} color={colors.textMuted} />
               <Text style={styles.waitingText}>{t('findingWorker.safeToLeave')}</Text>
             </View>
           )}
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Users size={15} color={Colors.cyan} />
+              <Users size={15} color={colors.cyan} />
               <Text style={styles.statVal}>{applicants.length}</Text>
               <Text style={styles.statLab}>{t('findingWorker.offersLabel')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Radio size={15} color={Colors.pink} />
+              <Radio size={15} color={colors.pink} />
               <Text style={styles.statVal}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
               <Text style={styles.statLab}>{t('findingWorker.jobTypeLabel')}</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Clock size={15} color={Colors.orange} />
+              <Clock size={15} color={colors.orange} />
               <Text style={styles.statVal}>{formatElapsedTime(elapsedSeconds)}</Text>
               <Text style={styles.statLab}>{t('findingWorker.elapsedLabel')}</Text>
             </View>
@@ -800,9 +803,9 @@ export default function FindingWorkerScreen() {
             activeOpacity={0.75}
           >
             {isCancelling ? (
-              <ActivityIndicator color={Colors.error} size="small" />
+              <ActivityIndicator color={colors.error} size="small" />
             ) : (
-              <X color={Colors.error} size={17} />
+              <X color={colors.error} size={17} />
             )}
             <Text style={styles.cancelText}>{isCancelling ? t('findingWorker.cancelling') : t('findingWorker.cancelRequest')}</Text>
           </TouchableOpacity>
@@ -837,7 +840,7 @@ export default function FindingWorkerScreen() {
                     <Text style={styles.modalSubtitle}>{t('findingWorker.reviewOfferSubtitle', 'Review the offer and Ustad profile')}</Text>
                   </View>
                   <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
-                    <X size={19} color={Colors.textMuted} />
+                    <X size={19} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
 
@@ -865,7 +868,7 @@ export default function FindingWorkerScreen() {
                       <Text style={styles.workerCategory} numberOfLines={1}>{selectedProfile.category || t('findingWorker.ustadSpecialist', 'Ustad Specialist')}</Text>
                       <View style={styles.identityMetaRow}>
                         <View style={styles.ratingRow}>
-                          <Star size={13} color={Colors.yellow} fill={Colors.yellow} />
+                          <Star size={13} color={colors.yellow} fill={colors.yellow} />
                           <Text style={styles.ratingText}>
                             {selectedRating > 0 ? selectedRating.toFixed(1) : t('common.new', 'New')} · {selectedReviews} {selectedReviews === 1 ? t('workerDetails.reviewsOne', 'review') : t('workerDetails.reviews', 'reviews')}
                           </Text>
@@ -881,7 +884,7 @@ export default function FindingWorkerScreen() {
                     </View>
 
                     <View style={[styles.verificationBadge, !selectedProfile.isVerified && styles.verificationBadgePending]}>
-                      <Shield size={12} color={selectedProfile.isVerified ? Colors.green : Colors.orange} />
+                      <Shield size={12} color={selectedProfile.isVerified ? colors.green : colors.orange} />
                       <Text style={[styles.verificationBadgeText, !selectedProfile.isVerified && styles.verificationBadgeTextPending]}>
                         {selectedProfile.isVerified ? t('findingWorker.verified', 'VERIFIED') : t('findingWorker.pending', 'REVIEWING')}
                       </Text>
@@ -890,7 +893,7 @@ export default function FindingWorkerScreen() {
 
                   <View style={styles.proposalCard}>
                     <View style={styles.proposalHeader}>
-                      <MessageSquare size={14} color={Colors.cyan} />
+                      <MessageSquare size={14} color={colors.cyan} />
                       <Text style={styles.proposalTitle}>{t('findingWorker.offerNote', 'OFFER NOTE')}</Text>
                     </View>
                     <Text style={styles.proposalText}>
@@ -912,7 +915,7 @@ export default function FindingWorkerScreen() {
                         )}
                       </View>
                       <View style={styles.proposalTimeline}>
-                        <Clock size={14} color={Colors.orange} />
+                        <Clock size={14} color={colors.orange} />
                         <View>
                           <Text style={styles.proposalTimelineLabel}>{t('findingWorker.estTime', 'ESTIMATED TIME')}</Text>
                           <Text style={styles.proposalTimelineValue}>
@@ -930,7 +933,7 @@ export default function FindingWorkerScreen() {
                   {/* Promo Code Input Panel */}
                   <View style={styles.promoContainer}>
                     <View style={styles.promoHeader}>
-                      <Tag size={14} color={Colors.cyan} strokeWidth={2.4} />
+                      <Tag size={14} color={colors.cyan} strokeWidth={2.4} />
                       <Text style={styles.promoHeaderTitle}>{t('findingWorker.promoTitle', 'PROMO & COUPONS')}</Text>
                     </View>
                     <View style={styles.promoInputWrapper}>
@@ -992,19 +995,19 @@ export default function FindingWorkerScreen() {
 
                   <View style={styles.trustStrip}>
                     <View style={styles.trustMetric}>
-                      <Award size={16} color={Colors.cyan} />
+                      <Award size={16} color={colors.cyan} />
                       <Text style={styles.trustValue}>{selectedExperience > 0 ? `${selectedExperience} yrs` : t('common.new', 'New')}</Text>
                       <Text style={styles.trustLabel}>{t('registerDetails.experience', 'EXPERIENCE')}</Text>
                     </View>
                     <View style={styles.trustDivider} />
                     <View style={styles.trustMetric}>
-                      <Briefcase size={16} color={Colors.green} />
+                      <Briefcase size={16} color={colors.green} />
                       <Text style={styles.trustValue}>{selectedJobs}</Text>
                       <Text style={styles.trustLabel}>{t('profile.jobs', 'JOBS')}</Text>
                     </View>
                     <View style={styles.trustDivider} />
                     <View style={styles.trustMetric}>
-                      <MapPin size={16} color={Colors.pink} />
+                      <MapPin size={16} color={colors.pink} />
                       <Text style={styles.trustValue} numberOfLines={1} adjustsFontSizeToFit>{selectedProfile.city || t('common.nearby', 'Nearby')}</Text>
                       <Text style={styles.trustLabel}>{t('auth.city', 'CITY')}</Text>
                     </View>
@@ -1037,7 +1040,7 @@ export default function FindingWorkerScreen() {
                     onPress={handleViewWorkerProfile}
                     activeOpacity={0.8}
                   >
-                    <Eye size={17} color={Colors.cyan} />
+                    <Eye size={17} color={colors.cyan} />
                     <Text style={styles.profileBtnText}>{t('profile.title', 'PROFILE')}</Text>
                   </TouchableOpacity>
 

@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { Bid, Job } from '../../hooks/queries/useMessagesAndJobs';
-import { BorderRadius, Colors, Shadows, Typography } from '../../constants/Theme';
+import { alpha, BorderRadius, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
 
 interface WorkerPendingBidCardProps {
   bid: Bid;
@@ -55,11 +55,15 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   isWithdrawing = false,
 }: WorkerPendingBidCardProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
   const job = useMemo(() => getJobFromBid(bid), [bid]);
   const meta = bid.cardMeta;
   const workerPerson = bid.worker && typeof bid.worker === 'object' ? bid.worker : null;
   const customer = job?.customer && typeof job.customer === 'object' ? job.customer : null;
-  const accentColor = meta?.statusInfo?.accentColor || Colors.worker;
+  const accentColor = meta?.statusInfo?.accentColor || colors.worker;
   const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
   const clientName = meta?.counterParty?.fullName || customer?.fullName || t('common.client', 'Client');
@@ -76,9 +80,9 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const statusLabel = meta?.statusInfo?.label || t('pendingBidDetails.awaitingClient', 'Awaiting client');
 
   const gradientColors: [string, string, string] = [
-    withAlpha(accentColor, '32'),
-    'rgba(8, 10, 30, 0.96)',
-    'rgba(0, 245, 255, 0.09)',
+    alpha(accentColor, 0.2),
+    alpha(theme.colors.background.screen, 0.9),
+    alpha(theme.colors.brand.primary, 0.09),
   ];
 
   return (
@@ -89,11 +93,13 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
         style={[
           styles.card,
           {
-            borderColor: withAlpha(accentColor, '50'),
-            borderTopColor: withAlpha(accentColor, '60'),
-            borderLeftColor: withAlpha(accentColor, '48'),
+            borderColor: alpha(accentColor, 0.35),
+            borderTopColor: alpha(accentColor, 0.4),
+            borderLeftColor: alpha(accentColor, 0.3),
             shadowColor: accentColor,
+            backgroundColor: alpha(theme.colors.background.screen, 0.9),
           },
+          shadows.bevel,
         ]}
       >
         <LinearGradient
@@ -102,78 +108,78 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.accentGlow, { backgroundColor: withAlpha(accentColor, '22') }]} />
+        <View style={[styles.accentGlow, { backgroundColor: alpha(accentColor, 0.15) }]} />
         <View style={[styles.accentLine, { backgroundColor: accentColor }]} />
 
         <View style={styles.topRow}>
-          <View style={[styles.avatarShell, { borderColor: withAlpha(accentColor, '72') }]}>
+          <View style={[styles.avatarShell, { borderColor: alpha(accentColor, 0.45) }]}>
             {clientAvatar ? (
               <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
             ) : (
               <LinearGradient
-                colors={[withAlpha(accentColor, '72'), 'rgba(0,245,255,0.24)']}
+                colors={[alpha(accentColor, 0.45), alpha(theme.colors.brand.primary, 0.15)]}
                 style={styles.avatarFallback}
               >
-                <Text style={styles.avatarText}>{initialsFor(clientName)}</Text>
+                <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{initialsFor(clientName)}</Text>
               </LinearGradient>
             )}
           </View>
 
           <View style={styles.identityBlock}>
-            <Text style={styles.personRole}>{clientRole}</Text>
-            <Text style={[styles.personName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
-            <Text style={styles.clientHistory} numberOfLines={1}>
+            <Text style={[styles.personRole, { color: theme.colors.text.muted }]}>{clientRole}</Text>
+            <Text style={[styles.personName, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
+            <Text style={[styles.clientHistory, { color: alpha(theme.colors.text.primary, 0.42) }]} numberOfLines={1}>
               {completedJobs > 0 ? t('incomingJobModal.jobsCompletedCount', '{{count}} completed jobs', { count: completedJobs }) : t('home.worker.proposalSubmitted', 'Proposal submitted')}
             </Text>
           </View>
 
-          <View style={[styles.statusBadge, { borderColor: withAlpha(accentColor, '60'), backgroundColor: withAlpha(accentColor, '18') }]}>
+          <View style={[styles.statusBadge, { borderColor: alpha(accentColor, 0.4), backgroundColor: alpha(accentColor, 0.1) }]}>
             <Hourglass size={11} color={accentColor} strokeWidth={2.6} />
             <Text style={[styles.statusText, { color: accentColor }]} numberOfLines={1}>{statusLabel}</Text>
           </View>
         </View>
 
         <View style={styles.serviceRow}>
-          <View style={[styles.serviceIcon, { borderColor: withAlpha(accentColor, '38') }]}>
-            <BriefcaseBusiness size={18} color={Colors.cyan} strokeWidth={2.4} />
+          <View style={[styles.serviceIcon, { borderColor: alpha(colors.cyan, 0.25), backgroundColor: alpha(colors.cyan, 0.05) }]}>
+            <BriefcaseBusiness size={18} color={colors.cyan} strokeWidth={2.4} />
           </View>
           <View style={styles.serviceCopy}>
-            <Text style={[styles.category, Typography.threeD]} numberOfLines={1}>{title}</Text>
-            <Text style={styles.description} numberOfLines={2}>{description}</Text>
+            <Text style={[styles.category, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
+            <Text style={[styles.description, { color: theme.colors.text.muted }]} numberOfLines={2}>{description}</Text>
           </View>
         </View>
 
         <View style={styles.metaGrid}>
           <View style={styles.metaPill}>
-            <MissionIcon size={13} color={isInstant ? Colors.worker : Colors.cyan} strokeWidth={2.4} />
-            <Text style={styles.metaText} numberOfLines={1}>{missionKindLabel}</Text>
+            <MissionIcon size={13} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.4} />
+            <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={1}>{missionKindLabel}</Text>
           </View>
           <View style={styles.metaPill}>
-            <CalendarDays size={13} color={Colors.cyan} strokeWidth={2.4} />
-            <Text style={styles.metaText} numberOfLines={1}>{dateLabel}</Text>
+            <CalendarDays size={13} color={colors.cyan} strokeWidth={2.4} />
+            <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={1}>{dateLabel}</Text>
           </View>
           <View style={styles.metaPill}>
-            <Clock3 size={13} color={Colors.worker} strokeWidth={2.4} />
-            <Text style={styles.metaText} numberOfLines={1}>{timeLabel}</Text>
+            <Clock3 size={13} color={colors.worker} strokeWidth={2.4} />
+            <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={1}>{timeLabel}</Text>
           </View>
         </View>
 
-        <View style={styles.locationRow}>
-          <MapPin size={14} color={Colors.textMuted} strokeWidth={2.2} />
-          <Text style={styles.locationText} numberOfLines={1}>{locationLabel}</Text>
+        <View style={[styles.locationRow, { borderColor: alpha(theme.colors.text.primary, 0.08), backgroundColor: alpha(theme.colors.background.screen, 0.12) }]}>
+          <MapPin size={14} color={theme.colors.text.muted} strokeWidth={2.2} />
+          <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>{locationLabel}</Text>
         </View>
 
         <View style={styles.offerRow}>
-          <View style={styles.amountBox}>
-            <Banknote size={14} color={Colors.green} strokeWidth={2.4} />
+          <View style={[styles.amountBox, { borderColor: alpha(colors.success, 0.2), backgroundColor: alpha(colors.success, 0.06) }]}>
+            <Banknote size={14} color={colors.success} strokeWidth={2.4} />
             <View>
-              <Text style={styles.amountLabel}>Your quote</Text>
-              <Text style={styles.amountValue}>{amountText}</Text>
+              <Text style={[styles.amountLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>Your quote</Text>
+              <Text style={[styles.amountValue, { color: colors.success }]}>{amountText}</Text>
             </View>
           </View>
-          <View style={styles.sentState}>
-            <Radar size={14} color={Colors.cyan} strokeWidth={2.4} />
-            <Text style={styles.sentText}>Interest sent</Text>
+          <View style={[styles.sentState, { borderColor: alpha(colors.cyan, 0.15), backgroundColor: alpha(colors.cyan, 0.05) }]}>
+            <Radar size={14} color={colors.cyan} strokeWidth={2.4} />
+            <Text style={[styles.sentText, { color: colors.cyan }]}>Interest sent</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -189,12 +195,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 14,
     padding: 14,
-    backgroundColor: 'rgba(8,10,30,0.9)',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.22,
-    shadowRadius: 22,
-    elevation: 8,
-    ...Shadows.bevel,
   },
   accentGlow: {
     position: 'absolute',
@@ -225,13 +225,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1.4,
     padding: 3,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha('#fff', 0.04),
   },
   avatarImage: {
     width: '100%',
     height: '100%',
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: alpha('#fff', 0.05),
   },
   avatarFallback: {
     flex: 1,
@@ -240,7 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '900',
   },
@@ -249,19 +248,16 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   personRole: {
-    color: Colors.textMuted,
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   personName: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 2,
   },
   clientHistory: {
-    color: 'rgba(255,255,255,0.42)',
     fontSize: 10,
     fontWeight: '700',
     marginTop: 3,
@@ -287,9 +283,7 @@ const styles = StyleSheet.create({
     gap: 11,
     padding: 11,
     borderRadius: BorderRadius.lg,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 10,
   },
   serviceIcon: {
@@ -298,7 +292,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,245,255,0.08)',
     borderWidth: 1,
   },
   serviceCopy: {
@@ -306,12 +299,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   category: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '900',
   },
   description: {
-    color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
@@ -332,12 +323,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(255,255,255,0.035)',
   },
   metaText: {
     flexShrink: 1,
-    color: 'rgba(255,255,255,0.72)',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -348,14 +336,11 @@ const styles = StyleSheet.create({
     gap: 7,
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.12)',
     paddingHorizontal: 10,
     marginBottom: 10,
   },
   locationText: {
     flex: 1,
-    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -371,19 +356,15 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.24)',
-    backgroundColor: 'rgba(0,255,127,0.10)',
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   amountLabel: {
-    color: 'rgba(255,255,255,0.50)',
     fontSize: 8,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   amountValue: {
-    color: Colors.green,
     fontSize: 14,
     fontWeight: '900',
     marginTop: 1,
@@ -394,13 +375,10 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.20)',
-    backgroundColor: 'rgba(0,245,255,0.08)',
     paddingHorizontal: 10,
     paddingVertical: 7,
   },
   sentText: {
-    color: Colors.cyan,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',

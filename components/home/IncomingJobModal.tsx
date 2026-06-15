@@ -38,8 +38,8 @@ import {
   CircleDollarSign,
   Clock3,
   Image as ImageIcon,
-  MapPin,
   Maximize2,
+  MapPin,
   Navigation,
   PauseCircle,
   PlayCircle,
@@ -55,7 +55,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 
-import { Colors, Shadows } from '../../constants/Theme';
+import { alpha, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import Toast from 'react-native-toast-message';
@@ -146,6 +146,9 @@ export function IncomingJobModal({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const shadows = useThemeShadows();
   const [parentScrollEnabled, setParentScrollEnabled] = useState(true);
 
   if (!jobs || jobs.length === 0) return null;
@@ -157,16 +160,16 @@ export function IncomingJobModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <LinearGradient colors={['rgba(2,4,16,0.82)', 'rgba(0,0,0,0.98)']} style={StyleSheet.absoluteFillObject} />
+      <View style={[styles.backdrop, { backgroundColor: theme.colors.modal.backdrop }]}>
+        <LinearGradient colors={[alpha(theme.colors.background.screen, 0.82), alpha(theme.colors.background.screen, 0.98)]} style={StyleSheet.absoluteFillObject} />
 
         <Animated.View entering={FadeIn.duration(240)} exiting={FadeOut.duration(180)} style={styles.screen}>
           <TouchableOpacity
-            style={[styles.closeButton, { top: insets.top + 10 }]}
+            style={[styles.closeButton, { backgroundColor: alpha(theme.colors.background.screen, 0.64), borderColor: alpha(colors.cyan, 0.3) }]}
             onPress={onClose}
             activeOpacity={0.75}
           >
-            <X size={21} color={Colors.cyan} strokeWidth={2.6} />
+            <X size={21} color={colors.cyan} strokeWidth={2.6} />
           </TouchableOpacity>
 
           <ScrollView
@@ -189,16 +192,19 @@ export function IncomingJobModal({
                   onReject={() => onReject(job._id)}
                   onWalletPress={handleWalletPress}
                   onScrollActive={setParentScrollEnabled}
+                  theme={theme}
+                  colors={colors}
+                  shadows={shadows}
                 />
               </View>
             ))}
           </ScrollView>
 
           {jobs.length > 1 && (
-            <View style={[styles.swipeHint, { bottom: insets.bottom + 14 }]}>
-              <ChevronLeft size={14} color={Colors.cyan} strokeWidth={2.5} />
-              <Text style={styles.swipeHintText}>{t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: jobs.length })}</Text>
-              <ChevronRight size={14} color={Colors.cyan} strokeWidth={2.5} />
+            <View style={[styles.swipeHint, { backgroundColor: alpha(theme.colors.background.screen, 0.7), borderColor: alpha(colors.cyan, 0.2) }]}>
+              <ChevronLeft size={14} color={colors.cyan} strokeWidth={2.5} />
+              <Text style={[styles.swipeHintText, { color: colors.cyan }]}>{t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: jobs.length })}</Text>
+              <ChevronRight size={14} color={colors.cyan} strokeWidth={2.5} />
             </View>
           )}
         </Animated.View>
@@ -217,6 +223,9 @@ function JobDecisionCard({
   onReject,
   onWalletPress,
   onScrollActive,
+  theme,
+  colors,
+  shadows,
 }: {
   job: any;
   totalJobs: number;
@@ -227,14 +236,16 @@ function JobDecisionCard({
   onReject: () => void;
   onWalletPress: () => void;
   onScrollActive?: (active: boolean) => void;
+  theme: ReturnType<typeof useTheme>;
+  colors: ReturnType<typeof useThemeColors>;
+  shadows: ReturnType<typeof useThemeShadows>;
 }) {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const workerLoc = (user as any)?.address || (user as any)?.city || '';
   const signal = job.signalMeta || {};
   const isInstant = job.urgency === 'instant';
-  const accent = isInstant ? '#00F0FF' : '#FF8C00';
-  const accentSecondary = isInstant ? '#007AFF' : '#FF5E00';
+  const accent = isInstant ? colors.cyan : colors.worker;
+  const accentSecondary = isInstant ? theme.colors.brand.secondary : colors.worker;
   const media = useMemo(() => getJobMedia(job), [job]);
   const client = getClientMeta(job);
   const [secondsRemaining, setSecondsRemaining] = useState(() => resolveSecondsRemaining(job));
@@ -353,8 +364,8 @@ function JobDecisionCard({
     <Animated.View entering={SlideInDown.duration(420).springify().damping(18)} style={styles.cardFrame}>
       <Animated.View style={[styles.cardGlow, { shadowColor: accent }, glowStyle]} />
 
-      <View style={styles.card}>
-        <LinearGradient colors={['rgba(8,11,31,0.98)', 'rgba(5,8,24,0.99)']} style={StyleSheet.absoluteFillObject} />
+      <View style={[styles.card, { borderColor: alpha(accent, 0.25), backgroundColor: theme.colors.surface.card }]}>
+        <LinearGradient colors={[alpha(theme.colors.background.screen, 0.98), alpha(theme.colors.background.screen, 0.99)]} style={StyleSheet.absoluteFillObject} />
 
         <LinearGradient
           colors={[accent, accentSecondary]}
@@ -363,14 +374,14 @@ function JobDecisionCard({
           style={styles.liveBar}
         >
           <View style={styles.liveBarLeft}>
-            <Radio size={13} color="#001014" strokeWidth={2.8} />
-            <Text style={styles.liveBarText}>{isInstant ? t('incomingJobModal.liveJobOffer', 'LIVE JOB OFFER') : t('incomingJobModal.newScheduledRequest', 'NEW SCHEDULED REQUEST')}</Text>
+            <Radio size={13} color={theme.colors.text.onBrand} strokeWidth={2.8} />
+            <Text style={[styles.liveBarText, { color: theme.colors.text.onBrand }]}>{isInstant ? t('incomingJobModal.liveJobOffer', 'LIVE JOB OFFER') : t('incomingJobModal.newScheduledRequest', 'NEW SCHEDULED REQUEST')}</Text>
           </View>
           <View style={styles.liveBarRight}>
-            {totalJobs > 1 && <Text style={styles.queueText}>{currentIndex}/{totalJobs}</Text>}
+            {totalJobs > 1 && <Text style={[styles.queueText, { color: theme.colors.text.onBrand }]}>{currentIndex}/{totalJobs}</Text>}
             <View style={styles.timer}>
-              <Clock3 size={11} color="#001014" strokeWidth={2.7} />
-              <Text style={styles.timerText}>{formatCountdown(secondsRemaining)}</Text>
+              <Clock3 size={11} color={theme.colors.text.onBrand} strokeWidth={2.7} />
+              <Text style={[styles.timerText, { color: theme.colors.text.onBrand }]}>{formatCountdown(secondsRemaining)}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -381,7 +392,7 @@ function JobDecisionCard({
           contentContainerStyle={styles.cardContent}
         >
           <View style={styles.summaryHeader}>
-            <View style={[styles.categoryIcon, { backgroundColor: `${accent}18`, borderColor: `${accent}42` }]}>
+            <View style={[styles.categoryIcon, { backgroundColor: alpha(accent, 0.1), borderColor: alpha(accent, 0.4) }]}>
               {isInstant ? (
                 <Zap size={25} color={accent} fill={accent} strokeWidth={2.4} />
               ) : (
@@ -394,13 +405,13 @@ function JobDecisionCard({
                 <Text style={[styles.eyebrowText, { color: accent }]}>
                   {isInstant ? t('incomingJobModal.instantResponse', 'Instant response') : t('incomingJobModal.scheduledOpportunity', 'Scheduled opportunity')}
                 </Text>
-                <Text style={styles.postedText}>{formatAge(job.createdAt, t)}</Text>
+                <Text style={[styles.postedText, { color: alpha(theme.colors.text.primary, 0.4) }]}>{formatAge(job.createdAt, t)}</Text>
               </View>
-              <Text style={styles.categoryTitle} numberOfLines={1}>{job.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
+              <Text style={[styles.categoryTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>{job.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
             </View>
           </View>
 
-          <Text style={styles.descriptionText}>
+          <Text style={[styles.descriptionText, { color: alpha(theme.colors.text.primary, 0.7) }]}>
             {job.description || t('incomingJobModal.defaultDescription', 'The client has requested professional assistance for this service.')}
           </Text>
 
@@ -410,7 +421,8 @@ function JobDecisionCard({
               label={primaryAmountLabel}
               value={primaryAmountText}
               hint={primaryAmountHint}
-              color={Colors.green}
+              color={colors.success}
+              theme={theme}
             />
             <DecisionMetric
               icon={Navigation}
@@ -418,18 +430,20 @@ function JobDecisionCard({
               value={distanceText}
               hint={isInstant ? t('incomingJobModal.respondNearby', 'Respond nearby') : t('incomingJobModal.planVisit', 'Plan your visit')}
               color={accent}
+              theme={theme}
             />
           </View>
 
-          <View style={styles.detailCard}>
-            <DetailRow icon={MapPin} label={t('incomingJobModal.serviceLocation', 'Service location')} value={job.address || t('incomingJobModal.nearbyServiceArea', 'Nearby service area')} color={accent} />
-            <DetailRow icon={CalendarDays} label={t('incomingJobModal.visitTiming', 'Visit timing')} value={timingText} color={isInstant ? Colors.green : '#FF8C00'} />
+          <View style={[styles.detailCard, { backgroundColor: alpha(theme.colors.background.screen, 0.2) }]}>
+            <DetailRow icon={MapPin} label={t('incomingJobModal.serviceLocation', 'Service location')} value={job.address || t('incomingJobModal.nearbyServiceArea', 'Nearby service area')} color={accent} theme={theme} />
+            <DetailRow icon={CalendarDays} label={t('incomingJobModal.visitTiming', 'Visit timing')} value={timingText} color={isInstant ? colors.success : colors.worker} theme={theme} isLast />
             <DetailRow
               icon={Banknote}
               label={t('incomingJobModal.clientOffer', 'Client offer')}
               value={signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'))}
-              color={Colors.green}
-              isLast
+              color={colors.success}
+              isLast={false}
+              theme={theme}
             />
           </View>
 
@@ -438,7 +452,7 @@ function JobDecisionCard({
               <ImageIcon size={14} color={accent} strokeWidth={2.4} />
               <Text style={[styles.sectionTitle, { color: accent }]}>{t('incomingJobModal.workEvidence', 'Work evidence')}</Text>
             </View>
-            <Text style={styles.sectionMeta}>{t('incomingJobModal.attachmentsLabel', '{{count}} attachments', { count: media.totalCount })}</Text>
+            <Text style={[styles.sectionMeta, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('incomingJobModal.attachmentsLabel', '{{count}} attachments', { count: media.totalCount })}</Text>
           </View>
 
           {media.items.length > 0 ? (
@@ -451,13 +465,13 @@ function JobDecisionCard({
               onTouchCancel={() => onScrollActive?.(true)}
             >
               {media.items.map((item: MediaItem, index: number) => (
-                <EvidenceTile key={`${item.type}-${item.url}-${index}`} item={item} index={index} accent={accent} />
+                <EvidenceTile key={`${item.type}-${item.url}-${index}`} item={item} index={index} accent={accent} theme={theme} />
               ))}
             </ScrollView>
           ) : (
-            <View style={styles.emptyEvidence}>
-              <ImageIcon size={18} color="rgba(255,255,255,0.3)" />
-              <Text style={styles.emptyEvidenceText}>{t('incomingJobModal.noEvidenceMsg', 'No work evidence attached. Review the brief carefully.')}</Text>
+            <View style={[styles.emptyEvidence, { backgroundColor: alpha(theme.colors.text.primary, 0.03) }]}>
+              <ImageIcon size={18} color={alpha(theme.colors.text.primary, 0.3)} />
+              <Text style={[styles.emptyEvidenceText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('incomingJobModal.noEvidenceMsg', 'No work evidence attached. Review the brief carefully.')}</Text>
             </View>
           )}
 
@@ -468,25 +482,25 @@ function JobDecisionCard({
             </View>
           </View>
 
-          <View style={styles.clientCard}>
+          <View style={[styles.clientCard, { backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
             {client?.profileImage ? (
               <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
             ) : (
-              <View style={[styles.clientAvatarFallback, { borderColor: `${accent}45` }]}>
+              <View style={[styles.clientAvatarFallback, { borderColor: alpha(accent, 0.4) }]}>
                 <UserRound size={20} color={accent} />
               </View>
             )}
             <View style={styles.clientCopy}>
-              <Text style={styles.clientLabel}>{t('incomingJobModal.serviceClient', 'Service client')}</Text>
-              <Text style={styles.clientName} numberOfLines={1}>{client?.fullName || t('incomingJobModal.defaultClientName', 'ApnaUstad client')}</Text>
+              <Text style={[styles.clientLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('incomingJobModal.serviceClient', 'Service client')}</Text>
+              <Text style={[styles.clientName, { color: theme.colors.text.primary }]} numberOfLines={1}>{client?.fullName || t('incomingJobModal.defaultClientName', 'ApnaUstad client')}</Text>
               <View style={styles.clientStats}>
                 <View style={styles.clientStat}>
                   <Star size={11} color="#FFD700" fill={clientRating > 0 ? '#FFD700' : 'transparent'} />
-                  <Text style={styles.clientStatText}>{clientRating > 0 ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: clientRating.toFixed(1) }) : t('incomingJobModal.newClient', 'New client')}</Text>
+                  <Text style={[styles.clientStatText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{clientRating > 0 ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: clientRating.toFixed(1) }) : t('incomingJobModal.newClient', 'New client')}</Text>
                 </View>
                 <View style={styles.clientStat}>
-                  <ShieldCheck size={11} color={Colors.green} />
-                  <Text style={styles.clientStatText}>{t('incomingJobModal.jobsCompleted', '{{completed}}/{{total}} jobs completed', { completed: completedJobs, total: totalJobsPosted })}</Text>
+                  <ShieldCheck size={11} color={colors.success} />
+                  <Text style={[styles.clientStatText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('incomingJobModal.jobsCompleted', '{{completed}}/{{total}} jobs completed', { completed: completedJobs, total: totalJobsPosted })}</Text>
                 </View>
               </View>
             </View>
@@ -495,18 +509,18 @@ function JobDecisionCard({
           <View style={[
             styles.walletCard,
             {
-              borderColor: isWalletEligible ? 'rgba(0,255,127,0.28)' : 'rgba(255,140,0,0.34)',
-              backgroundColor: isWalletEligible ? 'rgba(0,255,127,0.07)' : 'rgba(255,140,0,0.1)',
+              borderColor: isWalletEligible ? alpha(colors.success, 0.25) : alpha(colors.worker, 0.3),
+              backgroundColor: isWalletEligible ? alpha(colors.success, 0.06) : alpha(colors.worker, 0.1),
             }
           ]}>
-            <View style={[styles.walletIcon, { backgroundColor: isWalletEligible ? 'rgba(0,255,127,0.12)' : 'rgba(255,140,0,0.14)' }]}>
-              <WalletCards size={18} color={isWalletEligible ? Colors.green : '#FF8C00'} strokeWidth={2.4} />
+            <View style={[styles.walletIcon, { backgroundColor: isWalletEligible ? alpha(colors.success, 0.1) : alpha(colors.worker, 0.1) }]}>
+              <WalletCards size={18} color={isWalletEligible ? colors.success : colors.worker} strokeWidth={2.4} />
             </View>
             <View style={styles.walletCopy}>
-              <Text style={[styles.walletTitle, { color: isWalletEligible ? Colors.green : '#FF8C00' }]}>
+              <Text style={[styles.walletTitle, { color: isWalletEligible ? colors.success : colors.worker }]}>
                 {isWalletEligible ? t('incomingJobModal.walletReady', 'Wallet ready for acceptance') : t('incomingJobModal.walletTopUpRequired', 'Wallet top-up required')}
               </Text>
-              <Text style={styles.walletText}>
+              <Text style={[styles.walletText, { color: alpha(theme.colors.text.primary, 0.5) }]}>
                 {t('incomingJobModal.walletBalanceDesc', 'Balance {{balance}}. Minimum required {{required}}.', { balance: formatMoney(walletBalance), required: formatMoney(requiredWalletBalance) })}
               </Text>
             </View>
@@ -522,21 +536,21 @@ function JobDecisionCard({
               </View>
 
               {activeCounterPrice !== null && (
-                <Text style={styles.inlineActiveCounterText}>
-                  {t('incomingJobModal.activeCounterOffer', 'Your Active Counter-Offer')}: <Text style={{ color: Colors.green, fontWeight: '900' }}>Rs. {activeCounterPrice.toLocaleString()}</Text>
+                <Text style={[styles.inlineActiveCounterText, { color: alpha(theme.colors.text.primary, 0.5) }]}>
+                  {t('incomingJobModal.activeCounterOffer', 'Your Active Counter-Offer')}: <Text style={{ color: colors.success, fontWeight: '900' }}>Rs. {activeCounterPrice.toLocaleString()}</Text>
                 </Text>
               )}
 
               <View style={styles.inlineCounterRow}>
                 <View style={styles.inlineCounterInputWrapper}>
-                  <Text style={styles.inlineCounterPrefix}>PKR</Text>
+                  <Text style={[styles.inlineCounterPrefix, { color: colors.cyan }]}>PKR</Text>
                   <TextInput
-                    style={styles.inlineCounterInputField}
+                    style={[styles.inlineCounterInputField, { color: theme.colors.text.primary }]}
                     value={counterPrice}
                     onChangeText={(val) => setCounterPrice(val.replace(/[^\d]/g, ''))}
                     keyboardType="number-pad"
                     placeholder={String(activeCounterPrice ?? offerAmount)}
-                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    placeholderTextColor={alpha(theme.colors.text.primary, 0.3)}
                   />
                 </View>
 
@@ -553,9 +567,9 @@ function JobDecisionCard({
                     style={styles.inlineCounterSubmitGradient}
                   >
                     {submittingCounter ? (
-                      <ActivityIndicator color="#001014" size="small" />
+                      <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
                     ) : (
-                      <Text style={styles.inlineCounterSubmitText}>
+                      <Text style={[styles.inlineCounterSubmitText, { color: theme.colors.text.onBrand }]}>
                         {activeCounterPrice !== null ? t('common.save', 'Save') : t('incomingJobModal.counterOffer', 'Counter')}
                       </Text>
                     )}
@@ -566,10 +580,10 @@ function JobDecisionCard({
           )}
         </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.skipButton} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
-            <X size={18} color="rgba(255,255,255,0.62)" strokeWidth={2.5} />
-            <Text style={styles.skipButtonText}>{t('common.skip', 'Skip')}</Text>
+        <View style={[styles.footer, { backgroundColor: alpha(theme.colors.background.screen, 0.84), borderTopColor: alpha(theme.colors.text.primary, 0.06) }]}>
+          <TouchableOpacity style={[styles.skipButton, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
+            <X size={18} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.5} />
+            <Text style={[styles.skipButtonText, { color: alpha(theme.colors.text.primary, 0.6) }]}>{t('common.skip', 'Skip')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -579,35 +593,35 @@ function JobDecisionCard({
             activeOpacity={0.86}
           >
             <LinearGradient
-              colors={isWalletEligible ? [accent, accentSecondary] : ['#FFB000', '#FF7300']}
+              colors={isWalletEligible ? [accent, accentSecondary] : [colors.worker, alpha(colors.worker, 0.8)]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.primaryButtonGradient}
             >
               {isLoading ? (
-                <ActivityIndicator color="#001014" size="small" />
+                <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
               ) : isWalletEligible ? (
                 <>
-                  <Check size={19} color="#001014" strokeWidth={3} />
-                  <Text style={styles.primaryButtonText}>
+                  <Check size={19} color={theme.colors.text.onBrand} strokeWidth={3} />
+                  <Text style={[styles.primaryButtonText, { color: theme.colors.text.onBrand }]}>
                     {isInstant ? t('incomingJobModal.acceptOffer', 'Accept offer') : t('incomingJobModal.continueBid', 'Continue to bid')}
                   </Text>
-                  <ChevronRight size={17} color="#001014" strokeWidth={3} />
+                  <ChevronRight size={17} color={theme.colors.text.onBrand} strokeWidth={3} />
                 </>
               ) : (
                 <>
-                  <WalletCards size={18} color="#201000" strokeWidth={2.7} />
-                  <Text style={styles.primaryButtonText}>{t('incomingJobModal.topUpWallet', 'Top up wallet')}</Text>
-                  <ChevronRight size={17} color="#201000" strokeWidth={3} />
+                  <WalletCards size={18} color={theme.colors.text.onBrand} strokeWidth={2.7} />
+                  <Text style={[styles.primaryButtonText, { color: theme.colors.text.onBrand }]}>{t('incomingJobModal.topUpWallet', 'Top up wallet')}</Text>
+                  <ChevronRight size={17} color={theme.colors.text.onBrand} strokeWidth={3} />
                 </>
               )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footerNote}>
-          <ShieldAlert size={11} color="rgba(255,255,255,0.4)" />
-          <Text style={styles.footerNoteText}>
+        <View style={[styles.footerNote, { backgroundColor: alpha(theme.colors.background.screen, 0.84) }]}>
+          <ShieldAlert size={11} color={alpha(theme.colors.text.primary, 0.4)} />
+          <Text style={[styles.footerNoteText, { color: alpha(theme.colors.text.primary, 0.4) }]}>
             {isInstant ? t('incomingJobModal.instantFooterNote', 'Acceptance sends your interest to the client for confirmation.') : t('incomingJobModal.scheduledFooterNote', 'Submit your quote after reviewing the complete request.')}
           </Text>
         </View>
@@ -622,21 +636,23 @@ function DecisionMetric({
   value,
   hint,
   color,
+  theme,
 }: {
   icon: React.ComponentType<any>;
   label: string;
   value: string;
   hint: string;
   color: string;
+  theme: ReturnType<typeof useTheme>;
 }) {
   return (
     <View style={styles.metric}>
       <View style={styles.metricHeader}>
         <Icon size={15} color={color} strokeWidth={2.5} />
-        <Text style={styles.metricLabel}>{label}</Text>
+        <Text style={[styles.metricLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>{label}</Text>
       </View>
-      <Text style={styles.metricValue} numberOfLines={1}>{value}</Text>
-      <Text style={styles.metricHint} numberOfLines={1}>{hint}</Text>
+      <Text style={[styles.metricValue, { color: theme.colors.text.primary }]} numberOfLines={1}>{value}</Text>
+      <Text style={[styles.metricHint, { color: alpha(theme.colors.text.primary, 0.4) }]} numberOfLines={1}>{hint}</Text>
     </View>
   );
 }
@@ -647,37 +663,39 @@ function DetailRow({
   value,
   color,
   isLast,
+  theme,
 }: {
   icon: React.ComponentType<any>;
   label: string;
   value: string;
   color: string;
   isLast?: boolean;
+  theme: ReturnType<typeof useTheme>;
 }) {
   return (
     <View style={[styles.detailRow, !isLast && styles.detailRowBorder]}>
-      <View style={[styles.detailIcon, { backgroundColor: `${color}12` }]}>
+      <View style={[styles.detailIcon, { backgroundColor: alpha(color, 0.1) }]}>
         <Icon size={15} color={color} strokeWidth={2.4} />
       </View>
       <View style={styles.detailCopy}>
-        <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue} numberOfLines={2}>{value}</Text>
+        <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{label}</Text>
+        <Text style={[styles.detailValue, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={2}>{value}</Text>
       </View>
     </View>
   );
 }
 
-function EvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+function EvidenceTile({ item, index, accent, theme }: { item: MediaItem; index: number; accent: string; theme: ReturnType<typeof useTheme> }) {
   if (item.type === 'audio') {
-    return <AudioEvidenceTile item={item} index={index} accent={accent} />;
+    return <AudioEvidenceTile item={item} index={index} accent={accent} theme={theme} />;
   }
   if (item.type === 'video') {
-    return <VideoEvidenceTile item={item} index={index} accent={accent} />;
+    return <VideoEvidenceTile item={item} index={index} accent={accent} theme={theme} />;
   }
-  return <ImageEvidenceTile item={item} index={index} accent={accent} />;
+  return <ImageEvidenceTile item={item} index={index} accent={accent} theme={theme} />;
 }
 
-function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+function ImageEvidenceTile({ item, index, accent, theme }: { item: MediaItem; index: number; accent: string; theme: ReturnType<typeof useTheme> }) {
   const { t } = useTranslation();
   const [previewVisible, setPreviewVisible] = useState(false);
   return (
@@ -685,22 +703,22 @@ function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
       <TouchableOpacity
         activeOpacity={0.82}
         onPress={() => setPreviewVisible(true)}
-        style={[styles.mediaTile, { borderColor: `${accent}38` }]}
+        style={[styles.mediaTile, { borderColor: alpha(accent, 0.3) }]}
       >
         <Image source={{ uri: item.url }} style={styles.mediaImage} />
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFillObject} />
-        <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
+        <LinearGradient colors={['transparent', alpha(theme.colors.background.screen, 0.7)]} style={StyleSheet.absoluteFillObject} />
+        <Text style={[styles.mediaIndex, { color: theme.colors.text.primary }]}>{String(index + 1).padStart(2, '0')}</Text>
         <View style={styles.expandBadge}>
-          <Maximize2 size={12} color="#FFFFFF" strokeWidth={2.4} />
+          <Maximize2 size={12} color={theme.colors.text.primary} strokeWidth={2.4} />
         </View>
         <View style={styles.mediaTypeBadge}>
-          <Text style={styles.mediaTypeText}>{t('incomingJobModal.photo', 'PHOTO')}</Text>
+          <Text style={[styles.mediaTypeText, { color: theme.colors.text.primary }]}>{t('incomingJobModal.photo', 'PHOTO')}</Text>
         </View>
       </TouchableOpacity>
       <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
         <View style={styles.previewBackdrop}>
           <TouchableOpacity style={styles.previewCloseButton} onPress={() => setPreviewVisible(false)} activeOpacity={0.8}>
-            <X size={22} color="#FFFFFF" strokeWidth={2.7} />
+            <X size={22} color={theme.colors.text.primary} strokeWidth={2.7} />
           </TouchableOpacity>
           <Image source={{ uri: item.url }} style={styles.previewMedia} resizeMode="contain" />
         </View>
@@ -709,7 +727,7 @@ function ImageEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
   );
 }
 
-function VideoEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+function VideoEvidenceTile({ item, index, accent, theme }: { item: MediaItem; index: number; accent: string; theme: ReturnType<typeof useTheme> }) {
   const { t } = useTranslation();
   const [previewVisible, setPreviewVisible] = useState(false);
   const player = useVideoPlayer(item.url);
@@ -723,22 +741,22 @@ function VideoEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
       <TouchableOpacity
         activeOpacity={0.82}
         onPress={() => setPreviewVisible(true)}
-        style={[styles.mediaTile, { borderColor: `${accent}38` }]}
+        style={[styles.mediaTile, { borderColor: alpha(accent, 0.3) }]}
       >
-        <View style={styles.videoTile}>
+        <View style={[styles.videoTile, { backgroundColor: alpha(accent, 0.08) }]}>
           <PlayCircle size={34} color={accent} strokeWidth={1.8} />
-          <Text style={styles.videoTileText}>{t('incomingJobModal.playVideo', 'Play job video')}</Text>
+          <Text style={[styles.videoTileText, { color: alpha(theme.colors.text.primary, 0.8) }]}>{t('incomingJobModal.playVideo', 'Play job video')}</Text>
         </View>
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFillObject} />
-        <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
+        <LinearGradient colors={['transparent', alpha(theme.colors.background.screen, 0.7)]} style={StyleSheet.absoluteFillObject} />
+        <Text style={[styles.mediaIndex, { color: theme.colors.text.primary }]}>{String(index + 1).padStart(2, '0')}</Text>
         <View style={styles.mediaTypeBadge}>
-          <Text style={styles.mediaTypeText}>{t('incomingJobModal.video', 'VIDEO')}</Text>
+          <Text style={[styles.mediaTypeText, { color: theme.colors.text.primary }]}>{t('incomingJobModal.video', 'VIDEO')}</Text>
         </View>
       </TouchableOpacity>
       <Modal visible={previewVisible} transparent animationType="fade" onRequestClose={() => setPreviewVisible(false)}>
         <View style={styles.previewBackdrop}>
           <TouchableOpacity style={styles.previewCloseButton} onPress={() => setPreviewVisible(false)} activeOpacity={0.8}>
-            <X size={22} color="#FFFFFF" strokeWidth={2.7} />
+            <X size={22} color={theme.colors.text.primary} strokeWidth={2.7} />
           </TouchableOpacity>
           <VideoView player={player} style={styles.previewMedia} nativeControls allowsFullscreen />
         </View>
@@ -752,7 +770,7 @@ const formatPlaybackTime = (seconds: number) => {
   return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
 };
 
-function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: number; accent: string }) {
+function AudioEvidenceTile({ item, index, accent, theme }: { item: MediaItem; index: number; accent: string; theme: ReturnType<typeof useTheme> }) {
   const { t } = useTranslation();
   const player = useAudioPlayer(item.url);
   const status = useAudioPlayerStatus(player);
@@ -772,9 +790,9 @@ function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
     <TouchableOpacity
       activeOpacity={0.82}
       onPress={togglePlayback}
-      style={[styles.mediaTile, styles.audioTile, { borderColor: `${accent}38` }]}
+      style={[styles.mediaTile, styles.audioTile, { borderColor: alpha(accent, 0.3) }]}
     >
-      <View style={[styles.audioPlayButton, { borderColor: `${accent}55`, backgroundColor: `${accent}16` }]}>
+      <View style={[styles.audioPlayButton, { borderColor: alpha(accent, 0.5), backgroundColor: alpha(accent, 0.1) }]}>
         {status.playing ? (
           <PauseCircle size={32} color={accent} strokeWidth={1.8} />
         ) : (
@@ -784,18 +802,18 @@ function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
       <View style={styles.audioCopy}>
         <View style={styles.audioTitleRow}>
           <Volume2 size={14} color={accent} strokeWidth={2.3} />
-          <Text style={styles.audioTitle}>{t('incomingJobModal.voiceBrief', 'Client voice brief')}</Text>
+          <Text style={[styles.audioTitle, { color: theme.colors.text.primary }]}>{t('incomingJobModal.voiceBrief', 'Client voice brief')}</Text>
         </View>
-        <Text style={styles.audioSubtitle}>
+        <Text style={[styles.audioSubtitle, { color: alpha(theme.colors.text.primary, 0.5) }]}>
           {status.playing ? t('incomingJobModal.playingVoice', 'Playing requirement details') : t('incomingJobModal.tapListen', 'Tap to listen before responding')}
         </Text>
         <Text style={[styles.audioDuration, { color: accent }]}>
           {formatPlaybackTime(status.currentTime)} / {formatPlaybackTime(status.duration)}
         </Text>
       </View>
-      <Text style={styles.mediaIndex}>{String(index + 1).padStart(2, '0')}</Text>
+      <Text style={[styles.mediaIndex, { color: theme.colors.text.primary }]}>{String(index + 1).padStart(2, '0')}</Text>
       <View style={styles.mediaTypeBadge}>
-        <Text style={styles.mediaTypeText}>{t('incomingJobModal.voice', 'VOICE')}</Text>
+        <Text style={[styles.mediaTypeText, { color: theme.colors.text.primary }]}>{t('incomingJobModal.voice', 'VOICE')}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -804,7 +822,6 @@ function AudioEvidenceTile({ item, index, accent }: { item: MediaItem; index: nu
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(2,4,16,0.96)',
   },
   screen: {
     flex: 1,
@@ -819,9 +836,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.64)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.34)',
   },
   jobPager: {
     alignItems: 'center',
@@ -840,13 +854,10 @@ const styles = StyleSheet.create({
     gap: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.24)',
-    backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   swipeHintText: {
-    color: Colors.cyan,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -867,9 +878,6 @@ const styles = StyleSheet.create({
     maxHeight: Math.min(SCREEN_HEIGHT * 0.82, 760),
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.28)',
-    backgroundColor: '#07091A',
-    ...Shadows.depth,
   },
   liveBar: {
     height: 42,
@@ -884,7 +892,6 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   liveBarText: {
-    color: '#001014',
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -896,7 +903,6 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   queueText: {
-    color: '#001014',
     fontSize: 10,
     fontWeight: '900',
   },
@@ -910,7 +916,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   timerText: {
-    color: '#001014',
     fontSize: 11,
     fontWeight: '900',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
@@ -959,18 +964,15 @@ const styles = StyleSheet.create({
   },
   postedText: {
     flex: 1,
-    color: 'rgba(255,255,255,0.38)',
     fontSize: 9,
     fontWeight: '700',
     textAlign: 'right',
   },
   categoryTitle: {
-    color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '900',
   },
   descriptionText: {
-    color: 'rgba(255,255,255,0.72)',
     fontSize: 14,
     fontWeight: '600',
     lineHeight: 20,
@@ -987,7 +989,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(255,255,255,0.045)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     padding: 12,
   },
   metricHeader: {
@@ -996,19 +998,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metricLabel: {
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   metricValue: {
-    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '900',
     marginTop: 8,
   },
   metricHint: {
-    color: 'rgba(255,255,255,0.38)',
     fontSize: 10,
     fontWeight: '700',
     marginTop: 4,
@@ -1017,8 +1016,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.18)',
     marginBottom: 16,
   },
   detailRow: {
@@ -1044,13 +1041,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   detailLabel: {
-    color: 'rgba(255,255,255,0.38)',
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   detailValue: {
-    color: 'rgba(255,255,255,0.82)',
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 17,
@@ -1074,7 +1069,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sectionMeta: {
-    color: 'rgba(255,255,255,0.4)',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -1089,7 +1083,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 18,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   mediaImage: {
     width: '100%',
@@ -1100,10 +1093,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    backgroundColor: 'rgba(0,240,255,0.08)',
   },
   videoTileText: {
-    color: 'rgba(255,255,255,0.8)',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -1112,7 +1103,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 14,
-    backgroundColor: 'rgba(255,140,0,0.08)',
   },
   audioPlayButton: {
     width: 48,
@@ -1133,12 +1123,10 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   audioTitle: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '900',
   },
   audioSubtitle: {
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 10,
     fontWeight: '700',
     marginTop: 4,
@@ -1152,7 +1140,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 11,
     bottom: 10,
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '900',
   },
@@ -1168,7 +1155,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   mediaTypeText: {
-    color: '#FFFFFF',
     fontSize: 8,
     fontWeight: '900',
   },
@@ -1218,14 +1204,11 @@ const styles = StyleSheet.create({
     gap: 9,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
     paddingHorizontal: 12,
     marginBottom: 16,
   },
   emptyEvidenceText: {
     flex: 1,
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 16,
@@ -1236,8 +1219,6 @@ const styles = StyleSheet.create({
     gap: 11,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
     padding: 11,
     marginBottom: 12,
   },
@@ -1260,13 +1241,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   clientLabel: {
-    color: 'rgba(255,255,255,0.38)',
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   clientName: {
-    color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 3,
@@ -1283,7 +1262,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   clientStatText: {
-    color: 'rgba(255,255,255,0.52)',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -1311,138 +1289,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   walletText: {
-    color: 'rgba(255,255,255,0.5)',
     fontSize: 10,
     fontWeight: '700',
     lineHeight: 15,
     marginTop: 3,
-  },
-  counterOfferButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 14,
-    marginTop: 10,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255,176,0,0.26)',
-    backgroundColor: 'rgba(255,176,0,0.07)',
-  },
-  counterOfferIcon: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 11,
-    backgroundColor: 'rgba(255,176,0,0.11)',
-  },
-  counterOfferCopy: {
-    flex: 1,
-  },
-  counterOfferTitle: {
-    color: '#FFB000',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  counterOfferText: {
-    color: 'rgba(255,255,255,0.48)',
-    fontSize: 9,
-    lineHeight: 13,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  footer: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
-    backgroundColor: 'rgba(2,4,16,0.84)',
-  },
-  skipButton: {
-    width: 74,
-    height: 54,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.055)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  skipButtonText: {
-    color: 'rgba(255,255,255,0.62)',
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  counterButton: {
-    flex: 1,
-    height: 54,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.34)',
-    backgroundColor: 'rgba(0,240,255,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  counterButtonText: {
-    color: Colors.cyan,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  primaryButton: {
-    flex: 1,
-    height: 54,
-    overflow: 'hidden',
-    borderRadius: 17,
-    ...Shadows.glow,
-  },
-  primaryButtonGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 10,
-  },
-  primaryButtonText: {
-    color: '#001014',
-    fontSize: 13,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  footerNote: {
-    minHeight: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingBottom: 10,
-    backgroundColor: 'rgba(2,4,16,0.84)',
-  },
-  footerNoteText: {
-    flex: 1,
-    color: 'rgba(255,255,255,0.38)',
-    fontSize: 9,
-    fontWeight: '700',
-    lineHeight: 13,
-    textAlign: 'center',
   },
   inlineCounterSection: {
     marginTop: 14,
     marginBottom: 8,
   },
   inlineActiveCounterText: {
-    color: 'rgba(255, 255, 255, 0.52)',
     fontSize: 11,
     fontWeight: '700',
     marginTop: 4,
@@ -1466,13 +1322,11 @@ const styles = StyleSheet.create({
     height: 48,
   },
   inlineCounterPrefix: {
-    color: '#00F0FF',
     fontSize: 13,
     fontWeight: '900',
     marginRight: 6,
   },
   inlineCounterInputField: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '800',
     flex: 1,
@@ -1491,9 +1345,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   inlineCounterSubmitText: {
-    color: '#001014',
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+  },
+  skipButton: {
+    width: 74,
+    height: 54,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  skipButtonText: {
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  primaryButton: {
+    flex: 1,
+    height: 54,
+    overflow: 'hidden',
+    borderRadius: 17,
+  },
+  primaryButtonGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+  },
+  primaryButtonText: {
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  footerNote: {
+    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+  },
+  footerNoteText: {
+    flex: 1,
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 13,
+    textAlign: 'center',
   },
 });

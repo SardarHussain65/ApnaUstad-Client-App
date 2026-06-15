@@ -20,14 +20,15 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { BorderRadius, Colors, Spacing, useThemeColors } from '../../constants/Theme';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const isWorker = role === 'worker';
-  const accentColor = isWorker ? Colors.worker : Colors.cyan;
+  const colors = useThemeColors();
+  const accentColor = isWorker ? colors.worker : colors.cyan;
 
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');

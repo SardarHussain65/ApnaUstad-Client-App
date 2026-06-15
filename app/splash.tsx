@@ -13,7 +13,7 @@ import Animated, {
   Easing
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Typography, Animation } from '../constants/Theme';
+import { Spacing, Typography, Animation, useTheme, useThemeColors } from '../constants/Theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
@@ -22,6 +22,8 @@ const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const colors = useThemeColors();
   
   // Animation values
   const logoScale = useSharedValue(0.1);
@@ -114,8 +116,8 @@ export default function SplashScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.container}>
-        {/* Central Cosmic Glow */}
-        <Animated.View style={[styles.glow, glowStyle]} />
+{/* Central Cosmic Glow */}
+         <Animated.View style={[styles.glow, glowStyle, { backgroundColor: colors.cyan, shadowColor: colors.cyan }]} />
 
         <View style={styles.contentContainer}>
           <Animated.View style={[styles.logoContainer, logoStyle]}>
@@ -128,18 +130,18 @@ export default function SplashScreen() {
 
           <Animated.View style={[styles.taglineContainer, taglineStyle]}>
             <Text style={[styles.tagline, Typography.threeD]}>The Service Galaxy</Text>
-            <Text style={styles.subtext}>EXPANDING POSSIBILITIES</Text>
-          </Animated.View>
-        </View>
+<Text style={[styles.subtext, { color: colors.cyan }]}>EXPANDING POSSIBILITIES</Text>
+           </Animated.View>
+         </View>
 
-        <View style={styles.footer}>
-          <View style={styles.loadingContainer}>
-            <View style={styles.loadingBar}>
-              <Animated.View style={[styles.loadingProgress, loadingStyle]} />
-            </View>
-          </View>
-          <Text style={styles.versionText}>VER 2.50.0 ALPHA</Text>
-        </View>
+         <View style={styles.footer}>
+           <View style={styles.loadingContainer}>
+             <View style={styles.loadingBar}>
+               <Animated.View style={[styles.loadingProgress, loadingStyle, { backgroundColor: colors.cyan }]} />
+             </View>
+           </View>
+           <Text style={[styles.versionText, { color: theme.colors.text.muted }]}>VER 2.50.0 ALPHA</Text>
+         </View>
       </View>
     </BackgroundWrapper>
   );
@@ -156,9 +158,7 @@ const styles = StyleSheet.create({
     width: width * 0.5,
     height: width * 0.5,
     borderRadius: (width * 0.5) / 2,
-    backgroundColor: Colors.cyan,
     opacity: 0,
-    shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 60,
@@ -192,7 +192,6 @@ const styles = StyleSheet.create({
   },
   subtext: {
     fontSize: 9,
-    color: Colors.cyan,
     fontWeight: '900',
     letterSpacing: 4,
     marginTop: 8,
@@ -222,12 +221,10 @@ const styles = StyleSheet.create({
   },
   loadingProgress: {
     height: '100%',
-    backgroundColor: Colors.cyan,
     borderRadius: 2,
   },
   versionText: {
     fontSize: 9,
-    color: Colors.textDim,
     letterSpacing: 5,
     fontWeight: '900',
   }

@@ -349,12 +349,15 @@ export default function ProfileTab() {
               ]}
             >
               {!!(workerProfile.city || workerProfile.address) && (
-                <View style={styles.locationPill}>
-                  <MapPin size={13} color="#BF5AF2" strokeWidth={2.3} />
-                  <Text style={styles.locationPillText} numberOfLines={1}>
-                    {workerProfile.city || workerProfile.address}
-                  </Text>
-                </View>
+                <View style={[styles.locationPill, {
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.subtle
+              }]}>
+                <MapPin size={13} color={theme.colors.brand.primary} strokeWidth={2.3} />
+                <Text style={[styles.locationPillText, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                  {workerProfile.city || workerProfile.address}
+                </Text>
+              </View>
               )}
 
               {activeSpecialties.length > 0 && (
@@ -495,56 +498,55 @@ const styles = StyleSheet.create({
 
   // Hero
   heroBg: { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT, overflow: 'hidden' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5,5,16,0.4)' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: alpha('#000000', 0.3) },
 
   // Avatar
   avatarSection: { alignItems: 'center', paddingTop: 52, paddingBottom: 20 },
   avatarWrap: { position: 'relative', width: 120, height: 120, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: 'rgba(255,255,255,0.9)' },
+  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 3 },
   cameraBtn: {
     position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-    borderWidth: 2, borderColor: 'rgba(5,5,16,0.95)', ...Shadows.glow,
+    borderWidth: 2, ...Shadows.glow,
   },
 
   // Name
   nameBlock: { alignItems: 'center', paddingHorizontal: 24, alignSelf: 'stretch' },
   nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, maxWidth: '100%' },
   userName: {
-    fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5,
-    textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
+    fontSize: 24, fontWeight: '900', letterSpacing: -0.5,
+    textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6,
     flexShrink: 1,
   },
-  userSub: { fontSize: 13, color: 'rgba(255,255,255,0.48)', fontWeight: '500', marginBottom: 12 },
+  userSub: { fontSize: 13, fontWeight: '500', marginBottom: 12 },
   badgesRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   rolePill: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, ...Shadows.glow },
-  rolePillText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+  rolePillText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
 
 
   // Main card
   card: {
     marginHorizontal: 14, marginTop: 10, borderRadius: 26, overflow: 'hidden',
-    backgroundColor: 'rgba(8,10,28,0.92)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
     paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8, ...Shadows.depth,
   },
-
 
 
   // Stats
   statsCard: {
     flexDirection: 'row', alignItems: 'center', borderRadius: 18, overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', paddingVertical: 16,
-    marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.02)',
+    borderWidth: 1, paddingVertical: 16,
+    marginBottom: 14,
   },
   statItem: { flex: 1, alignItems: 'center', gap: 3 },
   statNum: { fontSize: 22, fontWeight: '900', letterSpacing: -0.8 },
-  statLbl: { color: 'rgba(255,255,255,0.38)', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  statDivider: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.1)' },
+  statLbl: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  statDivider: { width: 1, height: 36 },
 
   // Worker details
   workerSummary: {
-    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    padding: 13, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 14, borderWidth: 1,
+    padding: 13, marginBottom: 14,
   },
   locationPill: {
     alignSelf: 'flex-start',
@@ -553,23 +555,20 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(191,90,242,0.24)',
-    backgroundColor: 'rgba(191,90,242,0.08)',
     paddingHorizontal: 10,
     paddingVertical: 7,
     marginBottom: 13,
   },
-  locationPillText: { color: 'rgba(255,255,255,0.72)', fontSize: 12, fontWeight: '700' },
+  locationPillText: { fontSize: 12, fontWeight: '700' },
   serviceCategoriesBox: { marginTop: 0 },
   serviceCategoriesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  serviceCategoriesTitle: { color: '#fff', fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7 },
+  serviceCategoriesTitle: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7 },
   serviceCategoryStack: { gap: 8 },
   serviceCategoryCard: {
     position: 'relative',
     overflow: 'hidden',
     borderRadius: 18,
     borderWidth: 1,
-    backgroundColor: 'rgba(8,10,28,0.92)',
     paddingVertical: 11,
     paddingRight: 11,
     paddingLeft: 14,
@@ -588,7 +587,7 @@ const styles = StyleSheet.create({
   serviceCategoryIcon: { width: 34, height: 34, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   serviceCategoryTitleBlock: { flex: 1, minWidth: 0 },
   serviceCategoryName: { fontSize: 13, fontWeight: '900', letterSpacing: -0.1 },
-  serviceCategoryTier: { color: 'rgba(255,255,255,0.44)', fontSize: 8, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.55, marginTop: 2 },
+  serviceCategoryTier: { fontSize: 8, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.55, marginTop: 2 },
   servicePriorityBadge: {
     minWidth: 30,
     height: 24,
@@ -606,46 +605,43 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(255,255,255,0.055)',
     paddingHorizontal: 8,
     paddingVertical: 5,
   },
-  serviceCompactMetaText: { color: 'rgba(255,255,255,0.76)', fontSize: 10, fontWeight: '800' },
-  serviceCategoryBio: { color: 'rgba(255,255,255,0.58)', fontSize: 10.5, fontWeight: '600', lineHeight: 15, marginTop: 8 },
+  serviceCompactMetaText: { fontSize: 10, fontWeight: '800' },
+  serviceCategoryBio: { fontSize: 10.5, fontWeight: '600', lineHeight: 15, marginTop: 8 },
   serviceSkillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 8 },
   serviceSkillChip: {
     borderRadius: 20,
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: 'rgba(0,245,255,0.065)',
   },
   serviceSkillText: { fontSize: 9, fontWeight: '900' },
   // Section label
-  sectionLabel: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 },
+  sectionLabel: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 },
 
   // Menu
   menuSection: { marginBottom: 18 },
   menuItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: 14, marginBottom: 8, overflow: 'hidden', borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)', paddingHorizontal: 12, paddingVertical: 12, position: 'relative',
+    paddingHorizontal: 12, paddingVertical: 12, position: 'relative',
   },
   menuAccentBar: { position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingLeft: 8 },
   menuIconBox: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  menuLabel: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  menuSub: { color: 'rgba(255,255,255,0.36)', fontSize: 11, fontWeight: '500', marginTop: 1 },
+  menuLabel: { fontSize: 14, fontWeight: '700' },
+  menuSub: { fontSize: 11, fontWeight: '500', marginTop: 1 },
 
   // Logout
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
-    paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,59,48,0.25)',
-    backgroundColor: 'rgba(255,59,48,0.06)', marginBottom: 20,
+    paddingVertical: 14, borderRadius: 16, borderWidth: 1,
+    marginBottom: 20,
   },
-  logoutText: { color: '#FF3B30', fontSize: 14, fontWeight: '800' },
+  logoutText: { fontSize: 14, fontWeight: '800' },
 
   // Version
-  version: { textAlign: 'center', color: 'rgba(255,255,255,0.18)', fontSize: 11, fontWeight: '600', paddingBottom: 10 },
+  version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 10 },
 });

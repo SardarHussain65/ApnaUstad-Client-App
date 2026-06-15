@@ -44,7 +44,7 @@ import {
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/Theme';
+import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import {
   useAcceptInstantJobMutation,
@@ -71,31 +71,31 @@ const STATUS_CONFIG: Record<string, { label: string; description: string; color:
   open: {
     label: 'Open request',
     description: 'Visible to matching Ustads nearby.',
-    color: Colors.cyan,
+    color: 'cyan',
     Icon: Radio,
   },
   reviewing: {
     label: 'Reviewing proposals',
     description: 'The client is comparing available offers.',
-    color: Colors.worker,
+    color: 'worker',
     Icon: Hourglass,
   },
   assigned: {
     label: 'Ustad assigned',
     description: 'This request has moved into the booking flow.',
-    color: Colors.green,
+    color: 'success',
     Icon: ShieldCheck,
   },
   closed: {
     label: 'Closed',
     description: 'This request is no longer accepting responses.',
-    color: Colors.textMuted,
+    color: 'textMuted',
     Icon: CheckCircle2,
   },
   cancelled: {
     label: 'Cancelled',
     description: 'This request was cancelled and no further action is required.',
-    color: Colors.error,
+    color: 'error',
     Icon: XCircle,
   },
 };
@@ -173,14 +173,14 @@ function PrimaryAction({
   onPress,
   disabled,
   loading,
-  colors = [Colors.cyan, '#007AFF'],
+  gradientColors = [Colors.cyan, '#007AFF'],
 }: {
   icon: React.ComponentType<any>;
   label: string;
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
-  colors?: [string, string];
+  gradientColors?: [string, string];
 }) {
   return (
     <TouchableOpacity
@@ -189,7 +189,7 @@ function PrimaryAction({
       activeOpacity={0.84}
       disabled={disabled || loading}
     >
-      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       {loading ? (
         <ActivityIndicator color="#001014" />
       ) : (
@@ -205,6 +205,8 @@ function PrimaryAction({
 
 export default function JobDetailsScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = theme.legacy;
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; bookingId?: string; mode?: string; pendingBidId?: string }>();
@@ -270,9 +272,9 @@ export default function JobDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.centeredFill}>
           <View style={styles.loadingIcon}>
-            <BriefcaseBusiness size={27} color={Colors.cyan} strokeWidth={2.2} />
+            <BriefcaseBusiness size={27} color={colors.cyan} strokeWidth={2.2} />
           </View>
-          <ActivityIndicator color={Colors.cyan} />
+          <ActivityIndicator color={colors.cyan} />
           <Text style={styles.loadingText}>{t('jobDetails.loading')}</Text>
         </View>
       </BackgroundWrapper>
@@ -284,7 +286,7 @@ export default function JobDetailsScreen() {
       <BackgroundWrapper>
         <View style={[styles.centeredFill, styles.emptyState]}>
           <View style={styles.emptyIcon}>
-            <FileText size={28} color={Colors.worker} strokeWidth={2.2} />
+            <FileText size={28} color={colors.worker} strokeWidth={2.2} />
           </View>
           <Text style={styles.emptyTitle}>{t('jobDetails.unavailable')}</Text>
           <Text style={styles.emptyText}>{t('jobDetails.unavailableDesc')}</Text>
@@ -407,7 +409,7 @@ export default function JobDetailsScreen() {
       <View style={styles.root}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
-            <ChevronLeft size={22} color={Colors.text} strokeWidth={2.5} />
+            <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
@@ -447,14 +449,14 @@ export default function JobDetailsScreen() {
                   <Text style={[styles.statusBadgeText, { color: status.color }]}>{status.label}</Text>
                 </View>
                 <View style={styles.amountBadge}>
-                  <Banknote size={13} color={Colors.green} strokeWidth={2.4} />
-                  <Text style={styles.amountBadgeText}>{amountText}</Text>
+                  <Banknote size={13} color={colors.green} strokeWidth={2.4} />
+                  <Text style={[styles.amountBadgeText, { color: colors.green }]}>{amountText}</Text>
                 </View>
               </View>
 
               <View style={styles.heroTitleRow}>
                 <View style={[styles.heroIcon, { backgroundColor: isInstant ? P.orangeMuted : P.cyanMuted }]}>
-                  <MissionIcon size={24} color={isInstant ? Colors.worker : Colors.cyan} strokeWidth={2.3} />
+                  <MissionIcon size={24} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.3} />
                 </View>
                 <View style={styles.heroTitleCopy}>
                   <Text style={styles.heroLabel}>{missionKindLabel}</Text>
@@ -473,16 +475,16 @@ export default function JobDetailsScreen() {
           <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
             <SectionHeader icon={Clock3} title={t('jobDetails.visitOverview')} subtitle={t('jobDetails.visitOverviewDesc')} />
             <View style={styles.detailGrid}>
-              <DetailTile icon={MissionIcon} label={t('jobDetails.visitTypeLabel')} value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
+              <DetailTile icon={MissionIcon} label={t('jobDetails.visitTypeLabel')} value={missionKindLabel} color={isInstant ? colors.worker : colors.cyan} />
               <DetailTile icon={CalendarDays} label={t('transactionDetails.date')} value={dateLabel} />
-              <DetailTile icon={Clock3} label={t('transactionDetails.time')} value={timeLabel} color={Colors.worker} />
+              <DetailTile icon={Clock3} label={t('transactionDetails.time')} value={timeLabel} color={colors.worker} />
             </View>
 
             <GlassCard padding={14} intensity={35} style={styles.locationCard}>
               <View style={{ gap: 12 }}>
                 <View style={styles.locationRow}>
                   <View style={styles.locationIcon}>
-                    <MapPin size={18} color={Colors.green} strokeWidth={2.5} />
+                    <MapPin size={18} color={colors.green} strokeWidth={2.5} />
                   </View>
                   <View style={styles.locationCopy}>
                     <Text style={styles.locationLabel}>{t('transactionDetails.serviceLocation')}</Text>
@@ -492,7 +494,7 @@ export default function JobDetailsScreen() {
                 {!!workerLoc && (
                   <View style={styles.locationRow}>
                     <View style={[styles.locationIcon, { backgroundColor: 'rgba(0,245,255,0.12)' }]}>
-                      <MapPin size={18} color={Colors.cyan} strokeWidth={2.5} />
+                      <MapPin size={18} color={colors.cyan} strokeWidth={2.5} />
                     </View>
                     <View style={styles.locationCopy}>
                       <Text style={styles.locationLabel}>{t('jobDetails.workerLocationLabel')}</Text>
@@ -510,7 +512,7 @@ export default function JobDetailsScreen() {
                 icon={ImageIcon}
                 title={t('jobDetails.evidenceTitle')}
                 subtitle={t('jobDetails.attachmentsCount', { count: media.length })}
-                color={Colors.purple}
+                color={colors.purple}
               />
               <JobEvidenceGallery items={media} />
             </Animated.View>
@@ -522,14 +524,14 @@ export default function JobDetailsScreen() {
                 icon={UserRound}
                 title={t('jobDetails.client')}
                 subtitle={t('jobDetails.clientDesc')}
-                color={Colors.worker}
+                color={colors.worker}
               />
               <TouchableOpacity onPress={openClientProfile} disabled={!clientId} activeOpacity={0.84}>
                 <GlassCard
                   padding={14}
                   intensity={38}
                   hasGlow
-                  glowColor={Colors.worker}
+                  glowColor={colors.worker}
                   gradient={['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.06)']}
                 >
                   <View style={styles.clientRow}>
@@ -551,8 +553,8 @@ export default function JobDetailsScreen() {
                     </View>
                     {clientId ? (
                       <View style={styles.profileCue}>
-                        <Eye size={14} color={Colors.cyan} strokeWidth={2.4} />
-                        <ChevronRight size={15} color={Colors.cyan} strokeWidth={2.6} />
+                        <Eye size={14} color={colors.cyan} strokeWidth={2.4} />
+                        <ChevronRight size={15} color={colors.cyan} strokeWidth={2.6} />
                       </View>
                     ) : null}
                   </View>
@@ -565,13 +567,13 @@ export default function JobDetailsScreen() {
                 icon={Send}
                 title={t('jobDetails.activityTitle')}
                 subtitle={t('jobDetails.activitySub')}
-                color={Colors.worker}
+                color={colors.worker}
               />
               <GlassCard
                 padding={14}
                 intensity={38}
                 hasGlow
-                glowColor={Colors.worker}
+                glowColor={colors.worker}
                 gradient={['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.05)']}
               >
                 <View style={styles.activityStats}>
@@ -586,7 +588,7 @@ export default function JobDetailsScreen() {
                   </View>
                   <View style={styles.activityDivider} />
                   <View style={styles.activityStat}>
-                    <Text style={[styles.activityValue, { color: bidSummary.hasAcceptedBid ? Colors.green : P.textMuted }]}>
+                    <Text style={[styles.activityValue, { color: bidSummary.hasAcceptedBid ? colors.green : P.textMuted }]}>
                       {bidSummary.hasAcceptedBid ? t('common.yes') : t('common.no')}
                     </Text>
                     <Text style={styles.activityLabel}>{t('jobDetails.assignedLabel')}</Text>
@@ -601,7 +603,7 @@ export default function JobDetailsScreen() {
               icon={FileText}
               title={t('jobDetails.briefTitle')}
               subtitle={t('jobDetails.briefSub')}
-              color={Colors.green}
+              color={colors.green}
             />
             <GlassCard padding={14} intensity={34} style={styles.briefCard}>
               <Text style={styles.briefText}>{description}</Text>
@@ -618,7 +620,7 @@ export default function JobDetailsScreen() {
                 </View>
                 {job.status === 'assigned' ? (
                   <TouchableOpacity onPress={() => router.push('/(tabs)/bookings' as any)} style={styles.bookingsCue} activeOpacity={0.82}>
-                    <Navigation size={15} color={Colors.green} strokeWidth={2.5} />
+                    <Navigation size={15} color={colors.green} strokeWidth={2.5} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -645,7 +647,7 @@ export default function JobDetailsScreen() {
                       label={isWalletBlocked ? t('wallet.topUpWallet') : isInstant ? t('jobDetails.acceptOfferBtn') : t('jobDetails.createProposalBtn')}
                       onPress={handleWorkerResponse}
                       loading={isAccepting}
-                      colors={isWalletBlocked ? [Colors.worker, '#FF5E00'] : [Colors.cyan, '#007AFF']}
+                      gradientColors={isWalletBlocked ? [colors.worker, '#FF5E00'] : [colors.cyan, '#007AFF']}
                     />
                     <Text style={styles.walletHint}>
                       {isWalletBlocked ? t('jobDetails.walletRequiresAmount', { amount: requiredBalance.toLocaleString() }) : t('jobDetails.walletEligibilityOk')}
@@ -660,7 +662,7 @@ export default function JobDetailsScreen() {
                     activeOpacity={0.82}
                     disabled={isCancelling}
                   >
-                    {isCancelling ? <ActivityIndicator color={Colors.error} /> : <Trash2 size={17} color={Colors.error} strokeWidth={2.5} />}
+                    {isCancelling ? <ActivityIndicator color={colors.error} /> : <Trash2 size={17} color={colors.error} strokeWidth={2.5} />}
                   </TouchableOpacity>
                   <PrimaryAction
                     icon={Eye}
@@ -736,7 +738,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.cyan,
   },
   goBackText: {
     color: '#001014',
@@ -767,13 +768,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerEyebrow: {
-    color: Colors.cyan,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   headerTitle: {
-    color: Colors.text,
     fontSize: 19,
     fontWeight: '900',
     marginTop: 3,
@@ -834,7 +833,6 @@ const styles = StyleSheet.create({
     backgroundColor: P.greenMuted,
   },
   amountBadgeText: {
-    color: Colors.green,
     fontSize: 11,
     fontWeight: '900',
   },
@@ -857,7 +855,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   heroLabel: {
-    color: Colors.cyan,
+    color: Colors.primary,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',

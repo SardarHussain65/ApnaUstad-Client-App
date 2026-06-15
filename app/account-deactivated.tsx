@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { CustomButton } from '../components/CustomButton';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/Theme';
+import { BorderRadius, Spacing, Typography } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 
 export default function AccountDeactivatedScreen() {

@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, BorderRadius, Shadows, Typography } from '../../constants/Theme';
+import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { Booking } from '../../hooks';
 
 type StatusConfig = {
@@ -24,11 +24,11 @@ type StatusConfig = {
 };
 
 const STATUS_CONFIG: Record<string, StatusConfig> = {
-  completed: { label: 'Completed', color: Colors.success, Icon: CheckCircle2 },
-  pending: { label: 'Pending', color: Colors.yellow, Icon: Clock },
-  accepted: { label: 'Accepted', color: Colors.cyan, Icon: Zap },
-  ongoing: { label: 'In progress', color: Colors.purple, Icon: Zap },
-  cancelled: { label: 'Cancelled', color: Colors.error, Icon: XCircle },
+  completed: { label: 'Completed', color: 'success', Icon: CheckCircle2 },
+  pending: { label: 'Pending', color: 'yellow', Icon: Clock },
+  accepted: { label: 'Accepted', color: 'cyan', Icon: Zap },
+  ongoing: { label: 'In progress', color: 'purple', Icon: Zap },
+  cancelled: { label: 'Cancelled', color: 'error', Icon: XCircle },
 };
 
 const withAlpha = (color: string, alpha: string) =>
@@ -60,9 +60,12 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
   onPress,
 }: RecentBookingCardProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+const typography = useThemeTypography();
   const meta = booking.cardMeta;
   const baseStatus = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const statusColor = meta?.statusInfo?.accentColor || baseStatus.color;
+  const statusColor = (meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string;
   const statusLabel = meta?.statusInfo?.label || baseStatus.label;
   const StatusIcon = baseStatus.Icon;
   const isInstant = (meta?.missionKind || booking.bookingType) === 'instant';
@@ -107,14 +110,14 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
     if (label === 'View Receipt') return t('bookings.actionViewReceipt', 'View Receipt');
     if (label === 'Track Live Job') return t('bookings.actionTrackLiveJob', 'Track Live Job');
     if (label === 'Track Job') return t('bookings.actionTrackJob', 'Track Job');
-    return label;
+return label;
   };
   const actionLabel = getLocalizedActionLabel(meta?.actionLabel || meta?.statusInfo?.actionLabel || 'View details');
 
   const gradientColors: [string, string, string] = [
-    withAlpha(statusColor, '2E'),
-    'rgba(8, 10, 30, 0.96)',
-    'rgba(0, 245, 255, 0.10)',
+    alpha(statusColor, 0.18),
+    alpha(theme.colors.background.screen, 0.9),
+    alpha(theme.colors.brand.primary, 0.1),
   ];
 
   return (
@@ -122,8 +125,9 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
       style={[
         styles.card,
         {
-          borderColor: withAlpha(statusColor, '30'),
+          borderColor: alpha(statusColor, 0.2),
           shadowColor: statusColor,
+          backgroundColor: alpha(theme.colors.background.screen, 0.8),
         },
       ]}
       onPress={onPress}
@@ -135,25 +139,25 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={[styles.accentGlow, { backgroundColor: withAlpha(statusColor, '12') }]} />
+      <View style={[styles.accentGlow, { backgroundColor: alpha(statusColor, 0.08) }]} />
 
       <View style={styles.topRow}>
-        <View style={[styles.avatarShell, { borderColor: withAlpha(statusColor, '42') }]}>
+        <View style={[styles.avatarShell, { borderColor: alpha(statusColor, 0.3) }]}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
           ) : (
             <LinearGradient
-              colors={[withAlpha(statusColor, '66'), 'rgba(0,245,255,0.28)']}
+              colors={[alpha(statusColor, 0.4), alpha(theme.colors.brand.primary, 0.18)]}
               style={styles.avatarFallback}
             >
-              <Text style={styles.avatarText}>{initialsFor(personName)}</Text>
+              <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{initialsFor(personName)}</Text>
             </LinearGradient>
           )}
         </View>
 
         <View style={styles.identityBlock}>
-          <Text style={styles.personRole}>{personRole}</Text>
-          <Text style={[styles.personName, Typography.threeD]} numberOfLines={1}>
+          <Text style={[styles.personRole, { color: theme.colors.text.muted }]}>{personRole}</Text>
+          <Text style={[styles.personName, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
             {personName}
           </Text>
         </View>
@@ -162,8 +166,8 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
           style={[
             styles.statusBadge,
             {
-              backgroundColor: withAlpha(statusColor, '12'),
-              borderColor: withAlpha(statusColor, '38'),
+              backgroundColor: alpha(statusColor, 0.08),
+              borderColor: alpha(statusColor, 0.25),
             },
           ]}
         >
@@ -175,11 +179,11 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
       </View>
 
       <View style={styles.serviceSection}>
-        <Text style={[styles.category, Typography.threeD]} numberOfLines={1}>
+        <Text style={[styles.category, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
           {title}
         </Text>
         {!!description && (
-          <Text style={styles.description} numberOfLines={2}>
+          <Text style={[styles.description, { color: theme.colors.text.muted }]} numberOfLines={2}>
             {description}
           </Text>
         )}
@@ -187,36 +191,36 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
 
       <View style={styles.metaGrid}>
         <View style={styles.metaPill}>
-          <MissionIcon size={12} color={isInstant ? Colors.orange : Colors.cyan} strokeWidth={2.4} />
-          <Text style={styles.metaText} numberOfLines={1}>{missionKindLabel}</Text>
+          <MissionIcon size={12} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.4} />
+          <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={1}>{missionKindLabel}</Text>
         </View>
         <View style={styles.metaPill}>
-          <CalendarDays size={12} color={Colors.cyan} strokeWidth={2.4} />
-          <Text style={styles.metaText} numberOfLines={1}>{dateLabel}</Text>
+          <CalendarDays size={12} color={colors.cyan} strokeWidth={2.4} />
+          <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={1}>{dateLabel}</Text>
         </View>
         <View style={styles.metaPill}>
-          <Clock3 size={12} color={Colors.orange} strokeWidth={2.4} />
-          <Text style={styles.metaText} numberOfLines={1}>{timeLabel}</Text>
+          <Clock3 size={12} color={colors.worker} strokeWidth={2.4} />
+          <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={1}>{timeLabel}</Text>
         </View>
       </View>
 
       <View style={styles.locationRow}>
-        <MapPin size={13} color={Colors.textMuted} strokeWidth={2.2} />
-        <Text style={styles.locationText} numberOfLines={1}>
+        <MapPin size={13} color={theme.colors.text.muted} strokeWidth={2.2} />
+        <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>
           {locationLabel}
         </Text>
       </View>
 
-      <View style={styles.footerRow}>
+      <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, 0.05) }]}>
         <View style={styles.priceContainer}>
-          <Text style={styles.amountLabel}>{amountLabel}</Text>
-          <Text style={styles.amountValue}>{amountText}</Text>
+          <Text style={[styles.amountLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
+          <Text style={[styles.amountValue, { color: colors.success }]}>{amountText}</Text>
         </View>
 
-        <View style={styles.actionBtn}>
-          <Text style={styles.actionBtnText}>{actionLabel}</Text>
+        <View style={[styles.actionBtn, { backgroundColor: alpha(theme.colors.brand.primary, 0.05), borderColor: alpha(theme.colors.brand.primary, 0.1) }]}>
+          <Text style={[styles.actionBtnText, { color: theme.colors.brand.primary }]}>{actionLabel}</Text>
           <View style={[styles.actionIconCircle, { backgroundColor: statusColor }]}>
-            <ChevronRight size={13} color="#001014" strokeWidth={3} />
+            <ChevronRight size={13} color={theme.colors.text.primary} strokeWidth={3} />
           </View>
         </View>
       </View>
@@ -233,7 +237,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginHorizontal: Spacing.l,
     padding: 16,
-    backgroundColor: 'rgba(8,10,30,0.82)',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
@@ -259,13 +262,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.4,
     padding: 2,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: alpha('#fff', 0.03),
   },
   avatarImage: {
     width: '100%',
     height: '100%',
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: alpha('#fff', 0.05),
   },
   avatarFallback: {
     flex: 1,
@@ -274,7 +277,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#fff',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -283,14 +285,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   personRole: {
-    color: Colors.textMuted,
     fontSize: 9,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   personName: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 1,
@@ -315,12 +315,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   category: {
-    color: '#fff',
     fontSize: 19,
     fontWeight: '900',
   },
   description: {
-    color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 18,
     fontWeight: '600',
@@ -340,12 +338,11 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: alpha('#fff', 0.03),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: alpha('#fff', 0.05),
   },
   metaText: {
-    color: '#d8d9e4',
     fontSize: 10,
     fontWeight: '700',
     flexShrink: 1,
@@ -359,7 +356,6 @@ const styles = StyleSheet.create({
   },
   locationText: {
     flex: 1,
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -369,14 +365,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
     paddingTop: 12,
   },
   priceContainer: {
     justifyContent: 'center',
   },
   amountLabel: {
-    color: Colors.textDim,
     fontSize: 9,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -384,7 +378,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   amountValue: {
-    color: Colors.green,
     fontSize: 18,
     fontWeight: '900',
   },
@@ -395,12 +388,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: BorderRadius.m,
-    backgroundColor: 'rgba(0, 245, 255, 0.07)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.14)',
   },
   actionBtnText: {
-    color: Colors.cyan,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',

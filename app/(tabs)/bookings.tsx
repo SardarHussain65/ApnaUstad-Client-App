@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
-import { alpha, AppTheme, Colors, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
@@ -44,30 +44,6 @@ const entityId = (entity?: string | { _id?: string } | null) => {
   return typeof entity === 'string' ? entity : entity._id || '';
 };
 
-const getMissionCardGradient = (status: string, isInstant: boolean, theme: AppTheme, statusColor: string): [string, string, string] => {
-  if (theme.id !== 'current') {
-    return [
-      alpha(statusColor, theme.id === 'light' ? 0.08 : 0.14),
-      theme.colors.surface.card,
-      theme.colors.surface.cardMuted,
-    ];
-  }
-
-  if (status === 'completed' || status === 'closed') {
-    return ['rgba(0,255,127,0.28)', 'rgba(5,16,29,0.94)', 'rgba(0,245,255,0.14)'];
-  }
-  if (status === 'cancelled') {
-    return ['rgba(255,59,48,0.24)', 'rgba(12,10,28,0.95)', 'rgba(191,90,242,0.12)'];
-  }
-  if (status === 'ongoing' || status === 'in-progress') {
-    return ['rgba(191,90,242,0.28)', 'rgba(4,17,34,0.95)', 'rgba(0,245,255,0.18)'];
-  }
-  if (isInstant) {
-    return ['rgba(255,140,0,0.26)', 'rgba(5,18,32,0.95)', 'rgba(0,245,255,0.16)'];
-  }
-  return ['rgba(0,245,255,0.23)', 'rgba(7,13,35,0.95)', 'rgba(191,90,242,0.15)'];
-};
-
 const isWithinJobResponseWindow = (bookingCreatedAt: string, jobCreatedAt: string, jobExpiresAt: string) => {
   const bookingTime = new Date(bookingCreatedAt).getTime();
   const jobTime = new Date(jobCreatedAt).getTime();
@@ -86,6 +62,30 @@ export default function BookingsTab() {
   const { role } = useAuth();
   const isWorker = role === 'worker';
   const [activeTab, setActiveTab] = useState<TabType>('Active');
+
+  const getMissionCardGradient = (status: string, isInstant: boolean, statusColor: string): [string, string, string] => {
+    if (theme.id !== 'current') {
+      return [
+        alpha(statusColor, theme.id === 'light' ? 0.08 : 0.14),
+        theme.colors.surface.card,
+        theme.colors.surface.cardMuted,
+      ];
+    }
+
+    if (status === 'completed' || status === 'closed') {
+      return ['rgba(0,255,127,0.28)', 'rgba(5,16,29,0.94)', 'rgba(0,245,255,0.14)'];
+    }
+    if (status === 'cancelled') {
+      return ['rgba(255,59,48,0.24)', 'rgba(12,10,28,0.95)', 'rgba(191,90,242,0.12)'];
+    }
+    if (status === 'ongoing' || status === 'in-progress') {
+      return ['rgba(191,90,242,0.28)', 'rgba(4,17,34,0.95)', 'rgba(0,245,255,0.18)'];
+    }
+    if (isInstant) {
+      return ['rgba(255,140,0,0.26)', 'rgba(5,18,32,0.95)', 'rgba(0,245,255,0.16)'];
+    }
+    return ['rgba(0,245,255,0.23)', 'rgba(7,13,35,0.95)', 'rgba(191,90,242,0.15)'];
+  };
 
   // React Query hooks
   const userBookingsQuery = useMyBookings({ enabled: !isWorker });
@@ -370,23 +370,23 @@ export default function BookingsTab() {
                     intensity={30}
                     glowColor={statusColor}
                     hasGlow
-                    gradient={getMissionCardGradient(status, isInstant, theme, statusColor)}
+                    gradient={getMissionCardGradient(status, isInstant, statusColor)}
                     padding={0}
                     onPress={openDetails}
                   >
-                    <LinearGradient
-                      colors={[statusColor, 'rgba(0,245,255,0.85)', statusColor + '70']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.cardAccentLine}
-                    />
-                    <LinearGradient
-                      pointerEvents="none"
-                      colors={[statusColor + '30', 'rgba(0,0,0,0)', 'rgba(0,245,255,0.08)']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.cardAtmosphere}
-                    />
+<LinearGradient
+                       colors={[statusColor, colors.cyan, alpha(statusColor, 0.4)]}
+                       start={{ x: 0, y: 0 }}
+                       end={{ x: 1, y: 0 }}
+                       style={styles.cardAccentLine}
+                     />
+<LinearGradient
+                       pointerEvents="none"
+                       colors={[alpha(statusColor, 0.3), 'rgba(0,0,0,0)', alpha(colors.cyan, 0.08)]}
+                       start={{ x: 0, y: 0 }}
+                       end={{ x: 1, y: 1 }}
+                       style={styles.cardAtmosphere}
+                     />
                     <View style={[styles.cardSideAccent, { backgroundColor: statusColor }]} />
                     <View style={styles.cardBody}>
                       <View style={styles.cardTopStrip}>
@@ -442,12 +442,12 @@ export default function BookingsTab() {
                         )}
                       </View>
 
-                      <LinearGradient
-                        colors={theme.id === 'current' ? ['rgba(255,255,255,0.075)', statusColor + '0D'] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.serviceBlock}
-                      >
+<LinearGradient
+                       colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(colors.cyan, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
+                       start={{ x: 0, y: 0 }}
+                       end={{ x: 1, y: 1 }}
+                       style={styles.serviceBlock}
+                     >
                         <View style={styles.serviceIconBox}>
                           <BriefcaseBusiness size={19} color={colors.cyan} />
                         </View>
@@ -481,12 +481,12 @@ export default function BookingsTab() {
 
                       <View style={styles.actionDivider} />
 
-                      <LinearGradient
-                        colors={['rgba(0,245,255,0.15)', statusColor + '16']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.actionPanel}
-                      >
+<LinearGradient
+                         colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(statusColor, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
+                         start={{ x: 0, y: 0 }}
+                         end={{ x: 1, y: 0 }}
+                         style={styles.actionPanel}
+                       >
                         <TouchableOpacity
                           style={styles.actionBtn}
                           activeOpacity={0.85}
@@ -566,23 +566,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Colors.textMuted,
     fontWeight: '600',
     marginTop: 4,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 20,
     padding: 4,
     marginBottom: Spacing.l,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   tabButton: {
     flex: 1,
@@ -598,7 +594,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   tabText: {
-    color: Colors.textMuted,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -615,7 +610,6 @@ const styles = StyleSheet.create({
   bookingCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.13)',
   },
   cardAccentLine: {
     height: 3,
@@ -649,12 +643,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,245,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
   },
   missionTypeText: {
-    color: Colors.cyan,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -686,13 +677,11 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     borderWidth: 1.5,
     padding: 3,
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   avatarFallback: {
     flex: 1,
@@ -701,7 +690,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitials: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '900',
   },
@@ -710,7 +698,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   personRole: {
-    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -718,7 +705,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   personName: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '900',
   },
@@ -729,18 +715,14 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: 'rgba(52,199,89,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(52,199,89,0.22)',
   },
   amountLabel: {
-    color: Colors.textMuted,
     fontSize: 8,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   amountValue: {
-    color: Colors.success,
     fontSize: 12,
     fontWeight: '900',
   },
@@ -750,9 +732,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 13,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 12,
   },
   serviceIconBox: {
@@ -761,17 +741,13 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,245,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
   },
   itemTitle: {
     fontSize: 19,
     fontWeight: '900',
-    color: '#fff',
   },
   descriptionText: {
-    color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
@@ -786,9 +762,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -797,7 +771,6 @@ const styles = StyleSheet.create({
   detailText: {
     flex: 1,
     fontSize: 12,
-    color: '#D8D7E8',
     fontWeight: '800',
   },
   locationBox: {
@@ -806,27 +779,22 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.065)',
   },
   locationText: {
     flex: 1,
-    color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '700',
   },
   actionDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     marginTop: 14,
     marginBottom: 10,
   },
   actionPanel: {
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.14)',
     overflow: 'hidden',
   },
   actionBtn: {
@@ -842,7 +810,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionBtnText: {
-    color: Colors.cyan,
     fontWeight: '900',
     fontSize: 12,
     textTransform: 'uppercase',
@@ -852,7 +819,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 12,
-    backgroundColor: Colors.cyan,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -869,7 +835,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reviewBtnText: {
-    color: '#000',
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1,
@@ -897,14 +862,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    color: '#fff',
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   emptySub: {
     fontSize: 14,
-    color: Colors.textMuted,
     textAlign: 'center',
     fontWeight: '600',
     lineHeight: 20,

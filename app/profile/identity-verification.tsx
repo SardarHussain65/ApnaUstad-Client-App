@@ -28,7 +28,7 @@ import {
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeShadows, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -63,6 +63,9 @@ export default function IdentityVerificationScreen() {
   const { success, error: showError } = useToast();
   const { user, role, updateUser } = useAuth();
   const isWorker = role === 'worker';
+  const theme = useTheme();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
 
   const [cnicNumber, setCnicNumber] = useState('');
   const [frontLocalImage, setFrontLocalImage] = useState<string | null>(null);
@@ -269,8 +272,8 @@ export default function IdentityVerificationScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={Colors.primary} size="large" />
-          <Text style={styles.loadingText}>{t('identityVerification.fetching')}</Text>
+          <ActivityIndicator color={theme.colors.brand.primary} size="large" />
+          <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('identityVerification.fetching')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -289,70 +292,70 @@ export default function IdentityVerificationScreen() {
         >
           {/* Header */}
           <Animated.View entering={FadeInDown.delay(0)} style={[styles.header, { paddingTop: insets.top + 8 }]}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-              <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
+            <TouchableOpacity style={[styles.backBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
+              <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('identityVerification.title')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('identityVerification.title')}</Text>
             <View style={{ width: 40 }} />
           </Animated.View>
 
           {/* Verification Lifecycle Layout */}
 
           {status === 'approved' && (
-            <Animated.View entering={FadeInUp} style={styles.statusPanel}>
-              <View style={[styles.glowRing, { borderColor: '#34C759' }]}>
-                <BadgeCheck size={50} color="#34C759" strokeWidth={2.2} />
+            <Animated.View entering={FadeInUp} style={[styles.statusPanel, shadows.depth, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+              <View style={[styles.glowRing, { borderColor: theme.colors.status.success }, shadows.glow]}>
+                <BadgeCheck size={50} color={theme.colors.status.success} strokeWidth={2.2} />
               </View>
-              <Text style={styles.statusTitle}>{t('identityVerification.verifiedUstad')}</Text>
-              <Text style={styles.statusDesc}>{t('identityVerification.verifiedDesc')}</Text>
-              <View style={styles.cardInfo}>
-                <LinearGradient colors={['rgba(52,199,89,0.08)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
+              <Text style={[styles.statusTitle, { color: theme.colors.text.primary }]}>{t('identityVerification.verifiedUstad')}</Text>
+              <Text style={[styles.statusDesc, { color: theme.colors.text.muted }]}>{t('identityVerification.verifiedDesc')}</Text>
+              <View style={[styles.cardInfo, { borderColor: theme.colors.border.subtle }]}>
+                <LinearGradient colors={[alpha(theme.colors.status.success, 0.08), 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLbl}>{t('identityVerification.verifiedCnic')}</Text>
-                  <Text style={styles.infoVal}>{cnicNumber}</Text>
+                  <Text style={[styles.infoLbl, { color: theme.colors.text.muted }]}>{t('identityVerification.verifiedCnic')}</Text>
+                  <Text style={[styles.infoVal, { color: theme.colors.text.primary }]}>{cnicNumber}</Text>
                 </View>
               </View>
             </Animated.View>
           )}
 
           {status === 'pending' && (
-            <Animated.View entering={FadeInUp} style={styles.statusPanel}>
-              <View style={[styles.glowRing, { borderColor: '#FF9F0A' }]}>
-                <Hourglass size={42} color="#FF9F0A" strokeWidth={2.2} style={styles.pulseAnim} />
+            <Animated.View entering={FadeInUp} style={[styles.statusPanel, shadows.depth, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+              <View style={[styles.glowRing, { borderColor: theme.colors.status.warning }, shadows.glow]}>
+                <Hourglass size={42} color={theme.colors.status.warning} strokeWidth={2.2} style={styles.pulseAnim} />
               </View>
-              <Text style={styles.statusTitle}>{t('identityVerification.underReview')}</Text>
-              <Text style={styles.statusDesc}>{t('identityVerification.reviewDesc')}</Text>
-              <View style={styles.cardInfo}>
-                <LinearGradient colors={['rgba(255,159,10,0.08)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
+              <Text style={[styles.statusTitle, { color: theme.colors.text.primary }]}>{t('identityVerification.underReview')}</Text>
+              <Text style={[styles.statusDesc, { color: theme.colors.text.muted }]}>{t('identityVerification.reviewDesc')}</Text>
+              <View style={[styles.cardInfo, { borderColor: theme.colors.border.subtle }]}>
+                <LinearGradient colors={[alpha(theme.colors.status.warning, 0.08), 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLbl}>{t('identityVerification.pendingCnic')}</Text>
-                  <Text style={styles.infoVal}>{cnicNumber}</Text>
+                  <Text style={[styles.infoLbl, { color: theme.colors.text.muted }]}>{t('identityVerification.pendingCnic')}</Text>
+                  <Text style={[styles.infoVal, { color: theme.colors.text.primary }]}>{cnicNumber}</Text>
                 </View>
               </View>
             </Animated.View>
           )}
 
           {status === 'rejected' && (
-            <Animated.View entering={FadeInUp} style={styles.statusPanel}>
-              <View style={[styles.glowRing, { borderColor: '#FF3B30' }]}>
-                <ShieldAlert size={46} color="#FF3B30" strokeWidth={2.2} />
+            <Animated.View entering={FadeInUp} style={[styles.statusPanel, shadows.depth, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+              <View style={[styles.glowRing, { borderColor: theme.colors.status.error }, shadows.glow]}>
+                <ShieldAlert size={46} color={theme.colors.status.error} strokeWidth={2.2} />
               </View>
-              <Text style={[styles.statusTitle, { color: '#FF3B30' }]}>{t('identityVerification.rejected')}</Text>
-              <Text style={styles.statusDesc}>{t('identityVerification.rejectedDesc')}</Text>
-              <View style={styles.rejectionCard}>
-                <LinearGradient colors={['rgba(255,59,48,0.12)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
-                <AlertTriangle size={16} color="#FF3B30" strokeWidth={2.5} style={{ marginTop: 2 }} />
+              <Text style={[styles.statusTitle, { color: theme.colors.status.error }]}>{t('identityVerification.rejected')}</Text>
+              <Text style={[styles.statusDesc, { color: theme.colors.text.muted }]}>{t('identityVerification.rejectedDesc')}</Text>
+              <View style={[styles.rejectionCard, { borderColor: alpha(theme.colors.status.error, 0.2) }]}>
+                <LinearGradient colors={[alpha(theme.colors.status.error, 0.12), 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
+                <AlertTriangle size={16} color={theme.colors.status.error} strokeWidth={2.5} style={{ marginTop: 2 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.rejectionTitle}>{t('identityVerification.reasonTitle')}</Text>
-                  <Text style={styles.rejectionText}>
+                  <Text style={[styles.rejectionTitle, { color: theme.colors.status.error }]}>{t('identityVerification.reasonTitle')}</Text>
+                  <Text style={[styles.rejectionText, { color: theme.colors.text.muted }]}>
                     {requestDetails?.rejectionReason || t('identityVerification.defaultReason')}
                   </Text>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.resubmitBtn} onPress={handleReset}>
-                <LinearGradient colors={[Colors.primary, Colors.secondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.resubmitGradient}>
-                  <Text style={styles.resubmitText}>{t('identityVerification.correctResubmit')}</Text>
+              <TouchableOpacity style={[styles.resubmitBtn, shadows.glow]} onPress={handleReset}>
+                <LinearGradient colors={[theme.colors.brand.primary, theme.colors.brand.secondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.resubmitGradient}>
+                  <Text style={[styles.resubmitText, { color: theme.colors.text.inverse }]}>{t('identityVerification.correctResubmit')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
@@ -360,29 +363,29 @@ export default function IdentityVerificationScreen() {
 
           {status === 'not_submitted' && (
             <Animated.View entering={FadeInUp.delay(100)} style={{ width: '100%' }}>
-              <Text style={styles.formIntro}>
+              <Text style={[styles.formIntro, { color: theme.colors.text.muted }]}>
                 {t('identityVerification.uploadIntro')}
               </Text>
 
               {/* Form Fields */}
               <View style={styles.fieldWrap}>
                 <View style={styles.fieldLabelRow}>
-                  <FileText size={13} color={focused ? Colors.primary : 'rgba(255,255,255,0.5)'} strokeWidth={2.5} />
-                  <Text style={[styles.fieldLabel, focused && { color: Colors.primary }]}>{t('identityVerification.cnicDigits')}</Text>
+                  <FileText size={13} color={focused ? theme.colors.brand.primary : theme.colors.text.muted} strokeWidth={2.5} />
+                  <Text style={[styles.fieldLabel, { color: theme.colors.text.muted }, focused && { color: theme.colors.brand.primary }]}>{t('identityVerification.cnicDigits')}</Text>
                 </View>
-                <View style={[styles.inputCard, focused && { borderColor: `${Colors.primary}60` }]}>
+                <View style={[styles.inputCard, { borderColor: theme.colors.input.border, backgroundColor: theme.colors.input.background }, focused && { borderColor: theme.colors.input.focusedBorder }]}>
                   <LinearGradient
-                    colors={focused ? ['rgba(0,245,255,0.06)', 'rgba(0,0,0,0)'] : ['rgba(255,255,255,0.03)', 'rgba(0,0,0,0)']}
+                    colors={focused ? [alpha(theme.colors.brand.primary, 0.06), 'rgba(0,0,0,0)'] : [theme.colors.surface.subtle, 'rgba(0,0,0,0)']}
                     style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.colors.input.text }]}
                     value={cnicNumber}
                     onChangeText={handleCnicChange}
                     placeholder="e.g. 35201-1234567-1"
-                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    placeholderTextColor={theme.colors.input.placeholder}
                     keyboardType="numeric"
-                    selectionColor={Colors.primary}
+                    selectionColor={theme.colors.brand.primary}
                     onFocus={() => setFocused(true)}
                     onBlur={() => setFocused(false)}
                     maxLength={15}
@@ -411,18 +414,18 @@ export default function IdentityVerificationScreen() {
 
               {/* Save Button */}
               <View style={styles.footer}>
-                <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit} disabled={isSubmitting}>
+                <TouchableOpacity style={[styles.saveBtn, shadows.glow]} onPress={handleSubmit} disabled={isSubmitting}>
                   <LinearGradient
-                    colors={isSubmitting ? ['rgba(0,245,255,0.4)', 'rgba(191,90,242,0.4)'] : [Colors.primary, Colors.secondary]}
+                    colors={isSubmitting ? [alpha(theme.colors.brand.primary, 0.4), alpha(theme.colors.brand.secondary, 0.4)] : [theme.colors.brand.primary, theme.colors.brand.secondary]}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     style={styles.saveGradient}
                   >
                     {isSubmitting ? (
-                      <ActivityIndicator color="#000" />
+                      <ActivityIndicator color={theme.colors.text.inverse} />
                     ) : (
                       <>
-                        <Check size={20} color="#000" strokeWidth={3} />
-                        <Text style={styles.saveText}>{t('identityVerification.submitBtn')}</Text>
+                        <Check size={20} color={theme.colors.text.inverse} strokeWidth={3} />
+                        <Text style={[styles.saveText, { color: theme.colors.text.inverse }]}>{t('identityVerification.submitBtn')}</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -432,9 +435,9 @@ export default function IdentityVerificationScreen() {
           )}
 
           {/* Secure details nudge */}
-          <View style={styles.secureNotice}>
-            <LinearGradient colors={['rgba(255,255,255,0.02)', 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]} />
-            <Text style={styles.secureText}>
+          <View style={[styles.secureNotice, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
+            <LinearGradient colors={[alpha(theme.colors.text.primary, 0.02), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]} />
+            <Text style={[styles.secureText, { color: theme.colors.text.muted }]}>
               🔒 {t('identityVerification.privacySecured')}
             </Text>
           </View>
@@ -456,40 +459,42 @@ interface DocumentUploadProps {
 
 function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onSelectCamera, onClear }: DocumentUploadProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const shadows = useThemeShadows();
   const displayUri = localUri || getOptimizedImageUrl(onlineUrl, 500, 300);
 
   return (
     <View style={styles.uploadWidgetWrap}>
-      <Text style={styles.uploadWidgetTitle}>{title}</Text>
+      <Text style={[styles.uploadWidgetTitle, { color: theme.colors.text.muted }]}>{title}</Text>
 
       {displayUri ? (
-        <View style={styles.imagePreviewWrap}>
+          <View style={[styles.imagePreviewWrap, shadows.depth]}>
           <Image source={{ uri: displayUri }} style={styles.previewImage} resizeMode="cover" />
-          <TouchableOpacity style={styles.imageClearBtn} onPress={onClear}>
-            <X size={14} color="#fff" strokeWidth={2.5} />
+          <TouchableOpacity style={[styles.imageClearBtn, { backgroundColor: alpha(theme.colors.text.primary, 0.6), borderColor: theme.colors.border.subtle }]} onPress={onClear}>
+            <X size={14} color={theme.colors.text.primary} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.pickerBox}>
-          <LinearGradient colors={['rgba(255,255,255,0.03)', 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]} />
+          <LinearGradient colors={[theme.colors.surface.subtle, 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]} />
 
-          <View style={styles.pickerIcon}>
-            <ImageIcon size={28} color="rgba(255,255,255,0.3)" strokeWidth={1.5} />
+          <View style={[styles.pickerIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+            <ImageIcon size={28} color={theme.colors.text.muted} strokeWidth={1.5} />
           </View>
 
-          <Text style={styles.pickerNudge}>{t('identityVerification.noDocument')}</Text>
+          <Text style={[styles.pickerNudge, { color: theme.colors.text.muted }]}>{t('identityVerification.noDocument')}</Text>
 
           <View style={styles.pickerBtnRow}>
-            <TouchableOpacity style={styles.pickerBtn} onPress={onSelectCamera}>
-              <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)']} style={StyleSheet.absoluteFill} />
-              <Camera size={14} color={Colors.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnTxt}>{t('identityVerification.camera')}</Text>
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: theme.colors.border.subtle }]} onPress={onSelectCamera}>
+              <LinearGradient colors={[alpha(theme.colors.text.primary, 0.06), alpha(theme.colors.text.primary, 0.02)]} style={StyleSheet.absoluteFill} />
+              <Camera size={14} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
+              <Text style={[styles.pickerBtnTxt, { color: theme.colors.text.primary }]}>{t('identityVerification.camera')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.pickerBtn} onPress={onSelectGallery}>
-              <LinearGradient colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.02)']} style={StyleSheet.absoluteFill} />
-              <ImageIcon size={14} color={Colors.secondary} strokeWidth={2.5} style={{ marginRight: 6 }} />
-              <Text style={styles.pickerBtnTxt}>{t('identityVerification.gallery')}</Text>
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: theme.colors.border.subtle }]} onPress={onSelectGallery}>
+              <LinearGradient colors={[alpha(theme.colors.text.primary, 0.06), alpha(theme.colors.text.primary, 0.02)]} style={StyleSheet.absoluteFill} />
+              <ImageIcon size={14} color={theme.colors.brand.secondary} strokeWidth={2.5} style={{ marginRight: 6 }} />
+              <Text style={[styles.pickerBtnTxt, { color: theme.colors.text.primary }]}>{t('identityVerification.gallery')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -502,85 +507,83 @@ function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onS
 const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: Spacing.l, paddingBottom: 60 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 300 },
-  loadingText: { color: 'rgba(255,255,255,0.48)', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  loadingText: { fontSize: 13, fontWeight: '600', marginTop: 12 },
 
   // Header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 },
-  backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  backBtn: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
 
   // Intro
-  formIntro: { color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: '500', lineHeight: 20, marginBottom: 24, paddingHorizontal: 2 },
+  formIntro: { fontSize: 13, fontWeight: '500', lineHeight: 20, marginBottom: 24, paddingHorizontal: 2 },
 
   // Form
   fieldWrap: { marginBottom: 20 },
   fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7, marginLeft: 2 },
-  fieldLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  inputCard: { borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', backgroundColor: 'rgba(8,10,30,0.7)' },
-  input: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.8, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
+  fieldLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  inputCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  input: { fontSize: 16, fontWeight: '700', letterSpacing: 0.8, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
 
   // Upload Widget
   uploadWidgetWrap: { marginBottom: 22 },
-  uploadWidgetTitle: { color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginLeft: 2 },
+  uploadWidgetTitle: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginLeft: 2 },
   pickerBox: {
-    borderRadius: 16, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)',
-    borderStyle: 'dashed', backgroundColor: 'rgba(255,255,255,0.01)',
+    borderRadius: 16, borderWidth: 1.5,
+    borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 16,
   },
-  pickerIcon: { width: 50, height: 50, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  pickerNudge: { color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: '600', marginBottom: 16 },
+  pickerIcon: { width: 50, height: 50, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  pickerNudge: { fontSize: 13, fontWeight: '600', marginBottom: 16 },
   pickerBtnRow: { flexDirection: 'row', gap: 12 },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', minWidth: 100,
+    borderWidth: 1, overflow: 'hidden', minWidth: 100,
   },
-  pickerBtnTxt: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  pickerBtnTxt: { fontSize: 12, fontWeight: '700' },
 
   // Image Preview
-  imagePreviewWrap: { position: 'relative', width: '100%', aspectRatio: 8 / 5, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', ...Shadows.depth },
+  imagePreviewWrap: { position: 'relative', width: '100%', aspectRatio: 8 / 5, borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
   previewImage: { width: '100%', height: '100%' },
-  imageClearBtn: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  imageClearBtn: { position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
 
   // Status Panels
   statusPanel: {
     alignItems: 'center', borderRadius: 24, overflow: 'hidden',
-    backgroundColor: 'rgba(8,10,28,0.92)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    paddingVertical: 32, paddingHorizontal: 20, marginBottom: 24, ...Shadows.depth,
+    paddingVertical: 32, paddingHorizontal: 20, marginBottom: 24,
   },
   glowRing: {
     width: 90, height: 90, borderRadius: 45, borderWidth: 2.5,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.02)', marginBottom: 20,
-    ...Shadows.glow,
+    marginBottom: 20,
   },
   pulseAnim: { transform: [{ scale: 1 }] },
-  statusTitle: { color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginBottom: 8 },
-  statusDesc: { color: 'rgba(255,255,255,0.48)', fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 20, marginBottom: 24, paddingHorizontal: 10 },
-  cardInfo: { width: '100%', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', position: 'relative' },
+  statusTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginBottom: 8 },
+  statusDesc: { fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 20, marginBottom: 24, paddingHorizontal: 10 },
+  cardInfo: { width: '100%', padding: 14, borderRadius: 14, borderWidth: 1, position: 'relative' },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLbl: { color: 'rgba(255,255,255,0.36)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  infoVal: { color: '#fff', fontSize: 15, fontWeight: '700', letterSpacing: 0.8 },
+  infoLbl: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  infoVal: { fontSize: 15, fontWeight: '700', letterSpacing: 0.8 },
 
   // Rejection details
   rejectionCard: {
     flexDirection: 'row', gap: 12, width: '100%', padding: 14,
-    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,59,48,0.2)',
+    borderRadius: 14, borderWidth: 1,
     marginBottom: 24, position: 'relative',
   },
-  rejectionTitle: { color: '#FF3B30', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  rejectionText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '500', lineHeight: 18 },
-  resubmitBtn: { width: '100%', borderRadius: 14, overflow: 'hidden', ...Shadows.glow },
+  rejectionTitle: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  rejectionText: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
+  resubmitBtn: { width: '100%', borderRadius: 14, overflow: 'hidden' },
   resubmitGradient: { paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  resubmitText: { color: '#000', fontSize: 14, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
+  resubmitText: { fontSize: 14, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
 
   // Secure Nudge
-  secureNotice: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.01)', position: 'relative' },
-  secureText: { color: 'rgba(255,255,255,0.3)', fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
+  secureNotice: { padding: 12, borderRadius: 12, borderWidth: 1, position: 'relative' },
+  secureText: { fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
 
   // Save / Footer
   footer: { marginTop: 12 },
-  saveBtn: { borderRadius: BorderRadius.xl, overflow: 'hidden', ...Shadows.glow },
+  saveBtn: { borderRadius: BorderRadius.xl, overflow: 'hidden' },
   saveGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
-  saveText: { color: '#000', fontSize: 14, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
+  saveText: { fontSize: 14, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
 });

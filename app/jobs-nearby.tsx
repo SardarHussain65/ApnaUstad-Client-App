@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
-import { Colors, Spacing, Typography } from '../constants/Theme';
+import { Spacing, Typography, useTheme } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useNearbyJobs, useUserLocation } from '../hooks';
@@ -34,6 +34,8 @@ export default function JobsNearbyScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const colors = theme.legacy;
   const { location } = useUserLocation();
   const { data: jobs = [], isLoading, refetch } = useNearbyJobs(location?.longitude, location?.latitude);
 
@@ -51,7 +53,7 @@ export default function JobsNearbyScreen() {
 
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, Typography.threeD]}>{t('jobsNearby.title').toUpperCase()}</Text>
-            <Text style={styles.headerSub}>
+            <Text style={[styles.headerSub, { color: theme.colors.text.dim }]}>
               {isLoading ? t('jobsNearby.scanning') : t('jobsNearby.activeOpportunities', { count: jobs.length })}
             </Text>
           </View>
@@ -68,8 +70,8 @@ export default function JobsNearbyScreen() {
         >
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator color={Colors.cyan} size="large" />
-              <Text style={styles.loadingText}>{t('jobsNearby.scanningLocalFrequency')}</Text>
+              <ActivityIndicator color={theme.colors.brand.primary} size="large" />
+              <Text style={[styles.loadingText, { color: theme.colors.text.dim }]}>{t('jobsNearby.scanningLocalFrequency')}</Text>
             </View>
           ) : jobs.length > 0 ? (
             <View style={styles.list}>
@@ -81,7 +83,7 @@ export default function JobsNearbyScreen() {
                   <GlassCard
                     style={styles.jobCard}
                     hasGlow={job.urgency === 'instant'}
-                    glowColor={job.urgency === 'instant' ? Colors.cyan : Colors.primary}
+                    glowColor={job.urgency === 'instant' ? colors.cyan : colors.primary}
                     onPress={() => router.push({
                       pathname: '/bid-submission',
                       params: { jobId: job._id, title: job.category, urgency: job.urgency }
@@ -90,11 +92,11 @@ export default function JobsNearbyScreen() {
                     <View style={styles.jobRow}>
                       <View style={styles.typeCluster}>
                         {job.urgency === 'instant' ? (
-                          <Zap size={20} color={Colors.cyan} />
+                          <Zap size={20} color={colors.cyan} />
                         ) : (
-                          <Calendar size={20} color={Colors.worker} />
+                          <Calendar size={20} color={colors.worker} />
                         )}
-                        <Text style={[styles.jobTypeLabel, { color: job.urgency === 'instant' ? Colors.cyan : Colors.worker }]}>
+                        <Text style={[styles.jobTypeLabel, { color: job.urgency === 'instant' ? colors.cyan : colors.worker }]}>
                           {(job.urgency || 'Normal').toUpperCase()}
                         </Text>
                       </View>
@@ -103,10 +105,10 @@ export default function JobsNearbyScreen() {
                         <Text style={[styles.jobTitle, Typography.threeD]}>{job.category}</Text>
                         <Text style={styles.jobDesc} numberOfLines={2}>{job.description}</Text>
                         <View style={styles.jobMeta}>
-                          <MapPin size={12} color={Colors.textDim} />
-                          <Text style={styles.metaText}>{job.address || t('common.nearby')}</Text>
+                          <MapPin size={12} color={theme.colors.text.dim} />
+                          <Text style={[styles.metaText, { color: theme.colors.text.dim }]}>{job.address || t('common.nearby')}</Text>
                           <View style={styles.dot} />
-                          <Text style={styles.distanceText}>{t('jobsNearby.distanceAway', { defaultValue: '1.2 km away' })}</Text>
+                          <Text style={[styles.distanceText, { color: theme.colors.brand.primary }]}>{t('jobsNearby.distanceAway', { defaultValue: '1.2 km away' })}</Text>
                         </View>
                       </View>
 
@@ -121,13 +123,13 @@ export default function JobsNearbyScreen() {
           ) : (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconContainer}>
-                <Briefcase size={48} color={Colors.textDim} />
+                <Briefcase size={48} color={theme.colors.text.dim} />
               </View>
               <Text style={styles.emptyTitle}>{t('jobsNearby.noMissionsFound')}</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: theme.colors.text.dim }]}>
                 {t('jobsNearby.emptyDescription')}
               </Text>
-              <TouchableOpacity style={styles.refreshBtn} onPress={() => refetch()}>
+              <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: theme.colors.brand.primary }]} onPress={() => refetch()}>
                 <Text style={styles.refreshBtnText}>{t('jobsNearby.refreshScan')}</Text>
               </TouchableOpacity>
             </View>
@@ -170,7 +172,6 @@ const styles = StyleSheet.create({
   },
   headerSub: {
     fontSize: 11,
-    color: Colors.textDim,
     fontWeight: '600',
     marginTop: 2,
     letterSpacing: 0.5,
@@ -186,7 +187,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    color: Colors.textDim,
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 1,
@@ -241,7 +241,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    color: Colors.textDim,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -253,7 +252,6 @@ const styles = StyleSheet.create({
   },
   distanceText: {
     fontSize: 11,
-    color: Colors.cyan,
     fontWeight: '800',
   },
   actionArea: {
@@ -282,7 +280,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptySub: {
-    color: Colors.textDim,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 22,
@@ -292,12 +289,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 16,
-    backgroundColor: Colors.cyan,
-    shadowColor: Colors.cyan,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   refreshBtnText: {
     color: '#000',

@@ -23,7 +23,7 @@ import { ArrowRight } from 'lucide-react-native';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { BorderRadius, Colors, Spacing } from '../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 
 import { useTranslation } from 'react-i18next';
 
@@ -32,6 +32,9 @@ const { width } = Dimensions.get('window');
 export default function OnboardingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -44,7 +47,7 @@ export default function OnboardingScreen() {
       description: t('onboarding.slide1.description'),
       benefit: t('onboarding.slide1.benefit'),
       image: require('../assets/images/onboarding1.png'),
-      accent: Colors.cyan,
+      accent: colors.cyan,
     },
     {
       id: '2',
@@ -53,7 +56,7 @@ export default function OnboardingScreen() {
       description: t('onboarding.slide2.description'),
       benefit: t('onboarding.slide2.benefit'),
       image: require('../assets/images/onboarding2.png'),
-      accent: Colors.worker,
+      accent: colors.worker,
     },
     {
       id: '3',
@@ -62,7 +65,7 @@ export default function OnboardingScreen() {
       description: t('onboarding.slide3.description'),
       benefit: t('onboarding.slide3.benefit'),
       image: require('../assets/images/onboarding3.png'),
-      accent: Colors.success,
+      accent: colors.success,
     },
   ];
 
@@ -99,13 +102,16 @@ export default function OnboardingScreen() {
           <View style={styles.brand}>
             <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
             <View>
-              <Text style={styles.brandName}>APNAUSTAD</Text>
-              <Text style={styles.brandTagline}>SERVICES, MADE SIMPLE</Text>
+              <Text style={[styles.brandName, { color: theme.colors.text.primary }]}>APNAUSTAD</Text>
+              <Text style={[styles.brandTagline, { color: colors.cyan }]}>SERVICES, MADE SIMPLE</Text>
             </View>
           </View>
           {currentIndex < DATA.length - 1 && (
-            <TouchableOpacity activeOpacity={0.7} onPress={completeOnboarding} style={styles.skipButton}>
-              <Text style={styles.skipText}>{t('common.skip')}</Text>
+            <TouchableOpacity activeOpacity={0.7} onPress={completeOnboarding} style={[styles.skipButton, {
+              backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.05),
+              borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.08 : 0.1),
+            }]}>
+              <Text style={[styles.skipText, { color: theme.colors.text.muted }]}>{t('common.skip')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -148,7 +154,7 @@ export default function OnboardingScreen() {
           </View>
 
           <AnimatedButton
-            icon={<ArrowRight size={18} color="#000" strokeWidth={2.8} />}
+            icon={<ArrowRight size={18} color={colors.cyan} strokeWidth={2.8} />}
             onPress={handleNext}
             style={styles.nextButton}
             title={currentIndex === DATA.length - 1 ? t('common.getStarted') : t('common.continue')}
@@ -206,13 +212,11 @@ const styles = StyleSheet.create({
     marginRight: 9,
   },
   brandName: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1.8,
   },
   brandTagline: {
-    color: Colors.cyan,
     fontSize: 7,
     fontWeight: '900',
     letterSpacing: 1.3,
@@ -222,12 +226,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   skipText: {
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -251,7 +252,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   slideTotal: {
-    color: Colors.textDim,
+    fontSize: 13,
+    fontWeight: '900',
   },
   pagination: {
     flexDirection: 'row',

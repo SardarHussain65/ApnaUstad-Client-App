@@ -1,5 +1,5 @@
 /**
- * ClientHome.tsx — Fully Refactored
+ * ClientHome.tsx — Theme-aware refactored
  *
  * Changes from previous version:
  * - Sub-components extracted to separate files (Toast, Skeleton, RecentBookingCard)
@@ -14,6 +14,7 @@
  * - Shared shimmer (one loop, not one per SkeletonBox)
  * - MOCK_RATING removed — unrated users show 0
  * - All dead imports removed
+ * - Theme hooks added for Light/Dark support
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -33,7 +34,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
-import { Colors, Spacing, Typography, Shadows, BorderRadius } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
@@ -108,22 +109,24 @@ CategoryCard.displayName = 'CategoryCard';
 
 
 
-
 // ─── EmptyServiceState ────────────────────────────────────────────────────────
 
-const EmptyServiceState = ({ isSearching }: { isSearching: boolean }) => (
-  <View style={styles.emptyState}>
-    <Search size={32} color={Colors.textDim} strokeWidth={1.5} />
-    <Text style={styles.emptyTitle}>
-      {isSearching ? 'No results found' : 'No services available'}
-    </Text>
-    <Text style={styles.emptySubtitle}>
-      {isSearching
-        ? 'Try a different keyword'
-        : 'Pull down to refresh'}
-    </Text>
-  </View>
-);
+const EmptyServiceState = ({ isSearching }: { isSearching: boolean }) => {
+  const theme = useTheme();
+  return (
+    <View style={styles.emptyState}>
+      <Search size={32} color={theme.colors.text.muted} strokeWidth={1.5} />
+      <Text style={[styles.emptyTitle, { color: theme.colors.text.muted }]}>
+        {isSearching ? 'No results found' : 'No services available'}
+      </Text>
+      <Text style={[styles.emptySubtitle, { color: theme.colors.text.muted }]}>
+        {isSearching
+          ? 'Try a different keyword'
+          : 'Pull down to refresh'}
+      </Text>
+    </View>
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -132,6 +135,10 @@ export function ClientHome() {
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
 
   // Responsive grid dimensions
   const numColumns = windowWidth > 600 ? 4 : 3;
@@ -285,8 +292,8 @@ export function ClientHome() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor={Colors.cyan}
-            colors={[Colors.cyan]}
+            tintColor={colors.cyan}
+            colors={[colors.cyan]}
           />
         }
       >
@@ -296,10 +303,10 @@ export function ClientHome() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={[styles.sectionTitle, Typography.threeD]}>
+              <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
                 {t('home.client.services')}
               </Text>
-              <Text style={styles.sectionSub}>
+              <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
                 {t('home.client.whatHelp')}
               </Text>
             </View>
@@ -309,7 +316,7 @@ export function ClientHome() {
                 onPress={handleToggleServices}
                 hitSlop={styles.hitSlop}
               >
-                <Text style={styles.viewAll}>
+                <Text style={[styles.viewAll, { color: colors.cyan }]}>
                   {showAllServices ? t('home.client.showLess') : t('home.client.viewAll')}
                 </Text>
               </TouchableOpacity>
@@ -348,7 +355,7 @@ export function ClientHome() {
           entering={FadeInDown.delay(150).duration(700)}
           style={styles.dashboardSection}
         >
-          <Text style={[styles.sectionTitle, Typography.threeD, styles.dashboardLabel]}>
+          <Text style={[styles.sectionTitle, typography.threeD, styles.dashboardLabel, { color: theme.colors.text.primary }]}>
             {t('home.client.yourActivity')}
           </Text>
 
@@ -357,8 +364,8 @@ export function ClientHome() {
           ) : (
             <GlassCard
               intensity={42}
-              glowColor={Colors.cyan}
-              gradient={['rgba(0,245,255,0.16)', 'rgba(191,90,242,0.12)', 'rgba(5,5,16,0.98)']}
+              glowColor={colors.cyan}
+              gradient={[alpha(colors.cyan, 0.16), alpha(theme.colors.brand.secondary, 0.12), alpha(theme.colors.surface.card, 0.18)]}
               padding={0}
               style={styles.activityDashboardCard}
               contentStyle={styles.activityDashboardContent}
@@ -369,14 +376,14 @@ export function ClientHome() {
               <View style={styles.activityTopRow}>
                 <View style={styles.spentCluster}>
                   <View style={styles.heroIconBox}>
-                    <CreditCard size={22} color={Colors.cyan} strokeWidth={2.5} />
+                    <CreditCard size={22} color={colors.cyan} strokeWidth={2.5} />
                   </View>
                   <View style={styles.heroTextContainer}>
-                    <Text style={styles.heroLabel}>{t('home.client.totalSpent')}</Text>
-                    <Text style={[styles.heroValue, Typography.threeD]}>
+                    <Text style={[styles.heroLabel, { color: theme.colors.text.muted }]}>{t('home.client.totalSpent')}</Text>
+                    <Text style={[styles.heroValue, typography.threeD, { color: theme.colors.text.primary }]}>
                       Rs. {stats.totalSpent.toLocaleString()}
                     </Text>
-                    <Text style={styles.heroSubText}>{activeSummary}</Text>
+                    <Text style={[styles.heroSubText, { color: theme.colors.text.muted }]}>{activeSummary}</Text>
                   </View>
                 </View>
 
@@ -391,37 +398,37 @@ export function ClientHome() {
 
               <View style={styles.progressBlock}>
                 <View style={styles.progressHeader}>
-                  <Text style={styles.progressTitle}>{t('home.client.completionRate')}</Text>
-                  <Text style={styles.progressValue}>{completedSummary}</Text>
+                  <Text style={[styles.progressTitle, { color: theme.colors.text.muted }]}>{t('home.client.completionRate')}</Text>
+                  <Text style={[styles.progressValue, { color: theme.colors.text.primary }]}>{completedSummary}</Text>
                 </View>
                 <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${successPercent}%` }]} />
+                  <View style={[styles.progressFill, { width: `${successPercent}%`, backgroundColor: colors.success }]} />
                 </View>
               </View>
 
               <View style={styles.activityStatsRow}>
                 <View style={styles.activityStatTile}>
-                  <View style={[styles.statIconBubble, { backgroundColor: 'rgba(0,245,255,0.1)' }]}>
-                    <Clock size={14} color={Colors.cyan} />
+                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.cyan, 0.1) }]}>
+                    <Clock size={14} color={colors.cyan} />
                   </View>
-                  <Text style={styles.subStatVal}>{stats.active}</Text>
-                  <Text style={styles.subStatLab}>{t('home.client.active')}</Text>
+                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.active}</Text>
+                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.active')}</Text>
                 </View>
 
                 <View style={styles.activityStatTile}>
-                  <View style={[styles.statIconBubble, { backgroundColor: 'rgba(0,255,127,0.1)' }]}>
-                    <CheckCircle2 size={14} color={Colors.green} />
+                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.success, 0.1) }]}>
+                    <CheckCircle2 size={14} color={colors.success} />
                   </View>
-                  <Text style={styles.subStatVal}>{stats.completed}</Text>
-                  <Text style={styles.subStatLab}>{t('home.client.completed')}</Text>
+                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.completed}</Text>
+                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.completed')}</Text>
                 </View>
 
                 <View style={styles.activityStatTile}>
-                  <View style={[styles.statIconBubble, { backgroundColor: 'rgba(191,90,242,0.12)' }]}>
-                    <Briefcase size={14} color={Colors.purple} />
+                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.purple, 0.12) }]}>
+                    <Briefcase size={14} color={colors.purple} />
                   </View>
-                  <Text style={styles.subStatVal}>{stats.total}</Text>
-                  <Text style={styles.subStatLab}>{t('home.client.totalJobs')}</Text>
+                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.total}</Text>
+                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.totalJobs')}</Text>
                 </View>
               </View>
             </GlassCard>
@@ -433,10 +440,10 @@ export function ClientHome() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={[styles.sectionTitle, Typography.threeD]}>
+                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
                   {t('home.client.recentBookings', 'Recent Bookings')}
                 </Text>
-                <Text style={styles.sectionSub}>{t('home.client.latestActivity', 'Your latest activity')}</Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>{t('home.client.latestActivity', 'Your latest activity')}</Text>
               </View>
             </View>
             <BookingCardSkeleton translateX={translateX} />
@@ -449,10 +456,10 @@ export function ClientHome() {
           >
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={[styles.sectionTitle, Typography.threeD]}>
+                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
                   {t('home.client.recentBookings')}
                 </Text>
-                <Text style={styles.sectionSub}>{t('home.client.latestActivity')}</Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>{t('home.client.latestActivity')}</Text>
               </View>
 
               {stats.total > RECENT_BOOKINGS_LIMIT && (
@@ -461,8 +468,8 @@ export function ClientHome() {
                   hitSlop={styles.hitSlop}
                   style={styles.seeAllBtn}
                 >
-                  <Text style={styles.viewAll}>{t('home.client.seeAll')}</Text>
-                  <ChevronRight size={12} color={Colors.cyan} strokeWidth={2.5} />
+                  <Text style={[styles.viewAll, { color: colors.cyan }]}>{t('home.client.seeAll')}</Text>
+                  <ChevronRight size={12} color={colors.cyan} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
             </View>
@@ -476,8 +483,8 @@ export function ClientHome() {
                 />
               ))
             ) : (
-              <View style={styles.emptyBookings}>
-                <Text style={styles.emptyBookingsText}>
+              <View style={[styles.emptyBookings, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+                <Text style={[styles.emptyBookingsText, { color: theme.colors.text.muted }]}>
                   {t('home.client.noBookings')}
                 </Text>
               </View>
@@ -520,13 +527,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.cyan,
     paddingVertical: 13,
     borderRadius: BorderRadius.l,
-    ...Shadows.glow,
   },
   quickActionPrimaryText: {
-    color: Colors.background,
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -537,14 +541,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(0,245,255,0.08)',
     paddingVertical: 13,
     borderRadius: BorderRadius.l,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.25)',
   },
   quickActionSecondaryText: {
-    color: Colors.cyan,
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -564,19 +565,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: -0.3,
   },
   sectionSub: {
     fontSize: 12,
-    color: Colors.textMuted,
     fontWeight: '500',
     marginTop: 2,
   },
   viewAll: {
     fontSize: 11,
     fontWeight: '800',
-    color: Colors.cyan,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -621,12 +619,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    ...Shadows.depth,
   },
   categoryTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#fff',
     textAlign: 'center',
     lineHeight: 14,
   },
@@ -640,12 +636,10 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 15,
-    color: Colors.textMuted,
     fontWeight: '700',
   },
   emptySubtitle: {
     fontSize: 13,
-    color: Colors.textDim,
     fontWeight: '500',
   },
 
@@ -660,7 +654,6 @@ const styles = StyleSheet.create({
   activityDashboardCard: {
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.2)',
     marginBottom: Spacing.m,
   },
   activityDashboardContent: {
@@ -675,7 +668,6 @@ const styles = StyleSheet.create({
     borderRadius: 75,
     top: -72,
     right: -45,
-    backgroundColor: 'rgba(0,245,255,0.14)',
   },
   activityGlowTwo: {
     position: 'absolute',
@@ -684,7 +676,6 @@ const styles = StyleSheet.create({
     borderRadius: 65,
     bottom: -70,
     left: -42,
-    backgroundColor: 'rgba(191,90,242,0.15)',
   },
   activityTopRow: {
     flexDirection: 'row',
@@ -704,11 +695,9 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 21,
-    backgroundColor: 'rgba(0, 245, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.24)',
   },
   heroTextContainer: {
     flex: 1,
@@ -718,18 +707,15 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   heroValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#fff',
     marginTop: 2,
   },
   heroSubText: {
-    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
@@ -759,9 +745,7 @@ const styles = StyleSheet.create({
   progressBlock: {
     padding: 12,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 11,
   },
   progressHeader: {
@@ -771,27 +755,23 @@ const styles = StyleSheet.create({
     marginBottom: 9,
   },
   progressTitle: {
-    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   progressValue: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '900',
   },
   progressTrack: {
     height: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: 999,
-    backgroundColor: Colors.green,
   },
   activityStatsRow: {
     flexDirection: 'row',
@@ -802,9 +782,7 @@ const styles = StyleSheet.create({
     minHeight: 82,
     borderRadius: 18,
     padding: 11,
-    backgroundColor: 'rgba(6,8,24,0.62)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
   },
   statIconBubble: {
     width: 28,
@@ -817,12 +795,10 @@ const styles = StyleSheet.create({
   subStatVal: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#fff',
   },
   subStatLab: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginTop: 2,
@@ -831,15 +807,12 @@ const styles = StyleSheet.create({
   // ── Recent bookings empty state
   emptyBookings: {
     marginHorizontal: Spacing.l,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: BorderRadius.l,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
     paddingVertical: Spacing.xl,
     alignItems: 'center',
   },
   emptyBookingsText: {
-    color: Colors.textMuted,
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',
@@ -852,7 +825,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   missionHeader: {
     flexDirection: 'row',
@@ -861,13 +833,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   missionTitle: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '800',
     marginBottom: 2,
   },
   missionDesc: {
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -876,7 +846,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   bidCountText: {
     fontSize: 10,

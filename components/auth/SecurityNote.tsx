@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ShieldCheck } from 'lucide-react-native';
-import { Colors, Spacing } from '../../constants/Theme';
+import { Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 interface SecurityNoteProps {
   accentColor?: string;
@@ -9,13 +9,17 @@ interface SecurityNoteProps {
 }
 
 export function SecurityNote({
-  accentColor = Colors.cyan,
+  accentColor,
   text = 'Your information is protected with secure encrypted access.',
 }: SecurityNoteProps) {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const resolvedAccentColor = accentColor ?? colors.cyan;
+
   return (
     <View style={styles.container}>
-      <ShieldCheck size={15} color={accentColor} strokeWidth={2.5} />
-      <Text style={styles.text}>{text}</Text>
+      <ShieldCheck size={15} color={resolvedAccentColor} strokeWidth={2.5} />
+      <Text style={[styles.text, { color: theme.colors.text.dim }]}>{text}</Text>
     </View>
   );
 }
@@ -29,7 +33,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.s,
   },
   text: {
-    color: 'rgba(255,255,255,0.38)',
     fontSize: 11,
     fontWeight: '600',
     lineHeight: 16,
