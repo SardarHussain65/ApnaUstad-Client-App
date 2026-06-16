@@ -46,6 +46,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useJobDetails, useToast, useWorkerWallet } from '../hooks';
 import api from '../services/api';
+import { useTheme, useThemeColors, alpha } from '../constants/Theme';
 
 const CYAN = '#00F5FF';
 const GREEN = '#00FF7F';
@@ -223,6 +224,8 @@ function AudioEvidenceTile({ url }: { url: string }) {
 }
 
 export default function BidSubmissionScreen() {
+  const theme = useTheme();
+  const colors = useThemeColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -428,14 +431,31 @@ export default function BidSubmissionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.page}
       >
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <BlurView intensity={70} tint="dark" style={StyleSheet.absoluteFillObject} />
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.75}>
-            <ChevronLeft size={21} color="#FFFFFF" strokeWidth={2.4} />
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 8,
+            backgroundColor: theme.isDark ? 'transparent' : theme.colors.background.screen,
+            borderBottomColor: theme.isDark ? BORDER : theme.colors.border.subtle,
+          }
+        ]}>
+          <BlurView intensity={70} tint={theme.isDark ? "dark" : "light"} style={StyleSheet.absoluteFillObject} />
+          <TouchableOpacity 
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.13)' : theme.colors.border.subtle,
+              }
+            ]} 
+            onPress={() => router.back()} 
+            activeOpacity={0.75}
+          >
+            <ChevronLeft size={21} color={theme.colors.text.primary} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{isInstant ? t('bidSubmission.instantRequest', 'INSTANT REQUEST') : t('bidSubmission.scheduledRequest', 'SCHEDULED REQUEST')}</Text>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{isInstant ? t('bidSubmission.instantRequest', 'INSTANT REQUEST') : t('bidSubmission.scheduledRequest', 'SCHEDULED REQUEST')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>
               {isInstant ? (isCounterProposal ? t('bidSubmission.proposeFairPrice', 'Propose Fair Price') : t('bidSubmission.confirmAvailability', 'Confirm Availability')) : t('bidSubmission.sendProposal', 'Send Proposal')}
             </Text>
           </View>

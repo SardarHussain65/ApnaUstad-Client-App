@@ -5,6 +5,7 @@ import { SectionLabel, GlassInput, P, useJobCreationPalette } from './shared';
 import { calculateUrgentPrice, getRateForCategory } from '../../constants/UrgentPricing';
 import { addAlpha } from '../../utils/colorUtils';
 import { useTranslation } from 'react-i18next';
+import { useTheme, alpha } from '../../constants/Theme';
 
 interface UrgentPricingCardProps {
   category: string;
@@ -17,6 +18,7 @@ interface UrgentPricingCardProps {
 export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amount, onChangeAmount }: UrgentPricingCardProps) {
   const { t } = useTranslation();
   const palette = useJobCreationPalette();
+  const theme = useTheme();
   const rateInfo = getRateForCategory(category);
   const baseRate = rateInfo.baseRatePerHour;
   const minPrice = rateInfo.minimumPrice;
@@ -56,28 +58,42 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
             </View>
 
             {/* Stepper Control */}
-            <View style={styles.stepperContainer}>
+            <View style={[styles.stepperContainer, { borderColor: palette.border, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : alpha(theme.colors.text.primary, 0.03) }]}>
               <TouchableOpacity 
-                style={[styles.stepperButton, estimatedHours <= 1 && styles.stepperButtonDisabled]} 
+                style={[
+                  styles.stepperButton,
+                  {
+                    backgroundColor: palette.surfaceHigh,
+                    borderColor: palette.borderMedium,
+                  },
+                  estimatedHours <= 1 && styles.stepperButtonDisabled
+                ]} 
                 onPress={decrementHours}
                 disabled={estimatedHours <= 1}
                 activeOpacity={0.7}
               >
-                <Text style={styles.stepperButtonText}>-</Text>
+                <Text style={[styles.stepperButtonText, { color: palette.textPrimary }]}>-</Text>
               </TouchableOpacity>
               
               <View style={styles.hoursDisplay}>
-                <Text style={styles.hoursText}>{estimatedHours}</Text>
-                <Text style={styles.hoursLabel}>{estimatedHours === 1 ? t('jobCreation.hr', 'Hr') : t('jobCreation.hrs', 'Hrs')}</Text>
+                <Text style={[styles.hoursText, { color: palette.cyan }]}>{estimatedHours}</Text>
+                <Text style={[styles.hoursLabel, { color: palette.textSecondary }]}>{estimatedHours === 1 ? t('jobCreation.hr', 'Hr') : t('jobCreation.hrs', 'Hrs')}</Text>
               </View>
 
               <TouchableOpacity 
-                style={[styles.stepperButton, estimatedHours >= 8 && styles.stepperButtonDisabled]} 
+                style={[
+                  styles.stepperButton,
+                  {
+                    backgroundColor: palette.surfaceHigh,
+                    borderColor: palette.borderMedium,
+                  },
+                  estimatedHours >= 8 && styles.stepperButtonDisabled
+                ]} 
                 onPress={incrementHours}
                 disabled={estimatedHours >= 8}
                 activeOpacity={0.7}
               >
-                <Text style={styles.stepperButtonText}>+</Text>
+                <Text style={[styles.stepperButtonText, { color: palette.textPrimary }]}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -85,6 +101,10 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
           {/* Editable Price Banner */}
           <View style={[
             styles.priceBanner, 
+            {
+              backgroundColor: addAlpha(isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan), '10'),
+              borderColor: addAlpha(isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan), '25'),
+            },
             isBelowMin && styles.priceBannerError, 
             isBelowRecommended && !isBelowMin && styles.priceBannerWarning
           ]}>
@@ -95,11 +115,11 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
               style={styles.zapIcon} 
             />
             <View style={styles.bannerTextColumn}>
-              <Text style={styles.bannerLabel}>{t('jobCreation.offeredUrgentPrice', 'Your Offered Price')}</Text>
+              <Text style={[styles.bannerLabel, { color: palette.textSecondary }]}>{t('jobCreation.offeredUrgentPrice', 'Your Offered Price')}</Text>
               <View style={styles.inputRow}>
-                <Text style={styles.currencyPrefix}>Rs.</Text>
+                <Text style={[styles.currencyPrefix, { color: palette.textPrimary }]}>Rs.</Text>
                 <TextInput
-                  style={styles.priceInput}
+                  style={[styles.priceInput, { color: isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan) }]}
                   value={amount}
                   onChangeText={onChangeAmount}
                   keyboardType="numeric"
@@ -129,7 +149,7 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
           {/* Recommended Estimate Display */}
           <View style={styles.breakdownRow}>
             <Text style={[styles.breakdownLabel, { color: palette.textSecondary }]}>{t('jobCreation.recommendedEstimate', 'Recommended Estimate:')}</Text>
-            <Text style={[styles.breakdownValue, { color: palette.cyan }]}>
+            <Text style={[styles.breakdownValue, { color: palette.textPrimary }]}>
               {t('common.rupeesFormat', 'Rs. {{amount}}', { amount: fixedPrice.toLocaleString() })}
             </Text>
           </View>
@@ -143,7 +163,13 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
             </View>
           )}
 
-          <View style={[styles.infoBox, { borderColor: palette.border }]}>
+          <View style={[
+            styles.infoBox, 
+            { 
+              borderColor: palette.border,
+              backgroundColor: theme.isDark ? 'rgba(255,255,255,0.02)' : alpha(theme.colors.text.primary, 0.02)
+            }
+          ]}>
             <Text style={[styles.infoText, { color: palette.textSecondary }]}>
               {t('jobCreation.urgentFixedPriceInfo', '⚡ Clients and Ustads are matched instantly. The price is locked before posting and cannot be negotiated. The first Ustad to accept is hired instantly.')}
             </Text>

@@ -407,18 +407,45 @@ export default function JobDetailsScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.root}>
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 8,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : theme.colors.background.screen,
+            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+          }
+        ]}>
+          <TouchableOpacity 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+              }
+            ]} 
+            onPress={() => router.back()} 
+            activeOpacity={0.8}
+          >
             <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{t('jobDetails.defaultTitle')}</Text>
-            <Text style={styles.headerTitle}>{t('jobDetails.title')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('jobDetails.defaultTitle')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('jobDetails.title')}</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerButton} onPress={shareRequest} activeOpacity={0.8}>
-            <Share2 size={19} color={P.textMuted} strokeWidth={2.4} />
+          <TouchableOpacity 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+              }
+            ]} 
+            onPress={shareRequest} 
+            activeOpacity={0.8}
+          >
+            <Share2 size={19} color={theme.colors.text.primary} strokeWidth={2.4} />
           </TouchableOpacity>
         </View>
 

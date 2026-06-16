@@ -6,6 +6,7 @@ import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '..
 import { GlassCard } from '../home/GlassCard';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UserWalletTransaction } from '../../hooks';
 
 // ─── Constants & Types ────────────────────────────────────────────────────────
@@ -54,10 +55,10 @@ function SummaryChip({ label, value, color, theme }: { label: string; value: num
       gradient={[color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]}
     >
       <View style={[styles.chipDot, { backgroundColor: color }]} />
-      <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+      <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
         {formatMoney(value)}
       </Text>
-      <Text style={styles.chipLabel}>{label}</Text>
+      <Text style={[styles.chipLabel, { color: theme.colors.text.muted }]}>{label}</Text>
     </GlassCard>
   );
 }
@@ -77,6 +78,7 @@ export function ClientWalletView({
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
+  const insets = useSafeAreaInsets();
 
   const STATUS_CONFIG: Record<string, { color: string; icon: any; labelKey: string }> = {
     paid: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },
@@ -129,8 +131,8 @@ export function ClientWalletView({
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: Spacing.m }]}
-refreshControl={
+      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + Spacing.m }]}
+      refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
@@ -192,8 +194,8 @@ refreshControl={
                 key={filter}
                 onPress={() => onFilterChange(filter)}
                 style={[styles.filterPill, isActive && styles.activeFilterPill, {
-                  backgroundColor: theme.colors.surface.subtle,
-                  borderColor: isActive ? alpha(colors.cyan, 0.25) : theme.colors.border.subtle,
+                  backgroundColor: isActive ? alpha(colors.cyan, 0.12) : theme.colors.surface.subtle,
+                  borderColor: isActive ? alpha(colors.cyan, 0.35) : theme.colors.border.subtle,
                 }]}
               >
                 <Text style={[styles.filterText, isActive && styles.activeFilterText, { color: isActive ? colors.cyan : theme.colors.text.muted }]}>

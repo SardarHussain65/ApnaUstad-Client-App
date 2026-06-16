@@ -40,6 +40,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useBookingDetails, useWorker, useWorkerReviews, useToggleFavoriteMutation } from '../hooks';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { alpha, useTheme, useThemeColors } from '../constants/Theme';
 
 const C = {
   cyan: '#00F5FF',
@@ -71,6 +72,10 @@ export default function WorkerDetailsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
+  const colors = theme.colors;
+  const legacyColors = theme.legacy;
+  
   const params = useLocalSearchParams<{
     id?: string | string[];
     bidId?: string | string[];
@@ -195,8 +200,8 @@ export default function WorkerDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.center}>
-          <ActivityIndicator color={C.cyan} />
-          <Text style={styles.loadingText}>{t('workerDetails.loading')}</Text>
+          <ActivityIndicator color={legacyColors.cyan} />
+          <Text style={[styles.loadingText, { color: colors.text.muted }]}>{t('workerDetails.loading')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -206,9 +211,15 @@ export default function WorkerDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.center}>
-          <Text style={styles.emptyTitle}>{t('workerDetails.unavailable')}</Text>
-          <TouchableOpacity style={styles.emptyAction} onPress={() => router.back()}>
-            <Text style={styles.emptyActionText}>{t('common.back')}</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text.primary }]}>{t('workerDetails.unavailable')}</Text>
+          <TouchableOpacity 
+            style={[
+              styles.emptyAction,
+              { backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(legacyColors.cyan, 0.12) }
+            ]} 
+            onPress={() => router.back()}
+          >
+            <Text style={[styles.emptyActionText, { color: legacyColors.cyan }]}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -218,22 +229,61 @@ export default function WorkerDetailsScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.root}>
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
-            <ChevronLeft size={22} color={C.text} strokeWidth={2.4} />
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 8,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : colors.background.screen,
+            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle,
+          }
+        ]}>
+          <TouchableOpacity 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(colors.text.primary, 0.03),
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : colors.border.subtle,
+              }
+            ]} 
+            onPress={() => router.back()} 
+            activeOpacity={0.8}
+          >
+            <ChevronLeft size={22} color={colors.text.primary} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{t('workerDetails.headerEyebrow')}</Text>
-            <Text style={styles.headerTitle}>{t('workerDetails.headerTitle')}</Text>
+            <Text style={[styles.headerEyebrow, { color: colors.text.dim }]}>{t('workerDetails.headerEyebrow')}</Text>
+            <Text style={[styles.headerTitle, { color: colors.text.primary }]}>{t('workerDetails.headerTitle')}</Text>
           </View>
           <View style={styles.headerActions}>
             {role === 'client' && (
-              <TouchableOpacity style={[styles.headerButton, { marginRight: 8 }]} onPress={handleToggleFavorite} activeOpacity={0.8} disabled={isToggling}>
-                <Heart size={18} color={isFavorite ? C.pink : C.muted} fill={isFavorite ? C.pink : 'transparent'} strokeWidth={2.3} />
+              <TouchableOpacity 
+                style={[
+                  styles.headerButton, 
+                  { 
+                    marginRight: 8,
+                    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(colors.text.primary, 0.03),
+                    borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : colors.border.subtle,
+                  }
+                ]} 
+                onPress={handleToggleFavorite} 
+                activeOpacity={0.8} 
+                disabled={isToggling}
+              >
+                <Heart size={18} color={isFavorite ? legacyColors.pink : colors.text.dim} fill={isFavorite ? legacyColors.pink : 'transparent'} strokeWidth={2.3} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.headerButton} onPress={shareProfile} activeOpacity={0.8}>
-              <Share2 size={18} color={C.muted} strokeWidth={2.3} />
+            <TouchableOpacity 
+              style={[
+                styles.headerButton,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(colors.text.primary, 0.03),
+                  borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : colors.border.subtle,
+                }
+              ]} 
+              onPress={shareProfile} 
+              activeOpacity={0.8}
+            >
+              <Share2 size={18} color={colors.text.muted} strokeWidth={2.3} />
             </TouchableOpacity>
           </View>
         </View>
@@ -242,44 +292,68 @@ export default function WorkerDetailsScreen() {
           contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 108 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInUp.duration(520)} style={styles.heroCard}>
+          <Animated.View entering={FadeInUp.duration(520)} style={[
+            styles.heroCard,
+            {
+              backgroundColor: colors.surface.card,
+              borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : colors.border.subtle,
+            }
+          ]}>
             <LinearGradient
-              colors={['rgba(0,245,255,0.16)', 'rgba(5,11,31,0.92)', 'rgba(8,123,255,0.08)']}
+              colors={theme.isDark 
+                ? ['rgba(0,245,255,0.16)', 'rgba(5,11,31,0.92)', 'rgba(8,123,255,0.08)']
+                : [alpha(colors.brand.primary, 0.06), colors.surface.card, alpha(colors.brand.secondary, 0.03)]
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFillObject}
             />
             <View style={styles.heroTop}>
-              <View style={styles.avatarShell}>
+              <View style={[
+                styles.avatarShell,
+                {
+                  borderColor: theme.isDark ? 'rgba(0,245,255,0.74)' : colors.border.strong,
+                  backgroundColor: theme.isDark ? 'rgba(0,245,255,0.09)' : colors.surface.subtle,
+                }
+              ]}>
                 {worker.profileImage ? (
                   <Image source={{ uri: worker.profileImage }} style={styles.avatar} />
                 ) : (
-                  <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarFallbackText}>{initialsFor(worker.fullName)}</Text>
+                  <View style={[
+                    styles.avatarFallback,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.11)' : colors.surface.subtle,
+                    }
+                  ]}>
+                    <Text style={[styles.avatarFallbackText, { color: legacyColors.cyan }]}>{initialsFor(worker.fullName)}</Text>
                   </View>
                 )}
-                <View style={[styles.availabilityDot, !isAvailable && styles.availabilityDotBusy]} />
+                <View style={[
+                  styles.availabilityDot, 
+                  !isAvailable && styles.availabilityDotBusy,
+                  { borderColor: theme.isDark ? '#071024' : colors.surface.card }
+                ]} />
               </View>
 
               <View style={styles.heroCopy}>
                 <View style={styles.heroBadgeRow}>
                   <View style={[styles.verificationPill, !worker.isVerified && styles.verificationPillPending]}>
-                    <ShieldCheck size={12} color={worker.isVerified ? C.green : C.amber} />
-                    <Text style={[styles.verificationText, !worker.isVerified && styles.verificationTextPending]}>
+                    <ShieldCheck size={12} color={worker.isVerified ? legacyColors.green : C.amber} />
+                    <Text style={[styles.verificationText, !worker.isVerified && styles.verificationTextPending, { color: worker.isVerified ? legacyColors.green : C.amber }]}>
                       {worker.isVerified ? t('workerDetails.verifiedUstad') : t('workerDetails.verificationPending')}
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.workerName}>{worker.fullName}</Text>
-                <Text style={styles.workerCategory}>{worker.category || t('workerDetails.defaultCategory', { defaultValue: 'Service Specialist' })}</Text>
+                <Text style={[styles.workerName, { color: colors.text.primary }]}>{worker.fullName}</Text>
+                <Text style={[styles.workerCategory, { color: legacyColors.cyan }]}>{worker.category || t('workerDetails.defaultCategory', { defaultValue: 'Service Specialist' })}</Text>
                 <View style={styles.locationLine}>
-                  <MapPin size={13} color={C.pink} />
-                  <Text style={styles.locationText} numberOfLines={1}>{worker.city || t('workerDetails.noCity', { defaultValue: 'Service area not added' })}</Text>
+                  <MapPin size={13} color={legacyColors.pink} />
+                  <Text style={[styles.locationText, { color: colors.text.muted }]} numberOfLines={1}>{worker.city || t('workerDetails.noCity', { defaultValue: 'Service area not added' })}</Text>
                 </View>
               </View>
             </View>
 
-            <View style={styles.heroDivider} />
+            <View style={[styles.heroDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle }]} />
 
             <View style={styles.heroBottom}>
               <View style={styles.ratingBlock}>
@@ -294,63 +368,93 @@ export default function WorkerDetailsScreen() {
                   ))}
                 </View>
                 <Text style={styles.ratingText}>{rating > 0 ? rating.toFixed(1) : t('workerDetails.newProfile')}</Text>
-                <Text style={styles.ratingMeta}>{t('workerDetails.reviewsCount', { count: reviewCount })}</Text>
+                <Text style={[styles.ratingMeta, { color: colors.text.dim }]}>{t('workerDetails.reviewsCount', { count: reviewCount })}</Text>
               </View>
               <View style={[styles.availabilityPill, !isAvailable && styles.availabilityPillBusy]}>
-                <View style={[styles.availabilityMiniDot, !isAvailable && styles.availabilityDotBusy]} />
-                <Text style={[styles.availabilityLabel, !isAvailable && styles.availabilityLabelBusy]}>
+                <View style={[styles.availabilityMiniDot, !isAvailable && styles.availabilityDotBusy, { backgroundColor: isAvailable ? legacyColors.green : colors.text.dim }]} />
+                <Text style={[styles.availabilityLabel, !isAvailable && styles.availabilityLabelBusy, { color: isAvailable ? legacyColors.green : colors.text.dim }]}>
                   {isAvailable ? t('workerDetails.available') : t('workerDetails.busy')}
                 </Text>
               </View>
             </View>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(80).duration(520)} style={styles.statsStrip}>
+          <Animated.View entering={FadeInDown.delay(80).duration(520)} style={[
+            styles.statsStrip,
+            {
+              backgroundColor: colors.surface.card,
+              borderColor: colors.border.subtle,
+            }
+          ]}>
             <Metric icon={Award} value={experience > 0 ? t('workerDetails.yrs', { count: experience }) : t('workerDetails.newExperience')} label={t('workerDetails.experienceLabel')} color={C.amber} />
-            <View style={styles.metricDivider} />
-            <Metric icon={BriefcaseBusiness} value={String(completedJobs)} label={t('workerDetails.jobsLabel')} color={C.green} />
-            <View style={styles.metricDivider} />
-            <Metric icon={Clock3} value={hourlyRate > 0 ? t('workerDetails.hourlyRateValue', { rate: hourlyRate.toLocaleString() }) : t('workerDetails.openRate')} label={t('workerDetails.rateLabel')} color={C.cyan} />
+            <View style={[styles.metricDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle }]} />
+            <Metric icon={BriefcaseBusiness} value={String(completedJobs)} label={t('workerDetails.jobsLabel')} color={legacyColors.green} />
+            <View style={[styles.metricDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle }]} />
+            <Metric icon={Clock3} value={hourlyRate > 0 ? t('workerDetails.hourlyRateValue', { rate: hourlyRate.toLocaleString() }) : t('workerDetails.openRate')} label={t('workerDetails.rateLabel')} color={legacyColors.cyan} />
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(130).duration(520)} style={styles.sectionCard}>
-            <SectionTitle icon={Sparkles} title={t('workerDetails.bioTitle')} color={C.cyan} />
-            <Text style={styles.bioText}>{worker.bio || t('workerDetails.bioPlaceholder')}</Text>
+          <Animated.View entering={FadeInDown.delay(130).duration(520)} style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface.card,
+              borderColor: colors.border.subtle,
+            }
+          ]}>
+            <SectionTitle icon={Sparkles} title={t('workerDetails.bioTitle')} color={legacyColors.cyan} />
+            <Text style={[styles.bioText, { color: colors.text.muted }]}>{worker.bio || t('workerDetails.bioPlaceholder')}</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(180).duration(520)} style={styles.sectionCard}>
-            <SectionTitle icon={Wrench} title={t('workerDetails.skillsTitle')} color={C.pink} />
+          <Animated.View entering={FadeInDown.delay(180).duration(520)} style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface.card,
+              borderColor: colors.border.subtle,
+            }
+          ]}>
+            <SectionTitle icon={Wrench} title={t('workerDetails.skillsTitle')} color={legacyColors.pink} />
             {skills.length > 0 ? (
               <View style={styles.skillsWrap}>
                 {skills.map((skill) => (
-                  <View key={skill} style={styles.skillPill}>
-                    <Check size={12} color={C.cyan} strokeWidth={3} />
-                    <Text style={styles.skillText}>{skill}</Text>
+                  <View key={skill} style={[
+                    styles.skillPill,
+                    {
+                      borderColor: theme.isDark ? 'rgba(0,245,255,0.16)' : colors.border.subtle,
+                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.05)' : colors.surface.subtle,
+                    }
+                  ]}>
+                    <Check size={12} color={legacyColors.cyan} strokeWidth={3} />
+                    <Text style={[styles.skillText, { color: colors.text.muted }]}>{skill}</Text>
                   </View>
                 ))}
               </View>
             ) : (
-              <Text style={styles.emptySectionText}>{t('workerDetails.skillsPlaceholder')}</Text>
+              <Text style={[styles.emptySectionText, { color: colors.text.dim }]}>{t('workerDetails.skillsPlaceholder')}</Text>
             )}
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(230).duration(520)} style={styles.sectionCard}>
+          <Animated.View entering={FadeInDown.delay(230).duration(520)} style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface.card,
+              borderColor: colors.border.subtle,
+            }
+          ]}>
             <SectionTitle
               icon={Star}
               title={t('workerDetails.reviewsTitle')}
               color={C.amber}
-              right={<Text style={styles.sectionCount}>{t('workerDetails.totalReviews', { count: reviewCount })}</Text>}
+              right={<Text style={[styles.sectionCount, { color: colors.text.dim }]}>{t('workerDetails.totalReviews', { count: reviewCount })}</Text>}
             />
             {isLoadingReviews ? (
-              <ActivityIndicator color={C.cyan} style={styles.reviewsLoader} />
+              <ActivityIndicator color={legacyColors.cyan} style={styles.reviewsLoader} />
             ) : reviews.length > 0 ? (
               reviews.slice(0, 3).map((review: any, index: number) => (
                 <ReviewItem key={review._id} review={review} isLast={index === Math.min(reviews.length, 3) - 1} />
               ))
             ) : (
               <View style={styles.emptyReviews}>
-                <Star size={18} color={C.dim} />
-                <Text style={styles.emptySectionText}>{t('workerDetails.noReviews')}</Text>
+                <Star size={18} color={colors.text.dim} />
+                <Text style={[styles.emptySectionText, { color: colors.text.dim }]}>{t('workerDetails.noReviews')}</Text>
               </View>
             )}
           </Animated.View>
@@ -358,24 +462,42 @@ export default function WorkerDetailsScreen() {
 
         {(!hasBooking || hasActiveBooking) && (
           <View style={[styles.dock, { paddingBottom: insets.bottom + 12 }]}>
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
-            <View style={styles.dockLine} />
+            <BlurView intensity={80} tint={theme.blurTint} style={StyleSheet.absoluteFillObject} />
+            <View style={[styles.dockLine, { backgroundColor: colors.border.subtle }]} />
             <View style={[styles.dockRow, hasActiveBooking && styles.bookingDockRow]}>
               <TouchableOpacity
-                style={[styles.dockButton, hasActiveBooking && styles.bookingDockButton]}
+                style={[
+                  styles.dockButton, 
+                  hasActiveBooking && styles.bookingDockButton,
+                  {
+                    backgroundColor: theme.isDark ? 'rgba(0,245,255,0.07)' : alpha(legacyColors.cyan, 0.05),
+                    borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : colors.border.subtle,
+                  }
+                ]}
                 onPress={hasActiveBooking ? openChat : shareProfile}
                 activeOpacity={0.8}
               >
-                {hasActiveBooking ? <MessageSquare size={19} color={C.cyan} /> : <Share2 size={19} color={C.cyan} />}
+                {hasActiveBooking ? <MessageSquare size={19} color={legacyColors.cyan} /> : <Share2 size={19} color={legacyColors.cyan} />}
               </TouchableOpacity>
               {hasActiveBooking && (
-                <TouchableOpacity style={[styles.dockButton, styles.bookingDockButton]} onPress={callWorker} activeOpacity={0.8}>
-                  <Phone size={19} color={C.green} />
+                <TouchableOpacity 
+                  style={[
+                    styles.dockButton, 
+                    styles.bookingDockButton,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(0,232,135,0.07)' : alpha(legacyColors.green, 0.05),
+                      borderColor: theme.isDark ? 'rgba(0,232,135,0.2)' : colors.border.subtle,
+                    }
+                  ]} 
+                  onPress={callWorker} 
+                  activeOpacity={0.8}
+                >
+                  <Phone size={19} color={legacyColors.green} />
                 </TouchableOpacity>
               )}
               {!hasBooking && (
                 <TouchableOpacity style={styles.primaryAction} onPress={handlePrimaryAction} activeOpacity={0.86} disabled={isAccepting}>
-                  <LinearGradient colors={[C.cyan, C.blue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
+                  <LinearGradient colors={[legacyColors.cyan, C.blue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
                   {isAccepting ? (
                     <ActivityIndicator color="#001018" size="small" />
                   ) : (
@@ -406,11 +528,12 @@ function Metric({
   label: string;
   color: string;
 }) {
+  const theme = useTheme();
   return (
     <View style={styles.metric}>
       <Icon size={16} color={color} />
-      <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={[styles.metricLabel, { color: theme.colors.text.dim }]}>{label}</Text>
     </View>
   );
 }
@@ -426,13 +549,14 @@ function SectionTitle({
   color: string;
   right?: React.ReactNode;
 }) {
+  const theme = useTheme();
   return (
     <View style={styles.sectionHeading}>
       <View style={[styles.sectionIcon, { backgroundColor: `${color}12` }]}>
         <Icon size={14} color={color} />
       </View>
       <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
-      <View style={[styles.sectionLine, { backgroundColor: `${color}35` }]} />
+      <View style={[styles.sectionLine, { backgroundColor: theme.isDark ? `${color}35` : theme.colors.border.subtle }]} />
       {right}
     </View>
   );
@@ -440,27 +564,42 @@ function SectionTitle({
 
 function ReviewItem({ review, isLast }: { review: any; isLast: boolean }) {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const colors = theme.colors;
+  const legacyColors = theme.legacy;
   const clientName = review.customer?.fullName || t('jobDetails.client');
   return (
-    <View style={[styles.reviewItem, !isLast && styles.reviewDivider]}>
+    <View style={[
+      styles.reviewItem, 
+      !isLast && [styles.reviewDivider, { borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle }]
+    ]}>
       <View style={styles.reviewHeader}>
-        <View style={styles.reviewAvatar}>
+        <View style={[
+          styles.reviewAvatar,
+          {
+            borderColor: theme.isDark ? 'rgba(255,176,0,0.2)' : colors.border.subtle,
+            backgroundColor: theme.isDark ? 'rgba(255,176,0,0.08)' : colors.surface.subtle,
+          }
+        ]}>
           {review.customer?.profileImage ? (
             <Image source={{ uri: review.customer.profileImage }} style={styles.reviewAvatarImage} />
           ) : (
-            <Text style={styles.reviewAvatarText}>{initialsFor(clientName)}</Text>
+            <Text style={[styles.reviewAvatarText, { color: C.amber }]}>{initialsFor(clientName)}</Text>
           )}
         </View>
         <View style={styles.reviewCopy}>
-          <Text style={styles.reviewerName}>{clientName}</Text>
-          <Text style={styles.reviewDate}>{formatDate(review.createdAt, i18n.language)}</Text>
+          <Text style={[styles.reviewerName, { color: colors.text.primary }]}>{clientName}</Text>
+          <Text style={[styles.reviewDate, { color: colors.text.dim }]}>{formatDate(review.createdAt, i18n.language)}</Text>
         </View>
-        <View style={styles.reviewRating}>
+        <View style={[
+          styles.reviewRating,
+          { backgroundColor: theme.isDark ? 'rgba(255,176,0,0.08)' : colors.surface.subtle }
+        ]}>
           <Star size={12} color={C.amber} fill={C.amber} />
-          <Text style={styles.reviewRatingText}>{review.rating}</Text>
+          <Text style={[styles.reviewRatingText, { color: C.amber }]}>{review.rating}</Text>
         </View>
       </View>
-      {!!review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
+      {!!review.comment && <Text style={[styles.reviewComment, { color: colors.text.muted }]}>{review.comment}</Text>}
     </View>
   );
 }
@@ -468,81 +607,81 @@ function ReviewItem({ review, isLast }: { review: any; isLast: boolean }) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24 },
-  loadingText: { color: C.muted, fontSize: 13, fontWeight: '800' },
-  emptyTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
-  emptyAction: { marginTop: 8, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12, backgroundColor: 'rgba(0,245,255,0.12)' },
-  emptyActionText: { color: C.cyan, fontSize: 12, fontWeight: '900' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerButton: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', backgroundColor: 'rgba(4,9,26,0.78)' },
+  loadingText: { fontSize: 13, fontWeight: '800' },
+  emptyTitle: { fontSize: 18, fontWeight: '900' },
+  emptyAction: { marginTop: 8, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
+  emptyActionText: { fontSize: 12, fontWeight: '900' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  headerButton: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   headerCopy: { flex: 1, alignItems: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
-  headerEyebrow: { color: C.dim, fontSize: 9, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
-  headerTitle: { color: C.text, fontSize: 18, fontWeight: '900' },
+  headerEyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '900' },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
-  heroCard: { overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', padding: 15, marginBottom: 12, backgroundColor: C.surface },
+  heroCard: { overflow: 'hidden', borderRadius: 20, borderWidth: 1, padding: 15, marginBottom: 12 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
-  avatarShell: { width: 82, height: 82, borderRadius: 24, padding: 3, borderWidth: 2, borderColor: 'rgba(0,245,255,0.74)', backgroundColor: 'rgba(0,245,255,0.09)' },
+  avatarShell: { width: 82, height: 82, borderRadius: 24, padding: 3, borderWidth: 2 },
   avatar: { width: '100%', height: '100%', borderRadius: 20 },
-  avatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(0,245,255,0.11)' },
-  avatarFallbackText: { color: C.cyan, fontSize: 24, fontWeight: '900' },
-  availabilityDot: { position: 'absolute', bottom: 0, right: 0, width: 15, height: 15, borderRadius: 999, borderWidth: 2, borderColor: '#071024', backgroundColor: C.green },
-  availabilityDotBusy: { backgroundColor: C.dim },
+  avatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
+  avatarFallbackText: { fontSize: 24, fontWeight: '900' },
+  availabilityDot: { position: 'absolute', bottom: 0, right: 0, width: 15, height: 15, borderRadius: 999, borderWidth: 2, backgroundColor: '#00E887' },
+  availabilityDotBusy: { backgroundColor: '#6E778C' },
   heroCopy: { flex: 1, minWidth: 0 },
   heroBadgeRow: { flexDirection: 'row', marginBottom: 7 },
   verificationPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,232,135,0.24)', backgroundColor: 'rgba(0,232,135,0.08)' },
   verificationPillPending: { borderColor: 'rgba(255,176,0,0.24)', backgroundColor: 'rgba(255,176,0,0.08)' },
-  verificationText: { color: C.green, fontSize: 8, fontWeight: '900', letterSpacing: 0.6 },
-  verificationTextPending: { color: C.amber },
-  workerName: { color: C.text, fontSize: 22, fontWeight: '900', marginBottom: 3 },
-  workerCategory: { color: C.cyan, fontSize: 10, fontWeight: '900', letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 8 },
+  verificationText: { fontSize: 8, fontWeight: '900', letterSpacing: 0.6 },
+  verificationTextPending: { color: '#FFB000' },
+  workerName: { fontSize: 22, fontWeight: '900', marginBottom: 3 },
+  workerCategory: { fontSize: 10, fontWeight: '900', letterSpacing: 1.3, textTransform: 'uppercase', marginBottom: 8 },
   locationLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  locationText: { flex: 1, color: C.muted, fontSize: 11, fontWeight: '700' },
-  heroDivider: { height: 1, marginVertical: 14, backgroundColor: 'rgba(255,255,255,0.08)' },
+  locationText: { flex: 1, fontSize: 11, fontWeight: '700' },
+  heroDivider: { height: 1, marginVertical: 14 },
   heroBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   ratingBlock: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 },
   ratingStars: { flexDirection: 'row', gap: 2 },
-  ratingText: { color: C.amber, fontSize: 12, fontWeight: '900' },
-  ratingMeta: { color: C.dim, fontSize: 10, fontWeight: '700' },
+  ratingText: { fontSize: 12, fontWeight: '900' },
+  ratingMeta: { fontSize: 10, fontWeight: '700' },
   availabilityPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(0,232,135,0.08)', borderWidth: 1, borderColor: 'rgba(0,232,135,0.20)' },
   availabilityPillBusy: { backgroundColor: 'rgba(110,119,140,0.08)', borderColor: 'rgba(110,119,140,0.2)' },
-  availabilityMiniDot: { width: 6, height: 6, borderRadius: 999, backgroundColor: C.green },
-  availabilityLabel: { color: C.green, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
-  availabilityLabelBusy: { color: C.dim },
-  statsStrip: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 13, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, marginBottom: 12 },
+  availabilityMiniDot: { width: 6, height: 6, borderRadius: 999 },
+  availabilityLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  availabilityLabelBusy: { color: '#6E778C' },
+  statsStrip: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 13, borderRadius: 18, borderWidth: 1, marginBottom: 12 },
   metric: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' },
-  metricDivider: { width: 1, marginVertical: 5, backgroundColor: 'rgba(255,255,255,0.08)' },
-  metricValue: { maxWidth: '100%', color: C.text, fontSize: 14, fontWeight: '900', marginTop: 7, paddingHorizontal: 4 },
-  metricLabel: { color: C.dim, fontSize: 8, fontWeight: '900', letterSpacing: 0.9, marginTop: 4 },
-  sectionCard: { padding: 15, borderRadius: 18, borderWidth: 1, borderColor: C.border, backgroundColor: C.surface, marginBottom: 12 },
+  metricDivider: { width: 1, marginVertical: 5 },
+  metricValue: { maxWidth: '100%', fontSize: 14, fontWeight: '900', marginTop: 7, paddingHorizontal: 4 },
+  metricLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 0.9, marginTop: 4 },
+  sectionCard: { padding: 15, borderRadius: 18, borderWidth: 1, marginBottom: 12 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 13 },
   sectionIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   sectionLine: { flex: 1, height: 1 },
-  sectionCount: { color: C.dim, fontSize: 9, fontWeight: '900' },
-  bioText: { color: C.muted, fontSize: 13, lineHeight: 20, fontWeight: '600' },
+  sectionCount: { fontSize: 9, fontWeight: '900' },
+  bioText: { fontSize: 13, lineHeight: 20, fontWeight: '600' },
   skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  skillPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,245,255,0.16)', backgroundColor: 'rgba(0,245,255,0.05)' },
-  skillText: { color: C.muted, fontSize: 11, fontWeight: '800' },
+  skillPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
+  skillText: { fontSize: 11, fontWeight: '800' },
   reviewsLoader: { paddingVertical: 16 },
   emptyReviews: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
-  emptySectionText: { color: C.dim, fontSize: 12, lineHeight: 18, fontWeight: '700' },
+  emptySectionText: { fontSize: 12, lineHeight: 18, fontWeight: '700' },
   reviewItem: { paddingVertical: 10 },
-  reviewDivider: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  reviewDivider: { borderBottomWidth: 1 },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  reviewAvatar: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,176,0,0.2)', backgroundColor: 'rgba(255,176,0,0.08)' },
+  reviewAvatar: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1 },
   reviewAvatarImage: { width: '100%', height: '100%' },
-  reviewAvatarText: { color: C.amber, fontSize: 12, fontWeight: '900' },
+  reviewAvatarText: { fontSize: 12, fontWeight: '900' },
   reviewCopy: { flex: 1 },
-  reviewerName: { color: C.text, fontSize: 12, fontWeight: '900', marginBottom: 3 },
-  reviewDate: { color: C.dim, fontSize: 10, fontWeight: '700' },
-  reviewRating: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,176,0,0.08)' },
-  reviewRatingText: { color: C.amber, fontSize: 11, fontWeight: '900' },
-  reviewComment: { color: C.muted, fontSize: 12, lineHeight: 18, fontWeight: '600', marginTop: 8 },
+  reviewerName: { fontSize: 12, fontWeight: '900', marginBottom: 3 },
+  reviewDate: { fontSize: 10, fontWeight: '700' },
+  reviewRating: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 5, borderRadius: 999 },
+  reviewRatingText: { fontSize: 11, fontWeight: '900' },
+  reviewComment: { fontSize: 12, lineHeight: 18, fontWeight: '600', marginTop: 8 },
   dock: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingTop: 12, overflow: 'hidden' },
-  dockLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: C.border },
+  dockLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 1 },
   dockRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 16 },
   bookingDockRow: { justifyContent: 'center' },
-  dockButton: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,245,255,0.18)', backgroundColor: 'rgba(0,245,255,0.07)' },
+  dockButton: { width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   bookingDockButton: { width: 68 },
   primaryAction: { flex: 1, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, overflow: 'hidden', borderRadius: 15 },
   primaryActionText: { color: '#001018', fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },

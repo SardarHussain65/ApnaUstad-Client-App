@@ -78,10 +78,24 @@ interface CategoryCardProps {
 }
 
 const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => {
+  const theme = useTheme();
+  const colors = useThemeColors();
   const Icon = getIconForCategory(cat);
   const gradient: [string, string] = cat.color
     ? [cat.color, `${cat.color}40`]
     : DEFAULT_GRADIENT;
+
+  const cardBorderColor = cat.color
+    ? alpha(cat.color, theme.isDark ? 0.28 : 0.24)
+    : theme.colors.border.default;
+
+  const iconBgColor = cat.color
+    ? alpha(cat.color, theme.isDark ? 0.20 : 0.15)
+    : (theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
+
+  const iconColor = cat.color
+    ? cat.color
+    : (theme.isDark ? '#fff' : '#111827');
 
   return (
     <Animated.View
@@ -89,16 +103,21 @@ const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => 
       style={styles.categoryCardWrapper}
     >
       <GlassCard
-        style={styles.categoryItem}
+        style={[
+          styles.categoryItem,
+          {
+            borderColor: cardBorderColor,
+          }
+        ]}
         contentStyle={styles.categoryItemContent}
         onPress={() => onPress(cat)}
         gradient={gradient}
         padding={0}
       >
-        <View style={styles.categoryIconBox}>
-          <Icon size={22} color="#fff" strokeWidth={2} />
+        <View style={[styles.categoryIconBox, { backgroundColor: iconBgColor }]}>
+          <Icon size={22} color={iconColor} strokeWidth={2} />
         </View>
-        <Text style={styles.categoryTitle} numberOfLines={2}>
+        <Text style={[styles.categoryTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
           {cat.name}
         </Text>
       </GlassCard>

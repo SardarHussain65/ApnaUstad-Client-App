@@ -43,7 +43,7 @@ import {
 } from 'lucide-react-native';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { Typography } from '../constants/Theme';
+import { Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
 import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
@@ -229,6 +229,8 @@ function FloatingAction({
 }
 
 export default function TransactionDetailsScreen() {
+  const theme = useTheme();
+  const colors = useThemeColors();
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -410,16 +412,43 @@ export default function TransactionDetailsScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.root}>
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} activeOpacity={0.8}>
-            <ChevronLeft color={P.text} size={22} strokeWidth={2.4} />
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 8,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : theme.colors.background.screen,
+            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+          }
+        ]}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+              }
+            ]} 
+            activeOpacity={0.8}
+          >
+            <ChevronLeft color={theme.colors.text.primary} size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerEyebrow}>{t('transactionDetails.bookingDetails', 'Booking Details')}</Text>
-            <Text style={styles.headerTitle}>{t('transactionDetails.overview', 'Overview')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('transactionDetails.bookingDetails', 'Booking Details')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('transactionDetails.overview', 'Overview')}</Text>
           </View>
-          <TouchableOpacity onPress={shareMission} style={styles.headerButton} activeOpacity={0.8}>
-            <Share2 color={P.textMuted} size={19} strokeWidth={2.3} />
+          <TouchableOpacity 
+            onPress={shareMission} 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+              }
+            ]} 
+            activeOpacity={0.8}
+          >
+            <Share2 color={theme.colors.text.primary} size={19} strokeWidth={2.3} />
           </TouchableOpacity>
         </View>
 

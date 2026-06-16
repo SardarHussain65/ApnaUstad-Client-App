@@ -3,8 +3,9 @@ import { StyleSheet, View, Text, Modal, ScrollView, TouchableOpacity } from 'rea
 import { BlurView } from 'expo-blur';
 import { ChevronUp, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { P } from './shared';
+import { P, useJobCreationPalette } from './shared';
 import { useTranslation } from 'react-i18next';
+import { useTheme, alpha } from '../../constants/Theme';
 
 interface SchedulePickerModalProps {
   visible: boolean;
@@ -22,6 +23,8 @@ export function SchedulePickerModal({
   initialTime,
 }: SchedulePickerModalProps) {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
+  const palette = useJobCreationPalette();
   const [tempDate, setTempDate] = useState<Date>(initialDate);
   const [tempTime, setTempTime] = useState<string>(initialTime);
 
@@ -81,13 +84,19 @@ export function SchedulePickerModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.backdrop}>
-        <BlurView intensity={35} style={StyleSheet.absoluteFill} tint="dark" />
-        <View style={styles.container}>
-          <Text style={styles.title}>{t('jobCreation.scheduleVisit', 'Schedule Visit')}</Text>
-          <Text style={styles.subtitle}>{t('jobCreation.chooseDateTime', 'Choose a date and time for the service')}</Text>
+        <BlurView intensity={35} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
+        <View style={[
+          styles.container,
+          {
+            backgroundColor: palette.surface,
+            borderColor: palette.border,
+          }
+        ]}>
+          <Text style={[styles.title, { color: palette.textPrimary }]}>{t('jobCreation.scheduleVisit', 'Schedule Visit')}</Text>
+          <Text style={[styles.subtitle, { color: palette.textSecondary }]}>{t('jobCreation.chooseDateTime', 'Choose a date and time for the service')}</Text>
 
           {/* Date Horizontal Picker */}
-          <Text style={styles.sectionTitle}>{t('jobCreation.selectDate', 'Select Date')}</Text>
+          <Text style={[styles.sectionTitle, { color: palette.textSecondary }]}>{t('jobCreation.selectDate', 'Select Date')}</Text>
           <View style={styles.dateScrollWrapper}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
               {getNext14Days().map((day, idx) => {
@@ -97,18 +106,22 @@ export function SchedulePickerModal({
                     key={idx}
                     style={[
                        styles.dateCard,
-                       isSelected && { borderColor: P.orange, backgroundColor: 'rgba(255, 107, 0, 0.15)' },
+                       {
+                         backgroundColor: palette.surfaceRaised,
+                         borderColor: palette.border,
+                       },
+                       isSelected && { borderColor: palette.orange, backgroundColor: alpha(palette.orange, 0.15) },
                     ]}
                     onPress={() => handleDateSelect(day)}
                     activeOpacity={0.75}
                   >
-                    <Text style={[styles.dateDayText, isSelected && { color: P.orange }]}>
+                    <Text style={[styles.dateDayText, { color: palette.textMuted }, isSelected && { color: palette.orange }]}>
                       {day.toLocaleDateString(i18n.language === 'ur' ? 'ur-PK' : 'en-US', { weekday: 'short' })}
                     </Text>
-                    <Text style={[styles.dateNumText, isSelected && { color: P.orange }]}>
+                    <Text style={[styles.dateNumText, { color: palette.textPrimary }, isSelected && { color: palette.orange }]}>
                       {day.getDate()}
                     </Text>
-                    <Text style={styles.dateMonthText}>
+                    <Text style={[styles.dateMonthText, { color: palette.textMuted }]}>
                       {day.toLocaleDateString(i18n.language === 'ur' ? 'ur-PK' : 'en-US', { month: 'short' })}
                     </Text>
                   </TouchableOpacity>
@@ -118,29 +131,29 @@ export function SchedulePickerModal({
           </View>
 
           {/* Time Picker Block */}
-          <Text style={styles.sectionTitle}>{t('jobCreation.adjustTime', 'Adjust Time (24h)')}</Text>
+          <Text style={[styles.sectionTitle, { color: palette.textSecondary }]}>{t('jobCreation.adjustTime', 'Adjust Time (24h)')}</Text>
           <View style={styles.timeRow}>
             {/* Hours Column */}
             <View style={styles.timeCol}>
               <TouchableOpacity style={styles.timeBtn} onPress={() => handleAdjustHour(1)} activeOpacity={0.7}>
-                <ChevronUp size={22} color={P.textSecondary} strokeWidth={2.5} />
+                <ChevronUp size={22} color={palette.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
-              <Text style={styles.timeVal}>{tempTime.split(':')[0]}</Text>
+              <Text style={[styles.timeVal, { color: palette.textPrimary }]}>{tempTime.split(':')[0]}</Text>
               <TouchableOpacity style={styles.timeBtn} onPress={() => handleAdjustHour(-1)} activeOpacity={0.7}>
-                <ChevronDown size={22} color={P.textSecondary} strokeWidth={2.5} />
+                <ChevronDown size={22} color={palette.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.timeColon}>:</Text>
+            <Text style={[styles.timeColon, { color: palette.textSecondary }]}>:</Text>
 
             {/* Minutes Column */}
             <View style={styles.timeCol}>
               <TouchableOpacity style={styles.timeBtn} onPress={() => handleAdjustMinute(5)} activeOpacity={0.7}>
-                <ChevronUp size={22} color={P.textSecondary} strokeWidth={2.5} />
+                <ChevronUp size={22} color={palette.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
-              <Text style={styles.timeVal}>{tempTime.split(':')[1]}</Text>
+              <Text style={[styles.timeVal, { color: palette.textPrimary }]}>{tempTime.split(':')[1]}</Text>
               <TouchableOpacity style={styles.timeBtn} onPress={() => handleAdjustMinute(-5)} activeOpacity={0.7}>
-                <ChevronDown size={22} color={P.textSecondary} strokeWidth={2.5} />
+                <ChevronDown size={22} color={palette.textSecondary} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
           </View>
@@ -149,13 +162,13 @@ export function SchedulePickerModal({
           <View style={styles.statusContainer}>
             {isScheduleValid ? (
               <View style={[styles.statusPill, { backgroundColor: 'rgba(0, 230, 118, 0.08)', borderColor: 'rgba(0, 230, 118, 0.2)' }]}>
-                <CheckCircle2 size={13} color={P.success} />
-                <Text style={[styles.statusText, { color: P.success }]}>{t('jobCreation.scheduleAvailable', 'SCHEDULE IS AVAILABLE')}</Text>
+                <CheckCircle2 size={13} color={palette.success} />
+                <Text style={[styles.statusText, { color: palette.success }]}>{t('jobCreation.scheduleAvailable', 'SCHEDULE IS AVAILABLE')}</Text>
               </View>
             ) : (
               <View style={[styles.statusPill, { backgroundColor: 'rgba(255, 107, 0, 0.08)', borderColor: 'rgba(255, 107, 0, 0.2)' }]}>
-                <AlertCircle size={13} color={P.orange} />
-                <Text style={[styles.statusText, { color: P.orange }]}>{t('jobCreation.chooseOneHourLater', 'CHOOSE AT LEAST 1 HOUR FROM NOW')}</Text>
+                <AlertCircle size={13} color={palette.orange} />
+                <Text style={[styles.statusText, { color: palette.orange }]}>{t('jobCreation.chooseOneHourLater', 'CHOOSE AT LEAST 1 HOUR FROM NOW')}</Text>
               </View>
             )}
           </View>
@@ -163,23 +176,33 @@ export function SchedulePickerModal({
           {/* Action buttons */}
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={[styles.btn, styles.btnCancel]}
+              style={[
+                styles.btn, 
+                styles.btnCancel,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : alpha(theme.colors.text.primary, 0.04),
+                  borderColor: palette.border,
+                }
+              ]}
               onPress={onDismiss}
               activeOpacity={0.75}
             >
-              <Text style={styles.btnCancelText}>{t('common.cancel', 'Cancel')}</Text>
+              <Text style={[styles.btnCancelText, { color: palette.textSecondary }]}>{t('common.cancel', 'Cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.btn,
                 styles.btnSave,
+                {
+                  backgroundColor: palette.orange,
+                },
                 !isScheduleValid && { opacity: 0.4 },
               ]}
               disabled={!isScheduleValid}
               onPress={handleSave}
               activeOpacity={0.75}
             >
-              <Text style={styles.btnSaveText}>{t('jobCreation.lockSchedule', 'Lock Schedule')}</Text>
+              <Text style={[styles.btnSaveText, { color: theme.isDark ? '#001014' : '#ffffff' }]}>{t('jobCreation.lockSchedule', 'Lock Schedule')}</Text>
             </TouchableOpacity>
           </View>
         </View>

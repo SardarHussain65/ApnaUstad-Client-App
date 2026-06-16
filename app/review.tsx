@@ -29,7 +29,7 @@ import {
 } from 'lucide-react-native';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Spacing, Typography, useThemeColors } from '../constants/Theme';
+import { Spacing, Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
 import { useBookingDetails, useCreateReviewMutation, useToast } from '../hooks';
 
 const RATING_LABELS: Record<number, string> = {
@@ -72,6 +72,7 @@ export default function ReviewScreen() {
   const toast = useToast();
   const { t } = useTranslation();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const theme = useTheme();
   const colors = useThemeColors();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -172,13 +173,31 @@ export default function ReviewScreen() {
         style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
-            <ChevronLeft color="#fff" size={22} strokeWidth={2.4} />
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 10,
+            borderBottomWidth: 1,
+            borderBottomColor: theme.isDark ? 'transparent' : theme.colors.border.subtle,
+            backgroundColor: theme.isDark ? 'transparent' : theme.colors.background.screen,
+          }
+        ]}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={[
+              styles.backBtn,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+              }
+            ]} 
+            activeOpacity={0.8}
+          >
+            <ChevronLeft color={theme.colors.text.primary} size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{t('review.jobFeedback', 'JOB FEEDBACK')}</Text>
-            <Text style={[styles.headerTitle, Typography.threeD]}>{t('review.rateYourUstad', 'Rate Your Ustad')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('review.jobFeedback', 'JOB FEEDBACK')}</Text>
+            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('review.rateYourUstad', 'Rate Your Ustad')}</Text>
           </View>
           <View style={{ width: 44 }} />
         </View>

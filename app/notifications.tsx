@@ -37,7 +37,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Spacing, Typography, useTheme } from '../constants/Theme';
+import { Spacing, Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
 import { useMarkNotificationReadMutation, useNotifications, type AppNotification } from '../hooks';
 import { socketService } from '../services/socketService';
 
@@ -55,7 +55,8 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const theme = useTheme();
-  const colors = theme.legacy;
+  const colors = useThemeColors();
+  const legacyColors = theme.legacy;
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data, isLoading, isRefetching, refetch } = useNotifications();
   const { mutate: markRead, isPending: isMarkingRead } = useMarkNotificationReadMutation();
@@ -108,16 +109,31 @@ export default function NotificationsScreen() {
     <BackgroundWrapper>
       <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
         <Animated.View entering={FadeInUp.duration(520)} style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-            <ChevronLeft color="#fff" size={24} />
+          <TouchableOpacity 
+            style={[
+              styles.backBtn,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.07)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.14)' : theme.colors.border.subtle,
+              }
+            ]} 
+            onPress={() => router.back()} 
+            activeOpacity={0.8}
+          >
+            <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
 
           <View style={styles.headerText}>
-            <Text style={styles.headerEyebrow}>{t('notifications.eyebrow')}</Text>
-            <Text style={[styles.headerTitle, Typography.threeD]}>{t('notifications.title')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('notifications.eyebrow')}</Text>
+            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('notifications.title')}</Text>
           </View>
 
-          <View style={styles.unreadPill}>
+          <View style={[
+            styles.unreadPill,
+            {
+              borderColor: theme.isDark ? 'rgba(0,245,255,0.42)' : theme.colors.border.subtle,
+            }
+          ]}>
             <LinearGradient
               colors={['rgba(0,245,255,0.28)', 'rgba(191,90,242,0.14)']}
               style={StyleSheet.absoluteFill}
@@ -131,7 +147,7 @@ export default function NotificationsScreen() {
             padding={0}
             intensity={28}
             hasGlow={unreadCount > 0}
-            glowColor={colors.cyan}
+            glowColor={theme.colors.brand.primary}
             style={styles.summaryCard}
             contentStyle={styles.summaryContent}
           >

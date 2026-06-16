@@ -46,7 +46,8 @@ export function GlassCard({
   const fallbackBackground = theme.id === 'current'
     ? alpha(theme.legacy.surface, 0.6)
     : theme.colors.surface.card;
-  const gradientOpacity = theme.id === 'current' ? 0.35 : 0.08;
+  const gradientOpacity = theme.id === 'current' ? 0.35 : (theme.id === 'light' ? 0.20 : 0.16);
+  const androidGradientOpacity = theme.id === 'current' ? 0.4 : (theme.id === 'light' ? 0.22 : 0.18);
   const highlightColor = theme.id === 'current'
     ? alpha('#FFFFFF', 0.2)
     : alpha(theme.colors.text.primary, 0.06);
@@ -104,7 +105,7 @@ export function GlassCard({
               colors={gradient as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFill, { opacity: theme.id === 'current' ? 0.4 : 0.08 }]}
+              style={[StyleSheet.absoluteFill, { opacity: androidGradientOpacity }]}
             />
           )}
           <View style={[styles.highlight, { backgroundColor: highlightColor }]} />

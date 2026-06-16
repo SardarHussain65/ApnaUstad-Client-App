@@ -147,6 +147,7 @@ export default function PendingBidDetailsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const colors = theme.legacy;
+  const themeColors = useThemeColors();
   const shadows = useThemeShadows();
   const params = useLocalSearchParams<{ id?: string; pendingBidId?: string }>();
   const { data: bids, isLoading: isLoadingBids, refetch: refetchBids } = useWorkerBids();
@@ -280,14 +281,31 @@ export default function PendingBidDetailsScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.root}>
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 8,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : theme.colors.background.screen,
+            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+          }
+        ]}>
+          <TouchableOpacity 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+              }
+            ]} 
+            onPress={() => router.back()} 
+            activeOpacity={0.8}
+          >
             <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{t('pendingBidDetails.activeBid')}</Text>
-            <Text style={styles.headerTitle}>{t('pendingBidDetails.proposalDetails')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.brand.worker }]}>{t('pendingBidDetails.activeBid')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('pendingBidDetails.proposalDetails')}</Text>
           </View>
 
           <View style={styles.headerSpacer} />

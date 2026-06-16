@@ -100,7 +100,14 @@ export default function CategoryDetailsScreen() {
         >
           {/* Main Hero Text & Graphic */}
           <Animated.View entering={FadeInDown.delay(100).duration(800)} style={styles.heroSection}>
-            <View style={[styles.glowingOrb, { shadowColor: themeColor, borderColor: themeColor + '60' }]}>
+            <View style={[
+              styles.glowingOrb,
+              {
+                shadowColor: themeColor,
+                borderColor: theme.isDark ? alpha(themeColor, 0.45) : alpha(themeColor, 0.4),
+                backgroundColor: theme.isDark ? alpha(themeColor, 0.20) : alpha(themeColor, 0.15),
+              }
+            ]}>
               <Sparkles color={themeColor} size={40} />
             </View>
             <Text style={[styles.heroSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.selectMethod')}</Text>

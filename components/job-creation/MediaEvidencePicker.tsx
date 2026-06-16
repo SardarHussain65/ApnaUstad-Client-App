@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { SectionLabel, P, useJobCreationPalette } from './shared';
 import { useTranslation } from 'react-i18next';
+import { addAlpha } from '../../utils/colorUtils';
 
 type EvidenceAsset = { uri: string; type: 'image' | 'video' };
 
@@ -38,9 +39,19 @@ export function MediaEvidencePicker({
       {!hideLabel && <SectionLabel icon={Camera} label={t('jobCreation.photosOrVideo', 'PHOTOS OR VIDEO')} color={palette.purple} badge={t('common.optional', 'Optional')} />}
 
       {selectedMedia.length === 0 ? (
-        <TouchableOpacity activeOpacity={0.75} onPress={onPickMedia} style={styles.dropzone}>
+        <TouchableOpacity 
+          activeOpacity={0.75} 
+          onPress={onPickMedia} 
+          style={[
+            styles.dropzone,
+            {
+              backgroundColor: palette.surfaceRaised,
+              borderColor: addAlpha(palette.textMuted, '50'),
+            }
+          ]}
+        >
           {/* Glow scan line */}
-          <View style={styles.scanLine} />
+          <View style={[styles.scanLine, { backgroundColor: palette.purple }]} />
           <View style={styles.dropzoneContent}>
             <View style={[styles.cameraIconWrap, { borderColor: `${palette.purple}40`, backgroundColor: palette.purpleMuted }]}>
               <Camera size={26} color={palette.purple} strokeWidth={1.5} />
@@ -55,7 +66,13 @@ export function MediaEvidencePicker({
           <View style={[styles.bracket, styles.bracketBR, { borderColor: `${palette.purple}30` }]} />
         </TouchableOpacity>
       ) : (
-        <View style={styles.imageGrid}>
+        <View style={[
+          styles.imageGrid,
+          {
+            backgroundColor: palette.surfaceRaised,
+            borderColor: palette.border,
+          }
+        ]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -66,9 +83,9 @@ export function MediaEvidencePicker({
                 {asset.type === 'image' ? (
                   <Image source={{ uri: asset.uri }} style={styles.thumbImg} />
                 ) : (
-                  <View style={styles.videoThumb}>
+                  <View style={[styles.videoThumb, { backgroundColor: palette.purpleMuted }]}>
                     <PlayCircle size={28} color={palette.purple} strokeWidth={1.7} />
-                    <Text style={styles.videoThumbText}>{t('common.video', 'Video')}</Text>
+                    <Text style={[styles.videoThumbText, { color: palette.textSecondary }]}>{t('common.video', 'Video')}</Text>
                   </View>
                 )}
                 <LinearGradient
@@ -79,7 +96,7 @@ export function MediaEvidencePicker({
                   <Text style={styles.thumbIndex}>{i + 1}</Text>
                 </View>
                 <View style={styles.thumbTypeBadge}>
-                  <Text style={styles.thumbTypeText}>{asset.type === 'video' ? t('jobCreation.vidBadge', 'VID') : t('jobCreation.imgBadge', 'IMG')}</Text>
+                  <Text style={[styles.thumbTypeText, { color: palette.purple }]}>{asset.type === 'video' ? t('jobCreation.vidBadge', 'VID') : t('jobCreation.imgBadge', 'IMG')}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.removeMediaBtn}
@@ -91,7 +108,16 @@ export function MediaEvidencePicker({
               </View>
             ))}
             {selectedMedia.length < 5 && (
-              <TouchableOpacity onPress={onPickMedia} style={styles.addMoreBtn} activeOpacity={0.7}>
+              <TouchableOpacity 
+                onPress={onPickMedia} 
+                style={[
+                  styles.addMoreBtn,
+                  {
+                    borderColor: palette.border,
+                  }
+                ]} 
+                activeOpacity={0.7}
+              >
                 <Plus size={20} color={palette.textSecondary} />
                 <Text style={[styles.addMoreText, { color: palette.textMuted }]}>{t('common.add', 'Add')}</Text>
               </TouchableOpacity>
@@ -102,7 +128,16 @@ export function MediaEvidencePicker({
             <Text style={[styles.mediaSummaryDot, { color: palette.textMuted }]}>•</Text>
             <Text style={[styles.mediaSummaryText, { color: palette.textSecondary }]}>{t('jobCreation.videosCount', '{{count}} videos', { count: selectedVideoCount })}</Text>
           </View>
-          <TouchableOpacity onPress={onClearAll} style={styles.clearImages} activeOpacity={0.7}>
+          <TouchableOpacity 
+            onPress={onClearAll} 
+            style={[
+              styles.clearImages,
+              {
+                borderTopColor: palette.border,
+              }
+            ]} 
+            activeOpacity={0.7}
+          >
             <Text style={[styles.clearImagesText, { color: palette.textSecondary }]}>{t('jobCreation.clearAllMedia', 'Clear all media')}</Text>
           </TouchableOpacity>
         </View>

@@ -53,6 +53,7 @@ import { AlertModal, ConfirmModal } from '../components/ui';
 import { useConfirmModal, useCreateJobMutation, useToast, useUploadJobImagesMutation } from '../hooks';
 import { addAlpha } from '../utils/colorUtils';
 import { useTranslation } from 'react-i18next';
+import { useTheme, alpha } from '../constants/Theme';
 
 // Sub-components
 import { BudgetInput } from '../components/job-creation/BudgetInput';
@@ -99,6 +100,10 @@ function CollapsibleCard({
   return (
     <View style={[
       styles.collapsibleContainer,
+      {
+        backgroundColor: palette.surfaceRaised,
+        borderColor: palette.border,
+      },
       isExpanded && { borderColor: addAlpha(color, '30') }
     ]}>
       <TouchableOpacity
@@ -111,7 +116,7 @@ function CollapsibleCard({
         </View>
         <View style={styles.collapsibleHeaderText}>
           <Text style={[styles.collapsibleTitle, { color }]}>{title}</Text>
-          <Text style={styles.collapsibleSummary} numberOfLines={1}>{summary}</Text>
+          <Text style={[styles.collapsibleSummary, { color: palette.textSecondary }]} numberOfLines={1}>{summary}</Text>
         </View>
         <View style={styles.collapsibleRight}>
           {isExpanded ? (
@@ -122,7 +127,7 @@ function CollapsibleCard({
         </View>
       </TouchableOpacity>
       {isExpanded && (
-        <View style={styles.collapsibleContent}>
+        <View style={[styles.collapsibleContent, { borderTopColor: palette.border }]}>
           {children}
         </View>
       )}
@@ -135,6 +140,7 @@ export default function JobCreationScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const palette = useJobCreationPalette();
+  const theme = useTheme();
   const { success, error: showError } = useToast();
   const {
     visible: confirmVisible,
@@ -528,17 +534,32 @@ export default function JobCreationScreen() {
 
         {/* ── Header ── */}
         <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            style={[
+              styles.backBtn,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.colors.text.primary, 0.04),
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+              }
+            ]}
+          >
             <ArrowLeft color={palette.textPrimary} size={18} strokeWidth={2} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerEyebrow}>{t('jobCreation.urgent').toUpperCase()}</Text>
-            <Text style={styles.headerTitle}>{t('jobCreation.findUstad')}</Text>
+            <Text style={[styles.headerEyebrow, { color: palette.textMuted }]}>{t('jobCreation.urgent').toUpperCase()}</Text>
+            <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>{t('jobCreation.findUstad')}</Text>
           </View>
 
           {/* Live status indicator */}
-          <View style={styles.liveIndicator}>
+          <View style={[
+            styles.liveIndicator,
+            {
+              backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : alpha(theme.colors.text.primary, 0.03),
+              borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : theme.colors.border.subtle,
+            }
+          ]}>
             <View style={[styles.liveDot, { backgroundColor: isInstant ? palette.cyan : palette.orange }]} />
             <Text style={[styles.liveText, { color: isInstant ? palette.cyan : palette.orange }]}>
               {isInstant ? 'NOW' : 'PLANNED'}
@@ -551,7 +572,7 @@ export default function JobCreationScreen() {
           <UrgencyToggle
             urgency={urgency}
             onChange={setUrgency}
-            colors={P}
+            colors={palette}
           />
         </Animated.View>
 
@@ -668,9 +689,9 @@ export default function JobCreationScreen() {
 
             {/* ── Optional Details Divider ── */}
             <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.optionalDividerRow}>
-              <View style={styles.optionalLine} />
-              <Text style={styles.optionalDividerText}>{t('jobCreation.optionalDetails')}</Text>
-              <View style={styles.optionalLine} />
+              <View style={[styles.optionalLine, { backgroundColor: palette.border }]} />
+              <Text style={[styles.optionalDividerText, { color: palette.textSecondary }]}>{t('jobCreation.optionalDetails')}</Text>
+              <View style={[styles.optionalLine, { backgroundColor: palette.border }]} />
             </Animated.View>
 
             {/* ── Budget / Urgent Fixed Price Card ── */}
@@ -786,14 +807,23 @@ export default function JobCreationScreen() {
           </ScrollView>
 
           {/* ── Persistent Submit Panel ── */}
-          <Animated.View entering={FadeInUp.delay(450).duration(600)} style={styles.stickyFooter}>
+          <Animated.View 
+            entering={FadeInUp.delay(450).duration(600)} 
+            style={[
+              styles.stickyFooter,
+              {
+                backgroundColor: theme.isDark ? 'rgba(4,8,20,0.94)' : alpha(theme.colors.background.elevated, 0.96),
+                borderTopColor: theme.isDark ? 'rgba(0,245,255,0.12)' : theme.colors.border.subtle,
+              }
+            ]}
+          >
             <View style={styles.completionRow}>
               <View style={styles.completionCopy}>
                 <View style={styles.completionTitleRow}>
                   <ShieldCheck size={14} color={completionPercentage === 100 ? palette.success : palette.cyanDim} strokeWidth={2.3} />
-                  <Text style={styles.completionTitle}>{t('jobCreation.requiredDetails')}</Text>
+                  <Text style={[styles.completionTitle, { color: palette.textPrimary }]}>{t('jobCreation.requiredDetails')}</Text>
                 </View>
-                <Text style={styles.completionText}>
+                <Text style={[styles.completionText, { color: palette.textSecondary }]}>
                   {completedStepCount} of {requiredStepCount} filled
                 </Text>
               </View>
@@ -801,7 +831,7 @@ export default function JobCreationScreen() {
                 {completionPercentage}%
               </Text>
             </View>
-            <View style={styles.completionTrack}>
+            <View style={[styles.completionTrack, { backgroundColor: palette.border }]}>
               <LinearGradient
                 colors={completionPercentage === 100 ? [palette.success, palette.cyan] : [palette.cyan, palette.purple]}
                 start={{ x: 0, y: 0 }}

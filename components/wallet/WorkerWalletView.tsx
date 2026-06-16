@@ -90,10 +90,10 @@ function SummaryChip({ label, value, color, theme }: { label: string; value: num
       gradient={[color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]}
     >
       <View style={[styles.chipDot, { backgroundColor: color }]} />
-      <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+      <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
         {formatMoney(value)}
       </Text>
-      <Text style={styles.chipLabel}>{label}</Text>
+      <Text style={[styles.chipLabel, { color: theme.colors.text.muted }]}>{label}</Text>
     </GlassCard>
   );
 }
@@ -363,7 +363,16 @@ export function WorkerWalletView({
           borderColor: alpha(theme.colors.text.primary, 0.06),
         }]}>
           <TouchableOpacity
-            style={[styles.segmentBtn, workerTab === 'wallet' && styles.segmentBtnActive]}
+            style={[
+              styles.segmentBtn,
+              workerTab === 'wallet' && [
+                styles.segmentBtnActive,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.subtle,
+                }
+              ]
+            ]}
             onPress={() => onTabChange('wallet')}
           >
             <Text style={[styles.segmentText, workerTab === 'wallet' && styles.segmentTextActive, {
@@ -373,7 +382,16 @@ export function WorkerWalletView({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segmentBtn, workerTab === 'topups' && styles.segmentBtnActive]}
+            style={[
+              styles.segmentBtn,
+              workerTab === 'topups' && [
+                styles.segmentBtnActive,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.subtle,
+                }
+              ]
+            ]}
             onPress={() => onTabChange('topups')}
           >
             <Text style={[styles.segmentText, workerTab === 'topups' && styles.segmentTextActive, {
@@ -383,7 +401,16 @@ export function WorkerWalletView({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.segmentBtn, workerTab === 'earnings' && styles.segmentBtnActive]}
+            style={[
+              styles.segmentBtn,
+              workerTab === 'earnings' && [
+                styles.segmentBtnActive,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.subtle,
+                }
+              ]
+            ]}
             onPress={() => onTabChange('earnings')}
           >
             <Text style={[styles.segmentText, workerTab === 'earnings' && styles.segmentTextActive, {
