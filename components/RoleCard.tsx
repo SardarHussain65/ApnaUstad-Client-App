@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
 import { GlassCard } from './home/GlassCard';
-import { BorderRadius, Colors, Spacing } from '../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 
 interface RoleCardProps {
   description: string;
@@ -23,35 +23,42 @@ export const RoleCard: React.FC<RoleCardProps> = ({
   title,
   variant,
 }) => {
-  const mainColor = variant === 'client' ? Colors.cyan : Colors.worker;
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
+  const mainColor = variant === 'client' ? colors.cyan : colors.worker;
 
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={styles.touchable}>
       <GlassCard
         contentStyle={styles.cardContent}
         glowColor={mainColor}
-        gradient={[`${mainColor}18`, 'rgba(191,90,242,0.04)']}
+        gradient={[alpha(mainColor, 0.1), alpha(theme.colors.brand.secondary, 0.04)]}
         hasGlow={isSelected}
         intensity={isSelected ? 38 : 20}
         padding={Spacing.m}
         style={[
           styles.container,
+          {
+            borderColor: alpha(mainColor, theme.id === 'light' ? 0.2 : 0.4),
+            backgroundColor: alpha(mainColor, theme.id === 'light' ? 0.03 : 0.04),
+          },
           isSelected && {
-            borderColor: `${mainColor}70`,
-            backgroundColor: `${mainColor}0B`,
+            borderColor: alpha(mainColor, 0.7),
+            backgroundColor: alpha(mainColor, 0.05),
           },
         ]}
       >
-        <View style={[styles.iconContainer, { backgroundColor: `${mainColor}18` }]}>
+        <View style={[styles.iconContainer, { backgroundColor: alpha(mainColor, 0.18), borderColor: alpha(mainColor, theme.id === 'light' ? 0.3 : 0.5) }]}>
           {icon}
         </View>
         <View style={styles.copy}>
           <Text style={[styles.label, { color: mainColor }]}>{label}</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
+          <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{title}</Text>
+          <Text style={[styles.description, { color: theme.colors.text.muted }]}>{description}</Text>
         </View>
         <CheckCircle2
-          color={isSelected ? mainColor : 'rgba(255,255,255,0.18)'}
+          color={isSelected ? mainColor : theme.colors.text.dim}
           size={21}
           strokeWidth={isSelected ? 2.8 : 1.8}
         />
@@ -67,7 +74,7 @@ const styles = StyleSheet.create({
   },
   container: {
     borderRadius: BorderRadius.xl,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
   },
   cardContent: {
     flexDirection: 'row',
@@ -81,7 +88,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: BorderRadius.l,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     marginRight: Spacing.m,
   },
   copy: {
@@ -96,13 +102,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 5,
   },
   description: {
-    color: Colors.textMuted,
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 17,

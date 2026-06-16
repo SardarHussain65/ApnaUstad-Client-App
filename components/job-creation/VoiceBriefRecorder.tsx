@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Mic, Square, Trash2 } from 'lucide-react-native';
-import { SectionLabel, GlassInput, P } from './shared';
+import { SectionLabel, GlassInput, P, useJobCreationPalette } from './shared';
 import { useTranslation } from 'react-i18next';
 
 interface VoiceBriefRecorderProps {
@@ -29,19 +29,26 @@ export function VoiceBriefRecorder({
   hideLabel = false,
 }: VoiceBriefRecorderProps) {
   const { t } = useTranslation();
+  const palette = useJobCreationPalette();
   return (
     <View style={hideLabel ? null : styles.section}>
-      {!hideLabel && <SectionLabel icon={Mic} label={t('jobCreation.voiceBrief', 'VOICE BRIEF')} color={P.orange} badge={t('jobCreation.voiceBriefBadge', 'Optional · Max 60s')} />}
-      <GlassInput glowColor={isRecording || voiceNoteUri ? P.orange : undefined}>
+      {!hideLabel && <SectionLabel icon={Mic} label={t('jobCreation.voiceBrief', 'VOICE BRIEF')} color={palette.orange} badge={t('jobCreation.voiceBriefBadge', 'Optional · Max 60s')} />}
+      <GlassInput glowColor={isRecording || voiceNoteUri ? palette.orange : undefined}>
         <View style={styles.voiceNoteRow}>
-          <View style={[styles.voiceNoteIcon, isRecording && styles.voiceNoteIconRecording]}>
-            <Mic size={19} color={P.orange} strokeWidth={2.2} />
+          <View
+            style={[
+              styles.voiceNoteIcon,
+              { backgroundColor: palette.orangeMuted, borderColor: `${palette.orange}4D` },
+              isRecording && styles.voiceNoteIconRecording,
+            ]}
+          >
+            <Mic size={19} color={palette.orange} strokeWidth={2.2} />
           </View>
           <View style={styles.voiceNoteCopy}>
-            <Text style={styles.voiceNoteTitle}>
+            <Text style={[styles.voiceNoteTitle, { color: palette.textPrimary }]}>
               {isRecording ? t('jobCreation.recordingExplanation', 'Recording job explanation') : voiceNoteUri ? t('jobCreation.voiceBriefAttached', 'Voice brief attached') : t('jobCreation.explainWorkVoice', 'Explain the work in your own words')}
             </Text>
-            <Text style={styles.voiceNoteSubtitle}>
+            <Text style={[styles.voiceNoteSubtitle, { color: palette.textSecondary }]}>
               {isRecording
                 ? `${formatVoiceDuration(durationMillis)} / 1:00`
                 : voiceNoteUri
@@ -50,7 +57,7 @@ export function VoiceBriefRecorder({
             </Text>
           </View>
           {isRecording ? (
-            <TouchableOpacity style={styles.voiceNoteAction} onPress={onStopRecord}>
+            <TouchableOpacity style={[styles.voiceNoteAction, { backgroundColor: palette.orange }]} onPress={onStopRecord}>
               <Square size={15} color="#001014" fill="#001014" />
             </TouchableOpacity>
           ) : voiceNoteUri ? (
@@ -58,7 +65,7 @@ export function VoiceBriefRecorder({
               <Trash2 size={16} color="#FF6B63" />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.voiceNoteAction} onPress={onStartRecord}>
+            <TouchableOpacity style={[styles.voiceNoteAction, { backgroundColor: palette.orange }]} onPress={onStartRecord}>
               <Mic size={16} color="#001014" strokeWidth={2.7} />
             </TouchableOpacity>
           )}

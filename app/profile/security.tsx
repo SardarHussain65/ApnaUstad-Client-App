@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Shield, Lock, HelpCircle, ChevronRight, Eye } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import { useTheme, useThemeTypography, useThemeColors, Spacing } from '../../constants/Theme';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,9 @@ import { useRouter } from 'expo-router';
 export default function SecurityScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const typography = useThemeTypography();
+  const colors = useThemeColors();
 
   return (
     <BackgroundWrapper>
@@ -26,36 +29,39 @@ export default function SecurityScreen() {
         <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
           <View style={styles.shieldIconWrapper}>
             <LinearGradient
-              colors={[Colors.primary, Colors.secondary]}
+              colors={[colors.primary, colors.secondary]}
               style={styles.iconGlow}
             />
-            <View style={styles.iconCircle}>
-              <Shield size={40} color="#fff" />
+            <View style={[styles.iconCircle, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.strong }]}>
+              <Shield size={40} color={theme.colors.text.primary} />
             </View>
           </View>
-          <Text style={[styles.screenTitle, Typography.threeD]}>{t('security.screenTitle')}</Text>
-          <Text style={styles.screenSubtitle}>{t('security.screenSubtitle')}</Text>
+          <Text style={[styles.screenTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('security.screenTitle')}</Text>
+          <Text style={[styles.screenSubtitle, { color: theme.colors.text.muted }]}>{t('security.screenSubtitle')}</Text>
         </Animated.View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('security.sectionTitle')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>{t('security.sectionTitle')}</Text>
           <SecurityItem 
             icon={Lock} 
             label={t('changePassword.title')} 
             onPress={() => router.push('/profile/change-password')} 
             delay={300} 
+            primaryColor={colors.primary}
           />
           <SecurityItem 
             icon={Eye} 
             label={t('security.policiesTerms')} 
             onPress={() => router.push('/profile/privacy')} 
             delay={350} 
+            primaryColor={colors.primary}
           />
           <SecurityItem 
             icon={HelpCircle} 
             label={t('security.reportIssue')} 
             onPress={() => router.push('/profile/help-center')} 
             delay={400} 
+            primaryColor={colors.primary}
           />
         </View>
       </ScrollView>
@@ -70,17 +76,18 @@ interface SecurityItemProps {
   delay: number;
 }
 
-function SecurityItem({ icon: Icon, label, onPress, delay }: SecurityItemProps) {
+function SecurityItem({ icon: Icon, label, onPress, delay, primaryColor }: SecurityItemProps & { primaryColor?: string }) {
+  const theme = useTheme();
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
       <TouchableOpacity onPress={onPress}>
         <GlassCard style={styles.itemCard} intensity={25} padding={Spacing.m}>
           <View style={styles.itemContent}>
-            <View style={styles.itemIconBox}>
-              <Icon size={20} color={Colors.primary} />
+              <View style={[styles.itemIconBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+              <Icon size={20} color={primaryColor || theme.colors.text.primary} />
             </View>
-            <Text style={styles.itemLabel}>{label}</Text>
-            <ChevronRight size={18} color="rgba(255,255,255,0.3)" />
+            <Text style={[styles.itemLabel, { color: theme.colors.text.primary }]}>{label}</Text>
+            <ChevronRight size={18} color={theme.colors.text.dim} />
           </View>
         </GlassCard>
       </TouchableOpacity>
@@ -117,13 +124,12 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
   },
   itemIconBox: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -139,77 +145,22 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    color: 'rgba(255,255,255,0.8)',
     fontSize: 13,
     marginBottom: 8,
     fontWeight: '700',
   },
   itemLabel: {
     flex: 1,
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   screenTitle: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: '800',
     marginTop: 12,
   },
   screenSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     marginTop: 6,
-  },
-  sessionCard: {
-    marginBottom: 10,
-  },
-  sessionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sessionIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  sessionInfo: {
-    flex: 1,
-  },
-  sessionDevice: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  sessionLocation: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#32D74B',
-    shadowColor: '#32D74B',
-    shadowRadius: 5,
-    shadowOpacity: 0.8,
-  },
-  signoutAllBtn: {
-    alignItems: 'center',
-    paddingVertical: 15,
-    marginTop: 10,
-  },
-  signoutAllText: {
-    color: Colors.error,
-    fontSize: 14,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
 });

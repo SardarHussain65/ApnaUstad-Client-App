@@ -1,8 +1,8 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
-import { Colors, BorderRadius, Spacing, Typography, Animation } from '../constants/Theme';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { BorderRadius, Spacing, useTheme, useThemeShadows, useThemeTypography } from '../constants/Theme';
 
 interface CustomButtonProps {
   title: string;
@@ -27,16 +27,23 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   textStyle,
   icon 
 }) => {
+  const theme = useTheme();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
 
   const getGradientColors = () => {
     switch (variant) {
-      case 'primary': return Colors.cyanGradient;
-      case 'worker': return Colors.orangeGradient;
-      case 'secondary': return [Colors.card, Colors.cardSelected];
+      case 'primary': return theme.colors.button.primaryBackground;
+      case 'worker': return theme.colors.button.workerBackground;
+      case 'secondary': return theme.colors.button.secondaryBackground;
       case 'outline': return ['transparent', 'transparent'];
-      default: return Colors.cyanGradient;
+      default: return theme.colors.button.primaryBackground;
     }
   };
+
+  const textColor = variant === 'primary' || variant === 'worker'
+    ? theme.colors.button.primaryText
+    : theme.colors.button.outlineText;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 }]
@@ -54,8 +61,17 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
       onPressIn={handlePressIn}
       style={[
         styles.container, 
-        variant === 'outline' && styles.outlineContainer,
-        disabled && styles.disabled,
+        {
+          shadowColor: theme.colors.brand.primary,
+          opacity: disabled ? theme.colors.button.disabledOpacity : 1,
+        },
+        variant !== 'outline' && shadows.glow,
+        variant === 'outline' && {
+          borderWidth: 2,
+          borderColor: theme.colors.button.outlineBorder,
+          shadowOpacity: 0,
+          elevation: 0,
+        },
         style,
         animatedStyle
       ]}
@@ -67,14 +83,14 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
         style={styles.gradient}
       >
         {loading ? (
-          <ActivityIndicator color={variant === 'secondary' ? Colors.text : Colors.background} />
+          <ActivityIndicator color={variant === 'secondary' ? theme.colors.text.primary : textColor} />
         ) : (
           <React.Fragment>
             {icon}
             <Text style={[
-              styles.text, 
-              variant === 'secondary' && styles.secondaryText, 
-              variant === 'outline' && styles.outlineText,
+              typography.body,
+              styles.text,
+              { color: textColor },
               textStyle
             ]}>
               {title}
@@ -92,17 +108,10 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: BorderRadius.m,
     overflow: 'hidden',
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 8,
-  },
-  outlineContainer: {
-    borderWidth: 2,
-    borderColor: Colors.border,
-    shadowOpacity: 0,
-    elevation: 0,
   },
   gradient: {
     flex: 1,
@@ -112,19 +121,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.m,
   },
   text: {
-    ...Typography.body,
     fontSize: 18,
     fontWeight: '800',
-    color: '#000',
     letterSpacing: 0.5,
-  },
-  secondaryText: {
-    color: Colors.text,
-  },
-  outlineText: {
-    color: Colors.text,
-  },
-  disabled: {
-    opacity: 0.5,
   },
 });

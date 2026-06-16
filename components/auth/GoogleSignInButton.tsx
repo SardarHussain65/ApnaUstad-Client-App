@@ -10,7 +10,7 @@ import {
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import * as Haptics from 'expo-haptics';
-import { BorderRadius, Colors } from '../../constants/Theme';
+import { BorderRadius, useTheme } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
@@ -38,7 +38,7 @@ function GoogleLogo() {
         />
         <Path
           fill="#FBBC05"
-          d="M5.61 14.24c-.25-.74-.39-1.54-.39-2.36s.14-1.62.39-2.36l-4.13-3.2C.53 8.09 0 9.98 0 12s.53 3.91 1.48 5.68l4.13-3.23z"
+          d="M5.61 14.24c-.25-.74-.39-1.54-.39-2.36s.14-1.62.39-2.36l-4.13-3.2C.53 8.09 0 9.98 0 12s.53 3.91 1.48 5.68v4.13-3.23z"
         />
         <Path
           fill="#4285F4"
@@ -53,12 +53,14 @@ interface GoogleSignInButtonProps {
   accentColor?: string;
 }
 
-export function GoogleSignInButton({ accentColor = Colors.cyan }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({ accentColor }: GoogleSignInButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorModalConfig, setErrorModalConfig] = useState({ title: '', message: '' });
   const { setAuth } = useAuth();
   const router = useRouter();
+  const theme = useTheme();
+  const resolvedAccentColor = accentColor || theme.colors.brand.primary;
 
   const handleGoogleSignIn = async () => {
     if (isLoading) return;
@@ -146,9 +148,9 @@ export function GoogleSignInButton({ accentColor = Colors.cyan }: GoogleSignInBu
     <View style={styles.container}>
       {/* Divider with "or" */}
       <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or continue with</Text>
-        <View style={styles.dividerLine} />
+        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border.subtle }]} />
+        <Text style={[styles.dividerText, { color: theme.colors.text.dim }]}>or continue with</Text>
+        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border.subtle }]} />
       </View>
 
       {/* Google Button */}
@@ -158,16 +160,19 @@ export function GoogleSignInButton({ accentColor = Colors.cyan }: GoogleSignInBu
         onPress={handleGoogleSignIn}
         style={[
           styles.googleButton,
-          { borderColor: `${accentColor}30` },
+          { 
+            backgroundColor: theme.colors.surface.subtle,
+            borderColor: `${resolvedAccentColor}30` 
+          },
           isLoading && styles.googleButtonDisabled,
         ]}
       >
         {isLoading ? (
-          <ActivityIndicator color={accentColor} size="small" />
+          <ActivityIndicator color={resolvedAccentColor} size="small" />
         ) : (
           <GoogleLogo />
         )}
-        <Text style={styles.googleButtonText}>
+        <Text style={[styles.googleButtonText, { color: theme.colors.text.primary }]}>
           {isLoading ? 'Signing in...' : 'Continue with Google'}
         </Text>
       </TouchableOpacity>
@@ -196,10 +201,8 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   dividerText: {
-    color: 'rgba(255,255,255,0.35)',
     fontSize: 11,
     fontWeight: '700',
     marginHorizontal: 14,
@@ -211,7 +214,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 15,
     borderRadius: BorderRadius.xl,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     gap: 12,
   },
@@ -219,7 +221,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   googleButtonText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2,

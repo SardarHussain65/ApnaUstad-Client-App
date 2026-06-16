@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Touchable
 import { MapPin, Phone, Mail, Award, Zap, Briefcase, Star, TrendingUp, BadgeCheck } from 'lucide-react-native';
 import { BeautifulModal } from './BeautifulModal';
 import { useWorker } from '../../hooks';
-import { Colors, Spacing, Typography } from '../../constants/Theme';
+import { Spacing, Typography, useTheme, useThemeColors } from '../../constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
@@ -21,10 +21,13 @@ export function WorkerDetailsModal({
   onClose,
   workerId,
   category,
-  themeColor = Colors.cyan,
+  themeColor,
   onDeploy,
 }: WorkerDetailsModalProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const modalThemeColor = themeColor || colors.cyan;
   const { data: worker, isLoading } = useWorker(workerId || undefined, category);
   const [imageError, setImageError] = React.useState(false);
 
@@ -46,8 +49,8 @@ export function WorkerDetailsModal({
     >
       {isLoading || !worker ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={themeColor} />
-          <Text style={styles.loadingText}>{t('workerDetailsModal.fetchingProfile', 'Fetching profile...')}</Text>
+          <ActivityIndicator size="large" color={modalThemeColor} />
+          <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('workerDetailsModal.fetchingProfile', 'Fetching profile...')}</Text>
         </View>
       ) : (
         <View style={styles.container}>
@@ -100,15 +103,15 @@ export function WorkerDetailsModal({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('workerDetailsModal.contactDetails', 'CONTACT DETAILS')}</Text>
               <View style={styles.infoRow}>
-                <Phone size={14} color={Colors.textDim} />
+                <Phone size={14} color={theme.colors.text.muted} />
                 <Text style={styles.infoText}>{worker.phone}</Text>
               </View>
               <View style={styles.infoRow}>
-                <Mail size={14} color={Colors.textDim} />
+                <Mail size={14} color={theme.colors.text.muted} />
                 <Text style={styles.infoText}>{worker.email}</Text>
               </View>
               <View style={styles.infoRow}>
-                <MapPin size={14} color={Colors.textDim} />
+                <MapPin size={14} color={theme.colors.text.muted} />
                 <Text style={styles.infoText}>{worker.address}, {worker.city}</Text>
               </View>
             </View>
@@ -148,7 +151,7 @@ export function WorkerDetailsModal({
               onPress={() => onDeploy?.(worker)}
             >
               <LinearGradient
-                colors={[themeColor, themeColor + 'CC']}
+                colors={[modalThemeColor, modalThemeColor + 'CC']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.deployBtnGradient}
@@ -175,7 +178,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    color: Colors.textDim,
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 1,
@@ -218,7 +220,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   categoryText: {
-    color: Colors.textDim,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
@@ -263,7 +264,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   statLabel: {
-    color: Colors.textDim,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -328,7 +328,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rateLabel: {
-    color: Colors.textDim,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,

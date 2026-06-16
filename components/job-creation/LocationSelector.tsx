@@ -1,7 +1,7 @@
 import { MapPin, Target } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { GlassInput, P, SectionLabel } from './shared';
+import { GlassInput, P, SectionLabel, useJobCreationPalette } from './shared';
 import { useTranslation } from 'react-i18next';
 
 interface LocationSelectorProps {
@@ -22,29 +22,30 @@ export function LocationSelector({
   onGetLiveLocation,
 }: LocationSelectorProps) {
   const { t } = useTranslation();
+  const palette = useJobCreationPalette();
   return (
     <View style={styles.section}>
       <SectionLabel icon={MapPin} label={t('jobCreation.serviceLocation', 'SERVICE LOCATION')} badge={t('common.required', 'Required')} />
-      <GlassInput glowColor={P.cyan}>
+      <GlassInput glowColor={palette.cyan}>
         {/* Coordinates status row */}
-        <View style={styles.coordRow}>
-          <View style={styles.coordDot}>
-            <View style={styles.coordDotInner} />
+        <View style={[styles.coordRow, { borderBottomColor: palette.border }]}>
+          <View style={[styles.coordDot, { backgroundColor: palette.cyanMuted, borderColor: palette.cyan }]}>
+            <View style={[styles.coordDotInner, { backgroundColor: palette.cyan }]} />
           </View>
-          <Text style={styles.coordText}>
+          <Text style={[styles.coordText, { color: palette.cyanDim }]}>
             {latitude.toFixed(4)}°N · {longitude.toFixed(4)}°E
           </Text>
           {isGettingLocation && (
-            <ActivityIndicator size="small" color={P.cyan} style={{ marginLeft: 'auto' }} />
+            <ActivityIndicator size="small" color={palette.cyan} style={{ marginLeft: 'auto' }} />
           )}
         </View>
 
         {/* Address input row */}
         <View style={styles.locationRow}>
           <TextInput
-            style={styles.locationInput}
+            style={[styles.locationInput, { color: palette.textPrimary }]}
             placeholder={t('jobCreation.locationPlaceholder', 'Enter the address where service is needed')}
-            placeholderTextColor={P.textMuted}
+            placeholderTextColor={palette.textMuted}
             value={address}
             onChangeText={onAddressChange}
             multiline
@@ -53,13 +54,13 @@ export function LocationSelector({
 
         {/* Refresh button */}
         <TouchableOpacity
-          style={styles.locationAction}
+          style={[styles.locationAction, { borderTopColor: palette.border, backgroundColor: palette.cyanMuted }]}
           onPress={onGetLiveLocation}
           disabled={isGettingLocation}
           activeOpacity={0.75}
         >
-          <Target size={13} color={P.cyanDim} />
-          <Text style={styles.locationActionText}>
+          <Target size={13} color={palette.cyanDim} />
+          <Text style={[styles.locationActionText, { color: palette.cyanDim }]}>
             {isGettingLocation ? t('jobCreation.updatingLocation', 'Updating current location...') : t('jobCreation.useCurrentLocation', 'Use my current location')}
           </Text>
         </TouchableOpacity>

@@ -35,7 +35,7 @@ import {
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../constants/Theme';
+import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../constants/Theme';
 import { useJobDetails, useWorkerBids } from '../hooks';
 import { useWithdrawBidMutation } from '../hooks/mutations/useMutations';
 import { useAuth } from '../context/AuthContext';
@@ -53,6 +53,13 @@ const P = {
   textMuted: '#9BA3B4',
   textDim: '#646B7E',
 };
+
+function statusColor(specialty: any, theme: ReturnType<typeof useTheme>) {
+  if (specialty.approvalStatus === 'pending') return theme.legacy.yellow;
+  if (specialty.approvalStatus === 'rejected' || specialty.subscriptionStatus === 'expired') return theme.colors.status.error;
+  if (specialty.subscriptionStatus === 'payment_due') return theme.colors.brand.worker;
+  return theme.colors.status.success;
+}
 
 const compactUrls = (urls: (string | undefined | null)[]) =>
   Array.from(new Set(urls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0)));
@@ -138,6 +145,10 @@ export default function PendingBidDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = theme.legacy;
+  const themeColors = useThemeColors();
+  const shadows = useThemeShadows();
   const params = useLocalSearchParams<{ id?: string; pendingBidId?: string }>();
   const { data: bids, isLoading: isLoadingBids, refetch: refetchBids } = useWorkerBids();
   const bid = bids?.find(item => item._id === params.pendingBidId);
@@ -190,9 +201,9 @@ export default function PendingBidDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.centeredFill}>
           <View style={styles.loadingIcon}>
-            <Hourglass size={26} color={Colors.worker} strokeWidth={2.2} />
+            <Hourglass size={26} color={colors.worker} strokeWidth={2.2} />
           </View>
-          <ActivityIndicator color={Colors.cyan} />
+          <ActivityIndicator color={colors.cyan} />
           <Text style={styles.loadingText}>{t('pendingBidDetails.loading')}</Text>
         </View>
       </BackgroundWrapper>
@@ -204,11 +215,11 @@ export default function PendingBidDetailsScreen() {
       <BackgroundWrapper>
         <View style={[styles.centeredFill, styles.emptyState]}>
           <View style={styles.emptyIcon}>
-            <FileText size={27} color={Colors.worker} strokeWidth={2.1} />
+            <FileText size={27} color={colors.worker} strokeWidth={2.1} />
           </View>
           <Text style={styles.emptyTitle}>{t('pendingBidDetails.unavailable')}</Text>
           <Text style={styles.emptyText}>{t('pendingBidDetails.unavailableDesc')}</Text>
-          <TouchableOpacity style={styles.backHomeButton} onPress={() => router.back()} activeOpacity={0.82}>
+          <TouchableOpacity style={[styles.backHomeButton, { backgroundColor: theme.colors.brand.primary }]} onPress={() => router.back()} activeOpacity={0.82}>
             <ChevronLeft size={17} color="#001014" strokeWidth={2.8} />
             <Text style={styles.backHomeText}>{t('pendingBidDetails.goBack')}</Text>
           </TouchableOpacity>
@@ -270,14 +281,31 @@ export default function PendingBidDetailsScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.root}>
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={0.8}>
-            <ChevronLeft size={22} color={Colors.text} strokeWidth={2.5} />
+        <View style={[
+          styles.header, 
+          { 
+            paddingTop: insets.top + 8,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : theme.colors.background.screen,
+            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+          }
+        ]}>
+          <TouchableOpacity 
+            style={[
+              styles.headerButton,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
+                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+              }
+            ]} 
+            onPress={() => router.back()} 
+            activeOpacity={0.8}
+          >
+            <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
-            <Text style={styles.headerEyebrow}>{t('pendingBidDetails.activeBid')}</Text>
-            <Text style={styles.headerTitle}>{t('pendingBidDetails.proposalDetails')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.brand.worker }]}>{t('pendingBidDetails.activeBid')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('pendingBidDetails.proposalDetails')}</Text>
           </View>
 
           <View style={styles.headerSpacer} />
@@ -292,7 +320,7 @@ export default function PendingBidDetailsScreen() {
               padding={0}
               intensity={50}
               hasGlow
-              glowColor={Colors.worker}
+              glowColor={colors.worker}
               style={styles.heroCard}
               contentStyle={styles.heroContent}
             >
@@ -306,18 +334,18 @@ export default function PendingBidDetailsScreen() {
 
               <View style={styles.heroTopRow}>
                 <View style={styles.pendingBadge}>
-                  <Hourglass size={12} color={Colors.worker} strokeWidth={2.4} />
+                  <Hourglass size={12} color={colors.worker} strokeWidth={2.4} />
                   <Text style={styles.pendingBadgeText}>{t('pendingBidDetails.awaitingClient')}</Text>
                 </View>
                 <View style={styles.submittedBadge}>
-                  <Radio size={11} color={Colors.cyan} strokeWidth={2.4} />
+                  <Radio size={11} color={colors.cyan} strokeWidth={2.4} />
                   <Text style={styles.submittedBadgeText}>{submittedText}</Text>
                 </View>
               </View>
 
               <View style={styles.heroTitleRow}>
                 <View style={styles.heroIcon}>
-                  <BriefcaseBusiness size={24} color={Colors.cyan} strokeWidth={2.2} />
+                  <BriefcaseBusiness size={24} color={colors.cyan} strokeWidth={2.2} />
                 </View>
                 <View style={styles.heroTitleCopy}>
                   <Text style={styles.heroLabel}>{t('pendingBidDetails.proposalSent')}</Text>
@@ -332,7 +360,7 @@ export default function PendingBidDetailsScreen() {
                   <Text style={styles.heroValue}>{quoteText}</Text>
                 </View>
                 <View style={styles.heroStatusNote}>
-                  <ShieldCheck size={14} color={Colors.green} strokeWidth={2.5} />
+                  <ShieldCheck size={14} color={colors.green} strokeWidth={2.5} />
                   <Text style={styles.heroStatusText}>{t('pendingBidDetails.offerActive')}</Text>
                 </View>
               </View>
@@ -346,14 +374,14 @@ export default function PendingBidDetailsScreen() {
               subtitle={t('pendingBidDetails.visitOverviewDesc')}
             />
             <View style={styles.detailGrid}>
-              <DetailPill icon={MissionIcon} label={t('pendingBidDetails.visitType')} value={missionKindLabel} color={isInstant ? Colors.worker : Colors.cyan} />
+              <DetailPill icon={MissionIcon} label={t('pendingBidDetails.visitType')} value={missionKindLabel} color={isInstant ? colors.worker : colors.cyan} />
               <DetailPill icon={CalendarDays} label={t('pendingBidDetails.date')} value={dateLabel} />
-              <DetailPill icon={Clock3} label={t('pendingBidDetails.time')} value={timeLabel} color={Colors.worker} />
+              <DetailPill icon={Clock3} label={t('pendingBidDetails.time')} value={timeLabel} color={colors.worker} />
             </View>
              <GlassCard padding={14} intensity={35} style={styles.locationCard}>
               <View style={styles.locationRow}>
                 <View style={styles.locationIcon}>
-                  <MapPin size={17} color={Colors.green} strokeWidth={2.5} />
+                  <MapPin size={17} color={colors.green} strokeWidth={2.5} />
                 </View>
                 <View style={styles.locationCopy}>
                   <Text style={styles.locationLabel}>{t('pendingBidDetails.serviceLocation')}</Text>
@@ -368,14 +396,14 @@ export default function PendingBidDetailsScreen() {
               icon={UserRound}
               title={t('pendingBidDetails.client')}
               subtitle={t('pendingBidDetails.clientDesc')}
-              color={Colors.worker}
+              color={colors.worker}
             />
             <TouchableOpacity onPress={openClientProfile} disabled={!clientId} activeOpacity={0.84}>
               <GlassCard
                 padding={14}
                 intensity={38}
                 hasGlow
-                glowColor={Colors.worker}
+                glowColor={colors.worker}
                 gradient={['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.06)']}
               >
                 <View style={styles.clientRow}>
@@ -399,8 +427,8 @@ export default function PendingBidDetailsScreen() {
                   </View>
                   {clientId ? (
                     <View style={styles.profileCue}>
-                      <Eye size={14} color={Colors.cyan} strokeWidth={2.4} />
-                      <ChevronRight size={15} color={Colors.cyan} strokeWidth={2.6} />
+                      <Eye size={14} color={colors.cyan} strokeWidth={2.4} />
+                      <ChevronRight size={15} color={colors.cyan} strokeWidth={2.6} />
                     </View>
                   ) : null}
                 </View>
@@ -414,7 +442,7 @@ export default function PendingBidDetailsScreen() {
                 icon={ImageIcon}
                 title={t('pendingBidDetails.workEvidence')}
                 subtitle={media.length === 1 ? t('pendingBidDetails.attachmentsCount_one') : t('pendingBidDetails.attachmentsCount_other', { count: media.length })}
-                color={Colors.purple}
+                color={colors.purple}
               />
               <JobEvidenceGallery items={media} />
             </Animated.View>
@@ -425,24 +453,24 @@ export default function PendingBidDetailsScreen() {
               icon={FileText}
               title={t('pendingBidDetails.yourProposal')}
               subtitle={t('pendingBidDetails.yourProposalDesc')}
-              color={Colors.green}
+              color={colors.green}
             />
             <GlassCard padding={0} intensity={38} style={styles.proposalCard}>
               <View style={styles.proposalStats}>
                 <View style={styles.proposalStat}>
                   <View style={[styles.proposalIcon, { backgroundColor: P.greenMuted }]}>
-                    <Banknote size={18} color={Colors.green} strokeWidth={2.4} />
+                    <Banknote size={18} color={colors.green} strokeWidth={2.4} />
                   </View>
                   <Text style={styles.proposalLabel}>{t('pendingBidDetails.yourQuote')}</Text>
-                  <Text style={[styles.proposalValue, { color: Colors.green }]}>{quoteText}</Text>
+                  <Text style={[styles.proposalValue, { color: colors.green }]}>{quoteText}</Text>
                 </View>
                 <View style={styles.proposalDivider} />
                 <View style={styles.proposalStat}>
                   <View style={[styles.proposalIcon, { backgroundColor: P.orangeMuted }]}>
-                    <Clock3 size={18} color={Colors.worker} strokeWidth={2.4} />
+                    <Clock3 size={18} color={colors.worker} strokeWidth={2.4} />
                   </View>
                   <Text style={styles.proposalLabel}>{t('pendingBidDetails.estimatedTime')}</Text>
-                  <Text style={[styles.proposalValue, { color: Colors.worker }]}>{estimatedTime}</Text>
+                  <Text style={[styles.proposalValue, { color: colors.worker }]}>{estimatedTime}</Text>
                 </View>
               </View>
 
@@ -467,17 +495,17 @@ export default function PendingBidDetailsScreen() {
               activeOpacity={0.82}
             >
               {isWithdrawing ? (
-                <ActivityIndicator color={Colors.error} />
+                <ActivityIndicator color={colors.error} />
               ) : (
                 <>
                   <View style={styles.withdrawIcon}>
-                    <Trash2 size={17} color={Colors.error} strokeWidth={2.5} />
+                    <Trash2 size={17} color={colors.error} strokeWidth={2.5} />
                   </View>
                   <View style={styles.withdrawCopy}>
                     <Text style={styles.withdrawTitle}>{t('pendingBidDetails.withdrawProposal')}</Text>
                     <Text style={styles.withdrawSubtitle}>{t('pendingBidDetails.removeOffer')}</Text>
                   </View>
-                  <ChevronRight size={18} color={Colors.error} strokeWidth={2.6} />
+                  <ChevronRight size={18} color={colors.error} strokeWidth={2.6} />
                 </>
               )}
             </TouchableOpacity>
@@ -528,7 +556,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,140,0,0.3)',
   },
   emptyTitle: {
-    color: Colors.text,
     fontSize: 22,
     fontWeight: '900',
     marginTop: 6,
@@ -547,7 +574,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.cyan,
   },
   backHomeText: {
     color: '#001014',

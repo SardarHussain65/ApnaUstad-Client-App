@@ -30,7 +30,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BeautifulModal } from '../../components/ui';
-import { BorderRadius, Colors, Shadows, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Colors, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import api from '../../services/api';
 
 type Category = {
@@ -73,11 +73,11 @@ type WalletSnapshot = {
   additionalCategoryMonthlyFee?: number;
 };
 
-const statusColor = (specialty: Specialty) => {
-  if (specialty.approvalStatus === 'pending') return Colors.yellow;
-  if (specialty.approvalStatus === 'rejected' || specialty.subscriptionStatus === 'expired') return Colors.error;
-  if (specialty.subscriptionStatus === 'payment_due') return Colors.worker;
-  return Colors.success;
+const statusColor = (specialty: Specialty, colors: any) => {
+  if (specialty.approvalStatus === 'pending') return colors.yellow;
+  if (specialty.approvalStatus === 'rejected' || specialty.subscriptionStatus === 'expired') return colors.error;
+  if (specialty.subscriptionStatus === 'payment_due') return colors.worker;
+  return colors.success;
 };
 
 const formatDate = (value?: string | null) => {
@@ -108,6 +108,9 @@ export default function SpecialtiesScreen() {
   const [draftRate, setDraftRate] = useState('');
   const [draftExperience, setDraftExperience] = useState('');
   const [draftBio, setDraftBio] = useState('');
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const shadows = useThemeShadows();
 
   const load = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
@@ -284,360 +287,360 @@ export default function SpecialtiesScreen() {
           t('specialties.removedDesc')
         ),
       },
-    ]
+]
   );
 
   return (
     <BackgroundWrapper>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.cyan} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.back()}>
-            <ChevronLeft size={22} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('specialties.title')}</Text>
-          <View style={styles.headerCounter}><Text style={styles.headerCounterText}>{specialties.length}/{data.maxSpecialties}</Text></View>
+      <TouchableOpacity style={[styles.iconButton, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
+        <ChevronLeft size={22} color={theme.colors.text.primary} />
+      </TouchableOpacity>
+      <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('specialties.title')}</Text>
+      <View style={[styles.headerCounter, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.25) }]}><Text style={[styles.headerCounterText, { color: theme.colors.brand.primary }]}>{specialties.length}/{data.maxSpecialties}</Text></View>
+    </View>
+
+    <Animated.View entering={FadeInDown.delay(80)} style={[styles.hero, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.primary, 0.24) }]}>
+      <LinearGradient colors={[alpha(theme.colors.brand.primary, 0.18), alpha(theme.colors.brand.secondary, 0.1)]} style={StyleSheet.absoluteFillObject} />
+      <View style={[styles.heroIcon, { backgroundColor: alpha(theme.colors.brand.primary, 0.12) }]}><Layers3 size={23} color={theme.colors.brand.primary} /></View>
+      <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>{t('specialties.heroTitle')}</Text>
+      <Text style={[styles.heroText, { color: theme.colors.text.muted }]}>{t('specialties.heroText', { fee: formatPKR(additionalCategoryMonthlyFee) })}</Text>
+    </Animated.View>
+
+    {loading ? (
+      <View style={styles.loading}><ActivityIndicator color={colors.cyan} /><Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('specialties.loadingText')}</Text></View>
+    ) : (
+      <>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>{t('specialties.mySpecialties')}</Text>
+          {specialties.length < data.maxSpecialties && (
+            <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.brand.primary }]} onPress={openAddCategory}>
+              <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
+              <Text style={[styles.addButtonText, { color: theme.colors.button.primaryText }]}>{t('specialties.addCategory')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        <Animated.View entering={FadeInDown.delay(80)} style={styles.hero}>
-          <LinearGradient colors={['rgba(0,245,255,0.18)', 'rgba(191,90,242,0.10)']} style={StyleSheet.absoluteFillObject} />
-          <View style={styles.heroIcon}><Layers3 size={23} color={Colors.primary} /></View>
-          <Text style={styles.heroTitle}>{t('specialties.heroTitle')}</Text>
-          <Text style={styles.heroText}>{t('specialties.heroText', { fee: formatPKR(additionalCategoryMonthlyFee) })}</Text>
-        </Animated.View>
-
-        {loading ? (
-          <View style={styles.loading}><ActivityIndicator color={Colors.primary} /><Text style={styles.loadingText}>{t('specialties.loadingText')}</Text></View>
-        ) : (
-          <>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>{t('specialties.mySpecialties')}</Text>
-              {specialties.length < data.maxSpecialties && (
-                <TouchableOpacity style={styles.addButton} onPress={openAddCategory}>
-                  <Plus size={15} color="#000" strokeWidth={3} />
-                  <Text style={styles.addButtonText}>{t('specialties.addCategory')}</Text>
+        {showPicker && (
+          <Animated.View entering={FadeInDown.duration(220)} style={[styles.picker, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.secondary, 0.35) }]}>
+            <Text style={[styles.pickerTitle, { color: theme.colors.text.primary }]}>{t('specialties.requestNew')}</Text>
+            <Text style={[styles.pickerText, { color: theme.colors.text.muted }]}>{t('specialties.pickerText')}</Text>
+            <View style={styles.categoryChips}>
+              {availableCategories.map(category => (
+                <TouchableOpacity
+                  key={category._id}
+                  style={[
+                    styles.categoryChip,
+                    { borderColor: `${category.color || colors.cyan}55` },
+                    draftCategoryId === category._id && { backgroundColor: `${category.color || colors.cyan}22`, borderColor: category.color || colors.cyan }
+                  ]}
+                  disabled={!!workingKey}
+                  onPress={() => setDraftCategoryId(category._id)}
+                >
+                  <Plus size={13} color={category.color || colors.cyan} />
+                  <Text style={styles.categoryChipText}>{category.name}</Text>
                 </TouchableOpacity>
-              )}
+              ))}
+              {availableCategories.length === 0 && <Text style={[styles.emptyText, { color: theme.colors.text.muted }]}>{t('specialties.noMoreCategories')}</Text>}
             </View>
-
-            {showPicker && (
-              <Animated.View entering={FadeInDown.duration(220)} style={styles.picker}>
-                <Text style={styles.pickerTitle}>{t('specialties.requestNew')}</Text>
-                <Text style={styles.pickerText}>{t('specialties.pickerText')}</Text>
-                <View style={styles.categoryChips}>
-                  {availableCategories.map(category => (
-                    <TouchableOpacity
-                      key={category._id}
-                      style={[
-                        styles.categoryChip,
-                        { borderColor: `${category.color || Colors.primary}55` },
-                        draftCategoryId === category._id && { backgroundColor: `${category.color || Colors.primary}22`, borderColor: category.color || Colors.primary }
-                      ]}
-                      disabled={!!workingKey}
-                      onPress={() => setDraftCategoryId(category._id)}
-                    >
-                      <Plus size={13} color={category.color || Colors.primary} />
-                      <Text style={styles.categoryChipText}>{category.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                  {availableCategories.length === 0 && <Text style={styles.emptyText}>{t('specialties.noMoreCategories')}</Text>}
+            {availableCategories.length > 0 && (
+              <>
+                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.skillsLabel')}</Text>
+                <TextInput
+                  style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                  placeholder={t('specialties.skillsPlaceholder')}
+                  placeholderTextColor={theme.colors.input.placeholder}
+                  value={draftSkills}
+                  onChangeText={setDraftSkills}
+                />
+                <View style={styles.formRow}>
+                  <View style={styles.formHalf}>
+                    <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.rateLabel')}</Text>
+                    <TextInput
+                      style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                      placeholder={t('specialties.ratePlaceholder')}
+                      placeholderTextColor={theme.colors.input.placeholder}
+                      keyboardType="numeric"
+                      value={draftRate}
+                      onChangeText={setDraftRate}
+                    />
+                  </View>
+                  <View style={styles.formHalf}>
+                    <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.experienceLabel')}</Text>
+                    <TextInput
+                      style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                      placeholder={t('specialties.experiencePlaceholder')}
+                      placeholderTextColor={theme.colors.input.placeholder}
+                      keyboardType="numeric"
+                      value={draftExperience}
+                      onChangeText={setDraftExperience}
+                    />
+                  </View>
                 </View>
-                {availableCategories.length > 0 && (
-                  <>
-                    <Text style={styles.formLabel}>{t('specialties.skillsLabel')}</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder={t('specialties.skillsPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.28)"
-                      value={draftSkills}
-                      onChangeText={setDraftSkills}
-                    />
-                    <View style={styles.formRow}>
-                      <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>{t('specialties.rateLabel')}</Text>
-                        <TextInput
-                          style={styles.input}
-                          placeholder={t('specialties.ratePlaceholder')}
-                          placeholderTextColor="rgba(255,255,255,0.28)"
-                          keyboardType="numeric"
-                          value={draftRate}
-                          onChangeText={setDraftRate}
-                        />
-                      </View>
-                      <View style={styles.formHalf}>
-                        <Text style={styles.formLabel}>{t('specialties.experienceLabel')}</Text>
-                        <TextInput
-                          style={styles.input}
-                          placeholder={t('specialties.experiencePlaceholder')}
-                          placeholderTextColor="rgba(255,255,255,0.28)"
-                          keyboardType="numeric"
-                          value={draftExperience}
-                          onChangeText={setDraftExperience}
-                        />
-                      </View>
-                    </View>
-                    <Text style={styles.formLabel}>{t('specialties.descriptionLabel')}</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      placeholder={t('specialties.descriptionPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.28)"
-                      value={draftBio}
-                      onChangeText={setDraftBio}
-                      multiline
-                    />
-                    <View style={styles.feeBox}>
-                      <Wallet size={14} color={Colors.worker} />
-                      <Text style={styles.feeText}>
-                        {draftCategory
-                          ? t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })
-                          : t('specialties.selectCategoryInfo', { fee: formatPKR(additionalCategoryMonthlyFee) })}
-                      </Text>
-                    </View>
-                    <TouchableOpacity disabled={!!workingKey} style={styles.submitButton} onPress={requestCategory}>
-                      {workingKey === 'request-category' ? <ActivityIndicator size="small" color="#000" /> : <Plus size={15} color="#000" strokeWidth={3} />}
-                      <Text style={styles.submitButtonText}>{t('specialties.sendReviewBtn')}</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </Animated.View>
+                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.descriptionLabel')}</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder={t('specialties.descriptionPlaceholder')}
+                  placeholderTextColor={theme.colors.input.placeholder}
+                  value={draftBio}
+                  onChangeText={setDraftBio}
+                  multiline
+                />
+                <View style={styles.feeBox}>
+                  <Wallet size={14} color={colors.worker} />
+                  <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
+                    {draftCategory
+                      ? t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })
+                      : t('specialties.selectCategoryInfo', { fee: formatPKR(additionalCategoryMonthlyFee) })}
+                  </Text>
+                </View>
+                <TouchableOpacity disabled={!!workingKey} style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]} onPress={requestCategory}>
+                  {workingKey === 'request-category' ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />}
+                  <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>{t('specialties.sendReviewBtn')}</Text>
+                </TouchableOpacity>
+              </>
             )}
-
-            {specialties.map((specialty, index) => {
-              const color = statusColor(specialty);
-              const isPaid = specialty.priority > data.freeSpecialtyLimit;
-              const specialtyFee = isPaid ? additionalCategoryMonthlyFee : 0;
-              const canActivate = specialty.approvalStatus === 'approved'
-                && isPaid
-                && ['pending_activation', 'expired'].includes(specialty.subscriptionStatus);
-              const showRenew = isPaid && ['active', 'payment_due'].includes(specialty.subscriptionStatus);
-              return (
-                <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, { borderColor: `${color}45` }]}>
-                  <View style={styles.cardTop}>
-                    <View style={[styles.priorityBadge, { backgroundColor: `${color}20`, borderColor: `${color}55` }]}>
-                      <Text style={[styles.priorityText, { color }]}>#{specialty.priority}</Text>
-                    </View>
-                    <View style={styles.cardMain}>
-                      <Text style={styles.cardTitle}>{specialty.categoryId.name}</Text>
-                      <Text style={styles.tierText}>
-                        {specialty.tier === 'primary' ? t('specialties.primaryTier') : t('specialties.additionalTier')}
-                      </Text>
-                    </View>
-                    <View style={styles.orderButtons}>
-                      <TouchableOpacity disabled={index === 0 || !!workingKey} style={styles.orderButton} onPress={() => move(index, -1)}><ArrowUp size={14} color={index === 0 ? Colors.textDim : Colors.textMuted} /></TouchableOpacity>
-                      <TouchableOpacity disabled={index === specialties.length - 1 || !!workingKey} style={styles.orderButton} onPress={() => move(index, 1)}><ArrowDown size={14} color={index === specialties.length - 1 ? Colors.textDim : Colors.textMuted} /></TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.statusRow}>
-                    <View style={[styles.statusDot, { backgroundColor: color }]} />
-                    <Text style={[styles.statusText, { color }]}>
-                      {specialty.approvalStatus === 'pending'
-                        ? t('specialties.waitingApproval')
-                        : specialty.approvalStatus === 'rejected'
-                          ? t('specialties.requestRejected')
-                          : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
-                    </Text>
-                  </View>
-
-                  <View style={styles.metaRow}>
-                    {isPaid ? <Wallet size={13} color={Colors.worker} /> : <ShieldCheck size={13} color={Colors.success} />}
-                    <Text style={styles.metaText}>
-                      {isPaid
-                        ? t('specialties.feePerMonth', { fee: formatPKR(specialtyFee) })
-                        : t('specialties.includedFree')}
-                    </Text>
-                    {specialty.nextBillingAt ? (
-                      <>
-                        <Clock3 size={13} color={Colors.textMuted} />
-                        <Text style={styles.metaText}>
-                          {t('specialties.renewsOn', { date: formatDate(specialty.nextBillingAt) })}
-                        </Text>
-                      </>
-                    ) : null}
-                  </View>
-
-                  <View style={styles.profileBox}>
-                    <View style={styles.profileStats}>
-                      <Text style={styles.profileStat}>
-                        {t('specialties.ratePerHr', { rate: Number(specialty.hourlyRate || 0).toLocaleString('en-PK') })}
-                      </Text>
-                      <Text style={styles.profileStat}>
-                        {t('specialties.yearsExp', { count: Number(specialty.experience || 0) })}
-                      </Text>
-                    </View>
-                    {(specialty.skills || []).length > 0 && (
-                      <View style={styles.skillsWrap}>
-                        {specialty.skills.slice(0, 5).map(skill => (
-                          <Text key={skill} style={styles.skillPill}>#{skill}</Text>
-                        ))}
-                      </View>
-                    )}
-                    {!!specialty.bio && <Text style={styles.bioText} numberOfLines={2}>{specialty.bio}</Text>}
-                  </View>
-
-                  <View style={styles.cardActions}>
-                    {canActivate && (
-                      <TouchableOpacity disabled={!!workingKey} style={styles.activateButton} onPress={() => activate(specialty)}>
-                        {workingKey === `activate-${specialty._id}` ? <ActivityIndicator size="small" color="#000" /> : <Wallet size={15} color="#000" />}
-                        <Text style={styles.activateText}>
-                          {specialty.subscriptionStatus === 'expired'
-                            ? t('specialties.reactivatePay')
-                            : t('specialties.activatePay')}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                    {showRenew && (
-                      <View style={styles.renewWrap}>
-                        <Text style={styles.renewLabel}>{t('specialties.autoRenew')}</Text>
-                        <Switch
-                          value={specialty.autoRenew}
-                          disabled={!!workingKey}
-                          onValueChange={(autoRenew) => {
-                            void runAction(
-                              `renew-${specialty._id}`,
-                              () => api.patch(`/workers/specialties/${specialty.categoryId._id}/auto-renew`, { autoRenew }),
-                              autoRenew
-                                ? t('specialties.renewalEnabledDesc', { defaultValue: 'Automatic renewal is enabled.' })
-                                : t('specialties.renewalDisabledDesc', { defaultValue: 'Automatic renewal is disabled.' })
-                            );
-                          }}
-                          trackColor={{ false: Colors.surfaceLight, true: 'rgba(52,199,89,0.5)' }}
-                          thumbColor={specialty.autoRenew ? Colors.success : Colors.textMuted}
-                        />
-                      </View>
-                    )}
-                    {specialty.priority > 1 && (
-                      <TouchableOpacity style={styles.removeButton} disabled={!!workingKey} onPress={() => remove(specialty)}>
-                        <Trash2 size={15} color={Colors.error} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </Animated.View>
-              );
-            })}
-          </>
+          </Animated.View>
         )}
-      </ScrollView>
 
-      <BeautifulModal
-        visible={rechargePromptVisible}
-        onClose={() => setRechargePromptVisible(false)}
-        title={t('specialties.rechargeNeeded')}
-        height={470}
-        glowColor={Colors.worker}
-        icon={<Wallet size={32} color={Colors.worker} strokeWidth={2.4} />}
-      >
-        <View style={styles.rechargeModalBody}>
-          <View style={styles.rechargeIconRing}>
-            <AlertTriangle size={22} color={Colors.worker} strokeWidth={2.4} />
-          </View>
-          <Text style={styles.rechargeTitle}>{t('specialties.addBalancePrompt')}</Text>
-          <Text style={styles.rechargeMessage}>
-            {t('specialties.rechargeMessage', { action: rechargeActionLabel, fee: formatPKR(additionalCategoryMonthlyFee) })}
-          </Text>
+        {specialties.map((specialty, index) => {
+          const color = statusColor(specialty, colors);
+          const isPaid = specialty.priority > data.freeSpecialtyLimit;
+          const specialtyFee = isPaid ? additionalCategoryMonthlyFee : 0;
+          const canActivate = specialty.approvalStatus === 'approved'
+            && isPaid
+            && ['pending_activation', 'expired'].includes(specialty.subscriptionStatus);
+          const showRenew = isPaid && ['active', 'payment_due'].includes(specialty.subscriptionStatus);
+          return (
+            <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(color, 0.28) }]}>
+              <View style={styles.cardTop}>
+                <View style={[styles.priorityBadge, { backgroundColor: `${color}20`, borderColor: `${color}55` }]}>
+                  <Text style={[styles.priorityText, { color }]}>#{specialty.priority}</Text>
+                </View>
+                <View style={styles.cardMain}>
+                  <Text style={[styles.cardTitle, { color: theme.colors.text.primary }]}>{specialty.categoryId.name}</Text>
+                  <Text style={[styles.tierText, { color: theme.colors.text.muted }]}>
+                    {specialty.tier === 'primary' ? t('specialties.primaryTier') : t('specialties.additionalTier')}
+                  </Text>
+                </View>
+                <View style={styles.orderButtons}>
+                  <TouchableOpacity disabled={index === 0 || !!workingKey} style={styles.orderButton} onPress={() => move(index, -1)}><ArrowUp size={14} color={index === 0 ? colors.textDim : colors.textMuted} /></TouchableOpacity>
+                  <TouchableOpacity disabled={index === specialties.length - 1 || !!workingKey} style={styles.orderButton} onPress={() => move(index, 1)}><ArrowDown size={14} color={index === specialties.length - 1 ? colors.textDim : colors.textMuted} /></TouchableOpacity>
+                </View>
+              </View>
 
-          <View style={styles.walletSummaryCard}>
-            <View style={styles.walletSummaryRow}>
-              <Text style={styles.walletSummaryLabel}>{t('specialties.requiredBalance')}</Text>
-              <Text style={styles.walletSummaryValue}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
-            </View>
-            <View style={styles.walletSummaryDivider} />
-            <View style={styles.walletSummaryRow}>
-              <Text style={styles.walletSummaryLabel}>{t('specialties.availableBalance')}</Text>
-              <Text style={styles.walletSummaryValue}>{formatPKR(walletAvailableBalance)}</Text>
-            </View>
-            <View style={styles.walletSummaryDivider} />
-            <View style={styles.walletSummaryRow}>
-              <Text style={styles.walletSummaryLabel}>{t('specialties.needRecharge')}</Text>
-              <Text style={[styles.walletSummaryValue, styles.shortfallText]}>{formatPKR(walletShortfall)}</Text>
-            </View>
-          </View>
+              <View style={styles.statusRow}>
+                <View style={[styles.statusDot, { backgroundColor: color }]} />
+                <Text style={[styles.statusText, { color }]}>
+                  {specialty.approvalStatus === 'pending'
+                    ? t('specialties.waitingApproval')
+                    : specialty.approvalStatus === 'rejected'
+                      ? t('specialties.requestRejected')
+                      : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
+                </Text>
+              </View>
 
-          <View style={styles.rechargeActions}>
-            <TouchableOpacity style={styles.rechargeSecondaryButton} onPress={() => setRechargePromptVisible(false)}>
-              <Text style={styles.rechargeSecondaryText}>{t('specialties.maybeLater')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.rechargePrimaryButton}
-              onPress={() => {
-                setRechargePromptVisible(false);
-                router.push('/(tabs)/wallet' as any);
-              }}
-            >
-              <LinearGradient colors={[Colors.worker, '#FF5E00']} style={styles.rechargePrimaryGradient}>
-                <Wallet size={16} color="#160900" strokeWidth={2.6} />
-                <Text style={styles.rechargePrimaryText}>{t('specialties.rechargeWallet')}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.metaRow}>
+                {isPaid ? <Wallet size={13} color={colors.worker} /> : <ShieldCheck size={13} color={colors.success} />}
+                <Text style={[styles.metaText, { color: theme.colors.text.muted }]}>
+                  {isPaid
+                    ? t('specialties.feePerMonth', { fee: formatPKR(specialtyFee) })
+                    : t('specialties.includedFree')}
+                </Text>
+                {specialty.nextBillingAt ? (
+                  <>
+                    <Clock3 size={13} color={theme.colors.text.muted} />
+                    <Text style={[styles.metaText, { color: theme.colors.text.muted }]}>
+                      {t('specialties.renewsOn', { date: formatDate(specialty.nextBillingAt) })}
+                    </Text>
+                  </>
+                ) : null}
+              </View>
+
+              <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <View style={styles.profileStats}>
+                    <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                    {t('specialties.ratePerHr', { rate: Number(specialty.hourlyRate || 0).toLocaleString('en-PK') })}
+                  </Text>
+                    <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                    {t('specialties.yearsExp', { count: Number(specialty.experience || 0) })}
+                  </Text>
+                </View>
+                {(specialty.skills || []).length > 0 && (
+                  <View style={styles.skillsWrap}>
+                    {specialty.skills.slice(0, 5).map(skill => (
+                      <Text key={skill} style={[styles.skillPill, { color: theme.colors.brand.primary, borderColor: alpha(theme.colors.brand.primary, 0.14), backgroundColor: alpha(theme.colors.brand.primary, 0.05) }]}>#{skill}</Text>
+                    ))}
+                  </View>
+                )}
+                {!!specialty.bio && <Text style={[styles.bioText, { color: theme.colors.text.muted }]} numberOfLines={2}>{specialty.bio}</Text>}
+              </View>
+
+              <View style={styles.cardActions}>
+                {canActivate && (
+                    <TouchableOpacity disabled={!!workingKey} style={[styles.activateButton, { backgroundColor: theme.colors.brand.primary }]} onPress={() => activate(specialty)}>
+                    {workingKey === `activate-${specialty._id}` ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Wallet size={15} color={theme.colors.button.primaryText} />}
+                    <Text style={[styles.activateText, { color: theme.colors.button.primaryText }]}>
+                      {specialty.subscriptionStatus === 'expired'
+                        ? t('specialties.reactivatePay')
+                        : t('specialties.activatePay')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {showRenew && (
+                  <View style={styles.renewWrap}>
+                    <Text style={[styles.renewLabel, { color: theme.colors.text.muted }]}>{t('specialties.autoRenew')}</Text>
+                    <Switch
+                      value={specialty.autoRenew}
+                      disabled={!!workingKey}
+                      onValueChange={(autoRenew) => {
+                        void runAction(
+                          `renew-${specialty._id}`,
+                          () => api.patch(`/workers/specialties/${specialty.categoryId._id}/auto-renew`, { autoRenew }),
+                          autoRenew
+                            ? t('specialties.renewalEnabledDesc', { defaultValue: 'Automatic renewal is enabled.' })
+                            : t('specialties.renewalDisabledDesc', { defaultValue: 'Automatic renewal is disabled.' })
+                        );
+                      }}
+                      trackColor={{ false: theme.colors.surface.subtle, true: alpha(theme.colors.status.success, 0.6) }}
+                      thumbColor={specialty.autoRenew ? colors.success : theme.colors.text.muted}
+                    />
+                  </View>
+                )}
+                {specialty.priority > 1 && (
+                  <TouchableOpacity style={[styles.removeButton, { backgroundColor: alpha(theme.colors.status.error, 0.12) }]} disabled={!!workingKey} onPress={() => remove(specialty)}>
+                    <Trash2 size={15} color={colors.error} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+          );
+        })}
+      </>
+    )}
+  </ScrollView>
+
+  <BeautifulModal
+    visible={rechargePromptVisible}
+    onClose={() => setRechargePromptVisible(false)}
+    title={t('specialties.rechargeNeeded')}
+    height={470}
+    glowColor={colors.worker}
+    icon={<Wallet size={32} color={colors.worker} strokeWidth={2.4} />}
+  >
+    <View style={styles.rechargeModalBody}>
+        <View style={[styles.rechargeIconRing, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.35) }]}>
+        <AlertTriangle size={22} color={colors.worker} strokeWidth={2.4} />
+      </View>
+        <Text style={[styles.rechargeTitle, { color: theme.colors.text.primary }]}>{t('specialties.addBalancePrompt')}</Text>
+      <Text style={[styles.rechargeMessage, { color: theme.colors.text.muted }]}>
+        {t('specialties.rechargeMessage', { action: rechargeActionLabel, fee: formatPKR(additionalCategoryMonthlyFee) })}
+      </Text>
+
+        <View style={[styles.walletSummaryCard, { backgroundColor: alpha(colors.worker, 0.08), borderColor: alpha(colors.worker, 0.24) }]}>
+        <View style={styles.walletSummaryRow}>
+          <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.requiredBalance')}</Text>
+          <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
         </View>
-      </BeautifulModal>
-    </BackgroundWrapper>
-  );
+        <View style={styles.walletSummaryDivider} />
+        <View style={styles.walletSummaryRow}>
+          <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.availableBalance')}</Text>
+          <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(walletAvailableBalance)}</Text>
+        </View>
+        <View style={styles.walletSummaryDivider} />
+        <View style={styles.walletSummaryRow}>
+          <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.needRecharge')}</Text>
+          <Text style={[styles.walletSummaryValue, styles.shortfallText, { color: colors.worker }]}>{formatPKR(walletShortfall)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.rechargeActions}>
+        <TouchableOpacity style={styles.rechargeSecondaryButton} onPress={() => setRechargePromptVisible(false)}>
+          <Text style={[styles.rechargeSecondaryText, { color: theme.colors.text.muted }]}>{t('specialties.maybeLater')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.rechargePrimaryButton}
+          onPress={() => {
+            setRechargePromptVisible(false);
+            router.push('/(tabs)/wallet' as any);
+          }}
+        >
+            <LinearGradient colors={theme.colors.button.workerBackground} style={styles.rechargePrimaryGradient}>
+            <Wallet size={16} color={theme.colors.button.primaryText} strokeWidth={2.6} />
+            <Text style={[styles.rechargePrimaryText, { color: theme.colors.button.primaryText }]}>{t('specialties.rechargeWallet')}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </BeautifulModal>
+  </BackgroundWrapper>
+);
 }
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.l, paddingBottom: 60 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 18 },
-  iconButton: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '900' },
-  headerCounter: { minWidth: 40, height: 30, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,245,255,0.10)', borderWidth: 1, borderColor: 'rgba(0,245,255,0.25)' },
-  headerCounterText: { color: Colors.primary, fontSize: 12, fontWeight: '900' },
-  hero: { overflow: 'hidden', borderRadius: BorderRadius.xl, borderWidth: 1, borderColor: 'rgba(0,245,255,0.24)', padding: 18, marginBottom: 24, ...Shadows.card },
-  heroIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: 'rgba(0,245,255,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  heroTitle: { color: '#fff', fontSize: 20, fontWeight: '900' },
-  heroText: { color: Colors.textMuted, fontSize: 13, lineHeight: 19, marginTop: 6 },
+  iconButton: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '900' },
+  headerCounter: { minWidth: 40, height: 30, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  headerCounterText: { fontSize: 12, fontWeight: '900' },
+  hero: { overflow: 'hidden', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 18, marginBottom: 24 },
+  heroIcon: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  heroTitle: { fontSize: 20, fontWeight: '900' },
+  heroText: { fontSize: 13, lineHeight: 19, marginTop: 6 },
   loading: { alignItems: 'center', paddingVertical: 50, gap: 10 },
-  loadingText: { color: Colors.textMuted, fontSize: 13 },
+  loadingText: { fontSize: 13 },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sectionTitle: { color: '#fff', fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  addButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: Colors.primary },
-  addButtonText: { color: '#000', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  picker: { borderRadius: 18, borderWidth: 1, borderColor: 'rgba(191,90,242,0.35)', backgroundColor: 'rgba(15,15,36,0.94)', padding: 15, marginBottom: 14 },
-  pickerTitle: { color: '#fff', fontSize: 15, fontWeight: '900' },
-  pickerText: { color: Colors.textMuted, fontSize: 12, marginTop: 3, marginBottom: 12 },
+  sectionTitle: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  addButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8 },
+  addButtonText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  picker: { borderRadius: 18, borderWidth: 1, padding: 15, marginBottom: 14 },
+  pickerTitle: { fontSize: 15, fontWeight: '900' },
+  pickerText: { fontSize: 12, marginTop: 3, marginBottom: 12 },
   categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 18, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.04)' },
-  categoryChipText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  formLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 7 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 18, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8 },
+  categoryChipText: { fontSize: 12, fontWeight: '700' },
+  formLabel: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 7 },
   formRow: { flexDirection: 'row', gap: 10 },
   formHalf: { flex: 1 },
-  input: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', backgroundColor: 'rgba(255,255,255,0.05)', color: '#fff', paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, fontWeight: '700' },
+  input: { minHeight: 46, borderRadius: 14, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, fontWeight: '700' },
   textArea: { minHeight: 92, textAlignVertical: 'top' },
-  feeBox: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,140,0,0.24)', backgroundColor: 'rgba(255,140,0,0.08)', padding: 12, marginTop: 13 },
-  feeText: { flex: 1, color: Colors.textMuted, fontSize: 12, fontWeight: '700', lineHeight: 17 },
-  submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 14, backgroundColor: Colors.primary, paddingVertical: 12, marginTop: 13 },
-  submitButtonText: { color: '#000', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
-  emptyText: { color: Colors.textMuted, fontSize: 12 },
-  card: { borderRadius: 18, borderWidth: 1, backgroundColor: 'rgba(10,10,31,0.92)', padding: 15, marginBottom: 12 },
+  feeBox: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, padding: 12, marginTop: 13 },
+  feeText: { flex: 1, fontSize: 11, fontWeight: '600', lineHeight: 16 },
+  submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 14, paddingVertical: 12, marginTop: 13 },
+  submitButtonText: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  emptyText: { fontSize: 12 },
+  card: { borderRadius: 18, borderWidth: 1, padding: 15, marginBottom: 12 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   priorityBadge: { width: 38, height: 38, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   priorityText: { fontSize: 13, fontWeight: '900' },
   cardMain: { flex: 1 },
-  cardTitle: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  tierText: { color: Colors.textMuted, fontSize: 11, fontWeight: '700', marginTop: 2, textTransform: 'uppercase' },
-  orderButtons: { flexDirection: 'row', gap: 5 },
-  orderButton: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.05)' },
+  cardTitle: { fontSize: 16, fontWeight: '900' },
+  tierText: { fontSize: 11, fontWeight: '700', marginTop: 2, textTransform: 'uppercase' },
+  orderButtons: { flexDirection: 'row', gap: 6 },
+  orderButton: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 13 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  metaText: { color: Colors.textMuted, fontSize: 11, fontWeight: '700', marginRight: 4 },
-  profileBox: { borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.035)', padding: 12, marginTop: 12 },
+  metaText: { fontSize: 11, fontWeight: '700', marginRight: 4 },
+  profileBox: { borderRadius: 14, borderWidth: 1, padding: 12, marginTop: 12 },
   profileStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  profileStat: { color: '#fff', fontSize: 12, fontWeight: '900' },
+  profileStat: { fontSize: 12, fontWeight: '900' },
   skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 9 },
-  skillPill: { color: Colors.primary, fontSize: 11, fontWeight: '800', borderWidth: 1, borderColor: 'rgba(0,245,255,0.22)', backgroundColor: 'rgba(0,245,255,0.07)', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },
-  bioText: { color: Colors.textMuted, fontSize: 12, fontWeight: '600', lineHeight: 17, marginTop: 9 },
+  skillPill: { fontSize: 11, fontWeight: '800', borderWidth: 1, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },
+  bioText: { fontSize: 12, fontWeight: '600', lineHeight: 17, marginTop: 9 },
   cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 13 },
-  activateButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: Colors.primary },
-  activateText: { color: '#000', fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  activateButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 9 },
+  activateText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   renewWrap: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  renewLabel: { color: Colors.textMuted, fontSize: 11, fontWeight: '700' },
-  removeButton: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,59,48,0.12)' },
+  renewLabel: { fontSize: 11, fontWeight: '700' },
+  removeButton: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   rechargeModalBody: { alignItems: 'center', width: '100%', gap: 12 },
   rechargeIconRing: {
     width: 54,
@@ -645,27 +648,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,140,0,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,140,0,0.35)',
     marginBottom: 2,
   },
-  rechargeTitle: { color: '#fff', fontSize: 18, fontWeight: '900', textAlign: 'center' },
-  rechargeMessage: { color: Colors.textMuted, fontSize: 13, fontWeight: '600', lineHeight: 19, textAlign: 'center' },
+  rechargeTitle: { fontSize: 18, fontWeight: '900', textAlign: 'center' },
+  rechargeMessage: { fontSize: 13, fontWeight: '600', lineHeight: 19, textAlign: 'center' },
   walletSummaryCard: {
     width: '100%',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,140,0,0.24)',
-    backgroundColor: 'rgba(255,140,0,0.08)',
     padding: 14,
     marginTop: 4,
   },
   walletSummaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  walletSummaryLabel: { flex: 1, color: Colors.textMuted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
-  walletSummaryValue: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  walletSummaryLabel: { flex: 1, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  walletSummaryValue: { fontSize: 13, fontWeight: '900' },
   shortfallText: { color: Colors.worker },
-  walletSummaryDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 10 },
+  walletSummaryDivider: { height: 1, marginVertical: 10 },
   rechargeActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 },
   rechargeSecondaryButton: {
     flex: 0.85,
@@ -674,11 +673,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  rechargeSecondaryText: { color: Colors.textMuted, fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  rechargeSecondaryText: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
   rechargePrimaryButton: { flex: 1.15, minHeight: 46, borderRadius: 14, overflow: 'hidden' },
   rechargePrimaryGradient: { flex: 1, minHeight: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
-  rechargePrimaryText: { color: '#160900', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  rechargePrimaryText: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
 });

@@ -32,7 +32,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
-import { Colors, Typography, Spacing, Shadows } from '../constants/Theme';
+import { Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { SkeletonCard, WorkerDetailsModal } from '../components/ui';
@@ -60,6 +60,7 @@ interface WorkerCardProps {
 
 const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, onViewDetails }: WorkerCardProps) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const ratingStr = worker.rating ? worker.rating.toFixed(1) : '5.0';
   const ratingNum = worker.rating ?? 5.0;
 
@@ -170,7 +171,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
                   </Text>
                 </View>
                 <View style={styles.metaChip}>
-                  <MapPin size={9} color={Colors.textDim} />
+                  <MapPin size={9} color={theme.colors.text.muted} />
                   {/* ─── LEARNING: Nullish coalescing (??) ────────────────
                       Returns right-hand side only when left side is null
                       or undefined — NOT when it's 0 or ''. Safer than ||.
@@ -281,6 +282,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
     </Animated.View>
   );
 });
+WorkerCard.displayName = 'WorkerListCard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 🧩 MAIN SCREEN
@@ -301,10 +303,13 @@ export default function WorkerListScreen() {
   // Expo Router equivalent of React Navigation's route.params. Returns an
   // object of URL query params typed by our generic <{ ... }>.
   // ──────────────────────────────────────────────────────────────────────────
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const params = useLocalSearchParams<{ category: string; color: string; title: string }>();
 
   const category = params.category || params.title || '';
-  const themeColor = params.color || Colors.cyan;
+  const themeColor = params.color || colors.cyan;
 
   const [search, setSearch] = useState('');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
@@ -358,7 +363,7 @@ export default function WorkerListScreen() {
             transparent backgrounds without converting to rgba().
         ──────────────────────────────────────────────────────────────────── */}
         <View style={[styles.blobTop, { backgroundColor: themeColor + '14' }]} />
-        <View style={[styles.blobBottom, { backgroundColor: Colors.purple + '10' }]} />
+        <View style={[styles.blobBottom, { backgroundColor: colors.purple + '10' }]} />
 
         {/* ── HEADER ──────────────────────────────────────────────────────── */}
         <Animated.View
@@ -389,11 +394,11 @@ export default function WorkerListScreen() {
         {/* ── SEARCH BAR ────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(180).duration(450)} style={styles.searchRow}>
           <View style={styles.searchContainer}>
-            <Search size={15} color={Colors.textDim} />
+            <Search size={15} color={theme.colors.text.muted} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: theme.colors.text.primary }]}
               placeholder={t('workerList.searchPlaceholder')}
-              placeholderTextColor={Colors.textDim}
+              placeholderTextColor={theme.colors.text.muted}
               value={search}
               onChangeText={setSearch}
             />
@@ -403,7 +408,7 @@ export default function WorkerListScreen() {
             ──────────────────────────────────────────────────────────────── */}
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <X size={15} color={Colors.textDim} />
+                <X size={15} color={theme.colors.text.muted} />
               </TouchableOpacity>
             )}
           </View>
@@ -530,7 +535,6 @@ const styles = StyleSheet.create({
   },
   headerSub: {
     fontSize: 11,
-    color: Colors.textDim,
     fontWeight: '600',
     marginTop: 2,
     letterSpacing: 0.5,
@@ -681,7 +685,6 @@ const styles = StyleSheet.create({
   metaChipText: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textDim,
     letterSpacing: 0.3,
   },
   starsRow: {
@@ -721,7 +724,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   statLabel: {
-    color: Colors.textDim,
     fontSize: 9,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -748,10 +750,8 @@ const styles = StyleSheet.create({
   skillTextMore: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.textDim,
   },
   bioText: {
-    color: Colors.textDim,
     fontSize: 12,
     lineHeight: 18,
     marginTop: -4,
@@ -816,7 +816,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   emptySub: {
-    color: Colors.textDim,
     fontSize: 13,
     fontWeight: '500',
     textAlign: 'center',

@@ -4,7 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Banknote, BriefcaseBusiness, CalendarCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from './GlassCard';
-import { Colors, Typography } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { EarningsSummary } from '../../hooks/useWorkerAnalytics';
 
 interface WorkerQuickInsightsProps {
@@ -15,13 +15,16 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
   summary,
 }: WorkerQuickInsightsProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
 
   const cards = [
     {
       key: 'today',
       icon: Banknote,
-      color: Colors.green,
-      tint: 'rgba(0,255,127,0.12)',
+      color: colors.success,
+      tint: alpha(colors.success, 0.12),
       value: `Rs. ${(summary.todayEarnings || 0).toLocaleString()}`,
       label: t('home.worker.todayEarned', 'Today earned'),
       meta: t('home.worker.todayJobsCount', '{{count}} jobs today', { count: summary.todayJobs || 0 }),
@@ -29,8 +32,8 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
     {
       key: 'week',
       icon: BriefcaseBusiness,
-      color: Colors.cyan,
-      tint: 'rgba(0,245,255,0.12)',
+      color: colors.cyan,
+      tint: alpha(colors.cyan, 0.12),
       value: String(summary.thisWeekJobs || 0),
       label: t('home.worker.jobsThisWeek', 'Jobs this week'),
       meta: `Rs. ${(summary.thisWeekEarnings || 0).toLocaleString()}`,
@@ -38,8 +41,8 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
     {
       key: 'month',
       icon: CalendarCheck,
-      color: Colors.worker,
-      tint: 'rgba(255,140,0,0.12)',
+      color: colors.worker,
+      tint: alpha(colors.worker, 0.12),
       value: `Rs. ${(summary.thisMonthEarnings || 0).toLocaleString()}`,
       label: t('home.worker.monthEarned', 'Month earned'),
       meta: t('home.worker.monthJobsCount', '{{count}} jobs this month', { count: summary.thisMonthJobs || 0 }),
@@ -60,13 +63,13 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
           <View style={[styles.iconBubble, { backgroundColor: tint }]}>
             <Icon size={15} color={color} strokeWidth={2.5} />
           </View>
-          <Text style={[styles.value, Typography.threeD]} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={[styles.value, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>
             {value}
           </Text>
-          <Text style={styles.label} numberOfLines={2}>
+          <Text style={[styles.label, { color: theme.colors.text.muted }]} numberOfLines={2}>
             {label}
           </Text>
-          <Text style={styles.subMeta} numberOfLines={1}>
+          <Text style={[styles.subMeta, { color: theme.colors.text.dim }]} numberOfLines={1}>
             {meta}
           </Text>
         </GlassCard>
@@ -104,13 +107,11 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#fff',
     minHeight: 20,
   },
   label: {
     fontSize: 8,
     fontWeight: '800',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginTop: 2,
@@ -119,7 +120,6 @@ const styles = StyleSheet.create({
   subMeta: {
     fontSize: 8,
     fontWeight: '700',
-    color: Colors.textDim,
     marginTop: 3,
   },
 });

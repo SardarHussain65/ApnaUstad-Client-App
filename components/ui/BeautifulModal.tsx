@@ -19,7 +19,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
+import { alpha, useTheme, useThemeColors } from '../../constants/Theme';
 import { X, CheckCircle2, AlertTriangle, Info, HelpCircle } from 'lucide-react-native';
 import { GlassCard } from '../home/GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,12 +44,14 @@ export function BeautifulModal({
   children,
   height = '60%',
   showCloseButton = true,
-  glowColor = Colors.cyan,
+  glowColor,
   containerStyle,
   contentStyle,
   icon,
   ...modalProps
 }: BeautifulModalProps) {
+  const theme = useTheme();
+  const resolvedGlowColor = glowColor ?? theme.colors.brand.primary;
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
 
@@ -81,29 +83,34 @@ export function BeautifulModal({
       <Animated.View
         entering={FadeIn.duration(300)}
         exiting={FadeOut.duration(200)}
-        style={styles.backdrop}
+        style={[styles.backdrop, { backgroundColor: theme.colors.modal.backdrop }]}
       >
         <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={onClose} />
 
         <Animated.View
           style={[
             styles.modalContainer,
-            { height: numericHeight },
+            {
+              height: numericHeight,
+              borderColor: theme.colors.modal.border,
+              shadowColor: theme.colors.shadow.color,
+              shadowOpacity: theme.id === 'light' ? 0.14 : 0.5,
+            },
             containerStyle,
             animatedStyle,
           ]}
         >
-          <View style={[styles.modalGlow, { backgroundColor: glowColor.length === 7 ? glowColor + '20' : glowColor }]} />
+          <View style={[styles.modalGlow, { backgroundColor: alpha(resolvedGlowColor, theme.id === 'current' ? 0.12 : 0.08) }]} />
 
           <GlassCard
             intensity={Platform.OS === 'ios' ? 95 : 100}
-            glowColor={glowColor}
-            style={[styles.modalContent, contentStyle, { overflow: 'visible' }]}
+            glowColor={resolvedGlowColor}
+            style={[styles.modalContent, { backgroundColor: theme.colors.modal.card }, contentStyle, { overflow: 'visible' }]}
             contentStyle={{ flex: 1 }}
             padding={0}
           >
             <LinearGradient
-              colors={[glowColor, 'transparent']}
+              colors={[resolvedGlowColor, 'transparent']}
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
               style={styles.topAccentBar}
@@ -111,7 +118,17 @@ export function BeautifulModal({
 
             {icon && (
               <View style={styles.floatingIconBadge}>
-                 <View style={[styles.iconBadgeInner, { borderColor: glowColor.length === 7 ? glowColor + '40' : glowColor }]}>
+                 <View
+                   style={[
+                     styles.iconBadgeInner,
+                     {
+                       backgroundColor: theme.colors.surface.raised,
+                       borderColor: alpha(resolvedGlowColor, 0.28),
+                       shadowColor: theme.colors.shadow.color,
+                       shadowOpacity: theme.id === 'light' ? 0.12 : 0.5,
+                     },
+                   ]}
+                 >
                    {icon}
                  </View>
               </View>
@@ -120,10 +137,10 @@ export function BeautifulModal({
             <View style={styles.contentInner}>
               {title && (
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>{title.toUpperCase()}</Text>
+                  <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
                   {showCloseButton && (
-                    <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                      <X size={20} color="#FFFFFF" />
+                    <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.colors.modal.closeBackground }]}>
+                      <X size={20} color={theme.colors.text.primary} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -160,37 +177,46 @@ export function ConfirmModal({
   message,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
-  confirmColor = Colors.cyan,
+  confirmColor,
   isLoading = false,
 }: ConfirmModalProps) {
+  const theme = useTheme();
+  const resolvedConfirmColor = confirmColor ?? theme.colors.brand.primary;
   return (
     <BeautifulModal
       visible={visible}
       onClose={onCancel}
       title={title}
       height={380}
-      glowColor={confirmColor}
-      icon={<HelpCircle color={confirmColor} size={32} />}
+      glowColor={resolvedConfirmColor}
+      icon={<HelpCircle color={resolvedConfirmColor} size={32} />}
     >
       <View style={styles.modalBodyContent}>
-        <Text style={styles.modalMessage}>{message}</Text>
+        <Text style={[styles.modalMessage, { color: theme.colors.text.primary }]}>{message}</Text>
 
         <View style={styles.confirmButtons}>
           <TouchableOpacity
-            style={[styles.confirmBtn, styles.cancelBtn]}
+            style={[
+              styles.confirmBtn,
+              styles.cancelBtn,
+              {
+                backgroundColor: theme.colors.surface.subtle,
+                borderColor: theme.colors.border.subtle,
+              },
+            ]}
             onPress={onCancel}
             disabled={isLoading}
           >
-            <Text style={styles.cancelBtnText}>{cancelText.toUpperCase()}</Text>
+            <Text style={[styles.cancelBtnText, { color: theme.colors.text.muted }]}>{cancelText.toUpperCase()}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.confirmBtn, { backgroundColor: confirmColor, borderColor: confirmColor }]}
+            style={[styles.confirmBtn, { backgroundColor: resolvedConfirmColor, borderColor: resolvedConfirmColor }]}
             onPress={onConfirm}
             disabled={isLoading}
           >
-            <LinearGradient colors={[confirmColor, confirmColor]} style={styles.solidBtnGradient}>
-              <Text style={styles.solidBtnText}>
+            <LinearGradient colors={[resolvedConfirmColor, resolvedConfirmColor]} style={styles.solidBtnGradient}>
+              <Text style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}>
                 {isLoading ? '...' : confirmText.toUpperCase()}
               </Text>
             </LinearGradient>
@@ -218,12 +244,14 @@ export function AlertModal({
   buttonText = 'OK',
   type = 'info',
 }: AlertModalProps) {
+  const theme = useTheme();
+  const colors = useThemeColors();
   const getColor = () => {
     switch (type) {
-      case 'success': return Colors.success;
-      case 'error': return Colors.error;
-      case 'warning': return '#FFA500';
-      default: return Colors.cyan;
+      case 'success': return colors.success;
+      case 'error': return colors.error;
+      case 'warning': return theme.colors.status.warning;
+      default: return colors.cyan;
     }
   };
 
@@ -245,13 +273,13 @@ export function AlertModal({
       icon={getIcon()}
     >
       <View style={styles.modalBodyContent}>
-        <Text style={styles.modalMessage}>{message}</Text>
+        <Text style={[styles.modalMessage, { color: theme.colors.text.primary }]}>{message}</Text>
         <TouchableOpacity
           style={[styles.alertBtn, { backgroundColor: getColor(), borderColor: getColor() }]}
           onPress={onDismiss}
         >
            <LinearGradient colors={[getColor(), getColor()]} style={styles.solidBtnGradient}>
-              <Text style={styles.solidBtnText}>{buttonText.toUpperCase()}</Text>
+              <Text style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}>{buttonText.toUpperCase()}</Text>
             </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -262,7 +290,6 @@ export function AlertModal({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -272,10 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     zIndex: 1000,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.5,
     shadowRadius: 40,
     elevation: 30,
   },
@@ -287,7 +311,6 @@ const styles = StyleSheet.create({
   modalContent: {
     flex: 1,
     borderRadius: 32,
-    backgroundColor: 'rgba(15, 15, 30, 0.95)',
   },
   topAccentBar: {
     height: 4, width: '100%', position: 'absolute', top: 0, zIndex: 2,
@@ -300,13 +323,12 @@ const styles = StyleSheet.create({
     marginBottom: 20, zIndex: 10, height: 30,
   },
   modalTitle: {
-    fontSize: 14, fontWeight: '900', color: '#FFFFFF',
+    fontSize: 14, fontWeight: '900',
     letterSpacing: 2, textAlign: 'center',
   },
   closeBtn: {
     position: 'absolute', right: -10, top: -5,
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center', justifyContent: 'center', zIndex: 20,
   },
   modalBody: {
@@ -320,25 +342,24 @@ const styles = StyleSheet.create({
   },
   iconBadgeInner: {
     width: 90, height: 90, borderRadius: 45,
-    backgroundColor: '#0F0F1A', borderWidth: 2,
+    borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5, shadowRadius: 15, elevation: 20,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 15, elevation: 20,
   },
   modalMessage: {
-    fontSize: 16, color: '#FFFFFF', lineHeight: 24,
+    fontSize: 16, lineHeight: 24,
     textAlign: 'center', marginBottom: 40, fontWeight: '600',
     paddingHorizontal: 10,
   },
   confirmButtons: { flexDirection: 'row', gap: 12, width: '100%' },
   confirmBtn: { flex: 1, height: 56, borderRadius: 20, overflow: 'hidden' },
   solidBtnGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  solidBtnText: { color: '#000', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
+  solidBtnText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },
   cancelBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  cancelBtnText: { fontSize: 12, fontWeight: '900', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.5 },
+  cancelBtnText: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5 },
   alertBtn: { width: '100%', height: 58, borderRadius: 22, overflow: 'hidden' },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Platform, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import Animated, { 
@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Home, ClipboardList, Wallet, User } from 'lucide-react-native';
-import { Colors, Animation } from '../../constants/Theme';
+import { useTheme } from '../../constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ const TAB_BAR_WIDTH = width - 40;
 const TAB_WIDTH = TAB_BAR_WIDTH / 4;
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const theme = useTheme();
   const translateX = useSharedValue(state.index * TAB_WIDTH);
   const insets = useSafeAreaInsets();
 
@@ -53,10 +54,29 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     : (insets.bottom > 0 ? insets.bottom + 12 : 16);
 
   return (
-    <View style={[styles.container, { bottom: bottomMargin }]}>
-      <BlurView intensity={60} tint="dark" style={styles.blurContainer}>
+    <View
+      style={[
+        styles.container,
+        {
+          bottom: bottomMargin,
+          backgroundColor: theme.colors.tabBar.background,
+          borderColor: theme.colors.tabBar.border,
+          shadowColor: theme.colors.tabBar.shadow,
+        },
+      ]}
+    >
+      <BlurView intensity={theme.id === 'current' ? 60 : 18} tint={theme.blurTint} style={styles.blurContainer}>
         {/* Active Indicator (Glowing Pill) */}
-        <Animated.View style={[styles.activeIndicator, indicatorStyle]} />
+        <Animated.View
+          style={[
+            styles.activeIndicator,
+            {
+              backgroundColor: theme.colors.tabBar.activeBackground,
+              borderColor: theme.colors.tabBar.activeBorder,
+            },
+            indicatorStyle,
+          ]}
+        />
 
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
@@ -67,6 +87,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               isFocused={isFocused}
               onPress={() => handlePress(route, isFocused)}
               routeName={route.name}
+              activeColor={theme.colors.tabBar.activeIcon}
+              inactiveColor={theme.colors.tabBar.inactiveIcon}
             />
           );
         })}
@@ -75,7 +97,19 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   );
 }
 
-function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPress: () => void, routeName: string }) {
+function TabItem({
+  isFocused,
+  onPress,
+  routeName,
+  activeColor,
+  inactiveColor,
+}: {
+  isFocused: boolean,
+  onPress: () => void,
+  routeName: string,
+  activeColor: string,
+  inactiveColor: string,
+}) {
   const { t } = useTranslation();
   const prog = useSharedValue(isFocused ? 1 : 0);
 
@@ -84,12 +118,6 @@ function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPres
   }, [isFocused]);
 
   const animatedIconStyle = useAnimatedStyle(() => {
-    const color = interpolateColor(
-      prog.value,
-      [0, 1],
-      [Colors.textDim, Colors.primary]
-    );
-
     return {
       transform: [{ scale: withSpring(isFocused ? 1.1 : 1, { damping: 10 }) }],
       // Note: Reanimated v3 doesn't support color interpolation directly in styles for line-based icons 
@@ -101,7 +129,7 @@ function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPres
     return {
       opacity: prog.value,
       transform: [{ translateY: withSpring(isFocused ? 0 : 5, { damping: 12 }) }],
-      color: interpolateColor(prog.value, [0, 1], [Colors.textDim, Colors.primary])
+      color: interpolateColor(prog.value, [0, 1], [inactiveColor, activeColor])
     };
   });
 
@@ -127,7 +155,7 @@ function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPres
   }
 
   // We manually handle color transition for the icon component since it's not a native property reanimated interpolates on non-SVG components directly
-  const activeColor = isFocused ? Colors.primary : Colors.textDim;
+  const iconColor = isFocused ? activeColor : inactiveColor;
 
   return (
     <TouchableOpacity
@@ -136,7 +164,7 @@ function TabItem({ isFocused, onPress, routeName }: { isFocused: boolean, onPres
       activeOpacity={0.7}
     >
       <Animated.View style={[styles.iconContainer, animatedIconStyle]}>
-        <Icon color={activeColor} />
+        <Icon color={iconColor} />
         <Animated.Text style={[styles.tabLabel, animatedTextStyle]}>
           {getLabel()}
         </Animated.Text>
@@ -153,11 +181,8 @@ const styles = StyleSheet.create({
     height: 68,
     borderRadius: 34,
     overflow: 'hidden',
-    backgroundColor: 'rgba(10, 10, 31, 0.4)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     elevation: 10,
-    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -171,11 +196,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: TAB_WIDTH - 12,
     height: 52,
-    backgroundColor: 'rgba(0, 245, 255, 0.08)',
     borderRadius: 26,
     left: 6,
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 245, 255, 0.15)',
   },
   tabItem: {
     flex: 1,
@@ -192,7 +215,6 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: Colors.primary,
     marginTop: 2,
   }
 });

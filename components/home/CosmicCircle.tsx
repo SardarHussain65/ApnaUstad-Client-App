@@ -9,11 +9,9 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
-  interpolate,
-  DerivedValue,
-  withSequence
+  withSequence,
 } from 'react-native-reanimated';
-import { Colors, Typography, Shadows } from '../../constants/Theme';
+import { alpha, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,6 +29,10 @@ export function CosmicCircle({
   subLabel,
   size = SCREEN_WIDTH * 0.55
 }: CosmicCircleProps) {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
   const radius = (size - 40) / 2;
   const circumference = 2 * Math.PI * radius;
   const progress = useSharedValue(0);
@@ -73,13 +75,13 @@ export function CosmicCircle({
       <Svg width={size} height={size} style={styles.svg}>
         <Defs>
           <LinearGradient id="cosmicGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.cyan} />
-            <Stop offset="50%" stopColor={Colors.primary} />
-            <Stop offset="100%" stopColor={Colors.purple} />
+            <Stop offset="0%" stopColor={colors.cyan} />
+            <Stop offset="50%" stopColor={colors.primary} />
+            <Stop offset="100%" stopColor={colors.purple} />
           </LinearGradient>
           <RadialGradient id="innerGlow" cx="50%" cy="50%" r="50%">
             <Stop offset="70%" stopColor="transparent" stopOpacity="0" />
-            <Stop offset="100%" stopColor={Colors.cyan} stopOpacity="0.1" />
+            <Stop offset="100%" stopColor={colors.cyan} stopOpacity="0.1" />
           </RadialGradient>
         </Defs>
 
@@ -89,7 +91,7 @@ export function CosmicCircle({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="rgba(255, 255, 255, 0.03)"
+            stroke={alpha(theme.colors.text.primary, theme.id === 'light' ? 0.03 : 0.03)}
             strokeWidth="12"
             fill="transparent"
           />
@@ -107,13 +109,13 @@ export function CosmicCircle({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke={Colors.cyan}
+            stroke={colors.cyan}
             strokeWidth="14"
             strokeDasharray={circumference}
             animatedProps={animatedProps}
             strokeLinecap="round"
             fill="transparent"
-            opacity={0.15}
+            opacity={theme.id === 'current' ? 0.15 : 0.1}
           />
 
           {/* Primary High-Precision Stroke */}
@@ -133,13 +135,13 @@ export function CosmicCircle({
 
       {/* Satellite Orbit Dot */}
       <Animated.View style={[styles.satellite, satelliteStyle]}>
-        <View style={styles.satelliteCore} />
-        <View style={styles.satelliteGlow} />
+        <View style={[styles.satelliteCore, { backgroundColor: theme.colors.text.primary, borderColor: colors.cyan }]} />
+        <View style={[styles.satelliteGlow, { backgroundColor: colors.cyan }]} />
       </Animated.View>
 
       <Animated.View style={[styles.textContainer, { maxWidth: size - 45 }, centerStyle]}>
-        <Text style={[styles.label, Typography.threeD]} adjustsFontSizeToFit numberOfLines={1}>{label}</Text>
-        <Text style={styles.subLabel} adjustsFontSizeToFit numberOfLines={1}>{subLabel}</Text>
+        <Text style={[styles.label, typography.threeD, { color: theme.colors.text.primary }]} adjustsFontSizeToFit numberOfLines={1}>{label}</Text>
+        <Text style={[styles.subLabel, { color: theme.colors.text.dim }]} adjustsFontSizeToFit numberOfLines={1}>{subLabel}</Text>
       </Animated.View>
     </View>
   );
@@ -159,10 +161,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   mainAura: {
-    backgroundColor: Colors.primary + '08',
     borderWidth: 1,
-    borderColor: Colors.primary + '15',
-    ...Shadows.glow,
   },
   satellite: {
     width: 12,
@@ -173,13 +172,10 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#fff',
     borderWidth: 2,
-    borderColor: Colors.cyan,
   },
   satelliteGlow: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.cyan,
     borderRadius: 6,
     opacity: 0.6,
     transform: [{ scale: 1.8 }],
@@ -193,13 +189,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 28,
-    color: '#fff',
     fontWeight: '900',
     marginBottom: 2,
     textAlign: 'center',
   },
   subLabel: {
-    color: Colors.textDim,
     fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.5,

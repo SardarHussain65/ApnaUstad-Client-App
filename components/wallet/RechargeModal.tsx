@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { XCircle, Copy, Upload, Smartphone, Landmark, Banknote, FileImage } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BlurView } from 'expo-blur';
 
 interface WalletPaymentMethod {
@@ -55,6 +55,8 @@ function CopyRow({
   value: string;
   onCopy: (label: string, value?: string) => void;
 }) {
+  const theme = useTheme();
+  const colors = useThemeColors();
   return (
     <View style={copyStyles.row}>
       <View style={{ flex: 1 }}>
@@ -62,7 +64,7 @@ function CopyRow({
         <Text style={copyStyles.value}>{value}</Text>
       </View>
       <TouchableOpacity style={copyStyles.btn} onPress={() => onCopy(label, value)}>
-        <Copy size={15} color={Colors.cyan} />
+        <Copy size={15} color={colors.cyan} />
       </TouchableOpacity>
     </View>
   );
@@ -79,13 +81,11 @@ const copyStyles = StyleSheet.create({
   },
   label: {
     fontSize: 9,
-    color: Colors.textMuted,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   value: {
     marginTop: 3,
-    color: '#fff',
     fontSize: 14,
     fontWeight: '800',
   },
@@ -116,6 +116,9 @@ export function RechargeModal({
   onCopy,
 }: RechargeModalProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const selectedMethod = paymentMethods.find((m) => m.method === selectedMethodKey) || paymentMethods[0];
   const selectedMethodIsConfigured = selectedMethod ? selectedMethod.isConfigured !== false : false;
 
@@ -123,22 +126,22 @@ export function RechargeModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
       <View style={styles.backdrop}>
         <BlurView intensity={35} style={StyleSheet.absoluteFillObject} tint="dark" />
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, Typography.threeD]}>{t('wallet.prepaidTopUp')}</Text>
+            <Text style={[styles.modalTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('wallet.prepaidTopUp')}</Text>
             <TouchableOpacity onPress={onDismiss}>
-              <XCircle size={22} color={Colors.textMuted} />
+              <XCircle size={22} color={theme.colors.text.muted} />
             </TouchableOpacity>
           </View>
 
           {/* Amount input */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t('wallet.enterAmountPkr')}</Text>
+            <Text style={[styles.sectionLabel, { color: theme.colors.text.muted }]}>{t('wallet.enterAmountPkr')}</Text>
             <TextInput
-              style={styles.amountInput}
+              style={[styles.amountInput, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.input.border, color: theme.colors.input.text }]}
               placeholder="e.g. 1000"
-              placeholderTextColor={Colors.textDim}
+              placeholderTextColor={theme.colors.input.placeholder}
               keyboardType="numeric"
               value={amount}
               onChangeText={onAmountChange}
@@ -149,9 +152,9 @@ export function RechargeModal({
                 <TouchableOpacity
                    key={val}
                    onPress={() => onAmountChange(val.toString())}
-                   style={[styles.quickSelectChip, amount === val.toString() && styles.quickSelectChipActive]}
+                   style={[styles.quickSelectChip, amount === val.toString() && styles.quickSelectChipActive, { borderColor: amount === val.toString() ? alpha(colors.cyan, 0.8) : theme.colors.border.subtle, backgroundColor: amount === val.toString() ? alpha(colors.cyan, 0.08) : theme.colors.surface.subtle }]}
                 >
-                  <Text style={[styles.quickSelectText, amount === val.toString() && styles.quickSelectTextActive]}>
+                  <Text style={[styles.quickSelectText, amount === val.toString() && styles.quickSelectTextActive, { color: amount === val.toString() ? colors.cyan : theme.colors.text.muted }]}>
                     +{val}
                   </Text>
                 </TouchableOpacity>
@@ -161,7 +164,7 @@ export function RechargeModal({
 
           {/* Payment Methods */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t('wallet.selectMethod')}</Text>
+            <Text style={[styles.sectionLabel, { color: theme.colors.text.muted }]}>{t('wallet.selectMethod')}</Text>
             <View style={styles.methodList}>
               {paymentMethods.map((method) => {
                 const isSelected = selectedMethodKey === method.method || (!selectedMethodKey && paymentMethods[0]?.method === method.method);
@@ -170,10 +173,10 @@ export function RechargeModal({
                   <TouchableOpacity
                     key={method.method}
                     onPress={() => onSelectMethod(method.method)}
-                    style={[styles.methodCard, isSelected && styles.methodCardActive]}
+                    style={[styles.methodCard, isSelected && styles.methodCardActive, isSelected && { borderColor: alpha(colors.cyan, 0.8), backgroundColor: alpha(colors.cyan, 0.06) }, !isSelected && { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}
                   >
-                    <IconComponent size={20} color={isSelected ? Colors.cyan : Colors.textMuted} />
-                    <Text style={[styles.methodLabel, isSelected && styles.methodLabelActive]}>
+                    <IconComponent size={20} color={isSelected ? colors.cyan : theme.colors.text.muted} />
+                    <Text style={[styles.methodLabel, isSelected && styles.methodLabelActive, { color: isSelected ? colors.cyan : theme.colors.text.muted }]}>
                       {method.label}
                     </Text>
                   </TouchableOpacity>
@@ -185,12 +188,12 @@ export function RechargeModal({
           {/* Dynamic Instructions */}
           {selectedMethod && (
             <View style={styles.instructionsBox}>
-              <Text style={styles.instructionsTitle}>{t('wallet.transferInstructions')}</Text>
-              <Text style={styles.instructionsText}>
+              <Text style={[styles.instructionsTitle, { color: colors.cyan }]}>{t('wallet.transferInstructions')}</Text>
+              <Text style={[styles.instructionsText, { color: theme.colors.text.muted }]}>
                 {selectedMethod.instructions || t('wallet.transferFallback', { method: selectedMethod.label })}
               </Text>
 
-              <View style={styles.accountDetails}>
+              <View style={[styles.accountDetails, { gap: 2 }]}>
                 {selectedMethod.bankName && (
                   <CopyRow label={t('wallet.bankName')} value={selectedMethod.bankName} onCopy={onCopy} />
                 )}
@@ -206,7 +209,7 @@ export function RechargeModal({
 
           {/* Proof upload */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>{t('wallet.depositScreenshot')}</Text>
+            <Text style={[styles.sectionLabel, { color: theme.colors.text.muted }]}>{t('wallet.depositScreenshot')}</Text>
             {proofImageUri ? (
               <View style={styles.proofPreviewWrapper}>
                 <Image source={{ uri: proofImageUri }} style={styles.proofPreview} />
@@ -217,9 +220,9 @@ export function RechargeModal({
               </View>
             ) : (
               <TouchableOpacity style={styles.uploadBtn} onPress={onPickProofImage}>
-                <FileImage size={24} color={Colors.textMuted} style={{ marginBottom: 6 }} />
-                <Text style={styles.uploadText}>{t('wallet.selectScreenshot')}</Text>
-                <Text style={styles.uploadSub}>{t('wallet.supportedReceipts')}</Text>
+                <FileImage size={24} color={theme.colors.text.muted} style={{ marginBottom: 6 }} />
+                <Text style={[styles.uploadText, { color: theme.colors.text.muted }]}>{t('wallet.selectScreenshot')}</Text>
+                <Text style={[styles.uploadSub, { color: theme.colors.text.muted }]}>{t('wallet.supportedReceipts')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -228,6 +231,7 @@ export function RechargeModal({
           <TouchableOpacity
             style={[
               styles.confirmBtn,
+              { backgroundColor: colors.cyan },
               (!amount || !proofImageUri || !selectedMethodIsConfigured || isSubmitting) && styles.confirmBtnDisabled,
             ]}
             onPress={onConfirm}
@@ -248,26 +252,21 @@ export function RechargeModal({
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   container: {
-    backgroundColor: '#070714',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     padding: Spacing.m,
     maxHeight: '90%',
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: '#fff' },
+  modalTitle: { fontSize: 20, fontWeight: '900' },
   section: { marginBottom: 18 },
-  sectionLabel: { fontSize: 11, fontWeight: '900', color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  sectionLabel: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
   amountInput: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -277,44 +276,34 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
     alignItems: 'center',
   },
-  quickSelectChipActive: {
-    borderColor: Colors.cyan + '80',
-    backgroundColor: 'rgba(0,245,255,0.08)',
-  },
-  quickSelectText: { fontSize: 11, color: Colors.textMuted, fontWeight: '800' },
-  quickSelectTextActive: { color: Colors.cyan },
+  quickSelectChipActive: {},
+  quickSelectText: { fontSize: 11, fontWeight: '800' },
+  quickSelectTextActive: {},
   methodList: { flexDirection: 'row', gap: 8 },
   methodCard: {
     flex: 1,
     paddingVertical: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
     alignItems: 'center',
     gap: 6,
   },
-  methodCardActive: {
-    borderColor: Colors.cyan + '80',
-    backgroundColor: 'rgba(0,245,255,0.06)',
-  },
-  methodLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: '800', textTransform: 'capitalize' },
-  methodLabelActive: { color: Colors.cyan },
+  methodCardActive: {},
+  methodLabel: { fontSize: 10, fontWeight: '800', textTransform: 'capitalize' },
+  methodLabelActive: {},
   instructionsBox: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
     padding: 12,
     marginBottom: 18,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
-  instructionsTitle: { fontSize: 11, fontWeight: '900', color: Colors.cyan, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  instructionsText: { fontSize: 11, color: Colors.textMuted, lineHeight: 16, fontWeight: '600', marginBottom: 10 },
-  accountDetails: { gap: 2 },
+  instructionsTitle: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  instructionsText: { fontSize: 11, lineHeight: 16, fontWeight: '600', marginBottom: 10 },
+  accountDetails: {},
   proofPreviewWrapper: {
     height: 120,
     borderRadius: 14,
@@ -346,10 +335,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  uploadText: { fontSize: 12, color: Colors.textMuted, fontWeight: '800' },
-  uploadSub: { fontSize: 9, color: Colors.textDim, fontWeight: '600', marginTop: 2 },
+  uploadText: { fontSize: 12, fontWeight: '800' },
+  uploadSub: { fontSize: 9, fontWeight: '600', marginTop: 2 },
   confirmBtn: {
-    backgroundColor: Colors.cyan,
     borderRadius: 14,
     minHeight: 48,
     alignItems: 'center',

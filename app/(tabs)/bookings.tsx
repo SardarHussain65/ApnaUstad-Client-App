@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
-import { Colors, Typography, Spacing } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
@@ -44,22 +44,6 @@ const entityId = (entity?: string | { _id?: string } | null) => {
   return typeof entity === 'string' ? entity : entity._id || '';
 };
 
-const getMissionCardGradient = (status: string, isInstant: boolean): [string, string, string] => {
-  if (status === 'completed' || status === 'closed') {
-    return ['rgba(0,255,127,0.28)', 'rgba(5,16,29,0.94)', 'rgba(0,245,255,0.14)'];
-  }
-  if (status === 'cancelled') {
-    return ['rgba(255,59,48,0.24)', 'rgba(12,10,28,0.95)', 'rgba(191,90,242,0.12)'];
-  }
-  if (status === 'ongoing' || status === 'in-progress') {
-    return ['rgba(191,90,242,0.28)', 'rgba(4,17,34,0.95)', 'rgba(0,245,255,0.18)'];
-  }
-  if (isInstant) {
-    return ['rgba(255,140,0,0.26)', 'rgba(5,18,32,0.95)', 'rgba(0,245,255,0.16)'];
-  }
-  return ['rgba(0,245,255,0.23)', 'rgba(7,13,35,0.95)', 'rgba(191,90,242,0.15)'];
-};
-
 const isWithinJobResponseWindow = (bookingCreatedAt: string, jobCreatedAt: string, jobExpiresAt: string) => {
   const bookingTime = new Date(bookingCreatedAt).getTime();
   const jobTime = new Date(jobCreatedAt).getTime();
@@ -71,10 +55,37 @@ const isWithinJobResponseWindow = (bookingCreatedAt: string, jobCreatedAt: strin
 export default function BookingsTab() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const themedTypography = useThemeTypography();
   const router = useRouter();
   const { role } = useAuth();
   const isWorker = role === 'worker';
   const [activeTab, setActiveTab] = useState<TabType>('Active');
+
+  const getMissionCardGradient = (status: string, isInstant: boolean, statusColor: string): [string, string, string] => {
+    if (theme.id !== 'current') {
+      return [
+        alpha(statusColor, theme.id === 'light' ? 0.08 : 0.14),
+        theme.colors.surface.card,
+        theme.colors.surface.cardMuted,
+      ];
+    }
+
+    if (status === 'completed' || status === 'closed') {
+      return ['rgba(0,255,127,0.28)', 'rgba(5,16,29,0.94)', 'rgba(0,245,255,0.14)'];
+    }
+    if (status === 'cancelled') {
+      return ['rgba(255,59,48,0.24)', 'rgba(12,10,28,0.95)', 'rgba(191,90,242,0.12)'];
+    }
+    if (status === 'ongoing' || status === 'in-progress') {
+      return ['rgba(191,90,242,0.28)', 'rgba(4,17,34,0.95)', 'rgba(0,245,255,0.18)'];
+    }
+    if (isInstant) {
+      return ['rgba(255,140,0,0.26)', 'rgba(5,18,32,0.95)', 'rgba(0,245,255,0.16)'];
+    }
+    return ['rgba(0,245,255,0.23)', 'rgba(7,13,35,0.95)', 'rgba(191,90,242,0.15)'];
+  };
 
   // React Query hooks
   const userBookingsQuery = useMyBookings({ enabled: !isWorker });
@@ -121,16 +132,16 @@ export default function BookingsTab() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ongoing': 
-      case 'in-progress': return Colors.cyan;
+      case 'in-progress': return colors.cyan;
       case 'accepted': 
-      case 'assigned': return Colors.orange;
+      case 'assigned': return colors.orange;
       case 'completed': 
-      case 'closed': return Colors.success;
-      case 'cancelled': return Colors.error;
+      case 'closed': return colors.success;
+      case 'cancelled': return colors.error;
       case 'pending':
       case 'open':
-      case 'reviewing': return Colors.primary;
-      default: return Colors.primary;
+      case 'reviewing': return colors.primary;
+      default: return colors.primary;
     }
   };
 
@@ -193,12 +204,20 @@ export default function BookingsTab() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, Typography.threeD]}>{t('bookings.myBookings')}</Text>
-          <Text style={styles.headerSubtitle}>{t('bookings.subtitle')}</Text>
+          <Text style={[styles.headerTitle, themedTypography.threeD, { color: theme.colors.text.primary }]}>{t('bookings.myBookings')}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.text.muted }]}>{t('bookings.subtitle')}</Text>
         </View>
 
         {/* Custom Tab Bar */}
-        <View style={styles.tabContainer}>
+        <View
+          style={[
+            styles.tabContainer,
+            {
+              backgroundColor: theme.colors.surface.subtle,
+              borderColor: theme.colors.border.subtle,
+            },
+          ]}
+        >
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
             const tabKey = tab === 'Active' ? 'activeTab' : tab === 'Completed' ? 'completedTab' : 'cancelledTab';
@@ -214,7 +233,9 @@ export default function BookingsTab() {
                     style={StyleSheet.absoluteFillObject}
                   >
                     <LinearGradient
-                      colors={['rgba(0,245,255,0.4)', 'rgba(255,20,147,0.4)']}
+                      colors={theme.id === 'current'
+                        ? ['rgba(0,245,255,0.4)', 'rgba(255,20,147,0.4)']
+                        : [alpha(theme.colors.brand.primary, 0.16), alpha(theme.colors.brand.secondary, 0.12)]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.activeTabGradient}
@@ -223,6 +244,7 @@ export default function BookingsTab() {
                 )}
                 <Text style={[
                   styles.tabText,
+                  { color: isActive ? theme.colors.text.primary : theme.colors.text.muted },
                   isActive && styles.activeTabText
                 ]}>
                   {t(`bookings.${tabKey}`)}
@@ -243,7 +265,7 @@ export default function BookingsTab() {
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={handleRefresh}
-                tintColor={Colors.cyan}
+                tintColor={colors.cyan}
               />
             }
           >
@@ -348,29 +370,37 @@ export default function BookingsTab() {
                     intensity={30}
                     glowColor={statusColor}
                     hasGlow
-                    gradient={getMissionCardGradient(status, isInstant)}
+                    gradient={getMissionCardGradient(status, isInstant, statusColor)}
                     padding={0}
                     onPress={openDetails}
                   >
-                    <LinearGradient
-                      colors={[statusColor, 'rgba(0,245,255,0.85)', statusColor + '70']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.cardAccentLine}
-                    />
-                    <LinearGradient
-                      pointerEvents="none"
-                      colors={[statusColor + '30', 'rgba(0,0,0,0)', 'rgba(0,245,255,0.08)']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.cardAtmosphere}
-                    />
+<LinearGradient
+                       colors={[statusColor, colors.cyan, alpha(statusColor, 0.4)]}
+                       start={{ x: 0, y: 0 }}
+                       end={{ x: 1, y: 0 }}
+                       style={styles.cardAccentLine}
+                     />
+<LinearGradient
+                       pointerEvents="none"
+                       colors={[alpha(statusColor, 0.3), 'rgba(0,0,0,0)', alpha(colors.cyan, 0.08)]}
+                       start={{ x: 0, y: 0 }}
+                       end={{ x: 1, y: 1 }}
+                       style={styles.cardAtmosphere}
+                     />
                     <View style={[styles.cardSideAccent, { backgroundColor: statusColor }]} />
                     <View style={styles.cardBody}>
                       <View style={styles.cardTopStrip}>
-                        <View style={styles.missionTypePill}>
-                          {isInstant ? <Zap size={12} color={Colors.cyan} /> : <Calendar size={12} color={Colors.cyan} />}
-                          <Text style={styles.missionTypeText}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
+                        <View
+                          style={[
+                            styles.missionTypePill,
+                            {
+                              backgroundColor: alpha(colors.cyan, theme.id === 'current' ? 0.08 : 0.1),
+                              borderColor: alpha(colors.cyan, 0.18),
+                            },
+                          ]}
+                        >
+                          {isInstant ? <Zap size={12} color={colors.cyan} /> : <Calendar size={12} color={colors.cyan} />}
+                          <Text style={[styles.missionTypeText, { color: colors.cyan }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
                         </View>
                         <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
                           {getStatusIcon(status, statusColor)}
@@ -395,36 +425,36 @@ export default function BookingsTab() {
                         </View>
 
                         <View style={styles.identityTextGroup}>
-                          <Text style={styles.personRole}>{counterPartyRole}</Text>
-                          <Text style={[styles.personName, Typography.threeD]} numberOfLines={1}>
+                          <Text style={[styles.personRole, { color: theme.colors.text.dim }]}>{counterPartyRole}</Text>
+                          <Text style={[styles.personName, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
                             {counterPartyName}
                           </Text>
                         </View>
 
                         {!!amountValue && (
-                          <View style={styles.amountPill}>
-                            <Banknote size={13} color={Colors.success} />
+                          <View style={[styles.amountPill, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.22) }]}>
+                            <Banknote size={13} color={colors.success} />
                             <View>
-                              <Text style={styles.amountLabel}>{amountLabel}</Text>
-                              <Text style={styles.amountValue}>Rs. {amountValue.toLocaleString()}</Text>
+                              <Text style={[styles.amountLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
+                              <Text style={[styles.amountValue, { color: colors.success }]}>Rs. {amountValue.toLocaleString()}</Text>
                             </View>
                           </View>
                         )}
                       </View>
 
-                      <LinearGradient
-                        colors={['rgba(255,255,255,0.075)', statusColor + '0D']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.serviceBlock}
-                      >
+<LinearGradient
+                       colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(colors.cyan, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
+                       start={{ x: 0, y: 0 }}
+                       end={{ x: 1, y: 1 }}
+                       style={styles.serviceBlock}
+                     >
                         <View style={styles.serviceIconBox}>
-                          <BriefcaseBusiness size={19} color={Colors.cyan} />
+                          <BriefcaseBusiness size={19} color={colors.cyan} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.itemTitle, Typography.threeD]} numberOfLines={1}>{title}</Text>
+                          <Text style={[styles.itemTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
                           {!!description && (
-                            <Text style={styles.descriptionText} numberOfLines={2}>
+                            <Text style={[styles.descriptionText, { color: theme.colors.text.muted }]} numberOfLines={2}>
                               {description}
                             </Text>
                           )}
@@ -433,41 +463,41 @@ export default function BookingsTab() {
 
                       <View style={styles.detailGrid}>
                         <View style={styles.detailChip}>
-                          <Calendar size={14} color={Colors.cyan} />
-                          <Text style={styles.detailText}>{formatMissionDate(scheduledDate)}</Text>
+                          <Calendar size={14} color={colors.cyan} />
+                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{formatMissionDate(scheduledDate)}</Text>
                         </View>
                         <View style={styles.detailChip}>
-                          <Clock size={14} color={Colors.orange} />
-                          <Text style={styles.detailText}>{scheduledTime || 'ASAP'}</Text>
+                          <Clock size={14} color={colors.orange} />
+                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{scheduledTime || 'ASAP'}</Text>
                         </View>
                       </View>
 
-                      <View style={styles.locationBox}>
-                        <MapPin size={15} color={Colors.textMuted} />
-                        <Text style={styles.locationText} numberOfLines={2}>
+                      <View style={[styles.locationBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                        <MapPin size={15} color={theme.colors.text.muted} />
+                        <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={2}>
                           {address || t('bookings.openDetailsToViewLocation', 'Open details to view the service location')}
                         </Text>
                       </View>
 
                       <View style={styles.actionDivider} />
 
-                      <LinearGradient
-                        colors={['rgba(0,245,255,0.15)', statusColor + '16']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.actionPanel}
-                      >
+<LinearGradient
+                         colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(statusColor, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
+                         start={{ x: 0, y: 0 }}
+                         end={{ x: 1, y: 0 }}
+                         style={styles.actionPanel}
+                       >
                         <TouchableOpacity
                           style={styles.actionBtn}
                           activeOpacity={0.85}
                           onPress={openDetails}
                         >
                           <View style={styles.actionLabelGroup}>
-                            <Radio size={14} color={Colors.cyan} />
-                            <Text style={styles.actionBtnText}>{actionLabel}</Text>
+                            <Radio size={14} color={colors.cyan} />
+                            <Text style={[styles.actionBtnText, { color: theme.colors.text.primary }]}>{actionLabel}</Text>
                           </View>
-                          <View style={styles.actionCircle}>
-                            <ChevronRight size={16} color="#001014" />
+                          <View style={[styles.actionCircle, { backgroundColor: colors.cyan }]}>
+                            <ChevronRight size={16} color={theme.colors.button.primaryText} />
                           </View>
                         </TouchableOpacity>
                       </LinearGradient>
@@ -500,7 +530,7 @@ export default function BookingsTab() {
               )
             })}
             {filteredData.length === 0 && (() => {
-              const tabColor = activeTab === 'Active' ? Colors.cyan : activeTab === 'Completed' ? Colors.success : Colors.error;
+              const tabColor = activeTab === 'Active' ? colors.cyan : activeTab === 'Completed' ? colors.success : colors.error;
               const emptyTitleKey = activeTab === 'Active' ? 'noActiveBookings' : activeTab === 'Completed' ? 'noCompletedBookings' : 'noCancelledBookings';
               const emptySubKey = activeTab === 'Active' ? 'activeEmpty' : activeTab === 'Completed' ? 'completedEmpty' : 'cancelledEmpty';
               return (
@@ -508,10 +538,10 @@ export default function BookingsTab() {
                   <View style={[styles.emptyIconCircle, { borderColor: tabColor + '38', backgroundColor: tabColor + '10', shadowColor: tabColor }]}>
                     <Inbox size={42} color={tabColor} />
                   </View>
-                  <Text style={[styles.emptyTitle, Typography.threeD]}>
+                  <Text style={[styles.emptyTitle, themedTypography.threeD, { color: theme.colors.text.primary }]}>
                     {t(`bookings.${emptyTitleKey}`).toUpperCase()}
                   </Text>
-                  <Text style={styles.emptySub}>
+                  <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>
                     {t(`bookings.${emptySubKey}`)}
                   </Text>
                 </Animated.View>
@@ -536,23 +566,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Colors.textMuted,
     fontWeight: '600',
     marginTop: 4,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 20,
     padding: 4,
     marginBottom: Spacing.l,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   tabButton: {
     flex: 1,
@@ -568,14 +594,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   tabText: {
-    color: Colors.textMuted,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
     zIndex: 1,
   },
   activeTabText: {
-    color: '#fff',
     fontWeight: '900',
   },
   scrollContent: {
@@ -586,7 +610,6 @@ const styles = StyleSheet.create({
   bookingCard: {
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.13)',
   },
   cardAccentLine: {
     height: 3,
@@ -620,12 +643,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,245,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
   },
   missionTypeText: {
-    color: Colors.cyan,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -657,13 +677,11 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     borderWidth: 1.5,
     padding: 3,
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   avatarFallback: {
     flex: 1,
@@ -672,7 +690,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitials: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '900',
   },
@@ -681,7 +698,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   personRole: {
-    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -689,7 +705,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   personName: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '900',
   },
@@ -700,18 +715,14 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: 'rgba(52,199,89,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(52,199,89,0.22)',
   },
   amountLabel: {
-    color: Colors.textMuted,
     fontSize: 8,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   amountValue: {
-    color: Colors.success,
     fontSize: 12,
     fontWeight: '900',
   },
@@ -721,9 +732,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 13,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 12,
   },
   serviceIconBox: {
@@ -732,17 +741,13 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,245,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
   },
   itemTitle: {
     fontSize: 19,
     fontWeight: '900',
-    color: '#fff',
   },
   descriptionText: {
-    color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '600',
@@ -757,9 +762,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -768,7 +771,6 @@ const styles = StyleSheet.create({
   detailText: {
     flex: 1,
     fontSize: 12,
-    color: '#D8D7E8',
     fontWeight: '800',
   },
   locationBox: {
@@ -777,27 +779,22 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.065)',
   },
   locationText: {
     flex: 1,
-    color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '700',
   },
   actionDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     marginTop: 14,
     marginBottom: 10,
   },
   actionPanel: {
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.14)',
     overflow: 'hidden',
   },
   actionBtn: {
@@ -813,7 +810,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionBtnText: {
-    color: Colors.cyan,
     fontWeight: '900',
     fontSize: 12,
     textTransform: 'uppercase',
@@ -823,7 +819,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 12,
-    backgroundColor: Colors.cyan,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -840,7 +835,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reviewBtnText: {
-    color: '#000',
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1,
@@ -868,14 +862,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    color: '#fff',
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   emptySub: {
     fontSize: 14,
-    color: Colors.textMuted,
     textAlign: 'center',
     fontWeight: '600',
     lineHeight: 20,

@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
-import { Colors } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { CustomTabBar } from '../../components/navigation/TabBar';
 import { socketService } from '../../services/socketService';
 
 export default function TabLayout() {
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const router = useRouter();
 
   useEffect(() => {

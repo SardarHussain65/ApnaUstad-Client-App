@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { HelpCircle } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeShadows, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
@@ -20,6 +20,9 @@ export default function HelpCenterScreen() {
   const params = useLocalSearchParams<{ subject?: string; reason?: string; source?: string }>();
   const { success, error: showError } = useToast();
   const { mutateAsync: createRequest, isPending } = useCreateSupportRequestMutation();
+  const theme = useTheme();
+  const typography = useThemeTypography();
+  const shadows = useThemeShadows();
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -137,16 +140,16 @@ export default function HelpCenterScreen() {
       >
         <ProfileHeader title={t('helpCenter.title')} />
 
-        <Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
-          <View style={styles.iconWrap}>
-            <View style={styles.iconGlow} />
-            <View style={styles.iconCircle}>
-              <HelpCircle size={34} color={Colors.primary} />
-            </View>
-          </View>
-          <Text style={[styles.screenTitle, Typography.threeD]}>{t('helpCenter.needHelp')}</Text>
-          <Text style={styles.screenSubtitle}>{t('helpCenter.needHelpDesc')}</Text>
-        </Animated.View>
+<Animated.View entering={FadeInUp.delay(200)} style={styles.headerSection}>
+           <View style={styles.iconWrap}>
+              <View style={[styles.iconGlow, { backgroundColor: alpha(theme.colors.brand.primary, 0.15) }]} />
+             <View style={styles.iconCircle}>
+               <HelpCircle size={34} color={theme.colors.brand.primary} />
+             </View>
+           </View>
+           <Text style={[styles.screenTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('helpCenter.needHelp')}</Text>
+           <Text style={[styles.screenSubtitle, { color: theme.colors.text.muted }]}>{t('helpCenter.needHelpDesc')}</Text>
+         </Animated.View>
 
         {/* Create Request Form */}
         <Animated.View entering={FadeInDown.delay(300)} style={styles.formSection}>
@@ -158,18 +161,18 @@ export default function HelpCenterScreen() {
           />
 
           <Text style={styles.messageLabel}>{t('helpCenter.messageLabel')}</Text>
-          <GlassCard style={styles.messageCard} intensity={20} padding={Spacing.m}>
+            <GlassCard style={[styles.messageCard, { borderColor: theme.colors.border.subtle }]} intensity={20} padding={Spacing.m}>
             <TextInput
               value={message}
               onChangeText={setMessage}
               placeholder={t('helpCenter.messagePlaceholder')}
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={theme.colors.input.placeholder}
               multiline
-              style={styles.messageInput}
+              style={[styles.messageInput, { color: theme.colors.input.text }]}
             />
           </GlassCard>
 
-          <Text style={styles.helperText}>{contactText}</Text>
+          <Text style={[styles.helperText, { color: theme.colors.text.muted }]}>{contactText}</Text>
 
           <CustomButton
             title={isPending ? t('helpCenter.sending') : t('helpCenter.sendBtn')}
@@ -181,51 +184,53 @@ export default function HelpCenterScreen() {
 
         {/* User Requests List with status and replies */}
         <Animated.View entering={FadeInDown.delay(400)} style={styles.requestsSection}>
-          <Text style={styles.sectionTitle}>{t('helpCenter.myRequests')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('helpCenter.myRequests')}</Text>
           {loadingRequests && requests.length === 0 ? (
-            <Text style={styles.helperText}>{t('helpCenter.loadingRequests')}</Text>
+            <Text style={[styles.helperText, { color: theme.colors.text.muted }]}>{t('helpCenter.loadingRequests')}</Text>
           ) : requests.length === 0 ? (
-            <Text style={styles.helperText}>{t('helpCenter.noRequests')}</Text>
+            <Text style={[styles.helperText, { color: theme.colors.text.muted }]}>{t('helpCenter.noRequests')}</Text>
           ) : (
             requests.map((r) => (
-              <GlassCard key={r._id} style={styles.requestCard} intensity={18} padding={Spacing.m}>
+              <GlassCard key={r._id} style={[styles.requestCard, { borderColor: theme.colors.border.subtle }]} intensity={18} padding={Spacing.m}>
                 <View style={styles.requestHeader}>
-                  <Text style={styles.requestSubject}>{r.topic || r.subject || t('helpCenter.contactSupport')}</Text>
+                  <Text style={[styles.requestSubject, { color: theme.colors.text.primary }]}>{r.topic || r.subject || t('helpCenter.contactSupport')}</Text>
                   <View style={[
-                    styles.statusBadge, 
-                    r.status === 'closed' ? styles.statusClosed :
-                    r.status === 'pending' ? styles.statusPending : styles.statusOpen
+                    styles.statusBadge,
+                    {
+                      backgroundColor: r.status === 'closed' ? alpha(theme.colors.text.muted, 0.1) : r.status === 'pending' ? alpha(theme.colors.status.warning, 0.1) : alpha(theme.colors.status.success, 0.1),
+                      borderColor: r.status === 'closed' ? alpha(theme.colors.text.muted, 0.3) : r.status === 'pending' ? alpha(theme.colors.status.warning, 0.3) : alpha(theme.colors.status.success, 0.3),
+                    },
                   ]}>
-                    <Text style={styles.statusText}>{r.status?.toUpperCase() || 'OPEN'}</Text>
+                    <Text style={[styles.statusText, { color: r.status === 'closed' ? theme.colors.text.muted : r.status === 'pending' ? theme.colors.status.warning : theme.colors.status.success }]}>{r.status?.toUpperCase() || 'OPEN'}</Text>
                   </View>
                 </View>
                 
-                <Text style={styles.requestDate}>{t('helpCenter.openedOn', { date: formatDate(r.createdAt) })}</Text>
+                <Text style={[styles.requestDate, { color: theme.colors.text.dim }]}>{t('helpCenter.openedOn', { date: formatDate(r.createdAt) })}</Text>
                 
                 <View style={styles.originalMsgBox}>
-                  <Text style={styles.requestMessage}>{r.message}</Text>
+                  <Text style={[styles.requestMessage, { color: theme.colors.text.primary }]}>{r.message}</Text>
                 </View>
 
                 {/* Reply Message Thread */}
                 {r.replies && r.replies.length > 0 && (
                   <View style={styles.repliesContainer}>
-                    <Text style={styles.repliesTitle}>{t('helpCenter.conversationHistory')}</Text>
+                    <Text style={[styles.repliesTitle, { color: theme.colors.brand.primary }]}>{t('helpCenter.conversationHistory')}</Text>
                     <View style={styles.replyThread}>
                       {r.replies.map((rep: any, idx: number) => {
                         const isAdmin = rep.from === 'admin';
                         return (
-                          <View 
-                            key={idx} 
-                            style={[
-                              styles.replyBubble,
-                              isAdmin ? styles.adminBubble : styles.userBubble
-                            ]}
-                          >
-                            <Text style={styles.replyAuthor}>
+<View 
+                             key={idx} 
+                              style={[
+                                styles.replyBubble,
+                                isAdmin ? [styles.adminBubble, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }] : [styles.userBubble, { backgroundColor: alpha(theme.colors.brand.secondary, 0.18), borderColor: alpha(theme.colors.brand.secondary, 0.3) }]
+                              ]}
+                           >
+                            <Text style={[styles.replyAuthor, { color: theme.colors.text.primary }]}>
                               {isAdmin ? (rep.authorName || t('helpCenter.agentName')) : t('helpCenter.userName')}
                             </Text>
-                            <Text style={styles.replyText}>{rep.message}</Text>
-                            <Text style={styles.replyTime}>{formatDate(rep.createdAt)}</Text>
+                            <Text style={[styles.replyText, { color: theme.colors.text.secondary }]}>{rep.message}</Text>
+                            <Text style={[styles.replyTime, { color: theme.colors.text.dim }]}>{formatDate(rep.createdAt)}</Text>
                           </View>
                         );
                       })}
@@ -237,9 +242,9 @@ export default function HelpCenterScreen() {
                 {r.status !== 'closed' && (
                   <View style={styles.quickReplyContainer}>
                     <TextInput
-                      style={styles.quickReplyInput}
+                      style={[styles.quickReplyInput, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
                       placeholder={t('helpCenter.replyPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor={theme.colors.input.placeholder}
                       value={ticketReplies[r._id] || ''}
                       onChangeText={(text) => handleReplyTextChange(r._id, text)}
                     />
@@ -278,25 +283,19 @@ const styles = StyleSheet.create({
   iconGlow: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 45,
-    backgroundColor: Colors.primary + '15',
   },
   iconCircle: {
     flex: 1,
     borderRadius: 45,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   screenTitle: {
     fontSize: 26,
     fontWeight: '900',
-    color: '#fff',
     marginBottom: 8,
   },
   screenSubtitle: {
-    color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
     paddingHorizontal: 20,
     fontSize: 13,
@@ -306,7 +305,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   messageLabel: {
-    color: 'rgba(255,255,255,0.6)',
     fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -316,17 +314,14 @@ const styles = StyleSheet.create({
   messageCard: {
     borderRadius: BorderRadius.l,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   messageInput: {
     minHeight: 110,
-    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
     textAlignVertical: 'top',
   },
   helperText: {
-    color: 'rgba(255,255,255,0.35)',
     fontSize: 11,
     marginTop: 2,
   },
@@ -337,7 +332,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   sectionTitle: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '800',
     marginBottom: 12,
@@ -347,7 +341,6 @@ const styles = StyleSheet.create({
   requestCard: {
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: BorderRadius.l,
   },
   requestHeader: {
@@ -357,7 +350,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   requestSubject: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '800',
     flex: 1,
@@ -368,52 +360,32 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.s,
     borderWidth: 1,
   },
-  statusOpen: {
-    backgroundColor: 'rgba(52, 199, 89, 0.1)',
-    borderColor: 'rgba(52, 199, 89, 0.3)',
-  },
-  statusClosed: {
-    backgroundColor: 'rgba(142, 142, 147, 0.1)',
-    borderColor: 'rgba(142, 142, 147, 0.3)',
-  },
-  statusPending: {
-    backgroundColor: 'rgba(255, 140, 0, 0.1)',
-    borderColor: 'rgba(255, 140, 0, 0.3)',
-  },
   statusText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 0.5,
   },
   requestDate: {
-    color: 'rgba(255,255,255,0.3)',
     fontSize: 10,
     marginTop: 2,
     fontWeight: '500',
   },
   originalMsgBox: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: BorderRadius.s,
     padding: Spacing.s,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
   },
   requestMessage: {
-    color: 'rgba(255,255,255,0.85)',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '500',
   },
   repliesContainer: {
     marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
     paddingTop: 10,
   },
   repliesTitle: {
-    color: Colors.primary,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -430,30 +402,23 @@ const styles = StyleSheet.create({
   },
   adminBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: Colors.secondary + '20',
     borderWidth: 1,
-    borderColor: Colors.secondary + '30',
   },
   replyAuthor: {
-    color: 'rgba(255,255,255,0.9)',
     fontSize: 10,
     fontWeight: '800',
   },
   replyText: {
-    color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
     marginTop: 2,
     lineHeight: 16,
     fontWeight: '500',
   },
   replyTime: {
-    color: 'rgba(255,255,255,0.3)',
     fontSize: 8,
     alignSelf: 'flex-end',
     marginTop: 4,
@@ -462,20 +427,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 14,
     gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
     paddingTop: 10,
   },
   quickReplyInput: {
     flex: 1,
     height: 38,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: BorderRadius.s,
     paddingHorizontal: Spacing.s,
-    color: '#fff',
     fontSize: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   quickReplyBtn: {
     height: 38,

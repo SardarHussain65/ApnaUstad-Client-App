@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
 import { Bell, MapPin } from 'lucide-react-native';
-import { Colors, Spacing, Typography, Shadows } from '../../constants/Theme';
+import { Spacing, Shadows, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications, useUserLocation } from '../../hooks';
 import { BlurView } from 'expo-blur';
@@ -11,12 +11,15 @@ import { socketService } from '../../services/socketService';
 import { useTranslation } from 'react-i18next';
 
 export function HomeHeader() {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const router = useRouter();
   const { t } = useTranslation();
   const { role, user } = useAuth();
   const { location } = useUserLocation();
   const { data: notificationsData, refetch: refetchNotifications } = useNotifications({ enabled: !!user?._id });
-  const accentColor = role === 'worker' ? Colors.orange : Colors.primary;
+  const accentColor = role === 'worker' ? colors.orange : colors.primary;
   const unreadCount = notificationsData?.unreadCount || 0;
 
   useEffect(() => {
@@ -38,26 +41,36 @@ export function HomeHeader() {
           <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.8}>
             {/* Glowing Ring */}
             <LinearGradient
-              colors={[Colors.primary, Colors.secondary]}
+              colors={theme.colors.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.avatarGlow}
             />
             <Image
               source={{ uri: user?.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'Guest')}&background=random` }}
-              style={styles.avatar}
+              style={[styles.avatar, { borderColor: theme.colors.background.app }]}
             />
-            <View style={[styles.activeIndicator, { backgroundColor: Colors.success }]} />
+            <View style={[styles.activeIndicator, { backgroundColor: colors.success, borderColor: theme.colors.background.app }]} />
           </TouchableOpacity>
           <View style={styles.welcomeText}>
-            <Text style={styles.greetingLabel} numberOfLines={1}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
-            <Text style={styles.greetingHeader} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.6}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
+            <Text style={[styles.greetingLabel, typography.caption, { color: accentColor }]} numberOfLines={1}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
+            <Text style={[styles.greetingHeader, typography.h3, { color: theme.colors.text.primary }]} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.6}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.notificationBtn} activeOpacity={0.7} onPress={() => router.push('/notifications' as any)}>
-          <BlurView intensity={20} tint="light" style={styles.iconBlur}>
-            <Bell size={22} color={Colors.text} strokeWidth={1.5} />
+        <TouchableOpacity
+          style={[
+            styles.notificationBtn,
+            {
+              borderColor: theme.colors.border.subtle,
+              backgroundColor: theme.colors.surface.subtle,
+            },
+          ]}
+          activeOpacity={0.7}
+          onPress={() => router.push('/notifications' as any)}
+        >
+          <BlurView intensity={theme.id === 'current' ? 20 : 8} tint={theme.blurTint} style={styles.iconBlur}>
+            <Bell size={22} color={theme.colors.text.primary} strokeWidth={1.5} />
             {unreadCount > 0 && (
               <View style={[styles.badge, { backgroundColor: accentColor }]}>
                 <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -67,9 +80,17 @@ export function HomeHeader() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.locationContainer}>
+      <View
+        style={[
+          styles.locationContainer,
+          {
+            backgroundColor: theme.colors.surface.subtle,
+            borderColor: theme.colors.border.subtle,
+          },
+        ]}
+      >
         <MapPin size={14} color={accentColor} />
-        <Text style={styles.locationText} numberOfLines={1}>{locationDisplay}</Text>
+        <Text style={[styles.locationText, typography.caption, { color: theme.colors.text.muted }]} numberOfLines={1}>{locationDisplay}</Text>
       </View>
     </View>
   );
@@ -111,7 +132,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: Colors.background,
   },
   activeIndicator: {
     position: 'absolute',
@@ -121,43 +141,34 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: Colors.background,
   },
   welcomeText: {
     marginLeft: Spacing.m,
     flex: 1,
   },
   greetingLabel: {
-    ...Typography.caption,
     fontSize: 12,
-    color: Colors.primary,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 2,
   },
   greetingHeader: {
-    ...Typography.h3,
     fontSize: 22,
     fontWeight: '900',
-    color: '#fff',
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: Spacing.l,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   locationText: {
-    ...Typography.caption,
     marginLeft: 6,
-    color: Colors.textMuted,
     fontWeight: '700',
   },
   notificationBtn: {
@@ -166,7 +177,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   iconBlur: {
     flex: 1,

@@ -1,7 +1,9 @@
 import Constants from 'expo-constants';
 
 // For local development on your Mac, you can switch this back to your local IP address:
-export const BASE_URL = 'http://192.168.18.139:5001';
+export const BASE_URL = 'http://192.168.0.106:5001';
+// export const BASE_URL = 'http://192.168.86.29:5001';
+
 
 // Production VPS Server:
 // export const BASE_URL = 'https://api.apnaustad.app';

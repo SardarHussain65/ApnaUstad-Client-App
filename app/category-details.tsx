@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { Colors, Typography, Spacing, Shadows, BorderRadius } from '../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -25,9 +25,11 @@ export default function CategoryDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const typography = useThemeTypography();
 
   // Dynamic Theme
-  const themeColor = (params.color as string) || Colors.cyan;
+  const themeColor = (params.color as string) || theme.colors.brand.primary;
   const title = (params.title as string) || 'Service Hub';
 
   // Pulsing Animation for affordance
@@ -86,9 +88,9 @@ export default function CategoryDetailsScreen() {
         {/* Dynamic Header */}
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ChevronLeft color="#fff" size={24} />
+            <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, Typography.threeD]}>{title.toUpperCase()}</Text>
+          <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
           <View style={styles.placeholderBtn} />
         </View>
 
@@ -98,15 +100,22 @@ export default function CategoryDetailsScreen() {
         >
           {/* Main Hero Text & Graphic */}
           <Animated.View entering={FadeInDown.delay(100).duration(800)} style={styles.heroSection}>
-            <View style={[styles.glowingOrb, { shadowColor: themeColor, borderColor: themeColor + '60' }]}>
+            <View style={[
+              styles.glowingOrb,
+              {
+                shadowColor: themeColor,
+                borderColor: theme.isDark ? alpha(themeColor, 0.45) : alpha(themeColor, 0.4),
+                backgroundColor: theme.isDark ? alpha(themeColor, 0.20) : alpha(themeColor, 0.15),
+              }
+            ]}>
               <Sparkles color={themeColor} size={40} />
             </View>
-            <Text style={styles.heroSub}>{t('categoryDetails.selectMethod')}</Text>
-            <Text style={[styles.heroTitle, Typography.threeD]}>{title.toUpperCase()}</Text>
+            <Text style={[styles.heroSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.selectMethod')}</Text>
+            <Text style={[styles.heroTitle, typography.threeD, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
             {params.description ? (
-              <Text style={styles.categoryDescription}>{params.description}</Text>
+              <Text style={[styles.categoryDescription, { color: theme.colors.text.muted }]}>{params.description}</Text>
             ) : (
-              <Text style={styles.categoryDescription}>{t('categoryDetails.selectMethodDesc')}</Text>
+              <Text style={[styles.categoryDescription, { color: theme.colors.text.muted }]}>{t('categoryDetails.selectMethodDesc')}</Text>
             )}
           </Animated.View>
 
@@ -116,22 +125,22 @@ export default function CategoryDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(200).duration(600)} style={[styles.optionWrapper, pulseStyle]}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.mainOption, { borderColor: Colors.cyan, backgroundColor: 'rgba(10, 10, 31, 0.75)' }]}
+                style={[styles.mainOption, { borderColor: theme.colors.brand.primary, backgroundColor: theme.colors.surface.card }]}
                 onPress={() => handleRouteToJob('instant')}
               >
                 <LinearGradient
-                  colors={['rgba(0,245,255,0.15)', 'transparent']}
+                  colors={[alpha(theme.colors.brand.primary, 0.15), 'transparent']}
                   style={styles.optionGradient}
                 />
-                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(0,245,255,0.12)', borderColor: Colors.cyan + '40' }]}>
-                  <FileText size={28} color={Colors.cyan} />
+                <View style={[styles.optionIconBox, { backgroundColor: alpha(theme.colors.brand.primary, 0.12), borderColor: alpha(theme.colors.brand.primary, 0.4) }]}>
+                  <FileText size={28} color={theme.colors.brand.primary} />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={[styles.optionTitle, { color: Colors.cyan }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.postJob')}</Text>
-                  <Text style={styles.optionSub}>{t('categoryDetails.getBids')}</Text>
+                  <Text style={[styles.optionTitle, { color: theme.colors.brand.primary }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.postJob')}</Text>
+                  <Text style={[styles.optionSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.getBids')}</Text>
                 </View>
-                <View style={[styles.deployHint, { backgroundColor: Colors.cyan, shadowColor: Colors.cyan }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>{t('categoryDetails.postNow')}</Text>
+                <View style={[styles.deployHint, { backgroundColor: theme.colors.brand.primary, shadowColor: theme.colors.brand.primary }]}>
+                  <Text style={[styles.deployHintText, { color: theme.colors.button.primaryText }]}>{t('categoryDetails.postNow')}</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -140,22 +149,22 @@ export default function CategoryDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(300).duration(600)} style={[styles.optionWrapper, pulseStyle]}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.mainOption, { borderColor: Colors.worker, backgroundColor: 'rgba(10, 10, 31, 0.75)' }]}
+                style={[styles.mainOption, { borderColor: theme.colors.brand.worker, backgroundColor: theme.colors.surface.card }]}
                 onPress={handleBrowseWorkers}
               >
                 <LinearGradient
-                  colors={['rgba(255,107,0,0.15)', 'transparent']}
+                  colors={[alpha(theme.colors.brand.worker, 0.15), 'transparent']}
                   style={styles.optionGradient}
                 />
-                <View style={[styles.optionIconBox, { backgroundColor: 'rgba(255,107,0,0.12)', borderColor: Colors.worker + '40' }]}>
-                  <Users size={28} color={Colors.worker} />
+                <View style={[styles.optionIconBox, { backgroundColor: alpha(theme.colors.brand.worker, 0.12), borderColor: alpha(theme.colors.brand.worker, 0.4) }]}>
+                  <Users size={28} color={theme.colors.brand.worker} />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={[styles.optionTitle, { color: Colors.worker }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.chooseUstad')}</Text>
-                  <Text style={styles.optionSub}>{t('categoryDetails.hireDirectly')}</Text>
+                  <Text style={[styles.optionTitle, { color: theme.colors.brand.worker }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.chooseUstad')}</Text>
+                  <Text style={[styles.optionSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.hireDirectly')}</Text>
                 </View>
-                <View style={[styles.deployHint, { backgroundColor: Colors.worker, shadowColor: Colors.worker }]}>
-                  <Text style={[styles.deployHintText, { color: '#000' }]}>{t('categoryDetails.browse')}</Text>
+                <View style={[styles.deployHint, { backgroundColor: theme.colors.brand.worker, shadowColor: theme.colors.brand.worker }]}>
+                  <Text style={[styles.deployHintText, { color: theme.colors.button.primaryText }]}>{t('categoryDetails.browse')}</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>
@@ -182,11 +191,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
   placeholderBtn: {
     width: 44,
@@ -195,7 +202,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 2,
   },
   scrollContent: {
@@ -209,14 +215,12 @@ const styles = StyleSheet.create({
   },
   heroSub: {
     fontSize: 12,
-    color: Colors.textDim,
     fontWeight: '900',
     letterSpacing: 3,
     marginBottom: 8,
   },
   heroTitle: {
     fontSize: 28,
-    color: '#fff',
     fontWeight: '900',
     textAlign: 'center',
     lineHeight: 34,
@@ -237,7 +241,6 @@ const styles = StyleSheet.create({
   },
   categoryDescription: {
     fontSize: 13,
-    color: Colors.textMuted,
     fontWeight: '500',
     marginTop: 12,
     textAlign: 'center',
@@ -261,7 +264,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 12,
     overflow: 'hidden',
-    ...Shadows.card,
   },
   optionGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -273,7 +275,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.depth,
   },
   optionTextContainer: {
     alignItems: 'center',
@@ -291,7 +292,6 @@ const styles = StyleSheet.create({
   },
   optionSub: {
     fontSize: 10,
-    color: Colors.textDim,
     fontWeight: '800',
     letterSpacing: 0.8,
     textAlign: 'center',
@@ -312,89 +312,4 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
   },
-  cyberWrapper: {
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  cyberTouch: {
-    borderRadius: 24,
-    overflow: 'hidden',
-    paddingVertical: 6,
-    ...Shadows.depth,
-  },
-  cyberCard: {
-    minHeight: 100,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.12)',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  cyberContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  iconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    ...Shadows.depth,
-  },
-  infoBox: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  cyberLabel: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: Colors.textDim,
-    letterSpacing: 2,
-    marginBottom: 2,
-  },
-  cyberTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 4,
-    letterSpacing: 0.5,
-  },
-  cyberStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  cyberStatusText: {
-    fontSize: 9,
-    color: Colors.textMuted,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  cyberAction: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  shimmerLine: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 120,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    transform: [{ skewX: '-20deg' }],
-  },
 });
-

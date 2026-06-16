@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { CheckCircle2, Sparkles } from 'lucide-react-native';
 import { GlassCard } from './home/GlassCard';
-import { BorderRadius, Colors, Spacing, Typography } from '../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +27,8 @@ interface OnboardingSlideProps {
 }
 
 export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item, index, scrollX }) => {
+  const theme = useTheme();
+  const typography = useThemeTypography();
   const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
 
   const animatedImageStyle = useAnimatedStyle(() => ({
@@ -54,7 +56,7 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item, index, s
     <View style={styles.container}>
       <View style={styles.imageContainer}>
         <View style={[styles.outerGlow, { backgroundColor: item.accent }]} />
-        <View style={[styles.innerGlow, { borderColor: `${item.accent}40` }]} />
+        <View style={[styles.innerGlow, { borderColor: alpha(item.accent, 0.4) }]} />
         <Animated.Image
           resizeMode="contain"
           source={item.image}
@@ -63,21 +65,21 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item, index, s
       </View>
 
       <Animated.View style={[styles.content, animatedCardStyle]}>
-        <GlassCard
-          intensity={28}
-          padding={Spacing.l}
-          style={styles.infoCard}
-          gradient={[`${item.accent}1A`, 'rgba(191,90,242,0.06)']}
-        >
-          <View style={[styles.eyebrow, { borderColor: `${item.accent}40` }]}>
+<GlassCard
+           intensity={28}
+           padding={Spacing.l}
+           style={[styles.infoCard, { borderColor: theme.colors.border.subtle }]}
+           gradient={[alpha(item.accent, 0.1), alpha(theme.colors.brand.secondary, 0.04)]}
+         >
+          <View style={[styles.eyebrow, { borderColor: alpha(item.accent, 0.4) }]}>
             <Sparkles size={13} color={item.accent} />
             <Text style={[styles.eyebrowText, { color: item.accent }]}>{item.eyebrow}</Text>
           </View>
-          <Text style={[styles.title, Typography.threeD]}>{item.title}</Text>
-          <Text style={styles.description}>{item.description}</Text>
+          <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{item.title}</Text>
+          <Text style={[styles.description, { color: theme.colors.text.muted }]}>{item.description}</Text>
           <View style={styles.benefitRow}>
             <CheckCircle2 size={16} color={item.accent} strokeWidth={2.5} />
-            <Text style={styles.benefit}>{item.benefit}</Text>
+            <Text style={[styles.benefit, { color: theme.colors.text.secondary }]}>{item.benefit}</Text>
           </View>
         </GlassCard>
       </Animated.View>
@@ -102,7 +104,6 @@ const styles = StyleSheet.create({
     height: width * 0.58,
     borderRadius: width,
     opacity: 0.09,
-    shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.55,
     shadowRadius: 42,
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: alpha('#FFFFFF', 0.14),
   },
   eyebrow: {
     alignSelf: 'flex-start',
@@ -136,7 +137,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.035)',
     marginBottom: 14,
   },
   eyebrowText: {
@@ -146,7 +146,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: '#fff',
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: -0.6,
@@ -154,7 +153,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   description: {
-    color: 'rgba(255,255,255,0.62)',
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 21,
@@ -166,7 +164,6 @@ const styles = StyleSheet.create({
   },
   benefit: {
     flex: 1,
-    color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 17,

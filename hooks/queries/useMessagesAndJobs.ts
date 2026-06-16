@@ -22,6 +22,7 @@ export interface Job {
   category: string;
   urgency?: 'instant' | 'scheduled';
   urgencyPricingVersion?: number;
+  notifiedWorkersCount?: number;
   status: 'open' | 'assigned' | 'closed' | 'cancelled' | 'reviewing' | 'in-progress' | 'ongoing' | 'completed';
   customer?: string | {
     _id: string;

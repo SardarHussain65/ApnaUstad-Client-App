@@ -7,7 +7,7 @@ import Animated, {
   useSharedValue, 
   withSpring, 
 } from 'react-native-reanimated';
-import { Colors, BorderRadius, Shadows, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeShadows } from '../../constants/Theme';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -28,12 +28,29 @@ export function GlassCard({
   style, 
   onPress, 
   intensity = 40,
-  glowColor = Colors.cyan,
+  glowColor,
   hasGlow = false,
   gradient,
   padding = Spacing.l, // Default to standard padding
   contentStyle
 }: GlassCardProps) {
+  const theme = useTheme();
+  const shadows = useThemeShadows();
+  const resolvedGlowColor = glowColor ?? theme.colors.brand.primary;
+  const cardBackground = theme.id === 'current'
+    ? alpha('#FFFFFF', 0.03)
+    : theme.colors.surface.card;
+  const cardBorder = theme.id === 'current'
+    ? alpha('#FFFFFF', 0.12)
+    : theme.colors.border.default;
+  const fallbackBackground = theme.id === 'current'
+    ? alpha(theme.legacy.surface, 0.6)
+    : theme.colors.surface.card;
+  const gradientOpacity = theme.id === 'current' ? 0.35 : (theme.id === 'light' ? 0.20 : 0.16);
+  const androidGradientOpacity = theme.id === 'current' ? 0.4 : (theme.id === 'light' ? 0.22 : 0.18);
+  const highlightColor = theme.id === 'current'
+    ? alpha('#FFFFFF', 0.2)
+    : alpha(theme.colors.text.primary, 0.06);
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -52,42 +69,46 @@ export function GlassCard({
     <Animated.View 
       style={[
         styles.card,
-        Shadows.card,
-        Shadows.bevel, // Added 3D Bevel
+        {
+          backgroundColor: cardBackground,
+          borderColor: cardBorder,
+        },
+        shadows.card,
+        theme.id === 'current' && shadows.bevel,
         hasGlow && { 
-          borderColor: glowColor.length === 7 ? glowColor + '60' : glowColor,
-          shadowColor: glowColor.length === 9 ? glowColor.substring(0, 7) : glowColor,
-          shadowOpacity: 0.4,
-          shadowRadius: 20,
-          elevation: 15
+          borderColor: alpha(resolvedGlowColor, theme.id === 'current' ? 0.38 : 0.22),
+          shadowColor: resolvedGlowColor.length === 9 ? resolvedGlowColor.substring(0, 7) : resolvedGlowColor,
+          shadowOpacity: theme.id === 'current' ? 0.4 : 0.14,
+          shadowRadius: theme.id === 'current' ? 20 : 10,
+          elevation: theme.id === 'current' ? 15 : 5
         },
         style,
         animatedStyle
       ]}
     >
       {Platform.OS === 'ios' ? (
-        <BlurView intensity={intensity} tint="dark" style={StyleSheet.absoluteFill}>
+        <BlurView intensity={theme.id === 'current' ? intensity : Math.min(intensity, 20)} tint={theme.blurTint} style={StyleSheet.absoluteFill}>
           {gradient && (
             <LinearGradient
               colors={gradient as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} // Increased opacity
+              style={[StyleSheet.absoluteFill, { opacity: gradientOpacity }]}
             />
           )}
-          <View style={styles.highlight} />
+          <View style={[styles.highlight, { backgroundColor: highlightColor }]} />
         </BlurView>
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10, 10, 31, 0.6)' }]}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: fallbackBackground }]}>
            {gradient && (
             <LinearGradient
               colors={gradient as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[StyleSheet.absoluteFill, { opacity: 0.4 }]} // Increased opacity
+              style={[StyleSheet.absoluteFill, { opacity: androidGradientOpacity }]}
             />
           )}
-          <View style={styles.highlight} />
+          <View style={[styles.highlight, { backgroundColor: highlightColor }]} />
         </View>
       )}
       <View style={[styles.content, { padding: padding }, contentStyle]}>
@@ -115,9 +136,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   content: {
     zIndex: 1,
@@ -129,6 +148,5 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   }
 });

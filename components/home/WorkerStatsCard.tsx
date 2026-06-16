@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Banknote, Briefcase, CheckCircle2, Clock, Star } from 'lucide-react-native';
 import { GlassCard } from './GlassCard';
-import { Colors, BorderRadius, Typography } from '../../constants/Theme';
+import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +19,9 @@ interface WorkerStatsCardProps {
 
 export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: WorkerStatsCardProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const activeJobs = stats.activeCount ?? 0;
   const completed = stats.completed ?? 0;
   const successPercent = stats.missions > 0 ? Math.round(stats.successRate * 100) : 0;
@@ -30,8 +33,8 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
   return (
     <GlassCard
       intensity={42}
-      glowColor={Colors.green}
-      gradient={['rgba(0,255,127,0.16)', 'rgba(0,245,255,0.12)', 'rgba(5,5,16,0.98)']}
+      glowColor={colors.success}
+      gradient={[alpha(colors.success, 0.16), alpha(colors.cyan, 0.12), alpha(theme.colors.surface.card, 0.18)]}
       padding={0}
       style={styles.dashboardCard}
       contentStyle={styles.dashboardContent}
@@ -42,14 +45,14 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
       <View style={styles.topRow}>
         <View style={styles.earningsCluster}>
           <View style={styles.heroIconBox}>
-            <Banknote size={23} color={Colors.green} strokeWidth={2.5} />
+            <Banknote size={23} color={colors.success} strokeWidth={2.5} />
           </View>
           <View style={styles.heroTextContainer}>
-            <Text style={styles.heroLabel}>{t('home.worker.revenue')}</Text>
-            <Text style={[styles.heroValue, Typography.threeD]}>
+            <Text style={[styles.heroLabel, { color: theme.colors.text.muted }]}>{t('home.worker.revenue')}</Text>
+            <Text style={[styles.heroValue, typography.threeD, { color: theme.colors.text.primary }]}>
               Rs. {Number(stats.revenue || 0).toLocaleString()}
             </Text>
-            <Text style={styles.heroSubText}>{activeSummary}</Text>
+            <Text style={[styles.heroSubText, { color: theme.colors.text.muted }]}>{activeSummary}</Text>
           </View>
         </View>
 
@@ -64,37 +67,37 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
 
       <View style={styles.progressBlock}>
         <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>{t('home.client.completionRate')}</Text>
-          <Text style={styles.progressValue}>{completedSummary}</Text>
+          <Text style={[styles.progressTitle, { color: theme.colors.text.muted }]}>{t('home.client.completionRate')}</Text>
+          <Text style={[styles.progressValue, { color: theme.colors.text.primary }]}>{completedSummary}</Text>
         </View>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${successPercent}%` }]} />
+          <View style={[styles.progressFill, { width: `${successPercent}%`, backgroundColor: colors.success }]} />
         </View>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statTile}>
-          <View style={[styles.statIconBubble, { backgroundColor: 'rgba(0,245,255,0.1)' }]}>
-            <Clock size={14} color={Colors.cyan} />
+          <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.cyan, 0.1) }]}>
+            <Clock size={14} color={colors.cyan} />
           </View>
-          <Text style={styles.statValue}>{activeJobs}</Text>
-          <Text style={styles.statLabel}>{t('home.client.active')}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{activeJobs}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('home.client.active')}</Text>
         </View>
 
         <View style={styles.statTile}>
-          <View style={[styles.statIconBubble, { backgroundColor: 'rgba(0,255,127,0.1)' }]}>
-            <CheckCircle2 size={14} color={Colors.green} />
+          <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.success, 0.1) }]}>
+            <CheckCircle2 size={14} color={colors.success} />
           </View>
-          <Text style={styles.statValue}>{completed}</Text>
-          <Text style={styles.statLabel}>{t('home.client.completed')}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{completed}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('home.client.completed')}</Text>
         </View>
 
         <View style={styles.statTile}>
-          <View style={[styles.statIconBubble, { backgroundColor: 'rgba(191,90,242,0.12)' }]}>
-            <Briefcase size={14} color={Colors.purple} />
+          <View style={[styles.statIconBubble, { backgroundColor: alpha(theme.colors.brand.secondary, 0.12) }]}>
+            <Briefcase size={14} color={theme.colors.brand.secondary} />
           </View>
-          <Text style={styles.statValue}>{stats.missions}</Text>
-          <Text style={styles.statLabel}>{t('profile.jobs')}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{stats.missions}</Text>
+          <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('profile.jobs')}</Text>
         </View>
       </View>
     </GlassCard>
@@ -105,7 +108,6 @@ const styles = StyleSheet.create({
   dashboardCard: {
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.2)',
     marginTop: 14,
   },
   dashboardContent: {
@@ -120,7 +122,6 @@ const styles = StyleSheet.create({
     borderRadius: 75,
     top: -72,
     right: -45,
-    backgroundColor: 'rgba(0,255,127,0.13)',
   },
   glowTwo: {
     position: 'absolute',
@@ -129,7 +130,6 @@ const styles = StyleSheet.create({
     borderRadius: 65,
     bottom: -70,
     left: -42,
-    backgroundColor: 'rgba(0,245,255,0.14)',
   },
   topRow: {
     flexDirection: 'row',
@@ -149,11 +149,9 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 21,
-    backgroundColor: 'rgba(0,255,127,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.24)',
   },
   heroTextContainer: {
     flex: 1,
@@ -163,18 +161,15 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   heroValue: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#fff',
     marginTop: 2,
   },
   heroSubText: {
-    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
@@ -183,20 +178,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    backgroundColor: 'rgba(250,204,21,0.12)',
     paddingVertical: 8,
     paddingHorizontal: 11,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(250,204,21,0.3)',
   },
   ratingValue: {
-    color: '#facc15',
     fontSize: 14,
     fontWeight: '900',
   },
   ratingLabel: {
-    color: 'rgba(250,204,21,0.76)',
     fontSize: 8,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -204,9 +195,7 @@ const styles = StyleSheet.create({
   progressBlock: {
     padding: 12,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.045)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     marginBottom: 11,
   },
   progressHeader: {
@@ -216,27 +205,23 @@ const styles = StyleSheet.create({
     marginBottom: 9,
   },
   progressTitle: {
-    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 0,
   },
   progressValue: {
-    color: '#fff',
     fontSize: 11,
     fontWeight: '900',
   },
   progressTrack: {
     height: 8,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.green,
   },
   statsRow: {
     flexDirection: 'row',
@@ -247,9 +232,7 @@ const styles = StyleSheet.create({
     minHeight: 82,
     borderRadius: 18,
     padding: 11,
-    backgroundColor: 'rgba(6,8,24,0.62)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
   },
   statIconBubble: {
     width: 28,
@@ -262,12 +245,10 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#fff',
   },
   statLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0,
     marginTop: 2,

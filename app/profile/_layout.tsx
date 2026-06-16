@@ -1,14 +1,16 @@
 import { Stack } from 'expo-router';
-import { Colors } from '../../constants/Theme';
+import { useTheme } from '../../constants/Theme';
 
 export default function ProfileLayout() {
+  const theme = useTheme();
+
   return (
     <Stack
       screenOptions={{
         headerStyle: {
           backgroundColor: 'transparent',
         },
-        headerTintColor: Colors.primary,
+        headerTintColor: theme.colors.brand.primary,
         headerTitleStyle: {
           fontWeight: 'bold',
         },

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Colors, Spacing, BorderRadius, Shadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeShadows, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -39,6 +39,8 @@ export default function PersonalInfoScreen() {
   const { success, error: showError } = useToast();
   const { user, role, updateUser } = useAuth();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const shadows = useThemeShadows();
   const userId = user?._id;
   const isWorker = role === 'worker';
 
@@ -150,35 +152,35 @@ export default function PersonalInfoScreen() {
         >
           {/* Header */}
           <Animated.View entering={FadeInDown.delay(0)} style={[styles.header, { paddingTop: insets.top + 8 }]}>
-            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-              <ChevronLeft size={22} color="#fff" strokeWidth={2.5} />
+            <TouchableOpacity style={[styles.backBtn, { backgroundColor: theme.colors.border.subtle, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
+              <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{t('personalInfo.title')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('personalInfo.title')}</Text>
             <View style={{ width: 40 }} />
           </Animated.View>
 
           {/* Avatar */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.avatarSection}>
             <View style={styles.avatarWrapper}>
-              <LinearGradient colors={[Colors.primary, Colors.secondary]} style={styles.avatarGlow} />
+              <LinearGradient colors={[theme.colors.brand.primary, theme.colors.brand.secondary]} style={styles.avatarGlow} />
               {profileImage || localImage ? (
-                <Image source={{ uri: localImage || profileImage || '' }} style={styles.avatarPlaceholder} resizeMode="cover" />
+                <Image source={{ uri: localImage || profileImage || '' }} style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} resizeMode="cover" />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <User size={54} color="rgba(255,255,255,0.4)" strokeWidth={1.5} />
+                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]}>
+                  <User size={54} color={theme.colors.text.muted} strokeWidth={1.5} />
                 </View>
               )}
-              <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
+              <TouchableOpacity style={[styles.cameraBtn, { backgroundColor: theme.colors.brand.secondary, borderColor: theme.colors.background.app }, shadows.glow]} onPress={pickImage}>
                 {isUploading
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Camera size={17} color="#fff" />
+                  ? <ActivityIndicator color={theme.colors.text.inverse} size="small" />
+                  : <Camera size={17} color={theme.colors.text.inverse} />
                 }
               </TouchableOpacity>
             </View>
-            <Text style={styles.avatarTip}>{t('personalInfo.tapToChange')}</Text>
+            <Text style={[styles.avatarTip, { color: theme.colors.text.muted }]}>{t('personalInfo.tapToChange')}</Text>
             {!profileImage && !localImage && (
-              <View style={styles.photoNudge}>
-                <Text style={styles.photoNudgeText}>{t('personalInfo.photoNudge')}</Text>
+              <View style={[styles.photoNudge, { backgroundColor: alpha(theme.colors.brand.primary, 0.08), borderColor: alpha(theme.colors.brand.primary, 0.28) }]}>
+                <Text style={[styles.photoNudgeText, { color: theme.colors.brand.primary }]}>{t('personalInfo.photoNudge')}</Text>
               </View>
             )}
           </Animated.View>
@@ -202,17 +204,17 @@ export default function PersonalInfoScreen() {
 
           {/* Save Button */}
           <Animated.View entering={FadeInDown.delay(isWorker ? 460 : 420)} style={styles.footer}>
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isLoading}>
+            <TouchableOpacity style={[styles.saveBtn, shadows.glow]} onPress={handleSave} disabled={isLoading}>
               <LinearGradient
-                colors={isLoading ? ['rgba(0,245,255,0.4)', 'rgba(191,90,242,0.4)'] : [Colors.primary, Colors.secondary]}
+                colors={isLoading ? [alpha(theme.colors.brand.primary, 0.45), alpha(theme.colors.brand.secondary, 0.45)] : [theme.colors.brand.primary, theme.colors.brand.secondary]}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 style={styles.saveGradient}
               >
                 {isLoading
-                  ? <ActivityIndicator color="#000" />
+                  ? <ActivityIndicator color={theme.colors.button.primaryText} />
                   : <>
-                    <Check size={20} color="#000" strokeWidth={3} />
-                    <Text style={styles.saveText}>{t('personalInfo.saveChanges')}</Text>
+                    <Check size={20} color={theme.colors.button.primaryText} strokeWidth={3} />
+                    <Text style={[styles.saveText, { color: theme.colors.button.primaryText }]}>{t('personalInfo.saveChanges')}</Text>
                   </>
                 }
               </LinearGradient>
@@ -226,10 +228,12 @@ export default function PersonalInfoScreen() {
 
 // ─── Section Heading ──────────────────────────────────────────────────────────
 function SectionHeading({ label, delay }: { label: string; delay: number }) {
+  const theme = useTheme();
+  const typography = useThemeTypography();
   return (
     <Animated.View entering={FadeInDown.delay(delay)} style={styles.sectionHeading}>
-      <LinearGradient colors={[Colors.primary, Colors.secondary]} style={styles.sectionHeadingLine} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-      <Text style={styles.sectionHeadingText}>{label}</Text>
+      <LinearGradient colors={[theme.colors.brand.primary, theme.colors.brand.secondary]} style={styles.sectionHeadingLine} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+      <Text style={[styles.sectionHeadingText, { color: theme.colors.text.muted }]}>{label}</Text>
     </Animated.View>
   );
 }
@@ -246,24 +250,26 @@ interface FormFieldProps {
 
 function FormField({ label, value, onChangeText, icon: Icon, delay, ...props }: FormFieldProps) {
   const [focused, setFocused] = useState(false);
+  const theme = useTheme();
+  const typography = useThemeTypography();
 
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()} style={styles.fieldWrap}>
       <View style={styles.fieldLabelRow}>
-        <Icon size={13} color={focused ? Colors.primary : 'rgba(255,255,255,0.5)'} strokeWidth={2.5} />
-        <Text style={[styles.fieldLabel, focused && { color: Colors.primary }]}>{label}</Text>
+        <Icon size={13} color={focused ? theme.colors.brand.primary : theme.colors.text.muted} strokeWidth={2.5} />
+        <Text style={[styles.fieldLabel, { color: focused ? theme.colors.brand.primary : theme.colors.text.muted }]}>{label}</Text>
       </View>
-      <View style={[styles.inputCard, focused && { borderColor: `${Colors.primary}60` }]}>
+      <View style={[styles.inputCard, { borderColor: focused ? theme.colors.input.focusedBorder : theme.colors.input.border, backgroundColor: theme.colors.input.background }]}>
         <LinearGradient
-          colors={focused ? ['rgba(0,245,255,0.06)', 'rgba(0,0,0,0)'] : ['rgba(255,255,255,0.03)', 'rgba(0,0,0,0)']}
+          colors={focused ? [alpha(theme.colors.brand.primary, 0.06), 'rgba(0,0,0,0)'] : [alpha(theme.colors.text.primary, 0.05), 'rgba(0,0,0,0)']}
           style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: theme.colors.input.text }]}
           value={value}
           onChangeText={onChangeText}
-          placeholderTextColor="rgba(255,255,255,0.25)"
-          selectionColor={Colors.primary}
+          placeholderTextColor={theme.colors.input.placeholder}
+          selectionColor={theme.colors.brand.primary}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           {...props}
@@ -271,7 +277,7 @@ function FormField({ label, value, onChangeText, icon: Icon, delay, ...props }: 
       </View>
     </Animated.View>
   );
-}
+ }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
@@ -279,39 +285,39 @@ const styles = StyleSheet.create({
 
   // Header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 16 },
-  backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  backBtn: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
 
   // Avatar
   avatarSection: { alignItems: 'center', marginBottom: 32 },
   avatarWrapper: { width: 110, height: 110, position: 'relative', marginBottom: 10 },
   avatarGlow: { position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 60, opacity: 0.45 },
-  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 2, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  cameraBtn: { position: 'absolute', right: 0, bottom: 0, backgroundColor: Colors.secondary, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: Colors.background, ...Shadows.glow },
-  avatarTip: { color: 'rgba(255,255,255,0.38)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  photoNudge: { marginTop: 10, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12, backgroundColor: 'rgba(0,245,255,0.08)', borderWidth: 1, borderColor: 'rgba(0,245,255,0.2)' },
-  photoNudgeText: { color: 'rgba(0,245,255,0.9)', fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, borderWidth: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  cameraBtn: { position: 'absolute', right: 0, bottom: 0, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 3 },
+  avatarTip: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  photoNudge: { marginTop: 10, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12, borderWidth: 1 },
+  photoNudgeText: { fontSize: 12, fontWeight: '700', textAlign: 'center' },
 
   // Section heading
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 8 },
   sectionHeadingLine: { height: 2, width: 16, borderRadius: 1 },
-  sectionHeadingText: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 },
+  sectionHeadingText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 },
 
   // Field
   fieldWrap: { marginBottom: 16 },
   fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7, marginLeft: 2 },
-  fieldLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  fieldLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
 
   // Input card
   inputCard: {
-    borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden', backgroundColor: 'rgba(8,10,30,0.7)',
+    borderRadius: 14, borderWidth: 1,
+    overflow: 'hidden',
   },
-  input: { color: '#fff', fontSize: 15, fontWeight: '600', paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
+  input: { fontSize: 15, fontWeight: '600', paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
 
   // Footer / Save
   footer: { marginTop: 32 },
-  saveBtn: { borderRadius: BorderRadius.xl, overflow: 'hidden', ...Shadows.glow },
+  saveBtn: { borderRadius: BorderRadius.xl, overflow: 'hidden' },
   saveGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 12 },
-  saveText: { color: '#000', fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.5 },
+  saveText: { fontSize: 15, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.5 },
 });

@@ -23,7 +23,7 @@ import {
   Lock, CreditCard, Briefcase, Award, PenTool,
   BadgeDollarSign, FileText, CheckCircle, Eye, EyeOff
 } from 'lucide-react-native';
-import { Colors, BorderRadius, Shadows, Spacing } from '../../constants/Theme';
+import { Colors, BorderRadius, Shadows, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../../hooks';
@@ -46,7 +46,10 @@ export default function RegisterDetailsScreen() {
     role: string;
     idToken: string;
   }>();
-  const accentColor = params.role === 'worker' ? Colors.worker : Colors.cyan;
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  const accentColor = params.role === 'worker' ? colors.worker : colors.cyan;
 
   const [image, setImage] = useState<string | null>(null);
   const [address, setAddress] = useState('');
@@ -519,7 +522,7 @@ export default function RegisterDetailsScreen() {
 
                 {params.role === 'worker' && (
                   <View style={styles.locationStatus}>
-                    <MapPin size={14} color={latitude !== null && longitude !== null ? Colors.success : Colors.textMuted} />
+                    <MapPin size={14} color={latitude !== null && longitude !== null ? colors.success : colors.textMuted} />
                     <Text style={styles.locationStatusText}>
                       {latitude !== null && longitude !== null
                         ? t('registerDetails.locationCaptured')
@@ -545,8 +548,8 @@ export default function RegisterDetailsScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                   >
                     {showPassword
-                      ? <EyeOff size={18} color={Colors.textMuted} />
-                      : <Eye size={18} color={Colors.textMuted} />}
+                      ? <EyeOff size={18} color={theme.colors.text.muted} />
+                      : <Eye size={18} color={theme.colors.text.muted} />}
                   </TouchableOpacity>
                 </View>
               </GlassCard>
@@ -581,7 +584,8 @@ export default function RegisterDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const colors = Colors;
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -720,7 +724,7 @@ const styles = StyleSheet.create({
   },
   categoryInfoText: {
     flex: 1,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '700',
     lineHeight: 16,
@@ -769,7 +773,7 @@ const styles = StyleSheet.create({
   },
   locationStatusText: {
     flex: 1,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: '600',
     lineHeight: 16,
@@ -793,3 +797,5 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 });
+
+const styles = createStyles(colors);

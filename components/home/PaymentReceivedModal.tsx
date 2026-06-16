@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
-import { Colors, Shadows } from '../../constants/Theme';
 import { CheckCircle2, ShieldCheck, X } from 'lucide-react-native';
-import { GlassCard } from './GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { alpha, useTheme, useThemeColors } from '../../constants/Theme';
+import { GlassCard } from './GlassCard';
+import { useThemeShadows } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +20,10 @@ interface PaymentReceivedModalProps {
 export function PaymentReceivedModal({ visible, booking, onClose }: PaymentReceivedModalProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const shadows = useThemeShadows();
+
   if (!booking) return null;
 
   const handleAcknowledge = () => {
@@ -28,43 +33,43 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: theme.colors.modal.backdrop }]}>
         <Animated.View entering={ZoomIn.duration(500)} style={styles.container}>
-          <GlassCard 
-            intensity={50} 
-            style={styles.card} 
+          <GlassCard
+            intensity={50}
+            style={styles.card}
             padding={0}
             contentStyle={styles.glassContent}
           >
             <LinearGradient
-              colors={['rgba(0, 245, 255, 0.1)', 'transparent']}
+              colors={[alpha(colors.cyan, 0.1), 'transparent']}
               style={StyleSheet.absoluteFill}
             />
-            
+
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <X size={20} color="rgba(255,255,255,0.4)" />
+              <X size={20} color={alpha(theme.colors.text.primary, 0.4)} />
             </TouchableOpacity>
 
             <View style={styles.innerContent}>
               <View style={styles.iconWrapper}>
-                 <View style={styles.glow} />
-                 <CheckCircle2 size={54} color={Colors.cyan} strokeWidth={2.5} />
+                <View style={[styles.glow, { backgroundColor: alpha(colors.cyan, 0.15), shadowColor: colors.cyan }]} />
+                <CheckCircle2 size={54} color={colors.cyan} strokeWidth={2.5} />
               </View>
 
-              <Text style={styles.eyebrow}>{t('paymentReceivedModal.eyebrow', 'PAYMENT RECEIVED ✅')}</Text>
-              <Text style={styles.title}>{t('paymentReceivedModal.title', 'PAYMENT RECEIVED')}</Text>
-              
+              <Text style={[styles.eyebrow, { color: alpha(theme.colors.text.primary, 0.3) }]}>{t('paymentReceivedModal.eyebrow', 'PAYMENT RECEIVED ✅')}</Text>
+              <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('paymentReceivedModal.title', 'PAYMENT RECEIVED')}</Text>
+
               <View style={styles.amountBox}>
-                <Text style={styles.currency}>{t('paymentReceivedModal.currency', 'PKR')}</Text>
-                <Text style={styles.amount}>{booking.totalAmount || booking.amount || '—'}</Text>
+                <Text style={[styles.currency, { color: colors.cyan }]}>{t('paymentReceivedModal.currency', 'PKR')}</Text>
+                <Text style={[styles.amount, { color: theme.colors.text.primary }]}>{booking.totalAmount || booking.amount || '—'}</Text>
               </View>
 
-              <Text style={styles.category}>{booking.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
-              <Text style={styles.subtitle}>{t('paymentReceivedModal.subtitle', 'Payment has been verified and deposited into your wallet.')}</Text>
+              <Text style={[styles.category, { color: alpha(theme.colors.text.primary, 0.85) }]}>{booking.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
+              <Text style={[styles.subtitle, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('paymentReceivedModal.subtitle', 'Payment has been verified and deposited into your wallet.')}</Text>
 
               <View style={styles.footerRow}>
-                <ShieldCheck size={14} color={Colors.cyan} />
-                 <Text style={styles.securityTxt}>{t('paymentReceivedModal.verifiedBy', 'VERIFIED BY APNAUSTAD')}</Text>
+                <ShieldCheck size={14} color={colors.cyan} />
+                <Text style={[styles.securityTxt, { color: colors.cyan }]}>{t('paymentReceivedModal.verifiedBy', 'VERIFIED BY APNAUSTAD')}</Text>
               </View>
 
               <TouchableOpacity
@@ -73,12 +78,12 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                 style={styles.cta}
               >
                 <LinearGradient
-                  colors={[Colors.cyan, '#00B8C0']}
+                  colors={[colors.cyan, alpha(theme.colors.brand.secondary, 0.7)]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.ctaGradient}
                 >
-                  <Text style={styles.ctaText}>{t('paymentReceivedModal.gotIt', 'GOT IT')}</Text>
+                  <Text style={[styles.ctaText, { color: theme.colors.text.onBrand }]}>{t('paymentReceivedModal.gotIt', 'GOT IT')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -92,7 +97,6 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(5, 7, 16, 0.96)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -104,9 +108,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 32,
     borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.25)',
     overflow: 'hidden',
-    backgroundColor: '#0C0F1A',
   },
   glassContent: {
     alignItems: 'center',
@@ -142,8 +144,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(0, 245, 255, 0.15)',
-    shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 25,
@@ -151,7 +151,6 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontSize: 9,
     fontWeight: '800',
-    color: 'rgba(255,255,255,0.3)',
     letterSpacing: 4,
     marginBottom: 8,
     textAlign: 'center',
@@ -159,7 +158,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '900',
-    color: '#fff',
     letterSpacing: 1,
     marginBottom: 25,
     textAlign: 'center',
@@ -179,23 +177,19 @@ const styles = StyleSheet.create({
   currency: {
     fontSize: 16,
     fontWeight: '800',
-    color: Colors.cyan,
   },
   amount: {
     fontSize: 40,
     fontWeight: '900',
-    color: '#fff',
   },
   category: {
     fontSize: 16,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.85)',
     marginBottom: 10,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 35,
@@ -211,15 +205,12 @@ const styles = StyleSheet.create({
   securityTxt: {
     fontSize: 8,
     fontWeight: '900',
-    color: Colors.cyan,
     letterSpacing: 2,
   },
   cta: {
     width: '100%',
     borderRadius: 20,
     overflow: 'hidden',
-    ...Shadows.glow,
-    shadowColor: Colors.cyan,
   },
   ctaGradient: {
     paddingVertical: 20,
@@ -228,7 +219,6 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#000',
     letterSpacing: 2,
-  }
+  },
 });

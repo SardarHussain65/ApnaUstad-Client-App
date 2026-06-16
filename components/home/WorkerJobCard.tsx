@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { GlassCard } from './GlassCard';
-import { Colors, Typography } from '../../constants/Theme';
+import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { Zap, Calendar, MapPin, ChevronRight, Clock, Banknote } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -31,6 +31,9 @@ const getTimeAgo = (dateString: string) => {
 export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinates }: WorkerJobCardProps) => {
   const { user } = useAuth();
   const workerLoc = (user as any)?.address || (user as any)?.city || '';
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const typography = useThemeTypography();
   const distance = useMemo(() => {
     if (workerCoordinates && job.location?.coordinates) {
       const dist = calculateDistance(workerCoordinates, {
@@ -43,69 +46,68 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
   }, [workerCoordinates, job.location]);
 
   const timeAgo = useMemo(() => getTimeAgo(job.createdAt), [job.createdAt]);
+  const urgencyColor = job.urgency === 'instant' ? colors.cyan : colors.worker;
+  const urgencyBg = job.urgency === 'instant' ? alpha(theme.colors.brand.primary, 0.4) : alpha(colors.worker, 0.4);
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 100).duration(600)}>
       <GlassCard
         style={styles.jobCard}
         hasGlow={job.urgency === 'instant'}
-        glowColor={job.urgency === 'instant' ? Colors.cyan : Colors.worker}
-        gradient={job.urgency === 'instant' ? ['#004D4D', '#001A1A'] as any : ['#2D1400', '#0F0700'] as any}
+        glowColor={urgencyColor}
+        gradient={job.urgency === 'instant' ? [alpha(theme.colors.brand.primary, 0.8), alpha(theme.colors.background.screen, 0.9)] as any : [alpha(colors.worker, 0.7), alpha(theme.colors.background.screen, 0.9)] as any}
         onPress={() => onPress(job)}
         padding={0}
       >
         <View style={styles.container}>
-          {/* Top Header Row */}
           <View style={styles.headerRow}>
-            <View style={[styles.urgencyBadge, { backgroundColor: job.urgency === 'instant' ? '#006666' : '#663300' }]}>
+            <View style={[styles.urgencyBadge, { backgroundColor: urgencyBg, borderColor: alpha(urgencyColor, 0.3) }]}>
               {job.urgency === 'instant' ? (
-                <Zap size={12} color="#00FFFF" fill="#00FFFF" />
+                <Zap size={12} color={colors.cyan} fill={colors.cyan} />
               ) : (
                 <Calendar size={12} color="#FF8C00" />
               )}
-              <Text style={[styles.urgencyText, { color: job.urgency === 'instant' ? '#00FFFF' : '#FF8C00' }]}>
+              <Text style={[styles.urgencyText, { color: job.urgency === 'instant' ? colors.cyan : '#FF8C00' }]}>
                 {job.urgency === 'instant' ? 'INSTANT JOB' : job.urgency.toUpperCase()}
               </Text>
             </View>
             
             <View style={styles.timeContainer}>
-              <Clock size={10} color="rgba(255,255,255,0.4)" />
-              <Text style={styles.timeText}>{timeAgo}</Text>
+              <Clock size={10} color={alpha(theme.colors.text.primary, 0.4)} />
+              <Text style={[styles.timeText, { color: alpha(theme.colors.text.primary, 0.4) }]}>{timeAgo}</Text>
             </View>
           </View>
 
-          {/* Main Content Area */}
           <View style={styles.mainContent}>
             <View style={styles.infoSection}>
-              <Text style={[styles.categoryText, Typography.threeD]}>{job.category}</Text>
-              <Text style={styles.descriptionText} numberOfLines={2}>
+              <Text style={[styles.categoryText, typography.threeD, { color: theme.colors.text.primary }]}>{job.category}</Text>
+              <Text style={[styles.descriptionText, { color: alpha(theme.colors.text.primary, 0.6) }]} numberOfLines={2}>
                 {job.description}
               </Text>
             </View>
 
             <View style={styles.budgetSection}>
-              <View style={styles.budgetBadge}>
-                <Banknote size={14} color={Colors.green} />
-                <Text style={styles.budgetText}>Rs. {job.amount || 0}</Text>
+              <View style={[styles.budgetBadge, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.2) }]}>
+                <Banknote size={14} color={colors.success} />
+                <Text style={[styles.budgetText, { color: colors.success }]}>Rs. {job.amount || 0}</Text>
               </View>
             </View>
           </View>
 
-          {/* Footer Meta Area */}
           <View style={styles.footerRow}>
             <View style={styles.metaItem}>
-              <MapPin size={12} color="rgba(255,255,255,0.5)" />
-              <Text style={styles.addressText} numberOfLines={1}>
+              <MapPin size={12} color={alpha(theme.colors.text.primary, 0.5)} />
+              <Text style={[styles.addressText, { color: alpha(theme.colors.text.primary, 0.5) }]} numberOfLines={1}>
                 {job.address || 'Location Hidden'}
               </Text>
             </View>
             
             <View style={styles.distanceBadge}>
-              <View style={[styles.dot, { backgroundColor: job.urgency === 'instant' ? Colors.cyan : Colors.worker }]} />
-              <Text style={[styles.distanceText, { color: job.urgency === 'instant' ? Colors.cyan : Colors.worker }]}>
+              <View style={[styles.dot, { backgroundColor: urgencyColor }]} />
+              <Text style={[styles.distanceText, { color: urgencyColor }]}>
                 {distance}
               </Text>
-              <ChevronRight size={14} color="rgba(255,255,255,0.3)" />
+              <ChevronRight size={14} color={alpha(theme.colors.text.primary, 0.3)} />
             </View>
           </View>
         </View>
@@ -113,6 +115,7 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
     </Animated.View>
   );
 });
+WorkerJobCard.displayName = 'WorkerJobCard';
 
 const styles = StyleSheet.create({
   jobCard: {
@@ -136,7 +139,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   urgencyText: {
     fontSize: 9,
@@ -150,7 +152,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.4)',
     fontWeight: '600',
   },
   mainContent: {
@@ -166,13 +167,11 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#fff',
     marginBottom: 6,
     letterSpacing: 0.5,
   },
   descriptionText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
     lineHeight: 18,
     fontWeight: '500',
   },
@@ -182,16 +181,13 @@ const styles = StyleSheet.create({
   budgetBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 255, 127, 0.1)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 127, 0.2)',
   },
   budgetText: {
-    color: Colors.green,
     fontWeight: '900',
     fontSize: 14,
   },
@@ -201,7 +197,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
   },
   metaItem: {
     flexDirection: 'row',
@@ -212,7 +207,6 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
     fontWeight: '600',
   },
   distanceBadge: {

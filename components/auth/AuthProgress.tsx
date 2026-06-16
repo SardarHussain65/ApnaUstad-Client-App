@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 interface AuthProgressProps {
   accentColor?: string;
@@ -11,10 +11,15 @@ interface AuthProgressProps {
 const DEFAULT_LABELS = ['Account', 'Verify', 'Profile'];
 
 export function AuthProgress({
-  accentColor = Colors.cyan,
+  accentColor,
   currentStep,
   labels = DEFAULT_LABELS,
 }: AuthProgressProps) {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const resolvedAccentColor = accentColor ?? colors.cyan;
+  const trackColor = theme.id === 'light' ? alpha('#0F172A', 0.1) : alpha('#FFFFFF', 0.1);
+
   return (
     <View style={styles.container}>
       <View style={styles.stepsRow}>
@@ -30,12 +35,13 @@ export function AuthProgress({
                 style={[
                   styles.bar,
                   highlighted && {
-                    backgroundColor: accentColor,
+                    backgroundColor: resolvedAccentColor,
                     opacity: isActive ? 1 : 0.55,
                   },
+                  !highlighted && { backgroundColor: trackColor },
                 ]}
               />
-              <Text style={[styles.label, highlighted && { color: accentColor }]}>
+              <Text style={[styles.label, { color: theme.colors.text.muted }, highlighted && { color: resolvedAccentColor }]}>
                 0{step} {label}
               </Text>
             </View>
@@ -61,11 +67,9 @@ const styles = StyleSheet.create({
   bar: {
     height: 3,
     borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     marginBottom: 8,
   },
   label: {
-    color: 'rgba(255,255,255,0.35)',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.7,

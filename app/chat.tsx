@@ -28,7 +28,7 @@ import {
   Trash2,
   Volume2,
 } from 'lucide-react-native';
-import { Colors, Shadows } from '../constants/Theme';
+import { Colors, useTheme } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +57,8 @@ function VoiceMessageBubble({ item }: { item: Message }) {
   const player = useAudioPlayer(item.audioUrl || null);
   const status = useAudioPlayerStatus(player);
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = theme.legacy;
   const togglePlayback = async () => {
     if (status.playing) {
       player.pause();
@@ -71,11 +73,11 @@ function VoiceMessageBubble({ item }: { item: Message }) {
   return (
     <TouchableOpacity style={styles.voiceBubble} onPress={togglePlayback} activeOpacity={0.8}>
       <View style={styles.voicePlay}>
-        {status.playing ? <PauseCircle size={30} color={Colors.cyan} /> : <PlayCircle size={30} color={Colors.cyan} />}
+        {status.playing ? <PauseCircle size={30} color={colors.cyan} /> : <PlayCircle size={30} color={colors.cyan} />}
       </View>
       <View style={styles.voiceCopy}>
         <View style={styles.voiceTitleRow}>
-          <Volume2 size={13} color={Colors.cyan} strokeWidth={2.4} />
+          <Volume2 size={13} color={colors.cyan} strokeWidth={2.4} />
           <Text style={styles.voiceTitle}>{t('chat.voiceMessage')}</Text>
         </View>
         <Text style={styles.voiceDuration}>
@@ -91,6 +93,8 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
   const { t } = useTranslation();
+  const theme = useTheme();
+  const colors = theme.legacy;
   const { bookingId, recipientName } = useLocalSearchParams<{
     bookingId: string;
     recipientName: string;
@@ -300,13 +304,13 @@ export default function ChatScreen() {
           isMe ? styles.myMessageRow : styles.theirMessageRow
         ]}
       >
-        <GlassCard
-          intensity={isMe ? 35 : 20}
-          style={[
-            styles.bubble,
-            isMe ? styles.myBubble : styles.theirBubble
-          ]}
-        >
+<GlassCard
+           intensity={isMe ? 35 : 20}
+           style={[
+             styles.bubble,
+             isMe ? [styles.myBubble, { backgroundColor: theme.colors.gradients.success[0], borderColor: theme.colors.gradients.success[1] }] : styles.theirBubble
+           ]}
+         >
           {item.messageType === 'audio' && item.audioUrl ? (
             <VoiceMessageBubble item={item} />
           ) : (
@@ -316,7 +320,7 @@ export default function ChatScreen() {
             <Text style={styles.timeText}>
               {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
-            {isMe && <CheckCheck size={12} color={Colors.cyan} style={{ marginLeft: 4 }} />}
+            {isMe && <CheckCheck size={12} color={colors.cyan} style={{ marginLeft: 4 }} />}
           </View>
         </GlassCard>
       </Animated.View>
@@ -334,15 +338,15 @@ export default function ChatScreen() {
 
           <TouchableOpacity style={styles.userInfo}>
             <View style={styles.avatarWrapper}>
-              <View style={[styles.avatarGlow, { backgroundColor: Colors.cyan }]} />
+              <View style={[styles.avatarGlow, { backgroundColor: colors.cyan }]} />
               <View style={styles.avatar}>
                 <Text style={styles.avatarInitial}>{recipientName?.[0] || 'U'}</Text>
               </View>
             </View>
             <View style={styles.userMeta}>
-              <Text style={styles.userName}>{recipientName || t('transactionDetails.servicePartner')}</Text>
+<Text style={styles.userName}>{recipientName || t('transactionDetails.servicePartner')}</Text>
               <View style={styles.statusRow}>
-                <View style={[styles.activeDot, !canSendMessages && styles.inactiveDot]} />
+                <View style={[styles.activeDot, isCommunicationLocked ? { backgroundColor: theme.colors.text.muted } : { backgroundColor: theme.colors.status.success }]} />
                 <Text style={[styles.statusText, !canSendMessages && styles.inactiveStatusText]}>
                   {isLoadingBooking ? t('chat.checkingAccess') : canSendMessages ? t('chat.secureLine') : t('chat.historyOnly')}
                 </Text>
@@ -359,7 +363,7 @@ export default function ChatScreen() {
         <View style={styles.chatArea}>
           {isLoading && localMessages.length === 0 ? (
             <View style={styles.center}>
-              <ActivityIndicator color={Colors.cyan} />
+              <ActivityIndicator color={colors.cyan} />
             </View>
           ) : (
             <FlatList
@@ -373,7 +377,7 @@ export default function ChatScreen() {
                 showsVerticalScrollIndicator: false,
                 ListEmptyComponent: (
                   <View style={styles.emptyChat}>
-                    <View style={styles.emptyChatIcon}><MessageCircle size={24} color={Colors.cyan} /></View>
+                    <View style={styles.emptyChatIcon}><MessageCircle size={24} color={colors.cyan} /></View>
                     <Text style={styles.emptyChatTitle}>{t('chat.secureReady')}</Text>
                     <Text style={styles.emptyChatText}>{t('chat.bookingActiveDesc')}</Text>
                   </View>
@@ -386,7 +390,7 @@ export default function ChatScreen() {
         {/* Input */}
         {!canSendMessages ? (
           <View style={[styles.lockedContainer, { paddingBottom: insets.bottom + 12 }]}>
-            <ShieldCheck size={16} color={Colors.textMuted} />
+            <ShieldCheck size={16} color={colors.textMuted} />
             <View style={styles.lockedCopy}>
               <Text style={styles.lockedTitle}>{isLoadingBooking ? t('chat.checkingChatAccess') : t('chat.chatClosed')}</Text>
               <Text style={styles.lockedText}>
@@ -409,11 +413,11 @@ export default function ChatScreen() {
                       <Trash2 size={18} color="#FF453A" strokeWidth={2.5} />
                     </TouchableOpacity>
                     <View style={styles.recordingCopy}>
-                      <View style={styles.recordingTitleRow}>
+<View style={styles.recordingTitleRow}>
                         <View style={[styles.recordingDot, !isRecording && styles.voiceReadyDot]} />
                         <Text style={styles.recordingTitle}>{isRecording ? t('chat.recordingVoice') : t('chat.voiceReady')}</Text>
                       </View>
-                      <Text style={styles.recordingDuration}>
+                      <Text style={[styles.recordingDuration, { color: theme.colors.brand.primary }]}>
                         {formatSeconds((isRecording ? recorderState.durationMillis : voiceDurationMillis) / 1000)}
                       </Text>
                     </View>
@@ -454,7 +458,7 @@ export default function ChatScreen() {
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity style={styles.micBtn} onPress={startVoiceRecording} disabled={isComposerBusy} activeOpacity={0.78}>
-                        <Mic size={20} color={Colors.cyan} strokeWidth={2.5} />
+                        <Mic size={20} color={theme.colors.brand.primary} strokeWidth={2.5} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -587,7 +591,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.28)',
     backgroundColor: 'rgba(0,245,255,0.09)',
     marginBottom: 14,
   },
@@ -628,14 +631,11 @@ const styles = StyleSheet.create({
   },
   myBubble: {
     borderBottomRightRadius: 4,
-    backgroundColor: 'rgba(0, 245, 255, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.3)',
   },
   theirBubble: {
     borderBottomLeftRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   messageContent: {
     color: '#fff',
@@ -714,10 +714,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.cyan,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.glow,
   },
   micBtn: {
     width: 44,
@@ -726,7 +724,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.28)',
     backgroundColor: 'rgba(0,245,255,0.08)',
   },
   voiceComposer: {
@@ -767,7 +764,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   recordingDuration: {
-    color: Colors.cyan,
     fontSize: 11,
     fontWeight: '900',
     marginTop: 5,
@@ -779,7 +775,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 22,
     backgroundColor: '#FF453A',
-    ...Shadows.glow,
   },
   composerDisabled: {
     opacity: 0.56,
@@ -805,14 +800,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
     backgroundColor: 'rgba(7,10,24,0.88)',
   },
   lockedCopy: {
     flex: 1,
   },
   lockedTitle: {
-    color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 1,

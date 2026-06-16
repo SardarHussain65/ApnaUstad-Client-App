@@ -6,12 +6,9 @@ import {
   useWindowDimensions,
   StyleProp,
   ViewStyle,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing } from '../../constants/Theme';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { Spacing, useTheme } from '../../constants/Theme';
 
 // ─── Shared Shimmer Translation Hook ──────────────────────────────────────────
 export function useShimmerTranslateX(duration = 1200): RNAnimated.AnimatedInterpolation<string | number> {
@@ -51,12 +48,24 @@ export function Skeleton({
   style,
   translateX: providedTranslateX,
 }: SkeletonProps) {
+  const theme = useTheme();
   // If no shared translation is provided, create a local fallback one
   const localTranslateX = useShimmerTranslateX();
   const translateX = providedTranslateX ?? localTranslateX;
 
   return (
-    <View style={[styles.base, { width: width as any, height, borderRadius }, style]}>
+    <View
+      style={[
+        styles.base,
+        {
+          width: width as any,
+          height,
+          borderRadius,
+          backgroundColor: theme.colors.skeleton.base,
+        },
+        style,
+      ]}
+    >
       <View style={[StyleSheet.absoluteFill, { overflow: 'hidden', borderRadius }]}>
         <RNAnimated.View
           style={[
@@ -69,7 +78,7 @@ export function Skeleton({
           <LinearGradient
             colors={[
               'rgba(255, 255, 255, 0.0)',
-              'rgba(255, 255, 255, 0.08)',
+              theme.colors.skeleton.shimmer,
               'rgba(255, 255, 255, 0.0)',
             ]}
             start={{ x: 0, y: 0 }}
@@ -89,8 +98,18 @@ interface SkeletonCardProps {
 }
 
 export function SkeletonCard({ style, translateX }: SkeletonCardProps) {
+  const theme = useTheme();
   return (
-    <View style={[styles.skeletonCard, style]}>
+    <View
+      style={[
+        styles.skeletonCard,
+        {
+          backgroundColor: theme.colors.surface.cardMuted,
+          borderColor: theme.colors.border.subtle,
+        },
+        style,
+      ]}
+    >
       {/* Header section: avatar and two lines */}
       <View style={styles.cardHeader}>
         <Skeleton
@@ -134,7 +153,7 @@ export function SkeletonCard({ style, translateX }: SkeletonCardProps) {
       </View>
 
       {/* Footer details row */}
-      <View style={styles.cardFooter}>
+      <View style={[styles.cardFooter, { borderTopColor: theme.colors.border.subtle }]}>
         <Skeleton
           width={80}
           height={20}
@@ -176,7 +195,6 @@ export function SkeletonList({ count = 3, style }: SkeletonListProps) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   base: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     overflow: 'hidden',
   },
   shimmerContainer: {
@@ -184,10 +202,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   skeletonCard: {
-    backgroundColor: 'rgba(15, 15, 26, 0.3)',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
     padding: Spacing.m,
     marginBottom: Spacing.m,
   },
@@ -209,7 +225,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: Spacing.m,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
   },
   skeletonList: {
     flex: 1,

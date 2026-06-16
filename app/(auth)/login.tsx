@@ -23,7 +23,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 
@@ -32,9 +32,10 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const { role: urlRole } = useLocalSearchParams<{ role?: string }>();
   const { setAuth } = useAuth();
+  const theme = useTheme();
+  const typography = useThemeTypography();
   const isWorker = urlRole === 'worker';
-  const accentColor = isWorker ? Colors.worker : Colors.cyan;
-  const roleLabel = isWorker ? 'specialist' : 'client';
+  const accentColor = isWorker ? theme.colors.brand.worker : theme.colors.brand.primary;
 
   const [loginType, setLoginType] = useState<'phone' | 'email'>('email');
   const [identifier, setIdentifier] = useState('');
@@ -141,21 +142,24 @@ export default function LoginScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={styles.loginCard}
-              gradient={[`${accentColor}16`, 'rgba(191,90,242,0.06)']}
+              style={[styles.loginCard, { borderColor: theme.colors.border.subtle }]}
+              gradient={[`${accentColor}16`, alpha(theme.colors.brand.secondary, 0.06)]}
             >
-              <View style={styles.tabContainer}>
+              <View style={[styles.tabContainer, {
+                backgroundColor: theme.colors.surface.subtle,
+                borderColor: theme.colors.border.subtle,
+              }]}>
                 <LoginTab
                   active={loginType === 'email'}
                   accentColor={accentColor}
-                  icon={<Mail size={15} color={loginType === 'email' ? accentColor : Colors.textDim} />}
+                  icon={<Mail size={15} color={loginType === 'email' ? accentColor : theme.colors.text.muted} />}
                   label={t('auth.emailTab', 'Email')}
                   onPress={() => handleTabChange('email')}
                 />
                 <LoginTab
                   active={loginType === 'phone'}
                   accentColor={accentColor}
-                  icon={<Phone size={15} color={loginType === 'phone' ? accentColor : Colors.textDim} />}
+                  icon={<Phone size={15} color={loginType === 'phone' ? accentColor : theme.colors.text.muted} />}
                   label={t('auth.phoneTab', 'Phone')}
                   onPress={() => handleTabChange('phone')}
                 />
@@ -198,8 +202,8 @@ export default function LoginScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                   >
                     {showPassword
-                      ? <EyeOff size={18} color={Colors.textMuted} />
-                      : <Eye size={18} color={Colors.textMuted} />}
+                      ? <EyeOff size={18} color={theme.colors.text.muted} />
+                      : <Eye size={18} color={theme.colors.text.muted} />}
                   </TouchableOpacity>
                 }
                 secureTextEntry={!showPassword}
@@ -232,7 +236,7 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>{t('auth.noAccount')}</Text>
+              <Text style={[styles.footerText, { color: theme.colors.text.dim }]}>{t('auth.noAccount')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.push({
@@ -261,6 +265,7 @@ interface LoginTabProps {
 }
 
 function LoginTab({ accentColor, active, icon, label, onPress }: LoginTabProps) {
+  const theme = useTheme();
   return (
     <TouchableOpacity
       activeOpacity={0.8}
@@ -268,13 +273,13 @@ function LoginTab({ accentColor, active, icon, label, onPress }: LoginTabProps) 
       style={[
         styles.tabButton,
         active && {
-          backgroundColor: `${accentColor}16`,
-          borderColor: `${accentColor}48`,
+          backgroundColor: alpha(accentColor, 0.1),
+          borderColor: alpha(accentColor, 0.3),
         },
       ]}
     >
       {icon}
-      <Text style={[styles.tabText, active && { color: '#fff' }]}>{label}</Text>
+      <Text style={[styles.tabText, { color: active ? theme.colors.text.primary : theme.colors.text.muted }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
   },
   loginCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -298,9 +303,7 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: Spacing.l,
     borderRadius: BorderRadius.l,
-    backgroundColor: 'rgba(0,0,0,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   tabButton: {
     flex: 1,
@@ -311,10 +314,8 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: BorderRadius.m,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
   tabText: {
-    color: Colors.textDim,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -336,7 +337,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   footerText: {
-    color: 'rgba(255,255,255,0.48)',
     fontSize: 13,
     fontWeight: '600',
   },

@@ -1,6 +1,6 @@
 /**
  * ClientToast.tsx
- * Fixed: toast now uses correct accent color for 'success' vs 'error' type.
+ * Fixed: toast now uses theme-aware colors for 'success' vs 'error' type.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { AlertCircle, CheckCircle } from 'lucide-react-native';
-import { Spacing } from '../../constants/Theme';
+import { useTheme } from '../../constants/Theme';
 
 export interface ToastState {
   visible: boolean;
@@ -27,6 +27,7 @@ interface ClientToastProps {
 
 export const ClientToast = React.memo(({ toast, onDismiss }: ClientToastProps) => {
   const opacity = useRef(new RNAnimated.Value(0)).current;
+  const theme = useTheme();
 
   useEffect(() => {
     if (!toast.visible) return;
@@ -41,7 +42,7 @@ export const ClientToast = React.memo(({ toast, onDismiss }: ClientToastProps) =
   if (!toast.visible) return null;
 
   const isError = toast.type === 'error';
-  const accentColor = isError ? '#FF6B6B' : '#34C759';
+  const accentColor = isError ? theme.colors.status.error : theme.colors.status.success;
   const Icon = isError ? AlertCircle : CheckCircle;
 
   return (
@@ -49,18 +50,19 @@ export const ClientToast = React.memo(({ toast, onDismiss }: ClientToastProps) =
       style={[styles.container, { opacity, borderLeftColor: accentColor }]}
     >
       <Icon size={16} color={accentColor} />
-      <Text style={styles.message}>{toast.message}</Text>
+      <Text style={[styles.message, { color: theme.colors.text.primary }]}>{toast.message}</Text>
     </RNAnimated.View>
   );
 });
+ClientToast.displayName = 'ClientToast';
 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 60 : 40,
-    left: Spacing.l,
-    right: Spacing.l,
-    backgroundColor: '#12122a',
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 14,
     paddingVertical: 13,
     paddingHorizontal: 16,
@@ -76,9 +78,6 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   message: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
     flex: 1,
     lineHeight: 18,
   },

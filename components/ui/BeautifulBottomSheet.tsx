@@ -21,7 +21,7 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { Colors, Spacing } from '../../constants/Theme';
+import { Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { ChevronDown } from 'lucide-react-native';
 import { GlassCard } from '../home/GlassCard';
 
@@ -47,11 +47,13 @@ export function BeautifulBottomSheet({
   children,
   height = '70%',
   showDragIndicator = true,
-  glowColor = Colors.cyan,
+  glowColor,
   containerStyle,
   contentStyle,
   snapPoints,
 }: BeautifulBottomSheetProps) {
+  const theme = useTheme();
+  const resolvedGlowColor = glowColor ?? theme.colors.brand.primary;
   const translateY = useSharedValue(screenHeight);
   const [snapIndex, setSnapIndex] = useState(0);
 
@@ -122,7 +124,7 @@ export function BeautifulBottomSheet({
       <Animated.View
         entering={FadeIn.duration(300)}
         exiting={FadeOut.duration(200)}
-        style={styles.backdrop}
+        style={[styles.backdrop, { backgroundColor: theme.colors.modal.backdrop }]}
       >
         <TouchableOpacity
           style={styles.backdropTouchable}
@@ -141,13 +143,13 @@ export function BeautifulBottomSheet({
         >
           <GlassCard
             intensity={90}
-            glowColor={glowColor}
+            glowColor={resolvedGlowColor}
             style={[styles.bottomSheetContent, contentStyle]}
           >
             {/* Drag Indicator */}
             {showDragIndicator && (
               <View style={styles.dragIndicatorContainer}>
-                <View style={styles.dragIndicator} />
+                <View style={[styles.dragIndicator, { backgroundColor: theme.colors.text.dim }]} />
               </View>
             )}
 
@@ -155,7 +157,13 @@ export function BeautifulBottomSheet({
             {title && (
               <Animated.Text
                 entering={FadeIn.delay(100).duration(300)}
-                style={styles.bottomSheetTitle}
+                style={[
+                  styles.bottomSheetTitle,
+                  {
+                    color: theme.colors.text.primary,
+                    borderBottomColor: theme.colors.border.subtle,
+                  },
+                ]}
               >
                 {title}
               </Animated.Text>
@@ -197,6 +205,8 @@ export function BeautifulBottomMenu({
   options,
   title,
 }: BeautifulBottomMenuProps) {
+  const theme = useTheme();
+  const colors = useThemeColors();
   const numOptions = options.length;
   const sheetHeight = 60 + (title ? 50 : 0) + numOptions * 60 + Spacing.l;
 
@@ -214,7 +224,7 @@ export function BeautifulBottomMenu({
             style={[
               styles.menuOption,
               {
-                borderBottomColor: option === options[options.length - 1] ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                borderBottomColor: option === options[options.length - 1] ? 'transparent' : theme.colors.border.subtle,
               },
             ]}
             onPress={() => {
@@ -223,14 +233,14 @@ export function BeautifulBottomMenu({
             }}
           >
             {option.icon && (
-              <View style={styles.menuIconContainer}>{option.icon}</View>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.surface.subtle }]}>{option.icon}</View>
             )}
             <Animated.Text
               entering={FadeIn.delay(100).duration(300)}
               style={[
                 styles.menuLabel,
                 {
-                  color: option.isDangerous ? Colors.error : Colors.textDim,
+                  color: option.isDangerous ? colors.error : theme.colors.text.secondary,
                 },
               ]}
             >
@@ -246,7 +256,6 @@ export function BeautifulBottomMenu({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   backdropTouchable: {
@@ -271,16 +280,13 @@ const styles = StyleSheet.create({
   dragIndicator: {
     width: 40,
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 2,
   },
   bottomSheetTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
     marginBottom: Spacing.m,
     paddingBottom: Spacing.m,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
     borderBottomWidth: 1,
   },
   bottomSheetBody: {
@@ -301,7 +307,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
