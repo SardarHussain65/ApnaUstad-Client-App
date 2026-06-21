@@ -98,4 +98,10 @@ export const queryKeys = {
     channels: () => [...queryKeys.helpCenter.all, 'channels'] as const,
     search: (query: string) => [...queryKeys.helpCenter.all, 'search', query] as const,
   },
+
+  disputes: {
+    all: ['disputes'] as const,
+    my: () => [...queryKeys.disputes.all, 'my'] as const,
+    byBooking: (bookingId: string) => [...queryKeys.disputes.all, 'booking', bookingId] as const,
+  },
 } as const;

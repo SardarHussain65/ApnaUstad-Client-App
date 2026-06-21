@@ -147,6 +147,17 @@ const handleNotificationTap = async (
           }
           break;
 
+        case 'dispute':
+          if (bookingId) {
+            router.push({
+              pathname: '/transaction-details',
+              params: { id: bookingId },
+            });
+          } else {
+            router.push('/profile/my-disputes' as any);
+          }
+          break;
+
         case 'general':
         default:
           router.push('/(tabs)/index');
@@ -191,6 +202,17 @@ const handleNotificationTap = async (
           router.push({
             pathname: '/(tabs)/profile',
           });
+          break;
+
+        case 'dispute':
+          if (bookingId) {
+            router.push({
+              pathname: '/worker-details',
+              params: { bookingId },
+            });
+          } else {
+            router.push('/profile/my-disputes' as any);
+          }
           break;
 
         case 'general':

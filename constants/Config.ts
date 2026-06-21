@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 
 // For local development on your Mac, you can switch this back to your local IP address:
-export const BASE_URL = 'http://192.168.0.106:5001';
+export const BASE_URL = 'http://192.168.18.20:5001';
 // export const BASE_URL = 'http://192.168.86.29:5001';
 
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
   ScrollView,
@@ -40,9 +41,11 @@ import {
   Volume2,
   XCircle,
   Zap,
+  Scale,
 } from 'lucide-react-native';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
 import { Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
 import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
 import Toast from 'react-native-toast-message';
@@ -244,6 +247,7 @@ export default function TransactionDetailsScreen() {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
   const bypassBeforeRemoveRef = useRef(false);
 
   const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
@@ -297,6 +301,16 @@ export default function TransactionDetailsScreen() {
 
   const meta = booking.cardMeta;
   const status = booking.status || 'accepted';
+  const disputeMeta = booking.disputeMeta;
+  const hasActiveDispute = Boolean(
+    disputeMeta?.hasDispute && ['open', 'under_review'].includes(disputeMeta.disputeStatus || '')
+  );
+  const canRaiseDispute = disputeMeta?.canRaiseDispute === true;
+  const jobAmount = Number(disputeMeta?.bookingAmount ?? meta?.financial?.amount ?? booking.totalAmount ?? 0);
+  const isJobEnded = status === 'completed' || status === 'cancelled';
+  /** Rare edge case — small corner control only while job is still active */
+  const showDisputeReportCorner = canRaiseDispute && !isJobEnded;
+  const showDisputeStatusCorner = hasActiveDispute;
   const isCommunicationLocked = status === 'completed' || status === 'cancelled';
   const statusInfo = STATUS_MAP[status] || STATUS_MAP.accepted;
   const StatusIcon = statusInfo.Icon;
@@ -755,7 +769,7 @@ export default function TransactionDetailsScreen() {
             </Animated.View>
           )}
 
-          {!isWorker && status === 'completed' && booking.paymentStatus !== 'paid' && (
+          {!isWorker && status === 'completed' && booking.paymentStatus !== 'paid' && !hasActiveDispute && (
             <Animated.View entering={FadeInDown.delay(500).duration(450)} style={styles.section}>
               <SectionHeader icon={CreditCard} title={t('transactionDetails.cashSettlement', 'Cash Settlement')} color={P.green} />
               <ActionButton
@@ -774,8 +788,10 @@ export default function TransactionDetailsScreen() {
                       refetch();
                       setShowPaymentSuccess(true);
                     },
-                    onError: () => {
+                    onError: (error: any) => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                      const message = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+                      Alert.alert(t('transactionDetails.paymentBlocked', 'Payment paused'), message);
                     }
                   });
                 }}
@@ -887,6 +903,49 @@ export default function TransactionDetailsScreen() {
             </View>
           )}
         </ScrollView>
+
+        {showDisputeReportCorner ? (
+          <TouchableOpacity
+            accessibilityLabel={t('disputes.reportProblem', 'Report a problem')}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowDisputeModal(true);
+            }}
+            activeOpacity={0.85}
+            style={[
+              styles.disputeCornerBtn,
+              {
+                bottom: isJobEnded ? insets.bottom + 20 : insets.bottom + 96,
+                backgroundColor: theme.isDark ? 'rgba(255,107,53,0.14)' : 'rgba(255,107,53,0.1)',
+                borderColor: 'rgba(255,107,53,0.35)',
+              },
+            ]}
+          >
+            <Scale size={17} color="#FF6B35" strokeWidth={2.4} />
+          </TouchableOpacity>
+        ) : null}
+
+        {showDisputeStatusCorner ? (
+          <TouchableOpacity
+            accessibilityLabel={t('disputes.statusUnderReview', 'Under review')}
+            onPress={() => {
+              Alert.alert(
+                disputeMeta?.statusLabel || t('disputes.statusUnderReview', 'Under review'),
+                disputeMeta?.nextStep || t('disputes.activeNotice', 'Cash payment is on hold until ApnaUstad completes review.'),
+              );
+            }}
+            activeOpacity={0.85}
+            style={[
+              styles.disputeCornerStatus,
+              {
+                bottom: isJobEnded ? insets.bottom + 20 : insets.bottom + 96,
+              },
+            ]}
+          >
+            <Scale size={14} color="#FF3B30" strokeWidth={2.5} />
+          </TouchableOpacity>
+        ) : null}
+
         {status !== 'completed' && status !== 'cancelled' && (
           <Animated.View entering={FadeInDown.delay(620).duration(420)} style={[styles.floatingActions, { bottom: insets.bottom + 20 }]}>
             <FloatingAction icon={Navigation} label={t('transactionDetails.track', 'Track')} onPress={openRoute} color={P.green} disabled={!canTrackMission} />
@@ -895,6 +954,15 @@ export default function TransactionDetailsScreen() {
           </Animated.View>
         )}
       </View>
+      <RaiseDisputeModal
+        visible={showDisputeModal}
+        onClose={() => setShowDisputeModal(false)}
+        bookingId={id as string}
+        jobAmount={jobAmount}
+        onSubmitted={() => {
+          refetch();
+        }}
+      />
       <AlertModal
         visible={showPaymentSuccess}
         onDismiss={() => {
@@ -1650,6 +1718,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     lineHeight: 18,
+  },
+  disputeHelper: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  disputeCornerBtn: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 30,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  disputeCornerStatus: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 30,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.4)',
+    backgroundColor: 'rgba(255,59,48,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
   reviewCard: {
     flexDirection: 'row',

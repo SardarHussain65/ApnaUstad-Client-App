@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Scale,
   XCircle,
   Zap,
 } from 'lucide-react-native';
@@ -80,6 +81,7 @@ export default function NotificationsScreen() {
         'booking_cancelled',
         'job_started',
         'job_completed',
+        'dispute',
       ].includes(item.type));
     }
     return notifications;
@@ -97,6 +99,10 @@ export default function NotificationsScreen() {
     }
 
     const bookingId = notification.booking ? String(notification.booking) : null;
+    if (notification.type === 'dispute' && !bookingId) {
+      router.push('/profile/my-disputes' as any);
+      return;
+    }
     if (bookingId) {
       router.push({
         pathname: '/transaction-details',
@@ -340,6 +346,7 @@ function getNotificationIcon(type: AppNotification['type']) {
     case 'payment_received': return CreditCard;
     case 'new_review': return Star;
     case 'worker_verified': return ShieldCheck;
+    case 'dispute': return Scale;
     default: return Bell;
   }
 }
@@ -352,6 +359,7 @@ function getNotificationColor(type: AppNotification['type'], theme: ReturnType<t
     case 'payment_received':
     case 'new_review': return theme.legacy.yellow;
     case 'job_started': return theme.legacy.orange;
+    case 'dispute': return theme.colors.status.error;
     default: return theme.colors.brand.primary;
   }
 }
