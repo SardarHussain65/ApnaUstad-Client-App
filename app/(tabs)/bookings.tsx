@@ -5,7 +5,7 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap, Star, BriefcaseBusiness, Banknote, Radio, Inbox } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap, Star, BriefcaseBusiness, Banknote, Radio, Inbox, Scale } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
@@ -63,7 +63,7 @@ export default function BookingsTab() {
   const isWorker = role === 'worker';
   const [activeTab, setActiveTab] = useState<TabType>('Active');
 
-  const getMissionCardGradient = (status: string, isInstant: boolean, statusColor: string): [string, string, string] => {
+  const getMissionCardGradient = (status: string, isInstant: boolean, statusColor: string, isDisputed?: boolean): [string, string, string] => {
     if (theme.id !== 'current') {
       return [
         alpha(statusColor, theme.id === 'light' ? 0.08 : 0.14),
@@ -72,6 +72,9 @@ export default function BookingsTab() {
       ];
     }
 
+    if (isDisputed) {
+      return ['rgba(255,69,0,0.24)', 'rgba(12,10,28,0.95)', 'rgba(255,59,48,0.12)'];
+    }
     if (status === 'completed' || status === 'closed') {
       return ['rgba(0,255,127,0.28)', 'rgba(5,16,29,0.94)', 'rgba(0,245,255,0.14)'];
     }
@@ -186,13 +189,18 @@ export default function BookingsTab() {
 
   const filteredData = combinedData.filter(item => {
     const status = item.status;
+    const isDisputed = item._type === 'booking' && item.disputeMeta?.hasDispute && (item.disputeMeta.disputeStatus === 'open' || item.disputeMeta.disputeStatus === 'under_review');
+
     if (activeTab === 'Active') {
+      if (isDisputed) return false;
       return ['pending', 'accepted', 'ongoing', 'in-progress', 'open', 'assigned', 'reviewing'].includes(status);
     }
     if (activeTab === 'Completed') {
+      if (isDisputed) return false;
       return ['completed', 'closed'].includes(status);
     }
     if (activeTab === 'Cancelled') {
+      if (isDisputed) return true;
       return status === 'cancelled';
     }
     return false;
@@ -270,7 +278,8 @@ export default function BookingsTab() {
             }
           >
             {filteredData.map((item, index) => {
-              const statusColor = getStatusColor(item.status);
+              const isDisputed = item._type === 'booking' && item.disputeMeta?.hasDispute && (item.disputeMeta.disputeStatus === 'open' || item.disputeMeta.disputeStatus === 'under_review');
+              const statusColor = isDisputed ? colors.error : getStatusColor(item.status);
               const isBooking = '_type' in item && item._type === 'booking';
               
               // Type safety helpers
@@ -370,7 +379,7 @@ export default function BookingsTab() {
                     intensity={30}
                     glowColor={statusColor}
                     hasGlow
-                    gradient={getMissionCardGradient(status, isInstant, statusColor)}
+                    gradient={getMissionCardGradient(status, isInstant, statusColor, isDisputed)}
                     padding={0}
                     onPress={openDetails}
                   >
@@ -403,10 +412,10 @@ export default function BookingsTab() {
                           <Text style={[styles.missionTypeText, { color: colors.cyan }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
                         </View>
                         <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
-                          {getStatusIcon(status, statusColor)}
-                          <Text style={[styles.statusText, { color: statusColor }]}>
-                            {t(`bookingStatus.${status}.label`, statusLabel(status))}
-                          </Text>
+                           {isDisputed ? <Scale size={12} color={statusColor} /> : getStatusIcon(status, statusColor)}
+                           <Text style={[styles.statusText, { color: statusColor }]}>
+                             {isDisputed ? t('bookings.disputed', 'DISPUTED') : t(`bookingStatus.${status}.label`, statusLabel(status))}
+                           </Text>
                         </View>
                       </View>
 

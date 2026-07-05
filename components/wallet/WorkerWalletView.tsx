@@ -93,7 +93,7 @@ function SummaryChip({ label, value, color, theme }: { label: string; value: num
       <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
         {formatMoney(value)}
       </Text>
-      <Text style={[styles.chipLabel, { color: theme.colors.text.muted }]}>{label}</Text>
+      <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{label}</Text>
     </GlassCard>
   );
 }
@@ -215,14 +215,20 @@ export function WorkerWalletView({
                   : `${t('wallet.minimumReserve')} ${formatMoney(requiredBalance)}`}
               </Text>
             </View>
-            <View style={[styles.walletIconWrap, isBalanceLow && { borderColor: alpha(colors.error, 0.4), backgroundColor: alpha(colors.error, 0.08) }]}>
+            <View style={[styles.walletIconWrap,
+              { borderColor: alpha(colors.cyan, 0.35), backgroundColor: alpha(colors.cyan, 0.06) },
+              isBalanceLow && { borderColor: alpha(colors.error, 0.4), backgroundColor: alpha(colors.error, 0.08) }
+            ]}>
               <Wallet size={28} color={isBalanceLow ? colors.error : colors.cyan} strokeWidth={1.8} />
             </View>
           </View>
 
           {/* Quick actions inside card */}
           <TouchableOpacity
-            style={[styles.rechargeBtn, isBalanceLow && { backgroundColor: alpha(colors.error, 0.25), borderColor: alpha(colors.error, 0.4) }]}
+            style={[styles.rechargeBtn,
+              { borderColor: alpha(colors.cyan, 0.35) },
+              isBalanceLow && { backgroundColor: alpha(colors.error, 0.25), borderColor: alpha(colors.error, 0.4) }
+            ]}
             onPress={onOpenRecharge}
           >
             <Plus size={18} color={isBalanceLow ? '#FF4F4F' : colors.cyan} strokeWidth={2.5} style={{ marginRight: 6 }} />
@@ -240,7 +246,7 @@ export function WorkerWalletView({
           glowColor={colors.success}
           gradient={cardGradient(colors.success, colors.cyan)}
         >
-          <View style={styles.earningsOverviewHead}>
+          <View style={[styles.earningsOverviewHead, { borderBottomColor: theme.colors.border.subtle }]}>
             <View style={styles.earningsOverviewLead}>
               <View style={[styles.balanceEarningsIcon, {
                 backgroundColor: alpha(colors.success, 0.1),
@@ -263,24 +269,24 @@ export function WorkerWalletView({
             </Text>
           </View>
 
-          <View style={styles.balanceEarningsGrid}>
-            <View style={styles.balanceEarningsMetric}>
+          <View style={[styles.balanceEarningsGrid, { borderTopColor: theme.colors.border.subtle }]}>
+            <View style={[styles.balanceEarningsMetric, { borderRightColor: theme.colors.border.subtle }]}>
               <View style={[styles.earningsMetricDot, { backgroundColor: colors.success }]} />
-              <Text style={styles.balanceEarningsMiniLabel}>{t('wallet.received')}</Text>
+              <Text style={[styles.balanceEarningsMiniLabel, { color: theme.colors.text.muted }]}>{t('wallet.received')}</Text>
               <Text style={[styles.balanceEarningsMiniValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.paid)}
               </Text>
             </View>
-            <View style={styles.balanceEarningsMetric}>
+            <View style={[styles.balanceEarningsMetric, { borderRightColor: theme.colors.border.subtle }]}>
               <View style={[styles.earningsMetricDot, { backgroundColor: '#00B8FF' }]} />
-              <Text style={styles.balanceEarningsMiniLabel}>{t('wallet.ready')}</Text>
+              <Text style={[styles.balanceEarningsMiniLabel, { color: theme.colors.text.muted }]}>{t('wallet.ready')}</Text>
               <Text style={[styles.balanceEarningsMiniValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.payable)}
               </Text>
             </View>
-            <View style={[styles.balanceEarningsMetric, styles.balanceEarningsMetricLast]}>
+            <View style={[styles.balanceEarningsMetric, styles.balanceEarningsMetricLast, { borderRightColor: 'transparent' }]}>
               <View style={[styles.earningsMetricDot, { backgroundColor: '#FFB020' }]} />
-              <Text style={styles.balanceEarningsMiniLabel}>{t('wallet.upcoming')}</Text>
+              <Text style={[styles.balanceEarningsMiniLabel, { color: theme.colors.text.muted }]}>{t('wallet.upcoming')}</Text>
               <Text style={[styles.balanceEarningsMiniValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.pending)}
               </Text>
@@ -303,10 +309,10 @@ export function WorkerWalletView({
           gradient={cardGradient(colors.success, colors.cyan)}
         >
           <View style={[styles.chipDot, { backgroundColor: colors.success }]} />
-          <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
             {formatMoney(wallet?.totalRecharged)}
           </Text>
-          <Text style={styles.chipLabel}>{t('wallet.approvedTopUps')}</Text>
+          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.approvedTopUps')}</Text>
         </GlassCard>
 
         <GlassCard
@@ -317,10 +323,10 @@ export function WorkerWalletView({
           gradient={cardGradient('#FF8C00', '#FF1493')}
         >
           <View style={[styles.chipDot, { backgroundColor: '#FF8C00' }]} />
-          <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
             {formatMoney(wallet?.totalCommissionDeducted)}
           </Text>
-          <Text style={styles.chipLabel}>{t('wallet.commissionsTaken')}</Text>
+          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.commissionsTaken')}</Text>
         </GlassCard>
 
         <GlassCard
@@ -331,10 +337,10 @@ export function WorkerWalletView({
           gradient={cardGradient('#BF5AF2', colors.cyan)}
         >
           <View style={[styles.chipDot, { backgroundColor: '#BF5AF2' }]} />
-          <Text style={styles.chipValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
             {formatMoney(wallet?.totalSubscriptionDeducted)}
           </Text>
-          <Text style={styles.chipLabel}>{t('wallet.categoryRenewals')}</Text>
+          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.categoryRenewals')}</Text>
         </GlassCard>
       </Animated.View>
 
@@ -350,7 +356,7 @@ export function WorkerWalletView({
             <Text style={[styles.walletRecordsTitle, { color: theme.colors.text.primary }]}>{t('wallet.walletRecords')}</Text>
             <Text style={[styles.walletRecordsCaption, { color: theme.colors.text.muted }]}>{t('wallet.walletRecordsDesc')}</Text>
           </View>
-          <View style={styles.walletRecordsCount}>
+          <View style={[styles.walletRecordsCount, { borderColor: alpha(colors.cyan, 0.3), backgroundColor: alpha(colors.cyan, 0.08) }]}>
             <Text style={[styles.walletRecordsCountText, { color: colors.cyan }]}>
               {workerTab === 'wallet' ? transactions.length : workerTab === 'topups' ? topUps.length : payments.length}
             </Text>

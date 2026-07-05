@@ -207,8 +207,8 @@ export default function HelpCenterScreen() {
                 
                 <Text style={[styles.requestDate, { color: theme.colors.text.dim }]}>{t('helpCenter.openedOn', { date: formatDate(r.createdAt) })}</Text>
                 
-                <View style={styles.originalMsgBox}>
-                  <Text style={[styles.requestMessage, { color: theme.colors.text.primary }]}>{r.message}</Text>
+                <View style={[styles.originalMsgBox, { backgroundColor: alpha(theme.colors.text.primary, 0.04), borderColor: theme.colors.border.subtle }]}>
+                  <Text style={[styles.requestMessage, { color: theme.colors.text.secondary }]}>{r.message}</Text>
                 </View>
 
                 {/* Reply Message Thread */}
@@ -240,21 +240,35 @@ export default function HelpCenterScreen() {
 
                 {/* Reply Form */}
                 {r.status !== 'closed' && (
-                  <View style={styles.quickReplyContainer}>
+                  <View style={[styles.quickReplyContainer, { borderTopColor: theme.colors.border.subtle }]}>
+                    <Text style={[styles.quickReplyLabel, { color: theme.colors.brand.primary }]}>
+                      {t('helpCenter.sendAnotherMessage')}
+                    </Text>
                     <TextInput
-                      style={[styles.quickReplyInput, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                      style={[
+                        styles.quickReplyInput,
+                        {
+                          color: theme.colors.input.text,
+                          borderColor: theme.colors.border.subtle,
+                          backgroundColor: theme.colors.input.background,
+                        },
+                      ]}
                       placeholder={t('helpCenter.replyPlaceholder')}
                       placeholderTextColor={theme.colors.input.placeholder}
                       value={ticketReplies[r._id] || ''}
                       onChangeText={(text) => handleReplyTextChange(r._id, text)}
+                      multiline
+                      numberOfLines={3}
                     />
-                    <CustomButton
-                      title={t('helpCenter.sendReplyBtn')}
-                      onPress={() => submitReply(r._id)}
-                      style={styles.quickReplyBtn}
-                      loading={submittingReplies[r._id]}
-                      textStyle={{ fontSize: 11, fontWeight: '800' }}
-                    />
+                    <View style={styles.quickReplyActions}>
+                      <CustomButton
+                        title={submittingReplies[r._id] ? t('helpCenter.sending') : t('helpCenter.sendReplyBtn')}
+                        onPress={() => submitReply(r._id)}
+                        style={styles.quickReplyBtn}
+                        loading={submittingReplies[r._id]}
+                        textStyle={{ fontSize: 12, fontWeight: '800' }}
+                      />
+                    </View>
                   </View>
                 )}
               </GlassCard>
@@ -424,21 +438,37 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   quickReplyContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     marginTop: 14,
-    gap: 8,
-    paddingTop: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    gap: 10,
+  },
+  quickReplyLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   quickReplyInput: {
-    flex: 1,
-    height: 38,
-    borderRadius: BorderRadius.s,
-    paddingHorizontal: Spacing.s,
-    fontSize: 12,
+    width: '100%',
+    minHeight: 72,
+    borderRadius: BorderRadius.m,
+    paddingHorizontal: Spacing.m,
+    paddingVertical: Spacing.s + 2,
+    fontSize: 13,
+    fontWeight: '500',
     borderWidth: 1,
+    textAlignVertical: 'top',
+  },
+  quickReplyActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
   quickReplyBtn: {
-    height: 38,
-    paddingHorizontal: Spacing.m,
+    height: 40,
+    paddingHorizontal: 20,
+    minWidth: 100,
+    maxWidth: 160,
   },
 });

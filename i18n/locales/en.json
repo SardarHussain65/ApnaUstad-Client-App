@@ -324,7 +324,8 @@
     "subtitle": "View all your service requests and bookings",
     "activeTab": "Active",
     "completedTab": "Completed",
-    "cancelledTab": "Cancelled",
+    "cancelledTab": "Dispute",
+    "disputed": "Disputed",
     "noBookings": "No bookings found in this section.",
     "activeEmpty": "You do not have any active bookings at the moment.",
     "completedEmpty": "You do not have any completed bookings.",
@@ -1156,7 +1157,8 @@
     "agentName": "Support Agent",
     "userName": "You",
     "replyPlaceholder": "Type reply to agent...",
-    "sendReplyBtn": "Send"
+    "sendReplyBtn": "Send",
+    "sendAnotherMessage": "Send a message"
   },
   "changePassword": {
     "title": "Change Password",

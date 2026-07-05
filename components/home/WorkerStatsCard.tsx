@@ -23,6 +23,10 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const activeJobs = stats.activeCount ?? 0;
+
+  const innerBorderColor = theme.id === 'current'
+    ? alpha('#FFFFFF', 0.12)
+    : theme.colors.border.default;
   const completed = stats.completed ?? 0;
   const successPercent = stats.missions > 0 ? Math.round(stats.successRate * 100) : 0;
   const activeSummary = activeJobs > 0
@@ -44,7 +48,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
 
       <View style={styles.topRow}>
         <View style={styles.earningsCluster}>
-          <View style={styles.heroIconBox}>
+          <View style={[styles.heroIconBox, { borderColor: innerBorderColor }]}>
             <Banknote size={23} color={colors.success} strokeWidth={2.5} />
           </View>
           <View style={styles.heroTextContainer}>
@@ -56,7 +60,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
           </View>
         </View>
 
-        <View style={styles.ratingBadge}>
+        <View style={[styles.ratingBadge, { borderColor: innerBorderColor, backgroundColor: 'rgba(250,204,21,0.12)' }]}>
           <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
           <View>
             <Text style={styles.ratingValue}>{Number(stats.rating || 0).toFixed(1)}</Text>
@@ -65,18 +69,18 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
         </View>
       </View>
 
-      <View style={styles.progressBlock}>
+      <View style={[styles.progressBlock, { borderColor: innerBorderColor }]}>
         <View style={styles.progressHeader}>
           <Text style={[styles.progressTitle, { color: theme.colors.text.muted }]}>{t('home.client.completionRate')}</Text>
           <Text style={[styles.progressValue, { color: theme.colors.text.primary }]}>{completedSummary}</Text>
         </View>
-        <View style={styles.progressTrack}>
+        <View style={[styles.progressTrack, { backgroundColor: theme.colors.surface.subtle }]}>
           <View style={[styles.progressFill, { width: `${successPercent}%`, backgroundColor: colors.success }]} />
         </View>
       </View>
 
       <View style={styles.statsRow}>
-        <View style={styles.statTile}>
+        <View style={[styles.statTile, { borderColor: innerBorderColor }]}>
           <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.cyan, 0.1) }]}>
             <Clock size={14} color={colors.cyan} />
           </View>
@@ -84,7 +88,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
           <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('home.client.active')}</Text>
         </View>
 
-        <View style={styles.statTile}>
+        <View style={[styles.statTile, { borderColor: innerBorderColor }]}>
           <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.success, 0.1) }]}>
             <CheckCircle2 size={14} color={colors.success} />
           </View>
@@ -92,7 +96,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
           <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('home.client.completed')}</Text>
         </View>
 
-        <View style={styles.statTile}>
+        <View style={[styles.statTile, { borderColor: innerBorderColor }]}>
           <View style={[styles.statIconBubble, { backgroundColor: alpha(theme.colors.brand.secondary, 0.12) }]}>
             <Briefcase size={14} color={theme.colors.brand.secondary} />
           </View>

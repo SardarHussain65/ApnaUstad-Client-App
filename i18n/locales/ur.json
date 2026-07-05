@@ -324,7 +324,8 @@
     "subtitle": "اپنی تمام سروسز اور بکنگز کی تفصیلات دیکھیں",
     "activeTab": "فعال",
     "completedTab": "مکمل",
-    "cancelledTab": "منسوخ",
+    "cancelledTab": "تنازع",
+    "disputed": "تنازعہ",
     "noBookings": "اس سیکشن میں کوئی بکنگ نہیں ملی۔",
     "activeEmpty": "اس وقت آپ کی کوئی فعال بکنگ نہیں ہے۔",
     "completedEmpty": "آپ کی کوئی مکمل شدہ بکنگ نہیں ہے۔",
@@ -1156,7 +1157,8 @@
     "agentName": "نمائندہ سپورٹ",
     "userName": "آپ",
     "replyPlaceholder": "نمائندے کو جواب لکھیں...",
-    "sendReplyBtn": "بھیجیں"
+    "sendReplyBtn": "بھیجیں",
+    "sendAnotherMessage": "پیغام بھیجیں"
   },
   "changePassword": {
     "title": "پاس ورڈ تبدیل کریں",

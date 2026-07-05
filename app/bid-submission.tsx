@@ -46,17 +46,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useJobDetails, useToast, useWorkerWallet } from '../hooks';
 import api from '../services/api';
-import { useTheme, useThemeColors, alpha } from '../constants/Theme';
-
-const CYAN = '#00F5FF';
-const GREEN = '#00FF7F';
-const ORANGE = '#FF9500';
-const RED = '#FF453A';
-const PURPLE = '#BF5AF2';
-const SURFACE = 'rgba(4,9,29,0.88)';
-const BORDER = 'rgba(255,255,255,0.09)';
-const TEXT_DIM = 'rgba(255,255,255,0.58)';
-const TEXT_MUTED = 'rgba(255,255,255,0.38)';
+import { useTheme, useThemeColors, alpha, useThemedStyles, type AppTheme } from '../constants/Theme';
 
 const formatMoney = (amount: number) => `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`;
 
@@ -66,19 +56,685 @@ const formatPlaybackTime = (seconds: number) => {
   return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
 };
 
+const createStyles = (theme: AppTheme) => {
+  const isDark = theme.isDark;
+  const CYAN = theme.legacy.cyan;
+  const GREEN = theme.legacy.green;
+  const ORANGE = theme.legacy.orange;
+  const RED = theme.legacy.error;
+  const PURPLE = theme.legacy.purple;
+
+  const surfaceBg = theme.colors.surface.card;
+  const borderCol = theme.colors.border.subtle;
+  const textPrimary = theme.colors.text.primary;
+  const textSecondary = theme.colors.text.secondary;
+  const textMuted = theme.colors.text.muted;
+  const inputBg = theme.colors.input.background;
+  const inputBorder = theme.colors.input.border;
+  const inputText = theme.colors.input.text;
+
+  return StyleSheet.create({
+    page: {
+      flex: 1,
+    },
+    centeredFill: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 28,
+    },
+    loadingIcon: {
+      width: 62,
+      height: 62,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      backgroundColor: alpha(CYAN, 0.1),
+      borderWidth: 1,
+      borderColor: alpha(CYAN, 0.28),
+    },
+    loadingTitle: {
+      color: textPrimary,
+      fontSize: 20,
+      fontWeight: '900',
+      marginTop: 12,
+      marginBottom: 6,
+    },
+    loadingText: {
+      color: textSecondary,
+      fontSize: 13,
+      lineHeight: 19,
+      textAlign: 'center',
+      fontWeight: '600',
+    },
+    returnButton: {
+      marginTop: 18,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+      borderRadius: 8,
+      backgroundColor: alpha(CYAN, 0.12),
+      borderWidth: 1,
+      borderColor: alpha(CYAN, 0.3),
+    },
+    returnButtonText: {
+      color: CYAN,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    header: {
+      minHeight: 76,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingBottom: 10,
+      overflow: 'hidden',
+      borderBottomWidth: 1,
+      borderBottomColor: borderCol,
+    },
+    backButton: {
+      width: 42,
+      height: 42,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.13)' : theme.colors.border.subtle,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.colors.text.primary, 0.03),
+    },
+    headerCopy: {
+      flex: 1,
+    },
+    headerEyebrow: {
+      color: textMuted,
+      fontSize: 9,
+      fontWeight: '900',
+      marginBottom: 3,
+    },
+    headerTitle: {
+      color: textPrimary,
+      fontSize: 20,
+      fontWeight: '900',
+    },
+    headerBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+    },
+    headerBadgeText: {
+      fontSize: 9,
+      fontWeight: '900',
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 152,
+      gap: 12,
+    },
+    surface: {
+      position: 'relative',
+      overflow: 'hidden',
+      borderRadius: 14,
+      borderWidth: 1,
+      backgroundColor: surfaceBg,
+    },
+    requestSurface: {
+      padding: 16,
+    },
+    requestTopRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginBottom: 12,
+    },
+    requestTitleGroup: {
+      flex: 1,
+    },
+    requestEyebrow: {
+      fontSize: 9,
+      fontWeight: '900',
+      marginBottom: 5,
+    },
+    requestCategory: {
+      color: textPrimary,
+      fontSize: 24,
+      fontWeight: '900',
+    },
+    budgetBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.24),
+      backgroundColor: alpha(GREEN, 0.08),
+    },
+    budgetLabel: {
+      color: textMuted,
+      fontSize: 8,
+      fontWeight: '900',
+      marginBottom: 2,
+    },
+    budgetValue: {
+      color: GREEN,
+      fontSize: 13,
+      fontWeight: '900',
+    },
+    requestDescription: {
+      color: textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: '600',
+      marginBottom: 15,
+    },
+    factRow: {
+      flexDirection: 'row',
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: borderCol,
+    },
+    fact: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    factCopy: {
+      flex: 1,
+    },
+    factLabel: {
+      color: textMuted,
+      fontSize: 8,
+      fontWeight: '900',
+      marginBottom: 3,
+    },
+    factValue: {
+      color: textPrimary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    factDivider: {
+      width: 1,
+      marginHorizontal: 10,
+      backgroundColor: borderCol,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 13,
+    },
+    locationText: {
+      flex: 1,
+      color: textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
+      fontWeight: '700',
+    },
+    evidenceSection: {
+      marginTop: 15,
+      paddingTop: 13,
+      borderTopWidth: 1,
+      borderTopColor: borderCol,
+    },
+    sectionTitleRow: {
+      minHeight: 28,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 12,
+    },
+    sectionIcon: {
+      width: 28,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+    },
+    sectionTitle: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    sectionDetail: {
+      color: textMuted,
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    evidenceList: {
+      gap: 9,
+    },
+    evidenceTile: {
+      width: 112,
+      height: 82,
+      overflow: 'hidden',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: alpha(PURPLE, 0.32),
+      backgroundColor: alpha(PURPLE, 0.1),
+    },
+    evidenceImage: {
+      width: '100%',
+      height: '100%',
+    },
+    evidenceIndex: {
+      position: 'absolute',
+      left: 6,
+      bottom: 6,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 6,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+    },
+    evidenceIndexText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    evidenceExpand: {
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      width: 22,
+      height: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.18)',
+      backgroundColor: 'rgba(0,0,0,0.62)',
+    },
+    videoTile: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    videoTileText: {
+      color: PURPLE,
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    audioTile: {
+      width: 150,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      borderColor: alpha(ORANGE, 0.34),
+      backgroundColor: alpha(ORANGE, 0.1),
+    },
+    audioTileText: {
+      color: ORANGE,
+      fontSize: 10,
+      fontWeight: '900',
+    },
+    previewBackdrop: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 70,
+      backgroundColor: 'rgba(0,0,0,0.96)',
+    },
+    previewClose: {
+      position: 'absolute',
+      top: 54,
+      right: 18,
+      zIndex: 2,
+      width: 44,
+      height: 44,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+      backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    previewMedia: {
+      width: '100%',
+      height: '100%',
+    },
+    clientSurface: {
+      padding: 14,
+    },
+    clientRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 11,
+    },
+    clientAvatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.35),
+    },
+    clientAvatarFallback: {
+      width: 50,
+      height: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.28),
+      backgroundColor: alpha(GREEN, 0.09),
+    },
+    clientCopy: {
+      flex: 1,
+    },
+    clientName: {
+      color: textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+      marginBottom: 5,
+    },
+    clientStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    clientStatusText: {
+      color: textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    reliabilityBadge: {
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.22),
+      backgroundColor: alpha(GREEN, 0.07),
+    },
+    reliabilityValue: {
+      color: GREEN,
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    reliabilityLabel: {
+      color: textMuted,
+      fontSize: 8,
+      fontWeight: '900',
+      marginTop: 2,
+    },
+    proposalSurface: {
+      padding: 14,
+    },
+    instantSurface: {
+      padding: 14,
+    },
+    instantText: {
+      color: textSecondary,
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: '600',
+      marginBottom: 14,
+    },
+    formLabel: {
+      color: textMuted,
+      fontSize: 9,
+      fontWeight: '900',
+      marginBottom: 7,
+    },
+    quoteSuggestionRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 14,
+    },
+    quoteSuggestion: {
+      flex: 1,
+      minHeight: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 5,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: inputBorder,
+      backgroundColor: alpha(theme.colors.text.primary, 0.035),
+    },
+    quoteSuggestionSelected: {
+      borderColor: alpha(CYAN, 0.42),
+      backgroundColor: alpha(CYAN, 0.12),
+    },
+    quoteSuggestionText: {
+      color: textSecondary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    quoteSuggestionTextSelected: {
+      color: CYAN,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 13,
+    },
+    quoteInputGroup: {
+      flex: 1.35,
+    },
+    daysInputGroup: {
+      flex: 1,
+    },
+    inputShell: {
+      minHeight: 50,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 11,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: inputBorder,
+      backgroundColor: inputBg,
+    },
+    inputPrefix: {
+      color: GREEN,
+      fontSize: 11,
+      fontWeight: '900',
+    },
+    input: {
+      flex: 1,
+      color: inputText,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    messageShell: {
+      minHeight: 104,
+      alignItems: 'flex-start',
+      paddingTop: 11,
+      paddingBottom: 21,
+    },
+    messageIcon: {
+      marginTop: 1,
+    },
+    messageInput: {
+      minHeight: 80,
+      lineHeight: 19,
+    },
+    messageCount: {
+      position: 'absolute',
+      right: 9,
+      bottom: 7,
+      color: textMuted,
+      fontSize: 9,
+      fontWeight: '800',
+    },
+    settlementBlock: {
+      marginTop: 14,
+      paddingTop: 13,
+      borderTopWidth: 1,
+      borderTopColor: borderCol,
+    },
+    settlementHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+      gap: 8,
+    },
+    settlementTitle: {
+      color: textPrimary,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    settlementHint: {
+      flex: 1,
+      color: textMuted,
+      fontSize: 9,
+      textAlign: 'right',
+      fontWeight: '700',
+    },
+    settlementRow: {
+      flexDirection: 'row',
+      paddingVertical: 3,
+    },
+    settlementItem: {
+      flex: 1,
+    },
+    settlementDivider: {
+      width: 1,
+      marginHorizontal: 8,
+      backgroundColor: borderCol,
+    },
+    settlementLabel: {
+      color: textMuted,
+      fontSize: 8,
+      fontWeight: '900',
+      marginBottom: 5,
+    },
+    settlementValue: {
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    walletStrip: {
+      minHeight: 62,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.22),
+      backgroundColor: alpha(GREEN, 0.07),
+    },
+    walletStripBlocked: {
+      borderColor: alpha(RED, 0.24),
+      backgroundColor: alpha(RED, 0.07),
+    },
+    walletStripCopy: {
+      flex: 1,
+    },
+    walletStripTitle: {
+      color: textPrimary,
+      fontSize: 12,
+      fontWeight: '900',
+      marginBottom: 4,
+    },
+    walletStripText: {
+      color: textSecondary,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    topUpButton: {
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: RED,
+    },
+    topUpButtonText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '900',
+    },
+    actionDock: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      overflow: 'hidden',
+    },
+    actionDockBorder: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      height: 1,
+      backgroundColor: borderCol,
+    },
+    submitButton: {
+      minHeight: 62,
+      overflow: 'hidden',
+      borderRadius: 10,
+    },
+    submitButtonDisabled: {
+      opacity: 0.5,
+    },
+    submitGradient: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 11,
+      paddingHorizontal: 17,
+      paddingVertical: 11,
+    },
+    submitCopy: {
+      flex: 1,
+    },
+    submitTitle: {
+      fontSize: 14,
+      fontWeight: '900',
+      marginBottom: 3,
+    },
+    submitSubtitle: {
+      fontSize: 10,
+      fontWeight: '800',
+    },
+  });
+};
+
 function Surface({
   children,
-  accent = CYAN,
+  accent,
   style,
 }: {
   children: React.ReactNode;
   accent?: string;
   style?: object;
 }) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const resolvedAccent = accent || theme.legacy.cyan;
+  
+  const colorsList = theme.id === 'current'
+    ? [`${resolvedAccent}16`, 'rgba(4,9,29,0.92)', 'rgba(4,9,29,0.98)']
+    : [
+        alpha(resolvedAccent, theme.id === 'light' ? 0.05 : 0.12),
+        theme.colors.surface.card,
+        theme.colors.surface.cardMuted || theme.colors.surface.card,
+      ];
+
+  const borderColor = theme.id === 'current'
+    ? `${resolvedAccent}38`
+    : alpha(resolvedAccent, theme.id === 'light' ? 0.18 : 0.28);
+
   return (
-    <View style={[styles.surface, { borderColor: `${accent}38` }, style]}>
+    <View style={[styles.surface, { borderColor, backgroundColor: theme.colors.surface.card }, style]}>
       <LinearGradient
-        colors={[`${accent}16`, 'rgba(4,9,29,0.92)', 'rgba(4,9,29,0.98)']}
+        colors={colorsList as [string, string, ...string[]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
@@ -92,19 +748,23 @@ function SectionTitle({
   icon: Icon,
   title,
   detail,
-  color = CYAN,
+  color,
 }: {
   icon: React.ComponentType<any>;
   title: string;
   detail?: string;
   color?: string;
 }) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const resolvedColor = color || theme.legacy.cyan;
+
   return (
     <View style={styles.sectionTitleRow}>
-      <View style={[styles.sectionIcon, { backgroundColor: `${color}14`, borderColor: `${color}30` }]}>
-        <Icon size={15} color={color} strokeWidth={2.4} />
+      <View style={[styles.sectionIcon, { backgroundColor: alpha(resolvedColor, 0.08), borderColor: alpha(resolvedColor, 0.18) }]}>
+        <Icon size={15} color={resolvedColor} strokeWidth={2.4} />
       </View>
-      <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: resolvedColor }]}>{title}</Text>
       {!!detail && <Text style={styles.sectionDetail}>{detail}</Text>}
     </View>
   );
@@ -121,6 +781,7 @@ function RequestFact({
   value: string;
   color: string;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.fact}>
       <Icon size={15} color={color} strokeWidth={2.3} />
@@ -135,22 +796,26 @@ function RequestFact({
 function SettlementItem({
   label,
   value,
-  color = '#FFFFFF',
+  color,
 }: {
   label: string;
   value: string;
   color?: string;
 }) {
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const resolvedColor = color || theme.colors.text.primary;
   return (
     <View style={styles.settlementItem}>
       <Text style={styles.settlementLabel}>{label}</Text>
-      <Text style={[styles.settlementValue, { color }]}>{value}</Text>
+      <Text style={[styles.settlementValue, { color: resolvedColor }]}>{value}</Text>
     </View>
   );
 }
 
 function ImageEvidenceTile({ url, index }: { url: string; index: number }) {
   const [previewVisible, setPreviewVisible] = useState(false);
+  const styles = useThemedStyles(createStyles);
   return (
     <>
       <TouchableOpacity style={styles.evidenceTile} onPress={() => setPreviewVisible(true)} activeOpacity={0.8}>
@@ -173,6 +838,9 @@ function ImageEvidenceTile({ url, index }: { url: string; index: number }) {
 function VideoEvidenceTile({ url, index }: { url: string; index: number }) {
   const [previewVisible, setPreviewVisible] = useState(false);
   const player = useVideoPlayer(url);
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const PURPLE = theme.legacy.purple;
 
   useEffect(() => {
     if (!previewVisible) player.pause();
@@ -203,6 +871,10 @@ function VideoEvidenceTile({ url, index }: { url: string; index: number }) {
 function AudioEvidenceTile({ url }: { url: string }) {
   const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
+  const theme = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const ORANGE = theme.legacy.orange;
+
   const togglePlayback = async () => {
     if (status.playing) {
       player.pause();
@@ -226,6 +898,13 @@ function AudioEvidenceTile({ url }: { url: string }) {
 export default function BidSubmissionScreen() {
   const theme = useTheme();
   const colors = useThemeColors();
+  const styles = useThemedStyles(createStyles);
+  const CYAN = theme.legacy.cyan;
+  const GREEN = theme.legacy.green;
+  const ORANGE = theme.legacy.orange;
+  const RED = theme.legacy.error;
+  const PURPLE = theme.legacy.purple;
+  const TEXT_MUTED = theme.colors.text.muted;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -436,7 +1115,6 @@ export default function BidSubmissionScreen() {
           { 
             paddingTop: insets.top + 8,
             backgroundColor: theme.isDark ? 'transparent' : theme.colors.background.screen,
-            borderBottomColor: theme.isDark ? BORDER : theme.colors.border.subtle,
           }
         ]}>
           <BlurView intensity={70} tint={theme.isDark ? "dark" : "light"} style={StyleSheet.absoluteFillObject} />
@@ -710,7 +1388,7 @@ export default function BidSubmissionScreen() {
           entering={FadeInDown.delay(240).duration(450)}
           style={[styles.actionDock, { paddingBottom: insets.bottom + 12 }]}
         >
-          <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <BlurView intensity={90} tint={theme.isDark ? "dark" : "light"} style={StyleSheet.absoluteFillObject} />
           <View style={styles.actionDockBorder} />
           <TouchableOpacity
             style={[styles.submitButton, isWalletBlocked && styles.submitButtonDisabled]}
@@ -725,15 +1403,15 @@ export default function BidSubmissionScreen() {
               style={styles.submitGradient}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#001014" />
+                <ActivityIndicator color={theme.colors.button.primaryText} />
               ) : (
                 <>
-                  {isInstant && !isCounterProposal ? <Zap size={19} color="#001014" /> : <Send size={18} color="#001014" />}
+                  {isInstant && !isCounterProposal ? <Zap size={19} color={theme.colors.button.primaryText} /> : <Send size={18} color={theme.colors.button.primaryText} />}
                   <View style={styles.submitCopy}>
-                    <Text style={styles.submitTitle}>
+                    <Text style={[styles.submitTitle, { color: theme.colors.button.primaryText }]}>
                       {isInstant ? (isCounterProposal ? t('bidSubmission.sendFairPrice', 'SEND FAIR PRICE') : t('bidSubmission.sendAvailability', 'SEND AVAILABILITY')) : t('bidSubmission.sendProposal', 'SEND PROPOSAL')}
                     </Text>
-                    <Text style={styles.submitSubtitle}>
+                    <Text style={[styles.submitSubtitle, { color: alpha(theme.colors.button.primaryText, 0.68) }]}>
                       {isInstant && !isCounterProposal
                         ? t('bidSubmission.clientConfirmationRequired', 'Client confirmation required')
                         : proposalReady
@@ -750,637 +1428,3 @@ export default function BidSubmissionScreen() {
     </BackgroundWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  page: {
-    flex: 1,
-  },
-  centeredFill: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  loadingIcon: {
-    width: 62,
-    height: 62,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    backgroundColor: 'rgba(0,245,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.28)',
-  },
-  loadingTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  loadingText: {
-    color: TEXT_DIM,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  returnButton: {
-    marginTop: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,245,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.3)',
-  },
-  returnButtonText: {
-    color: CYAN,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  header: {
-    minHeight: 76,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    overflow: 'hidden',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  backButton: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.13)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  headerCopy: {
-    flex: 1,
-  },
-  headerEyebrow: {
-    color: TEXT_MUTED,
-    fontSize: 9,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  headerBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 152,
-    gap: 12,
-  },
-  surface: {
-    position: 'relative',
-    overflow: 'hidden',
-    borderRadius: 14,
-    borderWidth: 1,
-    backgroundColor: SURFACE,
-  },
-  requestSurface: {
-    padding: 16,
-  },
-  requestTopRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 12,
-  },
-  requestTitleGroup: {
-    flex: 1,
-  },
-  requestEyebrow: {
-    fontSize: 9,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-  requestCategory: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  budgetBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.24)',
-    backgroundColor: 'rgba(0,255,127,0.08)',
-  },
-  budgetLabel: {
-    color: TEXT_MUTED,
-    fontSize: 8,
-    fontWeight: '900',
-    marginBottom: 2,
-  },
-  budgetValue: {
-    color: GREEN,
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  requestDescription: {
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    marginBottom: 15,
-  },
-  factRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: BORDER,
-  },
-  fact: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  factCopy: {
-    flex: 1,
-  },
-  factLabel: {
-    color: TEXT_MUTED,
-    fontSize: 8,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-  factValue: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  factDivider: {
-    width: 1,
-    marginHorizontal: 10,
-    backgroundColor: BORDER,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 13,
-  },
-  locationText: {
-    flex: 1,
-    color: TEXT_DIM,
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
-  },
-  evidenceSection: {
-    marginTop: 15,
-    paddingTop: 13,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-  sectionTitleRow: {
-    minHeight: 28,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionIcon: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  sectionTitle: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  sectionDetail: {
-    color: TEXT_MUTED,
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  evidenceList: {
-    gap: 9,
-  },
-  evidenceTile: {
-    width: 112,
-    height: 82,
-    overflow: 'hidden',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(191,90,242,0.32)',
-    backgroundColor: 'rgba(191,90,242,0.1)',
-  },
-  evidenceImage: {
-    width: '100%',
-    height: '100%',
-  },
-  evidenceIndex: {
-    position: 'absolute',
-    left: 6,
-    bottom: 6,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  evidenceIndexText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  evidenceExpand: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(0,0,0,0.62)',
-  },
-  videoTile: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  videoTileText: {
-    color: PURPLE,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  audioTile: {
-    width: 150,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderColor: 'rgba(255,149,0,0.34)',
-    backgroundColor: 'rgba(255,149,0,0.1)',
-  },
-  audioTileText: {
-    color: ORANGE,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  previewBackdrop: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 70,
-    backgroundColor: 'rgba(0,0,0,0.96)',
-  },
-  previewClose: {
-    position: 'absolute',
-    top: 54,
-    right: 18,
-    zIndex: 2,
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  previewMedia: {
-    width: '100%',
-    height: '100%',
-  },
-  clientSurface: {
-    padding: 14,
-  },
-  clientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-  },
-  clientAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.35)',
-  },
-  clientAvatarFallback: {
-    width: 50,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.28)',
-    backgroundColor: 'rgba(0,255,127,0.09)',
-  },
-  clientCopy: {
-    flex: 1,
-  },
-  clientName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-  clientStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  clientStatusText: {
-    color: TEXT_DIM,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  reliabilityBadge: {
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.22)',
-    backgroundColor: 'rgba(0,255,127,0.07)',
-  },
-  reliabilityValue: {
-    color: GREEN,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  reliabilityLabel: {
-    color: TEXT_MUTED,
-    fontSize: 8,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-  proposalSurface: {
-    padding: 14,
-  },
-  instantSurface: {
-    padding: 14,
-  },
-  instantText: {
-    color: TEXT_DIM,
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '600',
-    marginBottom: 14,
-  },
-  formLabel: {
-    color: TEXT_MUTED,
-    fontSize: 9,
-    fontWeight: '900',
-    marginBottom: 7,
-  },
-  quoteSuggestionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 14,
-  },
-  quoteSuggestion: {
-    flex: 1,
-    minHeight: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: 'rgba(255,255,255,0.035)',
-  },
-  quoteSuggestionSelected: {
-    borderColor: 'rgba(0,245,255,0.42)',
-    backgroundColor: 'rgba(0,245,255,0.12)',
-  },
-  quoteSuggestionText: {
-    color: TEXT_DIM,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  quoteSuggestionTextSelected: {
-    color: CYAN,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 13,
-  },
-  quoteInputGroup: {
-    flex: 1.35,
-  },
-  daysInputGroup: {
-    flex: 1,
-  },
-  inputShell: {
-    minHeight: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 11,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  inputPrefix: {
-    color: GREEN,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  input: {
-    flex: 1,
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  messageShell: {
-    minHeight: 104,
-    alignItems: 'flex-start',
-    paddingTop: 11,
-    paddingBottom: 21,
-  },
-  messageIcon: {
-    marginTop: 1,
-  },
-  messageInput: {
-    minHeight: 80,
-    lineHeight: 19,
-  },
-  messageCount: {
-    position: 'absolute',
-    right: 9,
-    bottom: 7,
-    color: TEXT_MUTED,
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  settlementBlock: {
-    marginTop: 14,
-    paddingTop: 13,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-  settlementHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  settlementTitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  settlementHint: {
-    flex: 1,
-    color: TEXT_MUTED,
-    fontSize: 9,
-    textAlign: 'right',
-    fontWeight: '700',
-  },
-  settlementRow: {
-    flexDirection: 'row',
-    paddingVertical: 3,
-  },
-  settlementItem: {
-    flex: 1,
-  },
-  settlementDivider: {
-    width: 1,
-    marginHorizontal: 8,
-    backgroundColor: BORDER,
-  },
-  settlementLabel: {
-    color: TEXT_MUTED,
-    fontSize: 8,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-  settlementValue: {
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  walletStrip: {
-    minHeight: 62,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0,255,127,0.22)',
-    backgroundColor: 'rgba(0,255,127,0.07)',
-  },
-  walletStripBlocked: {
-    borderColor: 'rgba(255,69,58,0.24)',
-    backgroundColor: 'rgba(255,69,58,0.07)',
-  },
-  walletStripCopy: {
-    flex: 1,
-  },
-  walletStripTitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  walletStripText: {
-    color: TEXT_DIM,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  topUpButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: RED,
-  },
-  topUpButtonText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  actionDock: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    overflow: 'hidden',
-  },
-  actionDockBorder: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 1,
-    backgroundColor: BORDER,
-  },
-  submitButton: {
-    minHeight: 62,
-    overflow: 'hidden',
-    borderRadius: 10,
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    paddingHorizontal: 17,
-    paddingVertical: 11,
-  },
-  submitCopy: {
-    flex: 1,
-  },
-  submitTitle: {
-    color: '#001014',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-  submitSubtitle: {
-    color: 'rgba(0,16,20,0.68)',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-});

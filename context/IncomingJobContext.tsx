@@ -6,6 +6,7 @@ import { IncomingJobModal } from '../components/home/IncomingJobModal';
 import api from '../services/api';
 import Toast from 'react-native-toast-message';
 import { PaymentReceivedModal } from '../components/home/PaymentReceivedModal';
+import { JobAssignedSuccessModal } from '../components/home/JobAssignedSuccessModal';
 import * as Haptics from 'expo-haptics';
 
 interface IncomingJobContextType {
@@ -52,6 +53,11 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   // Payment notification state
   const [paidBooking, setPaidBooking] = useState<any>(null);
   const [showPaidModal, setShowPaidModal] = useState(false);
+
+  // Job assignment success modal state
+  const [assignedBooking, setAssignedBooking] = useState<any>(null);
+  const [showAssignedModal, setShowAssignedModal] = useState(false);
+
   const workerId = user?._id;
   const savedMasterAvailability = (user as any)?.isAvailable;
   const savedInstantAvailability = (user as any)?.isInstantAvailable;
@@ -186,26 +192,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     const unsubscribeWon = socketService.on('bid:won', (data: any) => {
       console.log('🏆 [IncomingJobContext] Mission Secured:', data);
 
-      Toast.show({
-        type: 'success',
-        text1: 'BOOKING SECURED! ✅',
-        text2: 'The client has hired you. Tap to view booking details.',
-        visibilityTime: 5000,
-        onPress: () => {
-          router.push({
-            pathname: '/transaction-details' as any,
-            params: { id: data.booking._id }
-          });
-        }
-      });
+      // Close the incoming job modal and clear the queue
+      setShowModal(false);
+      setIncomingJobsQueue([]);
+      incomingJobsQueueRef.current = [];
 
-      // Optional: Auto redirect after delay
-      setTimeout(() => {
-        router.push({
-          pathname: '/transaction-details' as any,
-          params: { id: data.booking._id }
-        });
-      }, 2000);
+      // Set booking details and display the custom success modal
+      setAssignedBooking(data.booking);
+      setShowAssignedModal(true);
     });
 
     const unsubscribeLost = socketService.on('bid:lost', (data: any) => {
@@ -504,6 +498,19 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         visible={showPaidModal}
         booking={paidBooking}
         onClose={() => setShowPaidModal(false)}
+      />
+
+      <JobAssignedSuccessModal
+        visible={showAssignedModal}
+        booking={assignedBooking}
+        onClose={() => setShowAssignedModal(false)}
+        onContinue={() => {
+          setShowAssignedModal(false);
+          router.push({
+            pathname: '/transaction-details' as any,
+            params: { id: assignedBooking?._id }
+          });
+        }}
       />
     </IncomingJobContext.Provider>
   );

@@ -165,7 +165,14 @@ export function IncomingJobModal({
 
         <Animated.View entering={FadeIn.duration(240)} exiting={FadeOut.duration(180)} style={styles.screen}>
           <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: alpha(theme.colors.background.screen, 0.64), borderColor: alpha(colors.cyan, 0.3) }]}
+            style={[
+              styles.closeButton,
+              {
+                backgroundColor: alpha(theme.colors.background.screen, 0.64),
+                borderColor: alpha(colors.cyan, 0.3),
+                top: Math.max(insets.top + 12, 16),
+              },
+            ]}
             onPress={onClose}
             activeOpacity={0.75}
           >
