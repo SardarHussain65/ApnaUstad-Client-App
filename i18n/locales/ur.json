@@ -324,7 +324,8 @@
     "subtitle": "اپنی تمام سروسز اور بکنگز کی تفصیلات دیکھیں",
     "activeTab": "فعال",
     "completedTab": "مکمل",
-    "cancelledTab": "منسوخ",
+    "cancelledTab": "تنازع",
+    "disputed": "تنازعہ",
     "noBookings": "اس سیکشن میں کوئی بکنگ نہیں ملی۔",
     "activeEmpty": "اس وقت آپ کی کوئی فعال بکنگ نہیں ہے۔",
     "completedEmpty": "آپ کی کوئی مکمل شدہ بکنگ نہیں ہے۔",
@@ -984,6 +985,7 @@
       "payment_received": "ادائیگی",
       "new_review": "تبصرہ",
       "worker_verified": "تصدیق شدہ",
+      "dispute": "تنازع",
       "general": "عام"
     }
   },
@@ -1155,7 +1157,8 @@
     "agentName": "نمائندہ سپورٹ",
     "userName": "آپ",
     "replyPlaceholder": "نمائندے کو جواب لکھیں...",
-    "sendReplyBtn": "بھیجیں"
+    "sendReplyBtn": "بھیجیں",
+    "sendAnotherMessage": "پیغام بھیجیں"
   },
   "changePassword": {
     "title": "پاس ورڈ تبدیل کریں",
@@ -1188,6 +1191,48 @@
     "sectionTitle": "حفاظتی اختیارات",
     "policiesTerms": "پالیسیز اور شرائط",
     "reportIssue": "سیکیورٹی کا مسئلہ رپورٹ کریں"
+  },
+  "disputes": {
+    "sectionTitle": "شکایت اور سپورٹ",
+    "activeNotice": "جائزہ مکمل ہونے تک نقد ادائیگی روکی گئی ہے۔",
+    "raiseHint": "کام یا ادائیگی سے ناخوش ہیں؟ مکمل ہونے کے 14 دنوں کے اندر رپورٹ کریں۔",
+    "cornerHint": "مسئلہ رپورٹ کریں",
+    "reportProblem": "مسئلہ رپورٹ کریں",
+    "myTitle": "میری شکایات",
+    "mySubtitle": "آپ کی رپورٹ کردہ بکنگ مسائل",
+    "raiseTitle": "مسئلہ رپورٹ کریں",
+    "reasonLabel": "کیا مسئلہ ہوا؟",
+    "descriptionLabel": "تفصیل سے بیان کریں",
+    "descriptionPlaceholder": "کیا ہوا؟ کب؟ نقد رقم، تاریخ اور وعدے لکھیں...",
+    "jobAmountLabel": "کام کی رقم",
+    "jobAmountHint": "آپ کی بکنگ سے لی گئی — رقم خود درج کرنے کی ضرورت نہیں۔",
+    "addProof": "تصاویر شامل کریں (اختیاری)",
+    "proofHint": "اسکرین شاٹ یا خراب کام کی تصویر فیصلے میں مدد کرتی ہے۔",
+    "submit": "شکایت جمع کریں",
+    "minChars": "کم از کم 10 حروف",
+    "step1": "رپورٹ",
+    "step2": "جائزہ",
+    "step3": "فیصلہ",
+    "howItWorks": "یہ کیسے کام کرتا ہے",
+    "howItWorksBody": "1) جاب کی تفصیل سے رپورٹ → 2) اپنا استاد دونوں فریق سنیں → 3) ادائیگی یا والیٹ ایڈجسٹ۔",
+    "tapToView": "جاب کی تفصیل دیکھیں →",
+    "emptyTitle": "ابھی کوئی شکایت نہیں",
+    "emptyBody": "بکنگز سے جاب کھولیں اور 14 دنوں کے اندر مسئلہ رپورٹ کریں۔",
+    "statusOpen": "رپورٹ موصول",
+    "statusUnderReview": "زیرِ تفتیش",
+    "statusResolved": "آپ کے حق میں",
+    "statusDismissed": "بند — منظور نہیں",
+    "booking": "بکنگ",
+    "raisedOn": "رپورٹ {{date}}",
+    "raiseHelper": "مسئلہ بیان کریں۔ اپنا استاد دونوں فریق سنیں گے۔ جائزے تک ادائیگی روکی رہے گی۔",
+    "reasons": {
+      "incomplete_work": "کام مکمل نہیں ہوا",
+      "unfair_pricing": "زیادہ چارج / غیر منصفانہ قیمت",
+      "no_show": "استاد نہیں آیا",
+      "poor_quality": "کمزور کام",
+      "payment_issue": "نقد ادائیگی کا مسئلہ",
+      "other": "کوئی اور مسئلہ"
+    }
   },
   "privacy": {
     "title": "پالیسیز اور شرائط",

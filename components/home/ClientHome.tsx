@@ -93,9 +93,7 @@ const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => 
     ? alpha(cat.color, theme.isDark ? 0.20 : 0.15)
     : (theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
 
-  const iconColor = cat.color
-    ? cat.color
-    : (theme.isDark ? '#fff' : '#111827');
+  const iconColor = theme.colors.text.primary;
 
   return (
     <Animated.View
@@ -158,6 +156,10 @@ export function ClientHome() {
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const shadows = useThemeShadows();
+
+  const innerBorderColor = theme.id === 'current'
+    ? alpha('#FFFFFF', 0.12)
+    : theme.colors.border.default;
 
   // Responsive grid dimensions
   const numColumns = windowWidth > 600 ? 4 : 3;
@@ -394,7 +396,7 @@ export function ClientHome() {
 
               <View style={styles.activityTopRow}>
                 <View style={styles.spentCluster}>
-                  <View style={styles.heroIconBox}>
+                  <View style={[styles.heroIconBox, { borderColor: innerBorderColor }]}>
                     <CreditCard size={22} color={colors.cyan} strokeWidth={2.5} />
                   </View>
                   <View style={styles.heroTextContainer}>
@@ -415,18 +417,18 @@ export function ClientHome() {
                 </View>
               </View>
 
-              <View style={styles.progressBlock}>
+              <View style={[styles.progressBlock, { borderColor: innerBorderColor }]}>
                 <View style={styles.progressHeader}>
                   <Text style={[styles.progressTitle, { color: theme.colors.text.muted }]}>{t('home.client.completionRate')}</Text>
                   <Text style={[styles.progressValue, { color: theme.colors.text.primary }]}>{completedSummary}</Text>
                 </View>
-                <View style={styles.progressTrack}>
+                <View style={[styles.progressTrack, { backgroundColor: theme.colors.surface.subtle }]}>
                   <View style={[styles.progressFill, { width: `${successPercent}%`, backgroundColor: colors.success }]} />
                 </View>
               </View>
 
               <View style={styles.activityStatsRow}>
-                <View style={styles.activityStatTile}>
+                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
                   <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.cyan, 0.1) }]}>
                     <Clock size={14} color={colors.cyan} />
                   </View>
@@ -434,7 +436,7 @@ export function ClientHome() {
                   <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.active')}</Text>
                 </View>
 
-                <View style={styles.activityStatTile}>
+                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
                   <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.success, 0.1) }]}>
                     <CheckCircle2 size={14} color={colors.success} />
                   </View>
@@ -442,7 +444,7 @@ export function ClientHome() {
                   <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.completed')}</Text>
                 </View>
 
-                <View style={styles.activityStatTile}>
+                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
                   <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.purple, 0.12) }]}>
                     <Briefcase size={14} color={colors.purple} />
                   </View>

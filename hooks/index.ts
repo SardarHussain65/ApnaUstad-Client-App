@@ -48,6 +48,15 @@ export {
   type Bid,
 } from './queries/useMessagesAndJobs';
 
+export {
+  useMyDisputes,
+  useBookingDisputeContext,
+  raiseDisputeRequest,
+  type DisputeRecord,
+  type BookingDisputeMeta,
+  type DisputeReason,
+} from './queries/useDisputes';
+
 // Mutation Hooks - Data Changes
 export {
   useCreateJobMutation,

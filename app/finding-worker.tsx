@@ -59,12 +59,17 @@ export default function FindingWorkerScreen() {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   
+
+  
   const pulse = useSharedValue(1);
   const rotation = useSharedValue(0);
 
   const bypassBeforeRemoveRef = useRef(false);
 
-  const { data: job, refetch: refetchJob } = useJobDetails(jobId as string);
+  const { data: job, refetch: refetchJob } = useJobDetails(jobId as string, {
+    staleTime: 0,
+    refetchInterval: 3000,
+  });
   const isInstant = job?.urgency === 'instant';
 
   const getRemainingTimeForEscalation = () => {
@@ -111,6 +116,25 @@ export default function FindingWorkerScreen() {
     }, 1000);
     return () => clearInterval(timer);
   }, [job, isInstant]);
+
+  const handleRedirectToBooking = (bookingId: string) => {
+    if (bookingId) {
+      bypassBeforeRemoveRef.current = true;
+      router.replace({
+        pathname: '/transaction-details',
+        params: { id: bookingId, autoAssigned: 'true' }
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (job && (job.status === 'assigned' || job.status === 'ongoing' || job.status === 'completed')) {
+      const bookingId = (job as any).bookingId;
+      if (bookingId) {
+        handleRedirectToBooking(bookingId);
+      }
+    }
+  }, [job, router]);
 
   const formatCountdown = (secs: number) => {
     const minutes = Math.floor(secs / 60);
@@ -214,18 +238,21 @@ export default function FindingWorkerScreen() {
 
   useEffect(() => {
     if (initialBids && initialBids.length > 0) {
-      // Sync state with fetched bids, avoiding duplicates
+      // Sync state with fetched bids, avoiding duplicates, and only showing pending counter-offers
+      const pendingBids = initialBids.filter(bid => bid.status === 'pending');
       setApplicants(prev => {
         const combined = [...prev];
-        initialBids.forEach(bid => {
+        pendingBids.forEach(bid => {
           if (!combined.some(a => a._id === bid._id)) {
             combined.push(bid);
           }
         });
-        return combined;
+        return combined.filter(bid => bid.status === 'pending');
       });
       
-      setStatus(t('findingWorker.offersLabel'));
+      if (pendingBids.length > 0) {
+        setStatus(t('findingWorker.offersLabel'));
+      }
     }
   }, [initialBids]);
 
@@ -262,13 +289,10 @@ export default function FindingWorkerScreen() {
         text2: t('findingWorker.assignedDesc', 'An Ustad has accepted your urgent request.'),
       });
       
-      setTimeout(() => {
-        bypassBeforeRemoveRef.current = true;
-        router.replace({
-          pathname: '/transaction-details',
-          params: { id: data._id }
-        });
-      }, 1500);
+      const bookingId = data._id || data.booking?._id || null;
+      if (bookingId) {
+        handleRedirectToBooking(bookingId);
+      }
     });
 
     const unsubscribeSearchExtended = socketService.on('job:search_extended', (data: any) => {
@@ -304,6 +328,8 @@ export default function FindingWorkerScreen() {
     const unsubscribeBids = socketService.on('bid:new', (newBid: any) => {
       const bidJobId = String(newBid?.jobPost?._id || newBid?.jobPost || '');
       if (bidJobId && bidJobId !== String(jobId)) return;
+
+      if (newBid.status !== 'pending') return;
 
       setApplicants(prev => {
         if (prev.some(a => a._id === newBid._id)) {
@@ -1250,6 +1276,8 @@ export default function FindingWorkerScreen() {
             </Animated.View>
           </View>
         </Modal>
+
+
       </SafeAreaView>
     </BackgroundWrapper>
   );
@@ -2424,5 +2452,153 @@ const styles = StyleSheet.create({
     color: Colors.error,
     fontSize: 11,
     fontWeight: '600',
+  },
+  successModalContainer: {
+    width: '90%',
+    maxWidth: 360,
+    borderRadius: 24,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    justifyContent: 'center',
+  },
+  successCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  successGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  successBadgeOutline: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    padding: 3,
+    backgroundColor: 'rgba(0, 255, 127, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: '#00FF7F',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  successBadgeCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#00FF7F',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+    marginBottom: 24,
+  },
+  assignedWorkerCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 18,
+    padding: 12,
+    gap: 12,
+    marginBottom: 20,
+  },
+  assignedWorkerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+  },
+  assignedWorkerDetails: {
+    flex: 1,
+  },
+  assignedWorkerName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  assignedWorkerCategory: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 2,
+  },
+  assignedWorkerRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  assignedWorkerRating: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  successPriceRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginBottom: 24,
+  },
+  successPriceLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.4)',
+    letterSpacing: 0.8,
+  },
+  successPriceValue: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#00F5FF',
+  },
+  redirectProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  redirectProgressText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.5)',
+  },
+  successActionBtn: {
+    width: '100%',
+    height: 50,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  successActionGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  successActionText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#000000',
+    letterSpacing: 0.5,
   }
 });

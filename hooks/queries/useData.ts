@@ -172,6 +172,18 @@ export interface Booking {
   cancelReason?: string;
   cancelledBy?: 'customer' | 'worker' | 'admin';
   cardMeta?: MissionCardMeta;
+  disputeMeta?: {
+    hasDispute: boolean;
+    disputeId: string | null;
+    disputeStatus: 'open' | 'under_review' | 'resolved' | 'dismissed' | null;
+    canRaiseDispute: boolean;
+    canRaiseDisputeReason?: string;
+    bookingAmount?: number;
+    amountDisputed?: number;
+    raisedByType?: 'customer' | 'worker';
+    statusLabel?: string;
+    nextStep?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -287,7 +299,7 @@ export interface AppNotification {
   _id: string;
   title: string;
   message: string;
-  type: 'booking_accepted' | 'booking_cancelled' | 'job_started' | 'job_completed' | 'payment_received' | 'new_review' | 'worker_verified' | 'general';
+  type: 'booking_accepted' | 'booking_cancelled' | 'job_started' | 'job_completed' | 'payment_received' | 'new_review' | 'worker_verified' | 'dispute' | 'general';
   icon?: string;
   color?: string;
   booking?: string | null;

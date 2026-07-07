@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Linking,
+  Modal,
   ScrollView,
   Share,
   StyleSheet,
@@ -12,12 +14,13 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, SlideInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import {
   Banknote,
   BriefcaseBusiness,
@@ -40,9 +43,11 @@ import {
   Volume2,
   XCircle,
   Zap,
+  Scale,
 } from 'lucide-react-native';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
 import { Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
 import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
 import Toast from 'react-native-toast-message';
@@ -146,23 +151,25 @@ function SectionHeader({ icon: Icon, title, color = P.cyan }: { icon: React.Comp
 }
 
 function InfoTile({ icon: Icon, label, value, color = P.cyan }: { icon: React.ComponentType<any>; label: string; value: string; color?: string }) {
+  const theme = useTheme();
   return (
-    <View style={styles.infoTile}>
+    <View style={[styles.infoTile, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
       <View style={[styles.infoIcon, { backgroundColor: `${color}14` }]}>
         <Icon size={15} color={color} strokeWidth={2.4} />
       </View>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
+      <Text style={[styles.infoLabel, { color: theme.colors.text.muted }]}>{label}</Text>
+      <Text style={[styles.infoValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{value}</Text>
     </View>
   );
 }
 
 function PartnerInsight({ icon: Icon, label, value, color = P.cyan }: { icon: React.ComponentType<any>; label: string; value: string; color?: string }) {
+  const theme = useTheme();
   return (
-    <View style={styles.partnerInsight}>
+    <View style={[styles.partnerInsight, { borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.045)' : theme.colors.surface.card }]}>
       <Icon size={14} color={color} strokeWidth={2.4} />
-      <Text style={styles.partnerInsightValue} numberOfLines={1}>{value}</Text>
-      <Text style={styles.partnerInsightLabel} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.partnerInsightValue, { color: theme.colors.text.primary }]} numberOfLines={1}>{value}</Text>
+      <Text style={[styles.partnerInsightLabel, { color: theme.colors.text.muted }]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -236,7 +243,7 @@ export default function TransactionDetailsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
-  const { id, amount: initialAmount } = useLocalSearchParams<{ id: string; amount?: string }>();
+  const { id, amount: initialAmount, autoAssigned } = useLocalSearchParams<{ id: string; amount?: string; autoAssigned?: string }>();
   const { role, user } = useAuth();
   const isWorker = role === 'worker';
 
@@ -244,7 +251,15 @@ export default function TransactionDetailsScreen() {
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [showAutoAssignedModal, setShowAutoAssignedModal] = useState(autoAssigned === 'true');
   const bypassBeforeRemoveRef = useRef(false);
+
+  useEffect(() => {
+    if (autoAssigned === 'true') {
+      router.setParams({ autoAssigned: undefined } as any);
+    }
+  }, [autoAssigned]);
 
   const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
   const galleryCardWidth = windowWidth - 72;
@@ -297,6 +312,16 @@ export default function TransactionDetailsScreen() {
 
   const meta = booking.cardMeta;
   const status = booking.status || 'accepted';
+  const disputeMeta = booking.disputeMeta;
+  const hasActiveDispute = Boolean(
+    disputeMeta?.hasDispute && ['open', 'under_review'].includes(disputeMeta.disputeStatus || '')
+  );
+  const canRaiseDispute = disputeMeta?.canRaiseDispute === true;
+  const jobAmount = Number(disputeMeta?.bookingAmount ?? meta?.financial?.amount ?? booking.totalAmount ?? 0);
+  const isJobEnded = status === 'completed' || status === 'cancelled';
+  /** Rare edge case — small corner control only while job is still active */
+  const showDisputeReportCorner = canRaiseDispute && !isJobEnded;
+  const showDisputeStatusCorner = hasActiveDispute;
   const isCommunicationLocked = status === 'completed' || status === 'cancelled';
   const statusInfo = STATUS_MAP[status] || STATUS_MAP.accepted;
   const StatusIcon = statusInfo.Icon;
@@ -437,25 +462,62 @@ export default function TransactionDetailsScreen() {
             <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('transactionDetails.bookingDetails', 'Booking Details')}</Text>
             <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('transactionDetails.overview', 'Overview')}</Text>
           </View>
-          <TouchableOpacity 
-            onPress={shareMission} 
-            style={[
-              styles.headerButton,
-              {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
-                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
-              }
-            ]} 
-            activeOpacity={0.8}
-          >
-            <Share2 color={theme.colors.text.primary} size={19} strokeWidth={2.3} />
-          </TouchableOpacity>
+          {showDisputeStatusCorner ? (
+            <TouchableOpacity 
+              onPress={() => {
+                Alert.alert(
+                  disputeMeta?.statusLabel || t('disputes.statusUnderReview', 'Under review'),
+                  disputeMeta?.nextStep || t('disputes.activeNotice', 'Cash payment is on hold until ApnaUstad completes review.'),
+                );
+              }} 
+              style={[
+                styles.headerButton,
+                {
+                  backgroundColor: 'rgba(255,59,48,0.12)',
+                  borderColor: 'rgba(255,59,48,0.3)',
+                }
+              ]} 
+              activeOpacity={0.8}
+            >
+              <Scale color="#FF3B30" size={19} strokeWidth={2.3} />
+            </TouchableOpacity>
+          ) : showDisputeReportCorner ? (
+            <TouchableOpacity 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowDisputeModal(true);
+              }} 
+              style={[
+                styles.headerButton,
+                {
+                  backgroundColor: 'rgba(255,107,53,0.12)',
+                  borderColor: 'rgba(255,107,53,0.35)',
+                }
+              ]} 
+              activeOpacity={0.8}
+            >
+              <Scale color="#FF6B35" size={19} strokeWidth={2.3} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerButtonPlaceholder} />
+          )}
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + (status === 'completed' || status === 'cancelled' ? 24 : 40) }]}>
-          <Animated.View entering={FadeInDown.duration(450)} style={styles.heroCard}>
+          <Animated.View 
+            entering={FadeInDown.duration(450)} 
+            style={[
+              styles.heroCard, 
+              { 
+                borderColor: theme.isDark ? P.borderStrong : theme.colors.border.subtle,
+                backgroundColor: theme.isDark ? P.surfaceStrong : theme.colors.surface.card
+              }
+            ]}
+          >
             <LinearGradient
-              colors={[`${statusInfo.color}26`, 'rgba(10,13,34,0.96)', 'rgba(0,245,255,0.08)']}
+              colors={theme.isDark 
+                ? [`${statusInfo.color}26`, 'rgba(10,13,34,0.96)', 'rgba(0,245,255,0.08)']
+                : [`${statusInfo.color}14`, theme.colors.surface.card, theme.colors.surface.subtle]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
@@ -466,9 +528,12 @@ export default function TransactionDetailsScreen() {
                 <PulseDot color={statusInfo.color} />
                 <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusLabel}</Text>
               </View>
-              <View style={styles.kindPill}>
+              <View style={[styles.kindPill, { 
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.surface.subtle,
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : theme.colors.border.subtle
+              }]}>
                 <Zap size={12} color={booking.bookingType === 'instant' ? P.orange : P.cyan} />
-                <Text style={styles.kindText}>{missionKindLabel}</Text>
+                <Text style={[styles.kindText, { color: theme.colors.text.secondary }]}>{missionKindLabel}</Text>
               </View>
             </View>
 
@@ -477,20 +542,26 @@ export default function TransactionDetailsScreen() {
                 <StatusIcon size={22} color={statusInfo.color} strokeWidth={2.5} />
               </View>
               <View style={styles.heroTitleCopy}>
-                <Text style={styles.heroStage}>{statusTitle}</Text>
-                <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{serviceTitle}</Text>
-                <Text style={styles.heroDescription} numberOfLines={2}>{serviceDescription}</Text>
+                <Text style={[styles.heroStage, { color: theme.colors.text.muted }]}>{statusTitle}</Text>
+                <Text style={[styles.heroTitle, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{serviceTitle}</Text>
+                <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={2}>{serviceDescription}</Text>
               </View>
             </View>
 
-            <View style={styles.valuePanel}>
+            <View style={[styles.valuePanel, {
+              borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+              backgroundColor: theme.isDark ? 'rgba(0,0,0,0.18)' : theme.colors.surface.subtle,
+            }]}>
               <View>
-                <Text style={styles.valueLabel}>{amountLabel}</Text>
-                <Text style={styles.valueText}>{amountText}</Text>
+                <Text style={[styles.valueLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
+                <Text style={[styles.valueText, { color: theme.colors.text.primary }]}>{amountText}</Text>
               </View>
-              <View style={styles.paymentBadge}>
+              <View style={[styles.paymentBadge, {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.surface.card,
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : theme.colors.border.subtle,
+              }]}>
                 <CreditCard size={14} color={booking.paymentStatus === 'paid' ? P.green : P.gold} />
-                <Text style={styles.paymentBadgeText}>{paymentStatusLabel}</Text>
+                <Text style={[styles.paymentBadgeText, { color: theme.colors.text.secondary }]}>{paymentStatusLabel}</Text>
               </View>
             </View>
 
@@ -499,20 +570,22 @@ export default function TransactionDetailsScreen() {
                 {STEPS.map((step, index) => {
                   const active = index <= visibleStepIndex;
                   const current = index === visibleStepIndex;
+                  const stepColor = active ? (theme.isDark ? P.cyan : theme.colors.brand.primary) : theme.colors.text.dim;
                   return (
                     <React.Fragment key={step.value}>
                       <View style={styles.timelineStep}>
                         <View style={[
                           styles.timelineNode,
-                          active && { borderColor: P.cyan, backgroundColor: current ? 'transparent' : P.cyan },
+                          { borderColor: theme.colors.text.dim },
+                          active && { borderColor: stepColor, backgroundColor: current ? 'transparent' : stepColor },
                         ]}>
-                          {current ? <View style={styles.timelineDot} /> : active ? <CheckCircle2 size={10} color="#001014" strokeWidth={3} /> : null}
+                          {current ? <View style={[styles.timelineDot, { backgroundColor: stepColor }]} /> : active ? <CheckCircle2 size={10} color={theme.isDark ? '#001014' : '#ffffff'} strokeWidth={3} /> : null}
                         </View>
-                        <Text style={[styles.timelineText, active && { color: P.cyan }]}>
+                        <Text style={[styles.timelineText, { color: theme.colors.text.dim }, active && { color: stepColor }]}>
                           {t('transactionDetails.step' + step.label, step.label)}
                         </Text>
                       </View>
-                      {index < STEPS.length - 1 && <View style={[styles.timelineLine, index < visibleStepIndex && { backgroundColor: P.cyan }]} />}
+                      {index < STEPS.length - 1 && <View style={[styles.timelineLine, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.12)' : theme.colors.border.subtle }, index < visibleStepIndex && { backgroundColor: stepColor }]} />}
                     </React.Fragment>
                   );
                 })}
@@ -528,53 +601,66 @@ export default function TransactionDetailsScreen() {
 
           <Animated.View entering={FadeInDown.delay(140).duration(450)} style={styles.section}>
             <SectionHeader icon={UserRound} title={partnerRole} />
-            <TouchableOpacity activeOpacity={0.88} onPress={openPartnerProfile} disabled={!partnerProfileId} style={styles.partnerCard}>
+            <TouchableOpacity 
+              activeOpacity={0.88} 
+              onPress={openPartnerProfile} 
+              disabled={!partnerProfileId} 
+              style={[
+                styles.partnerCard,
+                {
+                  borderColor: theme.isDark ? P.borderStrong : theme.colors.border.subtle,
+                  backgroundColor: theme.isDark ? P.surfaceStrong : theme.colors.surface.card
+                }
+              ]}
+            >
               <LinearGradient
-                colors={['rgba(0,245,255,0.13)', 'rgba(10,13,34,0.94)', 'rgba(0,255,127,0.08)']}
+                colors={theme.isDark 
+                  ? ['rgba(0,245,255,0.13)', 'rgba(10,13,34,0.94)', 'rgba(0,255,127,0.08)']
+                  : ['rgba(0,245,255,0.08)', theme.colors.surface.card, 'rgba(0,255,127,0.04)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
               />
               <View style={styles.partnerTopRow}>
-                <View style={styles.avatarShell}>
+                <View style={[styles.avatarShell, { borderColor: theme.isDark ? P.borderStrong : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : theme.colors.surface.subtle }]}>
                   {partnerImage ? (
                     <Image source={{ uri: partnerImage }} style={styles.avatarImage} />
                   ) : (
                     <LinearGradient colors={[P.cyanMuted, 'rgba(191,90,242,0.18)']} style={styles.avatarFallback}>
-                      <Text style={styles.avatarText}>{initialsFor(partnerName)}</Text>
+                      <Text style={[styles.avatarText, { color: theme.colors.brand.primary }]}>{initialsFor(partnerName)}</Text>
                     </LinearGradient>
                   )}
                 </View>
                 <View style={styles.partnerCopy}>
-                  <Text style={styles.partnerRoleText}>{partnerRole}</Text>
-                  <Text style={[styles.partnerName, Typography.threeD]} numberOfLines={1}>{partnerName}</Text>
-                  <Text style={styles.partnerSubText} numberOfLines={1}>{partnerSubtitle}</Text>
+                  <Text style={[styles.partnerRoleText, { color: theme.colors.text.muted }]}>{partnerRole}</Text>
+                  <Text style={[styles.partnerName, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{partnerName}</Text>
+                  <Text style={[styles.partnerSubText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{partnerSubtitle}</Text>
                 </View>
-                <View style={styles.partnerCue}>
-                  <ChevronRight size={18} color={P.cyan} strokeWidth={2.5} />
+                <View style={[styles.partnerCue, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08), borderColor: theme.isDark ? P.borderStrong : theme.colors.border.subtle }]}>
+                  <ChevronRight size={18} color={theme.colors.brand.primary} strokeWidth={2.5} />
                 </View>
               </View>
 
               <View style={styles.partnerInsightRow}>
                 {isWorker ? (
                   <>
-                    <PartnerInsight icon={Phone} label={t('transactionDetails.contact', 'Contact')} value={isCommunicationLocked ? t('transactionDetails.closedAfterCompletion', 'Closed after job completion') : partnerPhone || t('chat.inApp', 'In app')} />
+                    <PartnerInsight icon={Phone} label={t('transactionDetails.contact', 'Contact')} value={isCommunicationLocked ? t('transactionDetails.closedAfterCompletion', 'Closed after job completion') : partnerPhone || t('chat.inApp', 'In app')} color={theme.colors.brand.primary} />
                     <PartnerInsight icon={MapPin} label={t('transactionDetails.area', 'Area')} value={partnerCity || partnerAddress || t('common.notShared', 'Not shared')} color={P.green} />
                     <PartnerInsight icon={CalendarDays} label={t('transactionDetails.member', 'Member')} value={formatSince(partnerJoinedAt)} color={P.orange} />
                   </>
                 ) : (
                   <>
-                    <PartnerInsight icon={Banknote} label={t('transactionDetails.rate', 'Rate')} value={formatCurrency(partnerHourlyRate)} />
+                    <PartnerInsight icon={Banknote} label={t('transactionDetails.rate', 'Rate')} value={formatCurrency(partnerHourlyRate)} color={theme.colors.brand.primary} />
                   </>
                 )}
               </View>
 
-              <View style={styles.partnerProfileRow}>
+              <View style={[styles.partnerProfileRow, { borderColor: theme.isDark ? 'rgba(0,245,255,0.16)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(0,0,0,0.18)' : theme.colors.surface.subtle }]}>
                 <View style={[styles.partnerStatusDot, { backgroundColor: isWorker ? P.green : (partnerStatusText.includes('Verified') ? P.green : P.orange) }]} />
-                <Text style={styles.partnerStatusText} numberOfLines={1}>{partnerStatusText}</Text>
+                <Text style={[styles.partnerStatusText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{partnerStatusText}</Text>
                 <View style={styles.partnerProfileLink}>
-                  <Eye size={13} color={P.cyan} strokeWidth={2.4} />
-                  <Text style={styles.partnerProfileText}>
+                  <Eye size={13} color={theme.colors.brand.primary} strokeWidth={2.4} />
+                  <Text style={[styles.partnerProfileText, { color: theme.colors.brand.primary }]}>
                     {isWorker ? t('transactionDetails.viewClientProfile', 'View client profile') : t('transactionDetails.viewUstadProfile', 'View Ustad profile')}
                   </Text>
                 </View>
@@ -587,18 +673,20 @@ export default function TransactionDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
               <SectionHeader icon={BriefcaseBusiness} title={t('transactionDetails.jobDetails', 'Job Details')} />
               
-              <View style={styles.unifiedJobCard}>
+              <View style={[styles.unifiedJobCard, { borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle }]}>
                 <LinearGradient
-                  colors={['rgba(9, 12, 32, 0.94)', 'rgba(12, 16, 42, 0.98)']}
+                  colors={theme.isDark 
+                    ? ['rgba(9, 12, 32, 0.94)', 'rgba(12, 16, 42, 0.98)']
+                    : [theme.colors.surface.card, theme.colors.surface.card]}
                   style={StyleSheet.absoluteFillObject}
                 />
                 
                 {/* Primary Info: Written Description (Always visible, max 3 lines when collapsed) */}
                 {!!booking.description && (
                   <View style={styles.primaryDescBlock}>
-                    <Text style={styles.primaryDescLabel}>{t('transactionDetails.descriptionLabel', 'DESCRIPTION')}</Text>
+                    <Text style={[styles.primaryDescLabel, { color: theme.colors.text.muted }]}>{t('transactionDetails.descriptionLabel', 'DESCRIPTION')}</Text>
                     <Text 
-                      style={styles.primaryDescText} 
+                      style={[styles.primaryDescText, { color: theme.colors.text.primary }]} 
                       numberOfLines={isDetailsExpanded ? undefined : 3}
                     >
                       {booking.description}
@@ -608,15 +696,15 @@ export default function TransactionDetailsScreen() {
 
                 {/* Primary Specifications: Category & Duration Badges */}
                 <View style={styles.primaryBadgesRow}>
-                  <View style={styles.primaryBadge}>
-                    <BriefcaseBusiness size={11} color={P.cyan} />
-                    <Text style={styles.primaryBadgeText} numberOfLines={1}>
+                  <View style={[styles.primaryBadge, { borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.25)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.06)' : theme.colors.surface.subtle }]}>
+                    <BriefcaseBusiness size={11} color={theme.colors.brand.primary} />
+                    <Text style={[styles.primaryBadgeText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
                       {booking.category || serviceTitle}
                     </Text>
                   </View>
-                  <View style={[styles.primaryBadge, { borderColor: 'rgba(255, 140, 0, 0.25)' }]}>
+                  <View style={[styles.primaryBadge, { borderColor: theme.isDark ? 'rgba(255, 140, 0, 0.25)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(255, 140, 0, 0.06)' : theme.colors.surface.subtle }]}>
                     <Clock3 size={11} color={P.orange} />
-                    <Text style={styles.primaryBadgeText} numberOfLines={1}>
+                    <Text style={[styles.primaryBadgeText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
                       {booking.estimatedHours === 1 
                         ? t('transactionDetails.durationHours', { count: 1 }) 
                         : t('transactionDetails.durationHoursPlural', { count: booking.estimatedHours || 1 })}
@@ -642,7 +730,7 @@ export default function TransactionDetailsScreen() {
                             />
                           ))}
                         </View>
-                        <Text style={styles.previewItemText}>
+                        <Text style={[styles.previewItemText, { color: theme.colors.text.secondary }]}>
                           {photosAndVideos.length === 1 
                             ? t('transactionDetails.filesCount', { count: 1 }) 
                             : t('transactionDetails.filesCountPlural', { count: photosAndVideos.length })}
@@ -653,7 +741,7 @@ export default function TransactionDetailsScreen() {
                     {/* Voice Brief indicator preview */}
                     {voiceBriefs.length > 0 && (
                       <View style={styles.previewItem}>
-                        <View style={styles.voicePreviewIcon}>
+                        <View style={[styles.voicePreviewIcon, { backgroundColor: theme.isDark ? P.orangeMuted : alpha(P.orange, 0.08) }]}>
                           <Volume2 size={10} color={P.orange} strokeWidth={2.5} />
                         </View>
                         <Text style={[styles.previewItemText, { color: P.orange }]}>
@@ -664,10 +752,10 @@ export default function TransactionDetailsScreen() {
 
                     {/* Spec Indicators preview */}
                     <View style={styles.previewItem}>
-                      <View style={styles.specsPreviewIcon}>
-                        <MapPin size={10} color={P.cyan} strokeWidth={2.5} />
+                      <View style={[styles.specsPreviewIcon, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08) }]}>
+                        <MapPin size={10} color={theme.colors.brand.primary} strokeWidth={2.5} />
                       </View>
-                      <Text style={[styles.previewItemText, { color: P.cyan }]}>
+                      <Text style={[styles.previewItemText, { color: theme.colors.brand.primary }]}>
                         {t('transactionDetails.locRates', 'Loc & Rates')}
                       </Text>
                     </View>
@@ -681,7 +769,7 @@ export default function TransactionDetailsScreen() {
                     {/* 1. Photos & Videos section (if any) */}
                     {photosAndVideos.length > 0 && (
                       <View style={styles.detailsSubSection}>
-                        <Text style={styles.detailsSubSectionTitle}>{t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}</Text>
+                        <Text style={[styles.detailsSubSectionTitle, { color: theme.colors.text.muted }]}>{t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}</Text>
                         <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} cardWidth={galleryCardWidth} />
                       </View>
                     )}
@@ -689,7 +777,7 @@ export default function TransactionDetailsScreen() {
                     {/* 2. Voice brief player (if any) */}
                     {voiceBriefs.length > 0 && (
                       <View style={styles.detailsSubSection}>
-                        <Text style={styles.detailsSubSectionTitle}>
+                        <Text style={[styles.detailsSubSectionTitle, { color: theme.colors.text.muted }]}>
                           {isWorker ? t('transactionDetails.clientVoiceBrief', "CLIENT'S VOICE BRIEF") : t('transactionDetails.yourVoiceBrief', "YOUR VOICE BRIEF")}
                         </Text>
                         <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} cardWidth={galleryCardWidth} />
@@ -698,8 +786,8 @@ export default function TransactionDetailsScreen() {
 
                     {/* 3. Fully detailed specifications (Location & Rates) */}
                     <View style={styles.detailsSubSection}>
-                      <Text style={styles.detailsSubSectionTitle}>{t('transactionDetails.additionalDetails', 'ADDITIONAL DETAILS')}</Text>
-                      <View style={styles.detailSpecsCard}>
+                      <Text style={[styles.detailsSubSectionTitle, { color: theme.colors.text.muted }]}>{t('transactionDetails.additionalDetails', 'ADDITIONAL DETAILS')}</Text>
+                      <View style={[styles.detailSpecsCard, { borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.12)' : theme.colors.surface.subtle }]}>
                         <InfoRow icon={MapPin} label={t('transactionDetails.serviceLocation', 'Service Location')} value={addressLabel} />
                         <InfoRow 
                           icon={Banknote} 
@@ -718,12 +806,12 @@ export default function TransactionDetailsScreen() {
                   onPress={() => setIsDetailsExpanded(prev => !prev)}
                   style={styles.unifiedCardToggle}
                 >
-                  <Text style={styles.unifiedCardToggleText}>
+                  <Text style={[styles.unifiedCardToggleText, { color: theme.colors.brand.primary }]}>
                     {isDetailsExpanded ? t('transactionDetails.showLess', 'Show Less') : t('transactionDetails.showMoreDetails', 'Show More Details')}
                   </Text>
                   <ChevronRight
                     size={14}
-                    color={P.cyan}
+                    color={theme.colors.brand.primary}
                     style={{ transform: [{ rotate: isDetailsExpanded ? '270deg' : '90deg' }] }}
                   />
                 </TouchableOpacity>
@@ -755,7 +843,7 @@ export default function TransactionDetailsScreen() {
             </Animated.View>
           )}
 
-          {!isWorker && status === 'completed' && booking.paymentStatus !== 'paid' && (
+          {!isWorker && status === 'completed' && booking.paymentStatus !== 'paid' && !hasActiveDispute && (
             <Animated.View entering={FadeInDown.delay(500).duration(450)} style={styles.section}>
               <SectionHeader icon={CreditCard} title={t('transactionDetails.cashSettlement', 'Cash Settlement')} color={P.green} />
               <ActionButton
@@ -774,8 +862,10 @@ export default function TransactionDetailsScreen() {
                       refetch();
                       setShowPaymentSuccess(true);
                     },
-                    onError: () => {
+                    onError: (error: any) => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                      const message = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+                      Alert.alert(t('transactionDetails.paymentBlocked', 'Payment paused'), message);
                     }
                   });
                 }}
@@ -887,6 +977,9 @@ export default function TransactionDetailsScreen() {
             </View>
           )}
         </ScrollView>
+
+
+
         {status !== 'completed' && status !== 'cancelled' && (
           <Animated.View entering={FadeInDown.delay(620).duration(420)} style={[styles.floatingActions, { bottom: insets.bottom + 20 }]}>
             <FloatingAction icon={Navigation} label={t('transactionDetails.track', 'Track')} onPress={openRoute} color={P.green} disabled={!canTrackMission} />
@@ -895,6 +988,15 @@ export default function TransactionDetailsScreen() {
           </Animated.View>
         )}
       </View>
+      <RaiseDisputeModal
+        visible={showDisputeModal}
+        onClose={() => setShowDisputeModal(false)}
+        bookingId={id as string}
+        jobAmount={jobAmount}
+        onSubmitted={() => {
+          refetch();
+        }}
+      />
       <AlertModal
         visible={showPaymentSuccess}
         onDismiss={() => {
@@ -906,19 +1008,147 @@ export default function TransactionDetailsScreen() {
         buttonText={t('transactionDetails.backToHome', 'Back to Home')}
         type="success"
       />
+
+      <Modal
+        visible={showAutoAssignedModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAutoAssignedModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <BlurView intensity={45} style={StyleSheet.absoluteFill} tint={theme.isDark ? "dark" : "light"} />
+          <View style={styles.successModalContainer}>
+            <Animated.View 
+              entering={SlideInDown.springify().damping(15)}
+              style={[
+                styles.successCard, 
+                { 
+                  backgroundColor: theme.isDark ? '#07091A' : '#FFFFFF', 
+                  borderColor: theme.isDark ? 'rgba(0, 255, 127, 0.3)' : 'rgba(0, 168, 107, 0.25)',
+                  shadowColor: theme.isDark ? '#00FF7F' : '#00A86B',
+                }
+              ]}
+            >
+              <LinearGradient
+                colors={theme.isDark 
+                  ? ['rgba(0, 255, 127, 0.15)', 'rgba(7, 9, 26, 0.95)'] 
+                  : ['rgba(0, 168, 107, 0.08)', 'rgba(255, 255, 255, 0.98)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.successGradient}
+              >
+                <View style={[
+                  styles.successBadgeOutline, 
+                  { 
+                    backgroundColor: theme.isDark ? 'rgba(0, 255, 127, 0.15)' : 'rgba(0, 168, 107, 0.12)',
+                    shadowColor: theme.isDark ? '#00FF7F' : '#00A86B' 
+                  }
+                ]}>
+                  <LinearGradient
+                    colors={theme.isDark ? ['#00FF7F', '#00F5FF'] : ['#00A86B', '#34C759']}
+                    style={styles.successBadgeCircle}
+                  >
+                    <CheckCircle2 size={32} color={theme.isDark ? '#000000' : '#FFFFFF'} strokeWidth={2.5} />
+                  </LinearGradient>
+                </View>
+
+                <Text style={[styles.successTitle, { color: theme.isDark ? '#00FF7F' : '#00A86B' }]}>
+                  {t('findingWorker.assignedTitle', 'USTAD ASSIGNED! ⚡')}
+                </Text>
+                
+                <Text style={[styles.successSubtitle, { color: theme.isDark ? 'rgba(255, 255, 255, 0.7)' : '#444446' }]}>
+                  {partner ? (
+                    <>
+                      <Text style={{ fontWeight: '800', color: theme.isDark ? '#FFFFFF' : '#1C1C1E' }}>
+                        {partnerName}
+                      </Text>{' '}
+                      has accepted your job request with your price of{' '}
+                      <Text style={{ fontWeight: '800', color: theme.isDark ? '#00F5FF' : '#007AFF' }}>
+                        Rs. {amountValue.toLocaleString()}
+                      </Text>
+                      !
+                    </>
+                  ) : (
+                    <>
+                      An Ustad has accepted your job request at your offered price of{' '}
+                      <Text style={{ fontWeight: '800', color: theme.isDark ? '#00F5FF' : '#007AFF' }}>
+                        Rs. {amountValue.toLocaleString()}
+                      </Text>
+                      !
+                    </>
+                  )}
+                </Text>
+
+                {partner && (
+                  <View style={[
+                    styles.assignedWorkerCard, 
+                    { 
+                      backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+                      borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'
+                    }
+                  ]}>
+                    {partnerImage ? (
+                      <Image source={{ uri: partnerImage }} style={styles.assignedWorkerAvatar} />
+                    ) : (
+                      <View style={[styles.assignedWorkerAvatar, { backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' }]}>
+                        <UserRound size={20} color={theme.isDark ? '#FFF' : '#000'} />
+                      </View>
+                    )}
+                    <View style={styles.assignedWorkerDetails}>
+                      <Text style={[styles.assignedWorkerName, { color: theme.isDark ? '#FFFFFF' : '#1C1C1E' }]}>
+                        {partnerName}
+                      </Text>
+                      <Text style={[styles.assignedWorkerCategory, { color: theme.isDark ? 'rgba(255, 255, 255, 0.5)' : '#666668' }]}>
+                        {partnerCategory}
+                      </Text>
+                      <View style={styles.assignedWorkerRatingRow}>
+                        <Star size={12} color="#FFD700" fill="#FFD700" />
+                        <Text style={[styles.assignedWorkerRating, { color: theme.isDark ? 'rgba(255, 255, 255, 0.7)' : '#444446' }]}>
+                          {partnerRating > 0 ? partnerRating.toFixed(1) : 'New'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                <View style={[styles.successPriceRow, { borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
+                  <Text style={[styles.successPriceLabel, { color: theme.isDark ? 'rgba(255, 255, 255, 0.4)' : '#666668' }]}>AGREED PRICE:</Text>
+                  <Text style={[styles.successPriceValue, { color: theme.isDark ? '#00F5FF' : '#007AFF' }]}>Rs. {amountValue.toLocaleString()}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.successActionBtn}
+                  onPress={() => setShowAutoAssignedModal(false)}
+                  activeOpacity={0.82}
+                >
+                  <LinearGradient
+                    colors={theme.isDark ? ['#00FF7F', '#00F5FF'] : ['#00A86B', '#007AFF']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.successActionGradient}
+                  >
+                    <Text style={[styles.successActionText, { color: theme.isDark ? '#000000' : '#FFFFFF' }]}>GOT IT</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </LinearGradient>
+            </Animated.View>
+          </View>
+        </View>
+      </Modal>
     </BackgroundWrapper>
   );
 }
 
 function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<any>; label: string; value: string }) {
+  const theme = useTheme();
   return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoRowIcon}>
-        <Icon size={16} color={P.cyan} strokeWidth={2.4} />
+    <View style={[styles.infoRow, { borderBottomColor: theme.colors.border.subtle }]}>
+      <View style={[styles.infoRowIcon, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08) }]}>
+        <Icon size={16} color={theme.colors.brand.primary} strokeWidth={2.4} />
       </View>
       <View style={styles.infoRowCopy}>
-        <Text style={styles.infoRowLabel}>{label}</Text>
-        <Text style={styles.infoRowValue} numberOfLines={2}>{value}</Text>
+        <Text style={[styles.infoRowLabel, { color: theme.colors.text.muted }]}>{label}</Text>
+        <Text style={[styles.infoRowValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{value}</Text>
       </View>
     </View>
   );
@@ -1058,6 +1288,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.055)',
     borderWidth: 1,
     borderColor: P.border,
+  },
+  headerButtonPlaceholder: {
+    width: 44,
+    height: 44,
   },
   headerCenter: {
     flex: 1,
@@ -1651,6 +1885,46 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 18,
   },
+  disputeHelper: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  disputeCornerBtn: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 30,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  disputeCornerStatus: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 30,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,59,48,0.4)',
+    backgroundColor: 'rgba(255,59,48,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   reviewCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1886,5 +2160,132 @@ const styles = StyleSheet.create({
     color: '#201600',
     fontSize: 13,
     fontWeight: '900',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successModalContainer: {
+    width: '90%',
+    maxWidth: 360,
+    borderRadius: 24,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    justifyContent: 'center',
+  },
+  successCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  successGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  successBadgeOutline: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    padding: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  successBadgeCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 8,
+    marginBottom: 24,
+  },
+  successPriceRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    marginBottom: 24,
+  },
+  successPriceLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  successPriceValue: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  successActionBtn: {
+    width: '100%',
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  successActionGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successActionText: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+  assignedWorkerCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 12,
+    gap: 12,
+    marginBottom: 20,
+  },
+  assignedWorkerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+  },
+  assignedWorkerDetails: {
+    flex: 1,
+  },
+  assignedWorkerName: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  assignedWorkerCategory: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  assignedWorkerRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  assignedWorkerRating: {
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

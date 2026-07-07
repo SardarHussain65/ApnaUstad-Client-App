@@ -21,6 +21,7 @@ import {
   Settings,
   Layers3,
   Heart,
+  Scale,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -330,6 +331,7 @@ export default function ProfileTab() {
           <View style={styles.menuSection}>
             <Text style={[styles.sectionLabel, { color: theme.colors.text.dim }]}>{t('profile.support')}</Text>
             <MenuItem icon={HelpCircle} label={t('profile.helpCenter')} sublabel={t('profile.helpCenterSub')} delay={760} accent="#64D2FF" onPress={() => router.push('/profile/help-center')} />
+            <MenuItem icon={Scale} label={t('disputes.myTitle', 'My complaints')} sublabel={t('disputes.mySubtitle', 'Track issues you reported on bookings')} delay={775} accent="#FF6B6B" onPress={() => router.push('/profile/my-disputes' as any)} />
             <MenuItem icon={Star} label={t('profile.rateApp')} sublabel={t('profile.rateAppSub')} delay={790} accent="#FFD60A" />
             <MenuItem icon={Settings} label={t('profile.appSettings')} sublabel={t('profile.appSettingsSub')} delay={820} accent="#8E8E93" onPress={() => router.push('/profile/settings')} />
           </View>

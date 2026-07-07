@@ -42,6 +42,19 @@
       "favicon": "./assets/images/icon.jpeg"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "forceStaticLinking": [
+              "RNFBApp",
+              "RNFBAuth",
+              "RNFBMessaging"
+            ]
+          }
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",

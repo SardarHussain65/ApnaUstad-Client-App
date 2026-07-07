@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Scale,
   XCircle,
   Zap,
 } from 'lucide-react-native';
@@ -80,6 +81,7 @@ export default function NotificationsScreen() {
         'booking_cancelled',
         'job_started',
         'job_completed',
+        'dispute',
       ].includes(item.type));
     }
     return notifications;
@@ -97,6 +99,10 @@ export default function NotificationsScreen() {
     }
 
     const bookingId = notification.booking ? String(notification.booking) : null;
+    if (notification.type === 'dispute' && !bookingId) {
+      router.push('/profile/my-disputes' as any);
+      return;
+    }
     if (bookingId) {
       router.push({
         pathname: '/transaction-details',
@@ -156,7 +162,7 @@ export default function NotificationsScreen() {
                 <Sparkles size={18} color={theme.colors.brand.primary} />
               </View>
               <View style={styles.summaryCopy}>
-                <Text style={styles.summaryTitle}>{t('notifications.updatesTitle')}</Text>
+                <Text style={[styles.summaryTitle, { color: theme.colors.text.primary }]}>{t('notifications.updatesTitle')}</Text>
                 <Text style={[styles.summaryText, { color: theme.colors.text.muted }]}>
                   {unreadCount > 0
                     ? (unreadCount === 1 ? t('notifications.waitingSingular') : t('notifications.waitingPlural', { count: unreadCount }))
@@ -181,7 +187,14 @@ export default function NotificationsScreen() {
                 key={filter.key}
                 activeOpacity={0.82}
                 onPress={() => setActiveFilter(filter.key)}
-                style={[styles.filterChip, selected && styles.filterChipActive]}
+                style={[
+                  styles.filterChip,
+                  {
+                    borderColor: theme.isDark ? 'rgba(255,255,255,0.10)' : theme.colors.border.subtle,
+                    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : theme.colors.surface.subtle,
+                  },
+                  selected && [styles.filterChipActive, { borderColor: theme.colors.brand.primary }]
+                ]}
               >
                 {selected && (
                   <LinearGradient
@@ -191,7 +204,13 @@ export default function NotificationsScreen() {
                     style={StyleSheet.absoluteFill}
                   />
                 )}
-                <Text style={[styles.filterText, selected && styles.filterTextActive]}>
+                <Text
+                  style={[
+                    styles.filterText,
+                    { color: theme.colors.text.muted },
+                    selected && [styles.filterTextActive, { color: theme.isDark ? '#fff' : theme.colors.text.primary }]
+                  ]}
+                >
                   {t('notifications.' + filter.key)}
                 </Text>
               </TouchableOpacity>
@@ -232,7 +251,7 @@ export default function NotificationsScreen() {
                   <View style={styles.emptyIcon}>
                     <Bell size={34} color={theme.colors.brand.primary} />
                   </View>
-                  <Text style={styles.emptyTitle}>{t('notifications.emptyTitle')}</Text>
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('notifications.emptyTitle')}</Text>
                   <Text style={[styles.emptyText, { color: theme.colors.text.muted }]}>{t('notifications.emptyDesc')}</Text>
                 </GlassCard>
               </Animated.View>
@@ -274,18 +293,18 @@ function NotificationCard({ notification, onPress, theme }: { notification: AppN
         <View style={styles.notificationBody}>
           <View style={styles.notificationTop}>
             <Text style={[styles.typeLabel, { color: theme.colors.brand.primary }]}>{getTypeLabel(notification.type, t)}</Text>
-            <Text style={styles.notificationTime}>{formatNotificationTime(notification.createdAt, t)}</Text>
+            <Text style={[styles.notificationTime, { color: theme.colors.text.muted }]}>{formatNotificationTime(notification.createdAt, t)}</Text>
           </View>
 
           <View style={styles.titleRow}>
-            <Text style={styles.notificationTitle} numberOfLines={1}>{notification.title}</Text>
+            <Text style={[styles.notificationTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>{notification.title}</Text>
             {unread && <View style={[styles.unreadDot, { backgroundColor: accent }]} />}
           </View>
 
-          <Text style={styles.notificationMessage} numberOfLines={2}>{notification.message}</Text>
+          <Text style={[styles.notificationMessage, { color: theme.colors.text.secondary }]} numberOfLines={2}>{notification.message}</Text>
 
           <View style={styles.footerRow}>
-            <Text style={[styles.statusText, unread ? { color: accent } : null]}>
+            <Text style={[styles.statusText, unread ? { color: accent } : { color: theme.colors.text.muted }]}>
               {unread ? t('notifications.statusNew') : t('notifications.statusRead')}
             </Text>
             {notification.booking && (
@@ -340,6 +359,7 @@ function getNotificationIcon(type: AppNotification['type']) {
     case 'payment_received': return CreditCard;
     case 'new_review': return Star;
     case 'worker_verified': return ShieldCheck;
+    case 'dispute': return Scale;
     default: return Bell;
   }
 }
@@ -352,6 +372,7 @@ function getNotificationColor(type: AppNotification['type'], theme: ReturnType<t
     case 'payment_received':
     case 'new_review': return theme.legacy.yellow;
     case 'job_started': return theme.legacy.orange;
+    case 'dispute': return theme.colors.status.error;
     default: return theme.colors.brand.primary;
   }
 }
