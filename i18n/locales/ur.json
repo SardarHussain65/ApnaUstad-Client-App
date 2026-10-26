@@ -1659,5 +1659,28 @@
     "skills": "مہارتیں",
     "hourlyRate": "فی گھنٹہ ریٹ",
     "hireUstad": "استاد ہائر کریں"
+  },
+  "themeLanguageSetup": {
+    "stepBadge": "مرحلہ 02 / 02",
+    "eyebrow": "اپنی ترجیحات منتخب کریں",
+    "title": "تھیم اور زبان منتخب کریں",
+    "subtitle": "اپنا استاد شروع کرنے سے پہلے اپنا پسندیدہ ظاہری انداز اور زبان منتخب کریں۔",
+    "themeSectionTitle": "ایپ کی تھیم",
+    "themeSectionSubtitle": "اپنے پسندیدہ انداز کا انتخاب کریں",
+    "themeCosmic": "کاسمک گلیکسی",
+    "themeCosmicDesc": "گہری خلائی نیبائی اور نیون سیان چمک",
+    "themeCosmicTag": "اصل انداز",
+    "themeDark": "آبسیڈین ڈارک",
+    "themeDarkDesc": "نرم کنٹراسٹ اور آنکھوں کے لیے آرام دہ",
+    "themeLight": "پرسٹین لائٹ",
+    "themeLightDesc": "صاف ستھرا، روشن اور دن کے وقت کے لیے بہترین",
+    "languageSectionTitle": "ایپ کی زبان",
+    "languageSectionSubtitle": "اپنی بنیادی زبان منتخب کریں",
+    "langEnglish": "English",
+    "langEnglishSub": "انگریزی (ڈیفالٹ انٹرنیشنل)",
+    "langUrdu": "اردو (Urdu)",
+    "langUrduSub": "قومی زبان • دائیں سے بائیں (RTL)",
+    "continue": "جاری رکھیں",
+    "footerNote": "آپ بعد میں بھی پروفائل سیٹنگز سے یہ ترجیحات تبدیل کر سکتے ہیں"
   }
 }

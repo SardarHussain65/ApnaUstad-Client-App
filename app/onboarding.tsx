@@ -75,9 +75,8 @@ export default function OnboardingScreen() {
     scrollX.value = event.contentOffset.x;
   });
 
-  const completeOnboarding = async () => {
-    await AsyncStorage.setItem('onboarding_completed', 'true');
-    router.replace('/role-selection');
+  const completeOnboarding = () => {
+    router.replace('/theme-language');
   };
 
   const handleNext = async () => {

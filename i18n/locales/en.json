@@ -1670,5 +1670,28 @@
     "skills": "SKILLS",
     "hourlyRate": "Hourly Rate",
     "hireUstad": "HIRE USTAD"
+  },
+  "themeLanguageSetup": {
+    "stepBadge": "STEP 02 OF 02",
+    "eyebrow": "PERSONALIZE EXPERIENCE",
+    "title": "Select Theme &\nLanguage",
+    "subtitle": "Choose your preferred appearance and language to tailor your ApnaUstad experience.",
+    "themeSectionTitle": "App Appearance",
+    "themeSectionSubtitle": "Select how your universe looks",
+    "themeCosmic": "Cosmic Galaxy",
+    "themeCosmicDesc": "Deep space nebula & signature neon cyan",
+    "themeCosmicTag": "SIGNATURE",
+    "themeDark": "Obsidian Dark",
+    "themeDarkDesc": "OLED blacks with sleek violet tones",
+    "themeLight": "Pristine Light",
+    "themeLightDesc": "Crisp daytime clarity & clean contrast",
+    "languageSectionTitle": "App Language",
+    "languageSectionSubtitle": "Choose your primary language",
+    "langEnglish": "English",
+    "langEnglishSub": "Default international layout",
+    "langUrdu": "اردو (Urdu)",
+    "langUrduSub": "قومی زبان • دائیں سے بائیں (RTL)",
+    "continue": "Enter ApnaUstad",
+    "footerNote": "You can change these anytime in Profile > Settings"
   }
 }
