@@ -304,23 +304,26 @@ export default function ChatScreen() {
           isMe ? styles.myMessageRow : styles.theirMessageRow
         ]}
       >
-<GlassCard
-           intensity={isMe ? 35 : 20}
-           style={[
-             styles.bubble,
-             isMe ? [styles.myBubble, { backgroundColor: theme.colors.gradients.success[0], borderColor: theme.colors.gradients.success[1] }] : styles.theirBubble
-           ]}
-         >
+        <GlassCard
+          intensity={isMe ? 35 : 20}
+          borderColor={isMe ? theme.colors.gradients.success[1] : theme.colors.border.subtle}
+          style={[
+            styles.bubble,
+            isMe
+              ? [styles.myBubble, { backgroundColor: theme.colors.gradients.success[0], borderColor: theme.colors.gradients.success[1] }]
+              : [styles.theirBubble, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]
+          ]}
+        >
           {item.messageType === 'audio' && item.audioUrl ? (
             <VoiceMessageBubble item={item} />
           ) : (
-            <Text style={styles.messageContent}>{item.content}</Text>
+            <Text style={[styles.messageContent, { color: isMe ? '#FFFFFF' : theme.colors.text.primary }]}>{item.content}</Text>
           )}
           <View style={styles.messageFooter}>
-            <Text style={styles.timeText}>
+            <Text style={[styles.timeText, { color: isMe ? 'rgba(255,255,255,0.7)' : theme.colors.text.muted }]}>
               {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
-            {isMe && <CheckCheck size={12} color={colors.cyan} style={{ marginLeft: 4 }} />}
+            {isMe && <CheckCheck size={12} color="#FFFFFF" style={{ marginLeft: 4 }} />}
           </View>
         </GlassCard>
       </Animated.View>
@@ -331,20 +334,20 @@ export default function ChatScreen() {
     <BackgroundWrapper>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <ChevronLeft color="#fff" size={24} />
+        <View style={[styles.header, { borderBottomColor: theme.colors.border.subtle }]}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+            <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.userInfo}>
             <View style={styles.avatarWrapper}>
               <View style={[styles.avatarGlow, { backgroundColor: colors.cyan }]} />
-              <View style={styles.avatar}>
-                <Text style={styles.avatarInitial}>{recipientName?.[0] || 'U'}</Text>
+              <View style={[styles.avatar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <Text style={[styles.avatarInitial, { color: theme.colors.text.primary }]}>{recipientName?.[0] || 'U'}</Text>
               </View>
             </View>
             <View style={styles.userMeta}>
-<Text style={styles.userName}>{recipientName || t('transactionDetails.servicePartner')}</Text>
+              <Text style={[styles.userName, { color: theme.colors.text.primary }]}>{recipientName || t('transactionDetails.servicePartner')}</Text>
               <View style={styles.statusRow}>
                 <View style={[styles.activeDot, isCommunicationLocked ? { backgroundColor: theme.colors.text.muted } : { backgroundColor: theme.colors.status.success }]} />
                 <Text style={[styles.statusText, !canSendMessages && styles.inactiveStatusText]}>
@@ -355,7 +358,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.headerAction}>
-            <MoreVertical color="#fff" size={20} />
+            <MoreVertical color={theme.colors.text.primary} size={20} />
           </TouchableOpacity>
         </View>
 
@@ -377,9 +380,9 @@ export default function ChatScreen() {
                 showsVerticalScrollIndicator: false,
                 ListEmptyComponent: (
                   <View style={styles.emptyChat}>
-                    <View style={styles.emptyChatIcon}><MessageCircle size={24} color={colors.cyan} /></View>
-                    <Text style={styles.emptyChatTitle}>{t('chat.secureReady')}</Text>
-                    <Text style={styles.emptyChatText}>{t('chat.bookingActiveDesc')}</Text>
+                    <View style={[styles.emptyChatIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}><MessageCircle size={24} color={theme.colors.brand.primary} /></View>
+                    <Text style={[styles.emptyChatTitle, { color: theme.colors.text.primary }]}>{t('chat.secureReady')}</Text>
+                    <Text style={[styles.emptyChatText, { color: theme.colors.text.muted }]}>{t('chat.bookingActiveDesc')}</Text>
                   </View>
                 ),
               } as any)}
@@ -389,11 +392,11 @@ export default function ChatScreen() {
 
         {/* Input */}
         {!canSendMessages ? (
-          <View style={[styles.lockedContainer, { paddingBottom: insets.bottom + 12 }]}>
-            <ShieldCheck size={16} color={colors.textMuted} />
+          <View style={[styles.lockedContainer, { backgroundColor: theme.colors.surface.card, borderTopColor: theme.colors.border.subtle, paddingBottom: insets.bottom + 12 }]}>
+            <ShieldCheck size={16} color={theme.colors.text.muted} />
             <View style={styles.lockedCopy}>
-              <Text style={styles.lockedTitle}>{isLoadingBooking ? t('chat.checkingChatAccess') : t('chat.chatClosed')}</Text>
-              <Text style={styles.lockedText}>
+              <Text style={[styles.lockedTitle, { color: theme.colors.text.primary }]}>{isLoadingBooking ? t('chat.checkingChatAccess') : t('chat.chatClosed')}</Text>
+              <Text style={[styles.lockedText, { color: theme.colors.text.secondary }]}>
                 {isLoadingBooking
                   ? t('chat.confirmingStatus')
                   : t('chat.bookingEnded')}
@@ -406,16 +409,16 @@ export default function ChatScreen() {
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
           >
             <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
-              <GlassCard intensity={60} style={styles.inputGlass} padding={0}>
+              <GlassCard intensity={60} style={styles.inputGlass} padding={0} borderColor={theme.colors.border.subtle}>
                 {isRecording || voiceUri ? (
                   <View style={styles.voiceComposer}>
                     <TouchableOpacity style={styles.discardVoiceBtn} onPress={discardVoiceRecording} activeOpacity={0.78}>
                       <Trash2 size={18} color="#FF453A" strokeWidth={2.5} />
                     </TouchableOpacity>
                     <View style={styles.recordingCopy}>
-<View style={styles.recordingTitleRow}>
+                      <View style={styles.recordingTitleRow}>
                         <View style={[styles.recordingDot, !isRecording && styles.voiceReadyDot]} />
-                        <Text style={styles.recordingTitle}>{isRecording ? t('chat.recordingVoice') : t('chat.voiceReady')}</Text>
+                        <Text style={[styles.recordingTitle, { color: theme.colors.text.primary }]}>{isRecording ? t('chat.recordingVoice') : t('chat.voiceReady')}</Text>
                       </View>
                       <Text style={[styles.recordingDuration, { color: theme.colors.brand.primary }]}>
                         {formatSeconds((isRecording ? recorderState.durationMillis : voiceDurationMillis) / 1000)}
@@ -427,21 +430,21 @@ export default function ChatScreen() {
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
-                        style={[styles.sendBtn, isUploadingVoice && styles.composerDisabled]}
+                        style={[styles.sendBtn, { backgroundColor: theme.colors.brand.primary }, isUploadingVoice && styles.composerDisabled]}
                         onPress={sendVoiceMessage}
                         disabled={isUploadingVoice}
                         activeOpacity={0.78}
                       >
-                        {isUploadingVoice ? <ActivityIndicator size="small" color="#001014" /> : <Send size={20} color="#001014" />}
+                        {isUploadingVoice ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Send size={20} color={theme.colors.button.primaryText} />}
                       </TouchableOpacity>
                     )}
                   </View>
                 ) : (
                   <View style={styles.inputInner}>
                     <TextInput
-                      style={styles.textInput}
+                      style={[styles.textInput, { color: theme.colors.text.primary }]}
                       placeholder={t('chat.placeholder')}
-                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      placeholderTextColor={theme.colors.text.muted}
                       value={inputText}
                       onChangeText={setInputText}
                       multiline
@@ -449,15 +452,15 @@ export default function ChatScreen() {
                     />
                     {inputText.trim() ? (
                       <TouchableOpacity
-                        style={[styles.sendBtn, isComposerBusy && styles.composerDisabled]}
+                        style={[styles.sendBtn, { backgroundColor: theme.colors.brand.primary }, isComposerBusy && styles.composerDisabled]}
                         onPress={handleSendMessage}
                         disabled={isComposerBusy}
                         activeOpacity={0.78}
                       >
-                        <Send size={20} color="#001014" />
+                        <Send size={20} color={theme.colors.button.primaryText} />
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity style={styles.micBtn} onPress={startVoiceRecording} disabled={isComposerBusy} activeOpacity={0.78}>
+                      <TouchableOpacity style={[styles.micBtn, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]} onPress={startVoiceRecording} disabled={isComposerBusy} activeOpacity={0.78}>
                         <Mic size={20} color={theme.colors.brand.primary} strokeWidth={2.5} />
                       </TouchableOpacity>
                     )}
@@ -466,8 +469,8 @@ export default function ChatScreen() {
               </GlassCard>
 
               <View style={styles.securitySeal}>
-                <ShieldCheck size={10} color="rgba(255,255,255,0.3)" />
-                <Text style={styles.securityTxt}>{t('chat.protected')}</Text>
+                <ShieldCheck size={10} color={theme.colors.text.muted} />
+                <Text style={[styles.securityTxt, { color: theme.colors.text.muted }]}>{t('chat.protected')}</Text>
               </View>
             </View>
           </KeyboardAvoidingView>

@@ -100,7 +100,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
       {/* ── Accent glow border behind the card ─────────────────────────── */}
       <View style={[styles.cardGlow, { shadowColor: themeColor }]} />
 
-      <View style={styles.workerCard}>
+      <View style={[styles.workerCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
         {/* ── Top gradient strip ─────────────────────────────────────────── */}
         <LinearGradient
           colors={[themeColor + '22', 'transparent']}
@@ -142,7 +142,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
                     backgroundColor: worker.isAvailable
                       ? '#00E5A0'   // neon green = online
                       : '#FF4C6A', // red = offline
-                    borderColor: '#0a0a1a',
+                    borderColor: theme.id === 'light' ? '#FFFFFF' : '#0a0a1a',
                   },
                 ]}
               />
@@ -151,7 +151,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
             {/* Name + meta */}
             <View style={styles.nameBlock}>
               <View style={styles.nameRow}>
-                <Text style={styles.workerName} numberOfLines={1}>
+                <Text style={[styles.workerName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                   {worker.fullName}
                 </Text>
                 {worker.isVerified && (
@@ -163,20 +163,20 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
               </View>
 
               <View style={styles.metaRow}>
-                <View style={styles.metaChip}>
+                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
                   <Briefcase size={9} color={themeColor} />
                   {/* ─── LEARNING: toUpperCase() for consistent visual style */}
                   <Text style={[styles.metaChipText, { color: themeColor }]}>
                     {worker.category.toUpperCase()}
                   </Text>
                 </View>
-                <View style={styles.metaChip}>
+                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
                   <MapPin size={9} color={theme.colors.text.muted} />
                   {/* ─── LEARNING: Nullish coalescing (??) ────────────────
                       Returns right-hand side only when left side is null
                       or undefined — NOT when it's 0 or ''. Safer than ||.
                   ──────────────────────────────────────────────────────── */}
-                  <Text style={styles.metaChipText}>
+                  <Text style={[styles.metaChipText, { color: theme.colors.text.secondary }]}>
                     {worker.city ?? t('common.remote', { defaultValue: 'Remote' })}
                   </Text>
                 </View>
@@ -198,25 +198,25 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
           </View>
 
           {/* ── ROW 2: Stats Bar ────────────────────────────────────────── */}
-          <View style={styles.statsBar}>
+          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
             <View style={styles.statItem}>
               <TrendingUp size={12} color={themeColor} />
-              <Text style={styles.statValue}>{worker.totalJobs ?? 0}</Text>
-              <Text style={styles.statLabel}>{t('workerDetails.jobsLabel')}</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.jobsLabel')}</Text>
             </View>
-            <View style={[styles.statDivider]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
               <Award size={12} color={themeColor} />
-              <Text style={styles.statValue}>{worker.totalReviews ?? 0}</Text>
-              <Text style={styles.statLabel}>{t('workerDetails.reviews')}</Text>
+              <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalReviews ?? 0}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.reviews')}</Text>
             </View>
-            <View style={[styles.statDivider]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
               <Zap size={12} color={themeColor} />
               <Text style={[styles.statValue, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
                 {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
               </Text>
-              <Text style={styles.statLabel}>{t('common.status')}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('common.status')}</Text>
             </View>
           </View>
 
@@ -228,13 +228,13 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
           {(worker.skills?.length ?? 0) > 0 && (
             <View style={styles.skillsRow}>
               {worker.skills?.slice(0, 3).map((skill) => (
-                <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35' }]}>
+                <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35', backgroundColor: theme.colors.surface.subtle }]}>
                   <Text style={[styles.skillText, { color: themeColor }]}>#{skill}</Text>
                 </View>
               ))}
               {(worker.skills?.length ?? 0) > 3 && (
-                <View style={[styles.skillPill, { borderColor: 'rgba(255,255,255,0.12)' }]}>
-                  <Text style={styles.skillTextMore}>+{(worker.skills?.length ?? 0) - 3}</Text>
+                <View style={[styles.skillPill, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
+                  <Text style={[styles.skillTextMore, { color: theme.colors.text.muted }]}>+{(worker.skills?.length ?? 0) - 3}</Text>
                 </View>
               )}
             </View>
@@ -242,7 +242,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
 
           {/* ── Bio ──────────────────────────────────────────────────────── */}
           {!!worker.bio && (
-            <Text style={styles.bioText} numberOfLines={2}>
+            <Text style={[styles.bioText, { color: theme.colors.text.secondary }]} numberOfLines={2}>
               {worker.bio}
             </Text>
           )}
@@ -265,14 +265,14 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
               style={styles.deployBtnGradient}
             >
               <View style={styles.deployBtnLeft}>
-                <Text style={styles.deployRateLabel}>{t('wallet.totalEarnings')}</Text>
-                <Text style={styles.deployRateValue}>
+                <Text style={[styles.deployRateLabel, { color: theme.id === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)' }]}>{t('wallet.totalEarnings')}</Text>
+                <Text style={[styles.deployRateValue, { color: theme.id === 'light' ? '#FFFFFF' : '#050510' }]}>
                   Rs. {worker.totalEarnings ?? '0'}
                 </Text>
               </View>
-              <View style={styles.deployBtnRight}>
-                <Zap size={14} color="#000" fill="#000" />
-                <Text style={styles.deployBtnText}>{t('workerList.hire')}</Text>
+              <View style={[styles.deployBtnRight, { borderLeftColor: theme.id === 'light' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)' }]}>
+                <Zap size={14} color={theme.id === 'light' ? '#FFFFFF' : '#050510'} fill={theme.id === 'light' ? '#FFFFFF' : '#050510'} />
+                <Text style={[styles.deployBtnText, { color: theme.id === 'light' ? '#FFFFFF' : '#050510' }]}>{t('workerList.hire')}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -374,13 +374,13 @@ export default function WorkerListScreen() {
           // ──────────────────────────────────────────────────────────────
           style={[styles.header, { paddingTop: insets.top + 16 }]}
         >
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ChevronLeft color="#fff" size={22} />
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
+            <ChevronLeft color={theme.colors.text.primary} size={22} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{category.toUpperCase()}</Text>
-            <Text style={styles.headerSub}>
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{category.toUpperCase()}</Text>
+            <Text style={[styles.headerSub, { color: theme.colors.text.muted }]}>
               {isLoading
                 ? t('workerList.searchingUstads')
                 : t('workerList.availableCount', { count: filtered.length })}
@@ -393,7 +393,7 @@ export default function WorkerListScreen() {
 
         {/* ── SEARCH BAR ────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(180).duration(450)} style={styles.searchRow}>
-          <View style={styles.searchContainer}>
+          <View style={[styles.searchContainer, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.border.subtle }]}>
             <Search size={15} color={theme.colors.text.muted} />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text.primary }]}
@@ -444,14 +444,14 @@ export default function WorkerListScreen() {
           ) : (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyTitle}>{t('workerList.noUstadsFound')}</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('workerList.noUstadsFound')}</Text>
+              <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>
                 {search
                   ? t('workerList.tryDifferentSearch')
                   : t('workerList.noWorkersCategory')}
               </Text>
               {search ? (
-                <TouchableOpacity style={[styles.clearBtn, { borderColor: themeColor }]} onPress={() => setSearch('')}>
+                <TouchableOpacity style={[styles.clearBtn, { borderColor: themeColor, backgroundColor: theme.colors.surface.subtle }]} onPress={() => setSearch('')}>
                   <Text style={[styles.clearBtnText, { color: themeColor }]}>{t('workerList.clearSearch')}</Text>
                 </TouchableOpacity>
               ) : null}

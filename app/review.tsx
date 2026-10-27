@@ -49,7 +49,7 @@ const FEEDBACK_TAGS = [
   '💯 Super honest',
 ];
 
-const P = {
+const DEFAULT_P = {
   gold: '#FFD700',
   goldMuted: 'rgba(255,215,0,0.14)',
   cyan: '#00F5FF',
@@ -66,6 +66,26 @@ const P = {
   text: '#FFFFFF',
 };
 
+function getReviewPalette(theme: ReturnType<typeof useTheme>, colors: ReturnType<typeof useThemeColors>) {
+  if (theme.id === 'current') return DEFAULT_P;
+  return {
+    gold: colors.yellow,
+    goldMuted: alpha(colors.yellow, 0.14),
+    cyan: colors.cyan,
+    cyanMuted: alpha(colors.cyan, 0.12),
+    green: colors.green,
+    greenMuted: alpha(colors.green, 0.12),
+    surface: theme.colors.surface.card,
+    surfaceFocus: theme.colors.surface.raised,
+    border: theme.colors.border.subtle,
+    borderFocus: colors.cyan,
+    borderGold: alpha(colors.yellow, 0.35),
+    textDim: theme.colors.text.dim,
+    textMuted: theme.colors.text.muted,
+    text: theme.colors.text.primary,
+  };
+}
+
 export default function ReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -74,6 +94,7 @@ export default function ReviewScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const theme = useTheme();
   const colors = useThemeColors();
+  const P = useMemo(() => getReviewPalette(theme, colors), [theme, colors]);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -205,23 +226,23 @@ export default function ReviewScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           {booking?.isReviewed ? (
             <Animated.View entering={FadeInUp.duration(500)}>
-              <GlassCard intensity={25} style={styles.doneCard}>
+              <GlassCard intensity={25} style={[styles.doneCard, { backgroundColor: P.surface, borderColor: P.border }]}>
                 <CheckCircle2 size={50} color={colors.success} />
-                <Text style={styles.doneTitle}>{t('review.alreadySubmitted', 'Review Already Submitted')}</Text>
-                <Text style={styles.doneText}>{t('review.alreadySubmittedDesc', 'This completed job already has customer feedback attached.')}</Text>
+                <Text style={[styles.doneTitle, { color: P.text }]}>{t('review.alreadySubmitted', 'Review Already Submitted')}</Text>
+                <Text style={[styles.doneText, { color: P.textMuted }]}>{t('review.alreadySubmittedDesc', 'This completed job already has customer feedback attached.')}</Text>
                 <TouchableOpacity onPress={() => router.replace({ pathname: '/transaction-details', params: { id: bookingId } })} style={styles.doneBtn}>
-                  <Text style={styles.doneBtnText}>{t('review.backToDetails', 'BACK TO DETAILS')}</Text>
+                  <Text style={[styles.doneBtnText, { color: theme.colors.button.primaryText }]}>{t('review.backToDetails', 'BACK TO DETAILS')}</Text>
                 </TouchableOpacity>
               </GlassCard>
             </Animated.View>
           ) : booking?.status !== 'completed' ? (
             <Animated.View entering={FadeInUp.duration(500)}>
-              <GlassCard intensity={25} style={styles.doneCard}>
+              <GlassCard intensity={25} style={[styles.doneCard, { backgroundColor: P.surface, borderColor: P.border }]}>
                 <MessageSquareText size={50} color={colors.orange} />
-                <Text style={styles.doneTitle}>{t('review.unlocksAfterCompletion', 'Review Unlocks After Completion')}</Text>
-                <Text style={styles.doneText}>{t('review.unlocksAfterCompletionDesc', 'Once the job is completed, you can rate the service and share your experience.')}</Text>
+                <Text style={[styles.doneTitle, { color: P.text }]}>{t('review.unlocksAfterCompletion', 'Review Unlocks After Completion')}</Text>
+                <Text style={[styles.doneText, { color: P.textMuted }]}>{t('review.unlocksAfterCompletionDesc', 'Once the job is completed, you can rate the service and share your experience.')}</Text>
                 <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn}>
-                  <Text style={styles.doneBtnText}>{t('review.goBack', 'GO BACK')}</Text>
+                  <Text style={[styles.doneBtnText, { color: theme.colors.button.primaryText }]}>{t('review.goBack', 'GO BACK')}</Text>
                 </TouchableOpacity>
               </GlassCard>
             </Animated.View>
@@ -229,13 +250,15 @@ export default function ReviewScreen() {
             <>
               {/* Ustad Profile Card */}
               <Animated.View entering={FadeInDown.duration(450)}>
-                <View style={styles.workerCard}>
-                  <LinearGradient
-                    colors={['rgba(255,215,0,0.08)', 'rgba(9,12,32,0.92)', 'rgba(0,245,255,0.03)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
+                <View style={[styles.workerCard, { backgroundColor: P.surface, borderColor: P.border }]}>
+                  {theme.id === 'current' && (
+                    <LinearGradient
+                      colors={['rgba(255,215,0,0.08)', 'rgba(9,12,32,0.92)', 'rgba(0,245,255,0.03)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  )}
                   <View style={styles.avatarShell}>
                     {workerImage ? (
                       <Image source={{ uri: workerImage }} style={styles.avatarImage} />
@@ -260,7 +283,7 @@ export default function ReviewScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.workerName, Typography.threeD]} numberOfLines={1}>{workerName}</Text>
+                    <Text style={[styles.workerName, Typography.threeD, { color: P.text }]} numberOfLines={1}>{workerName}</Text>
                     <Text style={styles.workerSub} numberOfLines={1}>{workerCategory}</Text>
                   </View>
                 </View>
@@ -268,12 +291,14 @@ export default function ReviewScreen() {
 
               {/* Star Rating Panel */}
               <Animated.View entering={FadeInDown.delay(100).duration(450)}>
-                <View style={styles.ratingCard}>
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.02)', 'rgba(9,12,32,0.85)']}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <Text style={styles.sectionTitle}>{t('review.howWasService', 'HOW WAS THE SERVICE?')}</Text>
+                <View style={[styles.ratingCard, { backgroundColor: P.surface, borderColor: P.border }]}>
+                  {theme.id === 'current' && (
+                    <LinearGradient
+                      colors={['rgba(255,255,255,0.02)', 'rgba(9,12,32,0.85)']}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  )}
+                  <Text style={[styles.sectionTitle, { color: P.textDim }]}>{t('review.howWasService', 'HOW WAS THE SERVICE?')}</Text>
                   <View style={styles.starRow}>
                     {[1, 2, 3, 4, 5].map((value) => {
                       const active = value <= rating;
@@ -289,7 +314,7 @@ export default function ReviewScreen() {
                         >
                           <Star
                             size={36}
-                            color={active ? P.gold : 'rgba(255,255,255,0.15)'}
+                            color={active ? P.gold : (theme.id === 'light' ? theme.colors.border.strong : 'rgba(255,255,255,0.15)')}
                             fill={active ? P.gold : 'transparent'}
                             strokeWidth={1.8}
                           />
@@ -306,9 +331,9 @@ export default function ReviewScreen() {
 
               {/* Smart Feedback Tags */}
               <Animated.View entering={FadeInDown.delay(180).duration(450)}>
-                <View style={styles.tagsCard}>
-                  <Text style={styles.sectionTitle}>{t('review.quickComplements', 'QUICK COMPLEMENTS')}</Text>
-                  <Text style={styles.tagsHint}>{t('review.tagsHint', 'Tap tags to instantly add them to your review')}</Text>
+                <View style={[styles.tagsCard, { backgroundColor: P.surface, borderColor: P.border }]}>
+                  <Text style={[styles.sectionTitle, { color: P.textDim }]}>{t('review.quickComplements', 'QUICK COMPLEMENTS')}</Text>
+                  <Text style={[styles.tagsHint, { color: P.textMuted }]}>{t('review.tagsHint', 'Tap tags to instantly add them to your review')}</Text>
 
                   <View style={styles.tagsWrapper}>
                     {FEEDBACK_TAGS.map((tag) => {
@@ -321,13 +346,13 @@ export default function ReviewScreen() {
                           activeOpacity={0.8}
                           style={[
                             styles.tagChip,
-                            active && {
-                              borderColor: `${P.cyan}44`,
-                              backgroundColor: `${P.cyan}16`,
+                            {
+                              backgroundColor: active ? alpha(P.cyan, 0.16) : theme.colors.surface.subtle,
+                              borderColor: active ? alpha(P.cyan, 0.44) : P.border,
                             },
                           ]}
                         >
-                          <Text style={[styles.tagText, active && { color: P.cyan }]}>{translatedTag}</Text>
+                          <Text style={[styles.tagText, { color: active ? P.cyan : P.text }]}>{translatedTag}</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -345,17 +370,17 @@ export default function ReviewScreen() {
                   }
                 ]}>
                   <View style={styles.commentHeader}>
-                    <Text style={styles.sectionTitle}>{t('review.publicReview', 'PUBLIC REVIEW')}</Text>
+                    <Text style={[styles.sectionTitle, { color: P.textDim }]}>{t('review.publicReview', 'PUBLIC REVIEW')}</Text>
                     <View style={[
                       styles.counterPanel,
                       {
-                        backgroundColor: comment.trim().length > 400 ? 'rgba(255,59,48,0.1)' : 'rgba(255,255,255,0.04)',
-                        borderColor: comment.trim().length > 400 ? 'rgba(255,59,48,0.22)' : 'rgba(255,255,255,0.08)',
+                        backgroundColor: comment.trim().length > 400 ? 'rgba(255,59,48,0.1)' : theme.colors.surface.subtle,
+                        borderColor: comment.trim().length > 400 ? 'rgba(255,59,48,0.22)' : P.border,
                       }
                     ]}>
                       <Text style={[
                         styles.counter,
-                        comment.trim().length > 400 && { color: '#FF3B30' }
+                        { color: comment.trim().length > 400 ? '#FF3B30' : P.textDim }
                       ]}>{commentCounter}</Text>
                     </View>
                   </View>
@@ -367,8 +392,8 @@ export default function ReviewScreen() {
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     placeholder={t('review.commentPlaceholder', 'Share what went well, punctuality, quality of work, or anything future customers should know...')}
-                    placeholderTextColor="rgba(255,255,255,0.26)"
-                    style={styles.input}
+                    placeholderTextColor={theme.colors.input.placeholder}
+                    style={[styles.input, { color: P.text }]}
                   />
                 </View>
               </Animated.View>
@@ -377,10 +402,10 @@ export default function ReviewScreen() {
         </ScrollView>
 
         {booking?.status === 'completed' && !booking?.isReviewed && (
-          <View style={[styles.footer, { paddingBottom: insets.bottom + 18 }]}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 18, backgroundColor: theme.id === 'light' ? 'rgba(247,248,250,0.96)' : 'rgba(5,5,16,0.96)', borderTopColor: P.border }]}>
             <TouchableOpacity activeOpacity={0.86} disabled={!canSubmit} onPress={handleSubmit} style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}>
               <LinearGradient
-                colors={canSubmit ? ['#FFC700', '#FF9500'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.03)']}
+                colors={canSubmit ? ['#FFC700', '#FF9500'] : (theme.id === 'light' ? ['#E2E8F0', '#CBD5E1'] : ['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.03)'])}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.submitGradient}
@@ -389,8 +414,8 @@ export default function ReviewScreen() {
                   <ActivityIndicator color="#000" />
                 ) : (
                   <>
-                    <Text style={[styles.submitText, !canSubmit && { color: P.textDim }]}>{t('review.submitReviewBtn', 'SUBMIT REVIEW')}</Text>
-                    <Send size={15} color={canSubmit ? '#000' : P.textDim} strokeWidth={2.5} />
+                    <Text style={[styles.submitText, !canSubmit ? { color: P.textDim } : { color: '#001014' }]}>{t('review.submitReviewBtn', 'SUBMIT REVIEW')}</Text>
+                    <Send size={15} color={canSubmit ? '#001014' : P.textDim} strokeWidth={2.5} />
                   </>
                 )}
               </LinearGradient>
@@ -444,7 +469,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  loadingText: { color: P.textMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
+  loadingText: { color: '#9BA3B4', fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -463,7 +488,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerCopy: { alignItems: 'center' },
-  headerEyebrow: { color: P.textDim, fontSize: 9, fontWeight: '900', letterSpacing: 2.2 },
+  headerEyebrow: { color: '#646B7E', fontSize: 9, fontWeight: '900', letterSpacing: 2.2 },
   headerTitle: { color: '#fff', fontSize: 21, fontWeight: '900', marginTop: 4 },
   scroll: {
     paddingHorizontal: Spacing.l,
@@ -480,7 +505,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     padding: 16,
-    backgroundColor: P.surface,
+    backgroundColor: 'transparent',
   },
   avatarShell: {
     position: 'relative',
@@ -526,7 +551,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  workerLabel: { color: P.textDim, fontSize: 8, fontWeight: '900', letterSpacing: 1.8 },
+  workerLabel: { color: '#646B7E', fontSize: 8, fontWeight: '900', letterSpacing: 1.8 },
   verifiedLabel: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -539,12 +564,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,245,255,0.18)',
   },
   verifiedLabelText: {
-    color: P.cyan,
+    color: '#00F5FF',
     fontSize: 8,
     fontWeight: '900',
   },
   workerName: { color: '#fff', fontSize: 19, fontWeight: '900', marginTop: 4 },
-  workerSub: { color: P.cyan, fontSize: 12, fontWeight: '700', marginTop: 3 },
+  workerSub: { color: '#00F5FF', fontSize: 12, fontWeight: '700', marginTop: 3 },
   ratingCard: {
     position: 'relative',
     overflow: 'hidden',
@@ -553,7 +578,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
     padding: 18,
-    backgroundColor: P.surface,
+    backgroundColor: 'transparent',
   },
   sectionTitle: { color: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: '900', letterSpacing: 2 },
   starRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, gap: 8 },
@@ -571,10 +596,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
     padding: 16,
-    backgroundColor: P.surface,
+    backgroundColor: 'transparent',
   },
   tagsHint: {
-    color: P.textDim,
+    color: '#646B7E',
     fontSize: 11,
     fontWeight: '600',
     marginTop: 4,
@@ -611,7 +636,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  counter: { color: P.textDim, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  counter: { color: '#646B7E', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
   input: {
     minHeight: 110,
     color: '#fff',

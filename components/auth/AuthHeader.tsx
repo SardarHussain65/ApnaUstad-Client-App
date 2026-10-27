@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { I18nManager, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
@@ -25,7 +25,12 @@ export function AuthHeader({ title, onBack, accentColor }: AuthHeaderProps) {
           borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.14),
         }]}
       >
-        <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
+        <ChevronLeft
+          size={22}
+          color={theme.colors.text.primary}
+          strokeWidth={2.5}
+          style={I18nManager.isRTL ? { transform: [{ rotate: '180deg' }] } : undefined}
+        />
       </TouchableOpacity>
 
       <View style={[styles.titleWrap, {

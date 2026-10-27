@@ -149,20 +149,22 @@ function DetailTile({
   icon: Icon,
   label,
   value,
-  color = Colors.cyan,
+  color,
 }: {
   icon: React.ComponentType<any>;
   label: string;
   value: string;
   color?: string;
 }) {
+  const theme = useTheme();
+  const tileColor = color || theme.legacy.cyan;
   return (
-    <View style={styles.detailTile}>
-      <View style={[styles.detailTileIcon, { backgroundColor: `${color}12` }]}>
-        <Icon size={14} color={color} strokeWidth={2.4} />
+    <View style={[styles.detailTile, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+      <View style={[styles.detailTileIcon, { backgroundColor: `${tileColor}12` }]}>
+        <Icon size={14} color={tileColor} strokeWidth={2.4} />
       </View>
-      <Text style={styles.detailTileLabel}>{label}</Text>
-      <Text style={styles.detailTileValue} numberOfLines={1}>{value}</Text>
+      <Text style={[styles.detailTileLabel, { color: theme.colors.text.muted }]}>{label}</Text>
+      <Text style={[styles.detailTileValue, { color: theme.colors.text.primary }]} numberOfLines={1}>{value}</Text>
     </View>
   );
 }
@@ -173,7 +175,7 @@ function PrimaryAction({
   onPress,
   disabled,
   loading,
-  gradientColors = [Colors.cyan, '#007AFF'],
+  gradientColors,
 }: {
   icon: React.ComponentType<any>;
   label: string;
@@ -182,6 +184,9 @@ function PrimaryAction({
   loading?: boolean;
   gradientColors?: [string, string];
 }) {
+  const theme = useTheme();
+  const colors = theme.legacy;
+  const resolvedGradients = gradientColors || [colors.cyan, colors.primary];
   return (
     <TouchableOpacity
       style={[styles.primaryAction, disabled && styles.actionDisabled]}
@@ -189,14 +194,14 @@ function PrimaryAction({
       activeOpacity={0.84}
       disabled={disabled || loading}
     >
-      <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={resolvedGradients} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       {loading ? (
-        <ActivityIndicator color="#001014" />
+        <ActivityIndicator color={theme.colors.button.primaryText} />
       ) : (
         <>
-          <Icon size={18} color="#001014" strokeWidth={2.7} />
-          <Text style={styles.primaryActionText}>{label}</Text>
-          <ChevronRight size={17} color="#001014" strokeWidth={2.8} />
+          <Icon size={18} color={theme.colors.button.primaryText} strokeWidth={2.7} />
+          <Text style={[styles.primaryActionText, { color: theme.colors.button.primaryText }]}>{label}</Text>
+          <ChevronRight size={17} color={theme.colors.button.primaryText} strokeWidth={2.8} />
         </>
       )}
     </TouchableOpacity>
@@ -285,14 +290,14 @@ export default function JobDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={[styles.centeredFill, styles.emptyState]}>
-          <View style={styles.emptyIcon}>
+          <View style={[styles.emptyIcon, { backgroundColor: `${colors.worker}18`, borderColor: `${colors.worker}30` }]}>
             <FileText size={28} color={colors.worker} strokeWidth={2.2} />
           </View>
-          <Text style={styles.emptyTitle}>{t('jobDetails.unavailable')}</Text>
-          <Text style={styles.emptyText}>{t('jobDetails.unavailableDesc')}</Text>
-          <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()} activeOpacity={0.82}>
-            <ChevronLeft size={17} color="#001014" strokeWidth={2.8} />
-            <Text style={styles.goBackText}>{t('common.back')}</Text>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('jobDetails.unavailable')}</Text>
+          <Text style={[styles.emptyText, { color: theme.colors.text.muted }]}>{t('jobDetails.unavailableDesc')}</Text>
+          <TouchableOpacity style={[styles.goBackButton, { backgroundColor: theme.colors.brand.primary }]} onPress={() => router.back()} activeOpacity={0.82}>
+            <ChevronLeft size={17} color={theme.colors.button.primaryText} strokeWidth={2.8} />
+            <Text style={[styles.goBackText, { color: theme.colors.button.primaryText }]}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -482,50 +487,50 @@ export default function JobDetailsScreen() {
               </View>
 
               <View style={styles.heroTitleRow}>
-                <View style={[styles.heroIcon, { backgroundColor: isInstant ? P.orangeMuted : P.cyanMuted }]}>
+                <View style={[styles.heroIcon, { backgroundColor: isInstant ? `${colors.worker}18` : `${colors.cyan}18` }]}>
                   <MissionIcon size={24} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.3} />
                 </View>
                 <View style={styles.heroTitleCopy}>
-                  <Text style={styles.heroLabel}>{missionKindLabel}</Text>
-                  <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{title}</Text>
-                  <Text style={styles.heroDescription} numberOfLines={3}>{description}</Text>
+                  <Text style={[styles.heroLabel, { color: colors.primary }]}>{missionKindLabel}</Text>
+                  <Text style={[styles.heroTitle, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
+                  <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={3}>{description}</Text>
                 </View>
               </View>
 
-              <View style={styles.stateMessage}>
+              <View style={[styles.stateMessage, { borderTopColor: theme.colors.border.subtle }]}>
                 <View style={[styles.stateDot, { backgroundColor: status.color }]} />
-                <Text style={styles.stateMessageText}>{status.description}</Text>
+                <Text style={[styles.stateMessageText, { color: theme.colors.text.muted }]}>{status.description}</Text>
               </View>
             </GlassCard>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
-            <SectionHeader icon={Clock3} title={t('jobDetails.visitOverview')} subtitle={t('jobDetails.visitOverviewDesc')} />
+            <SectionHeader icon={Clock3} title={t('jobDetails.visitOverview')} subtitle={t('jobDetails.visitOverviewDesc')} color={colors.cyan} />
             <View style={styles.detailGrid}>
               <DetailTile icon={MissionIcon} label={t('jobDetails.visitTypeLabel')} value={missionKindLabel} color={isInstant ? colors.worker : colors.cyan} />
-              <DetailTile icon={CalendarDays} label={t('transactionDetails.date')} value={dateLabel} />
+              <DetailTile icon={CalendarDays} label={t('transactionDetails.date')} value={dateLabel} color={colors.cyan} />
               <DetailTile icon={Clock3} label={t('transactionDetails.time')} value={timeLabel} color={colors.worker} />
             </View>
 
-            <GlassCard padding={14} intensity={35} style={styles.locationCard}>
+            <GlassCard padding={14} intensity={35} borderColor={theme.colors.border.subtle} style={styles.locationCard}>
               <View style={{ gap: 12 }}>
                 <View style={styles.locationRow}>
-                  <View style={styles.locationIcon}>
+                  <View style={[styles.locationIcon, { backgroundColor: `${colors.green}18` }]}>
                     <MapPin size={18} color={colors.green} strokeWidth={2.5} />
                   </View>
                   <View style={styles.locationCopy}>
-                    <Text style={styles.locationLabel}>{t('transactionDetails.serviceLocation')}</Text>
-                    <Text style={styles.locationValue}>{locationLabel}</Text>
+                    <Text style={[styles.locationLabel, { color: theme.colors.text.muted }]}>{t('transactionDetails.serviceLocation')}</Text>
+                    <Text style={[styles.locationValue, { color: theme.colors.text.primary }]}>{locationLabel}</Text>
                   </View>
                 </View>
                 {!!workerLoc && (
                   <View style={styles.locationRow}>
-                    <View style={[styles.locationIcon, { backgroundColor: 'rgba(0,245,255,0.12)' }]}>
+                    <View style={[styles.locationIcon, { backgroundColor: `${colors.cyan}18` }]}>
                       <MapPin size={18} color={colors.cyan} strokeWidth={2.5} />
                     </View>
                     <View style={styles.locationCopy}>
-                      <Text style={styles.locationLabel}>{t('jobDetails.workerLocationLabel')}</Text>
-                      <Text style={styles.locationValue}>{workerLoc}</Text>
+                      <Text style={[styles.locationLabel, { color: theme.colors.text.muted }]}>{t('jobDetails.workerLocationLabel')}</Text>
+                      <Text style={[styles.locationValue, { color: theme.colors.text.primary }]}>{workerLoc}</Text>
                     </View>
                   </View>
                 )}
@@ -557,29 +562,30 @@ export default function JobDetailsScreen() {
                 <GlassCard
                   padding={14}
                   intensity={38}
+                  borderColor={theme.colors.border.subtle}
                   hasGlow
                   glowColor={colors.worker}
-                  gradient={['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.06)']}
+                  gradient={theme.isDark ? ['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.06)'] : undefined}
                 >
                   <View style={styles.clientRow}>
-                    <View style={styles.avatarShell}>
+                    <View style={[styles.avatarShell, { borderColor: `${colors.worker}80`, backgroundColor: theme.colors.surface.subtle }]}>
                       {clientImage ? (
                         <Image source={{ uri: clientImage }} style={styles.avatarImage} />
                       ) : (
-                        <LinearGradient colors={['rgba(255,140,0,0.28)', 'rgba(0,245,255,0.18)']} style={styles.avatarFallback}>
-                          <Text style={styles.avatarText}>{initialsFor(clientName)}</Text>
+                        <LinearGradient colors={[`${colors.worker}40`, `${colors.cyan}30`]} style={styles.avatarFallback}>
+                          <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{initialsFor(clientName)}</Text>
                         </LinearGradient>
                       )}
                     </View>
                     <View style={styles.clientCopy}>
-                      <Text style={styles.clientRole}>{t('jobDetails.serviceClientLabel')}</Text>
-                      <Text style={[styles.clientName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
-                      <Text style={styles.clientHistory}>
+                      <Text style={[styles.clientRole, { color: colors.worker }]}>{t('jobDetails.serviceClientLabel')}</Text>
+                      <Text style={[styles.clientName, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
+                      <Text style={[styles.clientHistory, { color: theme.colors.text.muted }]}>
                         {clientJobs > 0 ? t('jobDetails.clientJobsCount', { count: clientJobs }) : t('jobDetails.newClient')}
                       </Text>
                     </View>
                     {clientId ? (
-                      <View style={styles.profileCue}>
+                      <View style={[styles.profileCue, { borderColor: `${colors.cyan}40`, backgroundColor: `${colors.cyan}12` }]}>
                         <Eye size={14} color={colors.cyan} strokeWidth={2.4} />
                         <ChevronRight size={15} color={colors.cyan} strokeWidth={2.6} />
                       </View>
@@ -599,26 +605,27 @@ export default function JobDetailsScreen() {
               <GlassCard
                 padding={14}
                 intensity={38}
+                borderColor={theme.colors.border.subtle}
                 hasGlow
                 glowColor={colors.worker}
-                gradient={['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.05)']}
+                gradient={theme.isDark ? ['rgba(255,140,0,0.15)', 'rgba(0,245,255,0.05)'] : undefined}
               >
                 <View style={styles.activityStats}>
                   <View style={styles.activityStat}>
-                    <Text style={styles.activityValue}>{bidSummary.total}</Text>
-                    <Text style={styles.activityLabel}>{t('jobDetails.totalProposals')}</Text>
+                    <Text style={[styles.activityValue, { color: theme.colors.text.primary }]}>{bidSummary.total}</Text>
+                    <Text style={[styles.activityLabel, { color: theme.colors.text.muted }]}>{t('jobDetails.totalProposals')}</Text>
                   </View>
-                  <View style={styles.activityDivider} />
+                  <View style={[styles.activityDivider, { backgroundColor: theme.colors.border.subtle }]} />
                   <View style={styles.activityStat}>
-                    <Text style={[styles.activityValue, { color: Colors.worker }]}>{bidSummary.pending}</Text>
-                    <Text style={styles.activityLabel}>{t('jobDetails.awaitingReview')}</Text>
+                    <Text style={[styles.activityValue, { color: colors.worker }]}>{bidSummary.pending}</Text>
+                    <Text style={[styles.activityLabel, { color: theme.colors.text.muted }]}>{t('jobDetails.awaitingReview')}</Text>
                   </View>
-                  <View style={styles.activityDivider} />
+                  <View style={[styles.activityDivider, { backgroundColor: theme.colors.border.subtle }]} />
                   <View style={styles.activityStat}>
-                    <Text style={[styles.activityValue, { color: bidSummary.hasAcceptedBid ? colors.green : P.textMuted }]}>
+                    <Text style={[styles.activityValue, { color: bidSummary.hasAcceptedBid ? colors.green : theme.colors.text.muted }]}>
                       {bidSummary.hasAcceptedBid ? t('common.yes') : t('common.no')}
                     </Text>
-                    <Text style={styles.activityLabel}>{t('jobDetails.assignedLabel')}</Text>
+                    <Text style={[styles.activityLabel, { color: theme.colors.text.muted }]}>{t('jobDetails.assignedLabel')}</Text>
                   </View>
                 </View>
               </GlassCard>
@@ -632,8 +639,8 @@ export default function JobDetailsScreen() {
               subtitle={t('jobDetails.briefSub')}
               color={colors.green}
             />
-            <GlassCard padding={14} intensity={34} style={styles.briefCard}>
-              <Text style={styles.briefText}>{description}</Text>
+            <GlassCard padding={14} intensity={34} borderColor={theme.colors.border.subtle} style={styles.briefCard}>
+              <Text style={[styles.briefText, { color: theme.colors.text.secondary }]}>{description}</Text>
             </GlassCard>
           </Animated.View>
 
@@ -643,7 +650,7 @@ export default function JobDetailsScreen() {
                 <StatusIcon size={17} color={status.color} strokeWidth={2.5} />
                 <View style={styles.closedNoteCopy}>
                   <Text style={[styles.closedNoteTitle, { color: status.color }]}>{status.label}</Text>
-                  <Text style={styles.closedNoteText}>{status.description}</Text>
+                  <Text style={[styles.closedNoteText, { color: theme.colors.text.secondary }]}>{status.description}</Text>
                 </View>
                 {job.status === 'assigned' ? (
                   <TouchableOpacity onPress={() => router.push('/(tabs)/bookings' as any)} style={styles.bookingsCue} activeOpacity={0.82}>
@@ -657,16 +664,16 @@ export default function JobDetailsScreen() {
 
         {showDock ? (
           <View style={[styles.bottomDock, { paddingBottom: insets.bottom + 12 }]}>
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+            <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
             <LinearGradient
-              colors={['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)']}
+              colors={theme.isDark ? ['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)'] : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.96)', 'rgba(255,255,255,1)']}
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.dockRow}>
               {canWorkerRespond ? (
                 <>
-                  <TouchableOpacity style={styles.secondaryAction} onPress={() => router.back()} activeOpacity={0.82}>
-                    <ChevronLeft size={18} color={P.textMuted} strokeWidth={2.5} />
+                  <TouchableOpacity style={[styles.secondaryAction, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()} activeOpacity={0.82}>
+                    <ChevronLeft size={18} color={theme.colors.text.primary} strokeWidth={2.5} />
                   </TouchableOpacity>
                   <View style={styles.primaryActionWrap}>
                     <PrimaryAction
@@ -676,7 +683,7 @@ export default function JobDetailsScreen() {
                       loading={isAccepting}
                       gradientColors={isWalletBlocked ? [colors.worker, '#FF5E00'] : [colors.cyan, '#007AFF']}
                     />
-                    <Text style={styles.walletHint}>
+                    <Text style={[styles.walletHint, { color: theme.colors.text.muted }]}>
                       {isWalletBlocked ? t('jobDetails.walletRequiresAmount', { amount: requiredBalance.toLocaleString() }) : t('jobDetails.walletEligibilityOk')}
                     </Text>
                   </View>

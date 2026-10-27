@@ -58,12 +58,12 @@ function CopyRow({
   const theme = useTheme();
   const colors = useThemeColors();
   return (
-    <View style={copyStyles.row}>
+    <View style={[copyStyles.row, { borderBottomColor: theme.colors.border.subtle }]}>
       <View style={{ flex: 1 }}>
-        <Text style={copyStyles.label}>{label}</Text>
-        <Text style={copyStyles.value}>{value}</Text>
+        <Text style={[copyStyles.label, { color: theme.colors.text.muted }]}>{label}</Text>
+        <Text style={[copyStyles.value, { color: theme.colors.text.primary }]}>{value}</Text>
       </View>
-      <TouchableOpacity style={copyStyles.btn} onPress={() => onCopy(label, value)}>
+      <TouchableOpacity style={[copyStyles.btn, { backgroundColor: alpha(colors.cyan, 0.1), borderColor: alpha(colors.cyan, 0.25) }]} onPress={() => onCopy(label, value)}>
         <Copy size={15} color={colors.cyan} />
       </TouchableOpacity>
     </View>
@@ -187,7 +187,7 @@ export function RechargeModal({
 
           {/* Dynamic Instructions */}
           {selectedMethod && (
-            <View style={styles.instructionsBox}>
+            <View style={[styles.instructionsBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
               <Text style={[styles.instructionsTitle, { color: colors.cyan }]}>{t('wallet.transferInstructions')}</Text>
               <Text style={[styles.instructionsText, { color: theme.colors.text.muted }]}>
                 {selectedMethod.instructions || t('wallet.transferFallback', { method: selectedMethod.label })}
@@ -211,7 +211,7 @@ export function RechargeModal({
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: theme.colors.text.muted }]}>{t('wallet.depositScreenshot')}</Text>
             {proofImageUri ? (
-              <View style={styles.proofPreviewWrapper}>
+              <View style={[styles.proofPreviewWrapper, { borderColor: theme.colors.border.subtle }]}>
                 <Image source={{ uri: proofImageUri }} style={styles.proofPreview} />
                 <TouchableOpacity style={styles.changeProofBtn} onPress={onPickProofImage}>
                   <Upload size={14} color="#fff" style={{ marginRight: 6 }} />
@@ -219,9 +219,9 @@ export function RechargeModal({
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={styles.uploadBtn} onPress={onPickProofImage}>
+              <TouchableOpacity style={[styles.uploadBtn, { borderColor: theme.colors.border.default, backgroundColor: theme.colors.surface.subtle }]} onPress={onPickProofImage}>
                 <FileImage size={24} color={theme.colors.text.muted} style={{ marginBottom: 6 }} />
-                <Text style={[styles.uploadText, { color: theme.colors.text.muted }]}>{t('wallet.selectScreenshot')}</Text>
+                <Text style={[styles.uploadText, { color: theme.colors.text.primary }]}>{t('wallet.selectScreenshot')}</Text>
                 <Text style={[styles.uploadSub, { color: theme.colors.text.muted }]}>{t('wallet.supportedReceipts')}</Text>
               </TouchableOpacity>
             )}
@@ -238,9 +238,9 @@ export function RechargeModal({
             disabled={!amount || !proofImageUri || !selectedMethodIsConfigured || isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color="#001014" />
+              <ActivityIndicator size="small" color={theme.colors.button.primaryText} />
             ) : (
-              <Text style={styles.confirmBtnText}>{t('wallet.submitProof')}</Text>
+              <Text style={[styles.confirmBtnText, { color: theme.colors.button.primaryText }]}>{t('wallet.submitProof')}</Text>
             )}
           </TouchableOpacity>
         </View>

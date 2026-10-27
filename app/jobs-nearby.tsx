@@ -47,19 +47,19 @@ export default function JobsNearbyScreen() {
           entering={SlideInDown.duration(400)}
           style={[styles.header, { paddingTop: insets.top + 12 }]}
         >
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ChevronLeft color="#fff" size={24} />
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
+            <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, Typography.threeD]}>{t('jobsNearby.title').toUpperCase()}</Text>
+            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('jobsNearby.title').toUpperCase()}</Text>
             <Text style={[styles.headerSub, { color: theme.colors.text.dim }]}>
               {isLoading ? t('jobsNearby.scanning') : t('jobsNearby.activeOpportunities', { count: jobs.length })}
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.iconBtn} onPress={() => refetch()}>
-            <Filter color="#fff" size={20} />
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => refetch()}>
+            <Filter color={theme.colors.text.primary} size={20} />
           </TouchableOpacity>
         </Animated.View>
 
@@ -82,6 +82,7 @@ export default function JobsNearbyScreen() {
                 >
                   <GlassCard
                     style={styles.jobCard}
+                    borderColor={theme.colors.border.subtle}
                     hasGlow={job.urgency === 'instant'}
                     glowColor={job.urgency === 'instant' ? colors.cyan : colors.primary}
                     onPress={() => router.push({
@@ -90,7 +91,7 @@ export default function JobsNearbyScreen() {
                     })}
                   >
                     <View style={styles.jobRow}>
-                      <View style={styles.typeCluster}>
+                      <View style={[styles.typeCluster, { borderRightColor: theme.colors.border.subtle }]}>
                         {job.urgency === 'instant' ? (
                           <Zap size={20} color={colors.cyan} />
                         ) : (
@@ -102,18 +103,18 @@ export default function JobsNearbyScreen() {
                       </View>
 
                       <View style={styles.jobMain}>
-                        <Text style={[styles.jobTitle, Typography.threeD]}>{job.category}</Text>
-                        <Text style={styles.jobDesc} numberOfLines={2}>{job.description}</Text>
+                        <Text style={[styles.jobTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{job.category}</Text>
+                        <Text style={[styles.jobDesc, { color: theme.colors.text.secondary }]} numberOfLines={2}>{job.description}</Text>
                         <View style={styles.jobMeta}>
                           <MapPin size={12} color={theme.colors.text.dim} />
                           <Text style={[styles.metaText, { color: theme.colors.text.dim }]}>{job.address || t('common.nearby')}</Text>
-                          <View style={styles.dot} />
+                          <View style={[styles.dot, { backgroundColor: theme.colors.border.subtle }]} />
                           <Text style={[styles.distanceText, { color: theme.colors.brand.primary }]}>{t('jobsNearby.distanceAway', { defaultValue: '1.2 km away' })}</Text>
                         </View>
                       </View>
 
                       <View style={styles.actionArea}>
-                        <ChevronRight size={20} color="rgba(255,255,255,0.5)" />
+                        <ChevronRight size={20} color={theme.colors.text.muted} />
                       </View>
                     </View>
                   </GlassCard>
@@ -122,15 +123,15 @@ export default function JobsNearbyScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <View style={styles.emptyIconContainer}>
+              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
                 <Briefcase size={48} color={theme.colors.text.dim} />
               </View>
-              <Text style={styles.emptyTitle}>{t('jobsNearby.noMissionsFound')}</Text>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('jobsNearby.noMissionsFound')}</Text>
               <Text style={[styles.emptySub, { color: theme.colors.text.dim }]}>
                 {t('jobsNearby.emptyDescription')}
               </Text>
               <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: theme.colors.brand.primary }]} onPress={() => refetch()}>
-                <Text style={styles.refreshBtnText}>{t('jobsNearby.refreshScan')}</Text>
+                <Text style={[styles.refreshBtnText, { color: theme.colors.button.primaryText }]}>{t('jobsNearby.refreshScan')}</Text>
               </TouchableOpacity>
             </View>
           )}

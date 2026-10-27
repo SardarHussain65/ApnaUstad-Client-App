@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,24 +14,33 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import {
   ArrowDown,
   ArrowUp,
   AlertTriangle,
+  Briefcase,
+  ChevronDown,
   ChevronLeft,
+  CheckCircle,
   Clock3,
   Layers3,
   Plus,
   ShieldCheck,
   Trash2,
   Wallet,
+  Check,
+  Search,
+  Sparkles,
+  X,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BeautifulModal } from '../../components/ui';
-import { alpha, BorderRadius, Colors, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Shadows, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 type Category = {
@@ -103,8 +113,12 @@ export default function SpecialtiesScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const [rechargePromptVisible, setRechargePromptVisible] = useState(false);
   const [rechargeActionLabel, setRechargeActionLabel] = useState('request another category');
+  const { user } = useAuth();
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchCategoryText, setSearchCategoryText] = useState('');
   const [draftCategoryId, setDraftCategoryId] = useState('');
-  const [draftSkills, setDraftSkills] = useState('');
   const [draftRate, setDraftRate] = useState('');
   const [draftExperience, setDraftExperience] = useState('');
   const [draftBio, setDraftBio] = useState('');
@@ -148,6 +162,11 @@ export default function SpecialtiesScreen() {
   );
   const selectedIds = useMemo(() => new Set(specialties.map(item => item.categoryId._id)), [specialties]);
   const availableCategories = categories.filter(category => !selectedIds.has(category._id));
+  const filteredAvailableCategories = useMemo(() => {
+    if (!searchCategoryText.trim()) return availableCategories;
+    const query = searchCategoryText.toLowerCase().trim();
+    return availableCategories.filter(cat => cat.name.toLowerCase().includes(query));
+  }, [availableCategories, searchCategoryText]);
   const draftCategory = availableCategories.find(category => category._id === draftCategoryId);
   const additionalCategoryMonthlyFee = Math.max(0, Number(data.additionalCategoryMonthlyFee ?? 500));
   const walletShortfall = Math.max(0, additionalCategoryMonthlyFee - walletAvailableBalance);
@@ -187,7 +206,10 @@ export default function SpecialtiesScreen() {
 
   const resetDraft = () => {
     setDraftCategoryId('');
-    setDraftSkills('');
+    setIsCustomMode(false);
+    setCustomCategoryName('');
+    setSearchCategoryText('');
+    setIsDropdownOpen(false);
     setDraftRate('');
     setDraftExperience('');
     setDraftBio('');
@@ -207,11 +229,50 @@ export default function SpecialtiesScreen() {
     setShowPicker(true);
   };
 
-  const requestCategory = () => {
-    const skills = draftSkills.split(',').map(skill => skill.trim()).filter(Boolean);
+  const requestCustomCategory = () => {
     const hourlyRate = Number(draftRate);
     const experience = Number(draftExperience);
-    if (!draftCategoryId || skills.length === 0 || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
+    if (!customCategoryName.trim() || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
+      Alert.alert(
+        t('specialties.completeDetails', { defaultValue: 'Complete Details' }),
+        t('specialties.completeCustomDetailsDesc', { defaultValue: 'Please enter category name, hourly rate (min 100), experience, and description.' })
+      );
+      return;
+    }
+
+    runAction(
+      'request-custom-category',
+      () => api.post('/workers/profession-request', {
+        professionName: customCategoryName.trim(),
+        categoryDomain: 'Additional Specialty',
+        hourlyRate,
+        experience,
+        description: draftBio.trim(),
+        requesterName: user?.fullName || 'Worker',
+        requesterPhone: user?.phone || '',
+        workerId: user?._id || undefined,
+      }),
+      t('specialties.customCategorySuccessDesc', {
+        defaultValue: 'Your request for a new category has been sent to admin for review and addition.'
+      })
+    ).then((success) => {
+      if (success) {
+        resetDraft();
+        setShowPicker(false);
+      }
+    });
+  };
+
+  const requestCategory = () => {
+    if (isCustomMode) {
+      requestCustomCategory();
+      return;
+    }
+
+    const selectedCat = categories.find(c => c._id === draftCategoryId);
+    const hourlyRate = Number(draftRate);
+    const experience = Number(draftExperience);
+    if (!draftCategoryId || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
       Alert.alert(t('specialties.completeDetails'), t('specialties.completeDetailsDesc'));
       return;
     }
@@ -224,7 +285,7 @@ export default function SpecialtiesScreen() {
       'request-category',
       () => api.post('/workers/specialties/requests', {
         categoryId: draftCategoryId,
-        skills,
+        skills: [selectedCat?.name || 'General Service'],
         hourlyRate,
         experience,
         bio: draftBio.trim(),
@@ -317,7 +378,7 @@ export default function SpecialtiesScreen() {
     ) : (
       <>
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>{t('specialties.mySpecialties')}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('specialties.mySpecialties')}</Text>
           {specialties.length < data.maxSpecialties && (
             <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.brand.primary }]} onPress={openAddCategory}>
               <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
@@ -328,36 +389,111 @@ export default function SpecialtiesScreen() {
 
         {showPicker && (
           <Animated.View entering={FadeInDown.duration(220)} style={[styles.picker, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.secondary, 0.35) }]}>
-            <Text style={[styles.pickerTitle, { color: theme.colors.text.primary }]}>{t('specialties.requestNew')}</Text>
-            <Text style={[styles.pickerText, { color: theme.colors.text.muted }]}>{t('specialties.pickerText')}</Text>
-            <View style={styles.categoryChips}>
-              {availableCategories.map(category => (
-                <TouchableOpacity
-                  key={category._id}
-                  style={[
-                    styles.categoryChip,
-                    { borderColor: `${category.color || colors.cyan}55` },
-                    draftCategoryId === category._id && { backgroundColor: `${category.color || colors.cyan}22`, borderColor: category.color || colors.cyan }
-                  ]}
-                  disabled={!!workingKey}
-                  onPress={() => setDraftCategoryId(category._id)}
-                >
-                  <Plus size={13} color={category.color || colors.cyan} />
-                  <Text style={styles.categoryChipText}>{category.name}</Text>
-                </TouchableOpacity>
-              ))}
-              {availableCategories.length === 0 && <Text style={[styles.emptyText, { color: theme.colors.text.muted }]}>{t('specialties.noMoreCategories')}</Text>}
+            <View style={styles.pickerHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.pickerTitle, { color: theme.colors.text.primary }]}>
+                  {isCustomMode ? t('specialties.customCategoryTitle', 'Request New / Other Category') : t('specialties.requestNew')}
+                </Text>
+                <Text style={[styles.pickerText, { color: theme.colors.text.muted }]}>
+                  {isCustomMode
+                    ? t('specialties.customCategoryDesc', 'If your desired category or profession is not listed, enter details below so admin can review and add it.')
+                    : t('specialties.pickerText')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  resetDraft();
+                  setShowPicker(false);
+                }}
+                hitSlop={10}
+                style={styles.pickerCloseBtn}
+              >
+                <X size={18} color={theme.colors.text.muted} />
+              </TouchableOpacity>
             </View>
-            {availableCategories.length > 0 && (
-              <>
-                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.skillsLabel')}</Text>
+
+            {/* Standard Category Selection via Dropdown Trigger */}
+            {!isCustomMode ? (
+              <View style={{ marginTop: 4 }}>
+                <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 4 }]}>
+                  {t('specialties.selectCategoryLabel', 'SERVICE CATEGORY')}
+                </Text>
+
+                {/* Dropdown Selector Trigger */}
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownTrigger,
+                    {
+                      borderColor: draftCategoryId ? theme.colors.brand.primary : theme.colors.border.subtle,
+                      backgroundColor: theme.colors.input.background,
+                    },
+                  ]}
+                  onPress={() => setIsDropdownOpen(true)}
+                  activeOpacity={0.75}
+                >
+                  <View style={styles.dropdownTriggerContent}>
+                    <Briefcase size={18} color={draftCategoryId ? theme.colors.brand.primary : theme.colors.text.muted} />
+                    <Text
+                      style={[
+                        styles.dropdownTriggerText,
+                        { color: draftCategory ? theme.colors.text.primary : theme.colors.input.placeholder },
+                        draftCategory && { fontWeight: '700' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {draftCategory?.name || t('specialties.selectCategoryPlaceholder', 'Select category from list...')}
+                    </Text>
+                  </View>
+                  <ChevronDown size={20} color={draftCategoryId ? theme.colors.brand.primary : theme.colors.text.muted} />
+                </TouchableOpacity>
+
+                {/* Suggest Other Category button */}
+                <TouchableOpacity
+                  style={styles.switchModeBtn}
+                  onPress={() => {
+                    setIsCustomMode(true);
+                    setDraftCategoryId('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Sparkles size={14} color={theme.colors.brand.primary} />
+                  <Text style={[styles.switchModeText, { color: theme.colors.brand.primary }]}>
+                    {t('specialties.cantFindCategory', "Can't find your category? Request other here")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Custom Category Mode */
+              <View style={styles.customCategorySection}>
+                <View style={styles.customModeHeader}>
+                  <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 0, marginBottom: 0 }]}>
+                    {t('specialties.customCategoryNameLabel', 'REQUESTED CATEGORY / PROFESSION')}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setIsCustomMode(false);
+                      setCustomCategoryName('');
+                    }}
+                    hitSlop={8}
+                  >
+                    <Text style={[styles.switchBackText, { color: theme.colors.brand.primary }]}>
+                      {t('specialties.chooseFromList', '← Choose from available list')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 <TextInput
                   style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                  placeholder={t('specialties.skillsPlaceholder')}
+                  placeholder={t('specialties.customCategoryNamePlaceholder', 'e.g., Solar Technician, Welder, etc.')}
                   placeholderTextColor={theme.colors.input.placeholder}
-                  value={draftSkills}
-                  onChangeText={setDraftSkills}
+                  value={customCategoryName}
+                  onChangeText={setCustomCategoryName}
                 />
+              </View>
+            )}
+
+            {/* Shared Form Fields: Rate, Experience, Description (Shown when a category is selected OR in custom mode) */}
+            {(draftCategoryId || isCustomMode) && (
+              <>
                 <View style={styles.formRow}>
                   <View style={styles.formHalf}>
                     <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.rateLabel')}</Text>
@@ -382,26 +518,43 @@ export default function SpecialtiesScreen() {
                     />
                   </View>
                 </View>
+
                 <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.descriptionLabel')}</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
                   placeholder={t('specialties.descriptionPlaceholder')}
                   placeholderTextColor={theme.colors.input.placeholder}
                   value={draftBio}
                   onChangeText={setDraftBio}
                   multiline
                 />
-                <View style={styles.feeBox}>
-                  <Wallet size={14} color={colors.worker} />
-                  <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
-                    {draftCategory
-                      ? t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })
-                      : t('specialties.selectCategoryInfo', { fee: formatPKR(additionalCategoryMonthlyFee) })}
+
+                {!isCustomMode && (
+                  <View style={[styles.feeBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                    <Wallet size={14} color={colors.worker} />
+                    <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
+                      {draftCategory
+                        ? t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })
+                        : t('specialties.selectCategoryInfo', { fee: formatPKR(additionalCategoryMonthlyFee) })}
+                    </Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  disabled={!!workingKey}
+                  style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]}
+                  onPress={requestCategory}
+                >
+                  {workingKey ? (
+                    <ActivityIndicator size="small" color={theme.colors.button.primaryText} />
+                  ) : (
+                    <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
+                  )}
+                  <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>
+                    {isCustomMode
+                      ? t('specialties.sendReviewBtn', 'Send for admin review')
+                      : t('specialties.sendReviewBtn')}
                   </Text>
-                </View>
-                <TouchableOpacity disabled={!!workingKey} style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]} onPress={requestCategory}>
-                  {workingKey === 'request-category' ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />}
-                  <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>{t('specialties.sendReviewBtn')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -547,12 +700,12 @@ export default function SpecialtiesScreen() {
           <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.requiredBalance')}</Text>
           <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
         </View>
-        <View style={styles.walletSummaryDivider} />
+        <View style={[styles.walletSummaryDivider, { backgroundColor: alpha(colors.worker, 0.2) }]} />
         <View style={styles.walletSummaryRow}>
           <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.availableBalance')}</Text>
           <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(walletAvailableBalance)}</Text>
         </View>
-        <View style={styles.walletSummaryDivider} />
+        <View style={[styles.walletSummaryDivider, { backgroundColor: alpha(colors.worker, 0.2) }]} />
         <View style={styles.walletSummaryRow}>
           <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.needRecharge')}</Text>
           <Text style={[styles.walletSummaryValue, styles.shortfallText, { color: colors.worker }]}>{formatPKR(walletShortfall)}</Text>
@@ -560,7 +713,7 @@ export default function SpecialtiesScreen() {
       </View>
 
       <View style={styles.rechargeActions}>
-        <TouchableOpacity style={styles.rechargeSecondaryButton} onPress={() => setRechargePromptVisible(false)}>
+        <TouchableOpacity style={[styles.rechargeSecondaryButton, { backgroundColor: theme.colors.surface.subtle, borderWidth: 1, borderColor: theme.colors.border.subtle }]} onPress={() => setRechargePromptVisible(false)}>
           <Text style={[styles.rechargeSecondaryText, { color: theme.colors.text.muted }]}>{t('specialties.maybeLater')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -578,6 +731,109 @@ export default function SpecialtiesScreen() {
       </View>
     </View>
   </BeautifulModal>
+
+  {/* Category Dropdown Modal */}
+  <Modal
+    visible={isDropdownOpen}
+    transparent
+    animationType="slide"
+    onRequestClose={() => setIsDropdownOpen(false)}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface.card }]}>
+        <View style={styles.modalHeader}>
+          <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
+            {t('specialties.selectCategoryModalTitle', 'Select Category')}
+          </Text>
+          <TouchableOpacity onPress={() => setIsDropdownOpen(false)} hitSlop={12}>
+            <X size={22} color={theme.colors.text.muted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Bar */}
+        <View style={[styles.modalSearchWrapper, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.border.subtle }]}>
+          <Search size={18} color={theme.colors.text.muted} style={{ marginRight: 8 }} />
+          <TextInput
+            style={[styles.modalSearchInput, { color: theme.colors.input.text }]}
+            placeholder={t('specialties.searchCategoryPlaceholder', 'Search category...')}
+            placeholderTextColor={theme.colors.input.placeholder}
+            value={searchCategoryText}
+            onChangeText={setSearchCategoryText}
+            autoCapitalize="none"
+          />
+          {searchCategoryText.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchCategoryText('')} hitSlop={8}>
+              <X size={16} color={theme.colors.text.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Categories List */}
+        <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+          {filteredAvailableCategories.length > 0 ? (
+            filteredAvailableCategories.map((item) => {
+              const isSelected = draftCategoryId === item._id;
+              const itemColor = item.color || colors.cyan;
+              return (
+                <TouchableOpacity
+                  key={item._id}
+                  style={[
+                    styles.categoryItem,
+                    isSelected && { backgroundColor: alpha(theme.colors.brand.primary, 0.12) },
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setDraftCategoryId(item._id);
+                    setIsDropdownOpen(false);
+                  }}
+                >
+                  <View style={styles.categoryItemLeft}>
+                    <View style={[styles.categoryIconCircle, { backgroundColor: alpha(itemColor, 0.15) }]}>
+                      <Briefcase size={17} color={itemColor} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.categoryItemName, { color: theme.colors.text.primary }, isSelected && { color: theme.colors.brand.primary, fontWeight: '800' }]}>
+                        {item.name}
+                      </Text>
+                      {item.description ? (
+                        <Text style={[styles.categoryItemDesc, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                          {item.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  {isSelected && <CheckCircle size={18} color={theme.colors.brand.primary} />}
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <View style={styles.emptyList}>
+              <Text style={[styles.emptyListText, { color: theme.colors.text.muted }]}>
+                {t('specialties.noMatchingCategory', 'No matching category found')}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Request Other Category button in Modal Footer */}
+        <View style={[styles.modalFooter, { borderTopColor: theme.colors.border.subtle }]}>
+          <TouchableOpacity
+            style={[styles.modalRequestBtn, { borderColor: theme.colors.brand.primary, backgroundColor: alpha(theme.colors.brand.primary, 0.08) }]}
+            onPress={() => {
+              setIsDropdownOpen(false);
+              setIsCustomMode(true);
+              setDraftCategoryId('');
+            }}
+          >
+            <Sparkles size={16} color={theme.colors.brand.primary} />
+            <Text style={[styles.modalRequestBtnText, { color: theme.colors.brand.primary }]}>
+              {t('specialties.cantFindCategory', "Can't find your category? Request other here")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
   </BackgroundWrapper>
 );
 }
@@ -600,16 +856,156 @@ const styles = StyleSheet.create({
   addButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 8 },
   addButtonText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   picker: { borderRadius: 18, borderWidth: 1, padding: 15, marginBottom: 14 },
-  pickerTitle: { fontSize: 15, fontWeight: '900' },
-  pickerText: { fontSize: 12, marginTop: 3, marginBottom: 12 },
-  categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 18, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8 },
-  categoryChipText: { fontSize: 12, fontWeight: '700' },
+  pickerHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  pickerCloseBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  pickerTitle: { fontSize: 16, fontWeight: '900' },
+  pickerText: { fontSize: 12, marginTop: 3, lineHeight: 17 },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 48,
+    marginTop: 2,
+  },
+  dropdownTriggerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    marginRight: 8,
+  },
+  dropdownTriggerText: {
+    fontSize: 13,
+  },
+  switchModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  switchModeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  customCategorySection: {
+    marginTop: 2,
+  },
+  customModeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  switchBackText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    maxHeight: '75%',
+    borderTopLeftRadius: BorderRadius.xxl,
+    borderTopRightRadius: BorderRadius.xxl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalSearchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: 12,
+    height: 44,
+    marginBottom: 14,
+  },
+  modalSearchInput: {
+    flex: 1,
+    fontSize: 13,
+  },
+  categoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: BorderRadius.lg,
+    marginBottom: 4,
+  },
+  categoryItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    marginRight: 8,
+  },
+  categoryIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  categoryItemDesc: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  emptyList: {
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  emptyListText: {
+    fontSize: 13,
+  },
+  modalFooter: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    paddingTop: 12,
+  },
+  modalRequestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    gap: 8,
+  },
+  modalRequestBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   formLabel: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 7 },
   formRow: { flexDirection: 'row', gap: 10 },
   formHalf: { flex: 1 },
   input: { minHeight: 46, borderRadius: 14, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, fontWeight: '700' },
-  textArea: { minHeight: 92, textAlignVertical: 'top' },
+  textArea: { minHeight: 84, textAlignVertical: 'top' },
   feeBox: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, padding: 12, marginTop: 13 },
   feeText: { flex: 1, fontSize: 11, fontWeight: '600', lineHeight: 16 },
   submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 14, paddingVertical: 12, marginTop: 13 },
@@ -663,7 +1059,7 @@ const styles = StyleSheet.create({
   walletSummaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   walletSummaryLabel: { flex: 1, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
   walletSummaryValue: { fontSize: 13, fontWeight: '900' },
-  shortfallText: { color: Colors.worker },
+  shortfallText: { color: '#EA580C' },
   walletSummaryDivider: { height: 1, marginVertical: 10 },
   rechargeActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 4 },
   rechargeSecondaryButton: {

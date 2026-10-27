@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  I18nManager,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,7 +25,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { alpha, BorderRadius, Colors, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 const { width } = Dimensions.get('window');
 
@@ -155,13 +156,18 @@ export default function VerifyScreen() {
                 onTextChange={setOtp}
                 theme={{
                   containerStyle: styles.otpContainer,
-                  pinCodeContainerStyle: styles.otpCell,
-                  pinCodeTextStyle: styles.otpText,
+                  pinCodeContainerStyle: {
+                    ...styles.otpCell,
+                    borderColor: theme.colors.border.default,
+                    backgroundColor: theme.colors.input.background,
+                  },
+                  pinCodeTextStyle: { ...styles.otpText, color: theme.colors.text.primary },
                   focusStickStyle: { ...styles.focusStick, backgroundColor: accentColor },
                   focusedPinCodeContainerStyle: {
                     ...styles.activeOtpCell,
                     borderColor: accentColor,
                     shadowColor: accentColor,
+                    backgroundColor: alpha(accentColor, 0.08),
                   },
                 }}
               />
@@ -176,7 +182,7 @@ export default function VerifyScreen() {
             </GlassCard>
 
             <View style={styles.resendRow}>
-              <Text style={styles.resendHint}>{t('verify.resendHint')}</Text>
+              <Text style={[styles.resendHint, { color: theme.colors.text.muted }]}>{t('verify.resendHint')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 disabled={isResending || resendCooldown > 0}
@@ -215,7 +221,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   otpLabel: {
-    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.1,
@@ -224,7 +229,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   otpContainer: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     width: '100%',
   },
@@ -233,19 +238,16 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: BorderRadius.m,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.11)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   activeOtpCell: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1.5,
     shadowOpacity: 0.35,
     shadowRadius: 10,
   },
   otpText: {
-    color: '#fff',
     fontSize: 22,
     fontWeight: '900',
+    textAlign: 'center',
   },
   focusStick: {
     width: 2,
@@ -261,7 +263,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   resendHint: {
-    color: 'rgba(255,255,255,0.46)',
     fontSize: 12,
     fontWeight: '600',
   },

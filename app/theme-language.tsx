@@ -366,7 +366,7 @@ export default function ThemeLanguageScreen() {
                       ]}
                     >
                       {isSelected && (
-                        <Check size={12} color="#050510" strokeWidth={3.5} />
+                        <Check size={12} color={theme.id === 'light' ? '#FFFFFF' : '#050510'} strokeWidth={3.5} />
                       )}
                     </View>
                   </TouchableOpacity>
@@ -486,7 +486,7 @@ export default function ThemeLanguageScreen() {
                     ]}
                   >
                     {selectedLang === 'en' && (
-                      <Check size={12} color="#050510" strokeWidth={3.5} />
+                      <Check size={12} color={theme.id === 'light' ? '#FFFFFF' : '#050510'} strokeWidth={3.5} />
                     )}
                   </View>
                 </View>
@@ -595,7 +595,7 @@ export default function ThemeLanguageScreen() {
                     ]}
                   >
                     {selectedLang === 'ur' && (
-                      <Check size={12} color="#050510" strokeWidth={3.5} />
+                      <Check size={12} color={theme.id === 'light' ? '#FFFFFF' : '#050510'} strokeWidth={3.5} />
                     )}
                   </View>
                 </View>

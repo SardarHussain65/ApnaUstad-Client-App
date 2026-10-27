@@ -20,13 +20,14 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing, useThemeColors } from '../../constants/Theme';
+import { BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const isWorker = role === 'worker';
+  const theme = useTheme();
   const colors = useThemeColors();
   const accentColor = isWorker ? colors.worker : colors.cyan;
 
@@ -112,7 +113,7 @@ export default function ForgotPasswordScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={styles.recoveryCard}
+              style={[styles.recoveryCard, { borderColor: theme.colors.border.subtle }]}
               gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
             >
               <InputField
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   },
   recoveryCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
   },
   actionButton: {
     marginTop: Spacing.s,
