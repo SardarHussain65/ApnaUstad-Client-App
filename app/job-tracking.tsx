@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
-  Alert,
   View,
   Text,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   Animated,
   StatusBar,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -311,30 +311,50 @@ export default function JobTrackingScreen() {
 
   const handleCallPartner = useCallback(async () => {
     if (isCommunicationLocked) {
-      Alert.alert(t('jobTracking.callClosed'), t('jobTracking.callClosedDesc'));
+      Toast.show({
+        type: 'warning',
+        text1: t('jobTracking.callClosed'),
+        text2: t('jobTracking.callClosedDesc'),
+      });
       return;
     }
 
     if (!partnerPhone) {
-      Alert.alert(t('jobTracking.phoneUnavailable'), t('jobTracking.phoneUnavailableDesc', { name: partnerName }));
+      Toast.show({
+        type: 'info',
+        text1: t('jobTracking.phoneUnavailable'),
+        text2: t('jobTracking.phoneUnavailableDesc', { name: partnerName }),
+      });
       return;
     }
 
     try {
       await Linking.openURL(`tel:${partnerPhone}`);
     } catch {
-      Alert.alert(t('jobTracking.callError'), t('jobTracking.callErrorDesc'));
+      Toast.show({
+        type: 'error',
+        text1: t('jobTracking.callError'),
+        text2: t('jobTracking.callErrorDesc'),
+      });
     }
   }, [isCommunicationLocked, partnerName, partnerPhone, t]);
 
   const handleOpenChat = useCallback(() => {
     if (isCommunicationLocked) {
-      Alert.alert(t('jobTracking.chatClosed'), t('jobTracking.chatClosedDesc'));
+      Toast.show({
+        type: 'warning',
+        text1: t('jobTracking.chatClosed'),
+        text2: t('jobTracking.chatClosedDesc'),
+      });
       return;
     }
 
     if (!bookingId) {
-      Alert.alert(t('jobTracking.chatUnavailable'), t('jobTracking.chatUnavailableDesc'));
+      Toast.show({
+        type: 'info',
+        text1: t('jobTracking.chatUnavailable'),
+        text2: t('jobTracking.chatUnavailableDesc'),
+      });
       return;
     }
 

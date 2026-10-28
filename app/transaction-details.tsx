@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   Modal,
@@ -49,7 +48,7 @@ import {
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
 import { Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
-import { useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
+import { useAlertModal, useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
@@ -253,6 +252,7 @@ export default function TransactionDetailsScreen() {
   const [reviewComment, setReviewComment] = useState('');
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [showAutoAssignedModal, setShowAutoAssignedModal] = useState(autoAssigned === 'true');
+  const alertModal = useAlertModal();
   const bypassBeforeRemoveRef = useRef(false);
 
   useEffect(() => {
@@ -465,9 +465,12 @@ export default function TransactionDetailsScreen() {
           {showDisputeStatusCorner ? (
             <TouchableOpacity 
               onPress={() => {
-                Alert.alert(
+                alertModal.showAlert(
                   disputeMeta?.statusLabel || t('disputes.statusUnderReview', 'Under review'),
                   disputeMeta?.nextStep || t('disputes.activeNotice', 'Cash payment is on hold until ApnaUstad completes review.'),
+                  undefined,
+                  'warning',
+                  t('common.ok', 'OK')
                 );
               }} 
               style={[
@@ -865,7 +868,13 @@ export default function TransactionDetailsScreen() {
                     onError: (error: any) => {
                       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                       const message = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-                      Alert.alert(t('transactionDetails.paymentBlocked', 'Payment paused'), message);
+                      alertModal.showAlert(
+                        t('transactionDetails.paymentBlocked', 'Payment paused'),
+                        message,
+                        undefined,
+                        'error',
+                        t('common.ok', 'OK')
+                      );
                     }
                   });
                 }}
@@ -1007,6 +1016,14 @@ export default function TransactionDetailsScreen() {
         message={t('transactionDetails.settlementMsg', `You have successfully settled the payment of {{amount}} with your Ustad {{ustad}} for the {{category}} job.\n\nThank you for choosing Apna Ustad!`, { amount: formatCurrency(booking.hourlyRate), ustad: partnerName, category: booking.category })}
         buttonText={t('transactionDetails.backToHome', 'Back to Home')}
         type="success"
+      />
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        buttonText={alertModal.buttonText}
+        type={alertModal.type}
       />
 
       <Modal

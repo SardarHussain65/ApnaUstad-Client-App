@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -35,8 +34,9 @@ import {
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
+import { ConfirmModal } from '../components/ui';
 import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography, useThemeShadows, useThemedStyles, type AppTheme } from '../constants/Theme';
-import { useJobDetails, useWorkerBids } from '../hooks';
+import { useConfirmModal, useJobDetails, useToast, useWorkerBids } from '../hooks';
 import { useWithdrawBidMutation } from '../hooks/mutations/useMutations';
 import { useAuth } from '../context/AuthContext';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
@@ -742,6 +742,8 @@ export default function PendingBidDetailsScreen() {
   const { data: job, isLoading: isLoadingJob } = useJobDetails(jobId);
   const { mutate: withdrawBid, isPending: isWithdrawing } = useWithdrawBidMutation();
   const { user } = useAuth();
+  const toast = useToast();
+  const confirmModal = useConfirmModal();
   const workerPerson = bid?.worker && typeof bid.worker === 'object' ? bid.worker : null;
 
   const displayJob = job || bidJob;
@@ -833,28 +835,26 @@ export default function PendingBidDetailsScreen() {
   const handleWithdraw = () => {
     if (!bid || isWithdrawing) return;
 
-    Alert.alert(
+    confirmModal.showConfirm(
       t('pendingBidDetails.withdrawConfirmTitle'),
       t('pendingBidDetails.withdrawConfirmMsg'),
-      [
-        { text: t('pendingBidDetails.keepProposal'), style: 'cancel' },
-        {
-          text: t('pendingBidDetails.withdraw'),
-          style: 'destructive',
-          onPress: () => {
-            withdrawBid(
-              { bidId: bid._id },
-              {
-                onSuccess: () => {
-                  refetchBids();
-                  router.back();
-                },
-                onError: () => Alert.alert(t('pendingBidDetails.unableWithdraw'), t('pendingBidDetails.tryAgain')),
-              }
-            );
-          },
-        },
-      ]
+      () => {
+        confirmModal.closeConfirm();
+        withdrawBid(
+          { bidId: bid._id },
+          {
+            onSuccess: () => {
+              refetchBids();
+              router.back();
+            },
+            onError: () => toast.error(t('pendingBidDetails.unableWithdraw'), t('pendingBidDetails.tryAgain')),
+          }
+        );
+      },
+      undefined,
+      t('pendingBidDetails.withdraw'),
+      t('pendingBidDetails.keepProposal'),
+      colors.error
     );
   };
 
@@ -1101,6 +1101,17 @@ export default function PendingBidDetailsScreen() {
           </View>
         ) : null}
       </View>
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmColor={confirmModal.confirmColor}
+        isLoading={isWithdrawing}
+      />
     </BackgroundWrapper>
   );
 }

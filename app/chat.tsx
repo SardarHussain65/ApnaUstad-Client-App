@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -183,7 +182,11 @@ export default function ChatScreen() {
     try {
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert(t('chat.micAccessNeeded'), t('chat.allowMic'));
+        Toast.show({
+          type: 'warning',
+          text1: t('chat.micAccessNeeded'),
+          text2: t('chat.allowMic'),
+        });
         return;
       }
 

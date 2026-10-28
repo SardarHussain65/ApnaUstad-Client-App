@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   Share,
@@ -44,11 +43,13 @@ import {
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
+import { ConfirmModal } from '../components/ui';
 import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import {
   useAcceptInstantJobMutation,
   useCancelJobMutation,
+  useConfirmModal,
   useJobDetails,
   useWorkerWallet,
 } from '../hooks';
@@ -217,6 +218,7 @@ export default function JobDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string; bookingId?: string; mode?: string; pendingBidId?: string }>();
   const resolvedId = params.id || params.bookingId;
   const { role } = useAuth();
+  const confirmModal = useConfirmModal();
   const { data: job, isLoading } = useJobDetails(resolvedId);
   const { data: wallet } = useWorkerWallet({ enabled: role === 'worker' });
   const isPendingBidPreview = params.mode === 'pending-bid' || !!params.pendingBidId;
@@ -372,13 +374,17 @@ export default function JobDetailsScreen() {
   };
 
   const handleCancel = () => {
-    Alert.alert(
+    confirmModal.showConfirm(
       t('jobDetails.cancelConfirmTitle'),
       t('jobDetails.cancelConfirmDesc'),
-      [
-        { text: t('jobDetails.cancelConfirmKeep'), style: 'cancel' },
-        { text: t('jobDetails.cancelConfirmCancel'), style: 'destructive', onPress: () => cancelJob({ jobId: job._id }) },
-      ]
+      () => {
+        confirmModal.closeConfirm();
+        cancelJob({ jobId: job._id });
+      },
+      undefined,
+      t('jobDetails.cancelConfirmCancel'),
+      t('jobDetails.cancelConfirmKeep'),
+      colors.error
     );
   };
 
@@ -709,6 +715,17 @@ export default function JobDetailsScreen() {
           </View>
         ) : null}
       </View>
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmColor={confirmModal.confirmColor}
+        isLoading={isCancelling}
+      />
     </BackgroundWrapper>
   );
 }

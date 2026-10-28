@@ -347,7 +347,7 @@ export default function JobCreationScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        alert(t('jobCreation.permissionDenied'));
+        showError(t('common.error', 'Permission Needed'), t('jobCreation.permissionDenied'));
         return;
       }
       const remainingSlots = Math.max(1, 5 - selectedMedia.length);
@@ -368,9 +368,9 @@ export default function JobCreationScreen() {
         setSelectedMedia((prev) => [...prev, ...nextAssets].slice(0, 5));
       }
     } catch {
-      alert(t('jobCreation.mediaLibraryError'));
+      showError(t('common.error', 'Media Error'), t('jobCreation.mediaLibraryError'));
     }
-  }, [selectedMedia.length, t]);
+  }, [selectedMedia.length, showError, t]);
 
   const removeMedia = useCallback((indexToRemove: number) => {
     setSelectedMedia((current) => current.filter((_, index) => index !== indexToRemove));

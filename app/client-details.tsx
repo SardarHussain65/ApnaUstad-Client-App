@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -137,7 +137,11 @@ export default function ClientDetailsScreen() {
 
   const callClient = async () => {
     if (!clientPhone) {
-      Alert.alert(t('clientDetails.phoneUnavailable'), t('clientDetails.noPhoneNumber'));
+      Toast.show({
+        type: 'info',
+        text1: t('clientDetails.phoneUnavailable'),
+        text2: t('clientDetails.noPhoneNumber'),
+      });
       return;
     }
     await Linking.openURL(`tel:${clientPhone}`);

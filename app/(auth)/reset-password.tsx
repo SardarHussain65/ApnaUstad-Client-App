@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Dimensions,
   I18nManager,
   KeyboardAvoidingView,
@@ -24,8 +23,10 @@ import { AuthHero } from '../../components/auth/AuthHero';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
+import { useAlertModal, useToast } from '../../hooks';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +37,8 @@ export default function ResetPasswordScreen() {
   const isWorker = role === 'worker';
   const theme = useTheme();
   const colors = useThemeColors();
+  const toast = useToast();
+  const alertModal = useAlertModal();
   const accentColor = isWorker ? colors.worker : colors.cyan;
 
   const [otp, setOtp] = useState('');
@@ -67,21 +70,25 @@ export default function ResetPasswordScreen() {
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
+      alertModal.showAlert(
         t('resetPassword.passwordUpdated'),
         t('resetPassword.readySignIn'),
-        [{
-          text: t('resetPassword.signIn'),
-          onPress: () => router.replace({
-            pathname: '/(auth)/login' as never,
-            params: { role },
-          }),
-        }],
+        () => router.replace({
+          pathname: '/(auth)/login' as never,
+          params: { role },
+        }),
+        'success',
+        t('resetPassword.signIn')
       );
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('resetPassword.unableReset'), error.message || t('resetPassword.invalidCode'));
+      alertModal.showAlert(
+        t('resetPassword.unableReset'),
+        error.message || t('resetPassword.invalidCode'),
+        undefined,
+        'error'
+      );
     },
   });
 
@@ -91,7 +98,7 @@ export default function ResetPasswordScreen() {
 
     if (otp.length !== 6) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('resetPassword.codeRequired'), t('resetPassword.enterCode'));
+      toast.warning(t('resetPassword.codeRequired'), t('resetPassword.enterCode'));
       return;
     }
     if (newPassword.length < 6) {
@@ -213,6 +220,14 @@ export default function ResetPasswordScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        buttonText={alertModal.buttonText}
+        type={alertModal.type}
+      />
     </BackgroundWrapper>
   );
 }

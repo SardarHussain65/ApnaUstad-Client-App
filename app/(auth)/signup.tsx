@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -22,8 +21,10 @@ import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
+import { useAlertModal } from '../../hooks';
 import { useTranslation } from 'react-i18next';
 
 export default function SignupScreen() {
@@ -32,6 +33,7 @@ export default function SignupScreen() {
   const { role } = useLocalSearchParams<{ role?: string }>();
   const theme = useTheme();
   const typography = useThemeTypography();
+  const alertModal = useAlertModal();
   const isWorker = role === 'worker';
   const accentColor = isWorker ? theme.colors.brand.worker : theme.colors.brand.primary;
 
@@ -84,19 +86,25 @@ export default function SignupScreen() {
     },
     onError: (error: Error) => {
       if (error.message === 'PHONE_EXISTS') {
-        Alert.alert(
+        alertModal.showAlert(
           t('auth.accountExistsTitle', 'Account already exists'),
-          t('auth.phoneExistsMsg', 'This phone number is already registered as a {{role}}.', { role: isWorker ? t('roleSelection.worker.title', 'Continue as a specialist') : t('roleSelection.client.title', 'Continue as a client') })
+          t('auth.phoneExistsMsg', 'This phone number is already registered as a {{role}}.', { role: isWorker ? t('roleSelection.worker.title', 'Continue as a specialist') : t('roleSelection.client.title', 'Continue as a client') }),
+          undefined,
+          'warning'
         );
       } else if (error.message === 'EMAIL_EXISTS') {
-        Alert.alert(
+        alertModal.showAlert(
           t('auth.accountExistsTitle', 'Account already exists'),
-          t('auth.emailExistsMsg', 'This email address is already registered to another account.')
+          t('auth.emailExistsMsg', 'This email address is already registered to another account.'),
+          undefined,
+          'warning'
         );
       } else {
-        Alert.alert(
+        alertModal.showAlert(
           t('auth.unableContinueTitle', 'Unable to continue'),
-          error.message || t('auth.failedSendVerification', 'Failed to send the verification code.')
+          error.message || t('auth.failedSendVerification', 'Failed to send the verification code.'),
+          undefined,
+          'error'
         );
       }
     },
@@ -233,6 +241,14 @@ export default function SignupScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        buttonText={alertModal.buttonText}
+        type={alertModal.type}
+      />
     </BackgroundWrapper>
   );
 }

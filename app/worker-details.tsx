@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   ScrollView,
@@ -117,7 +116,11 @@ export default function WorkerDetailsScreen() {
         text1: result.isFavorite ? t('workerDetails.favoriteAdded') : t('workerDetails.favoriteRemoved'),
       });
     } catch (error: any) {
-      Alert.alert(t('common.error'), error?.response?.data?.message || t('common.tryAgain'));
+      Toast.show({
+        type: 'error',
+        text1: t('common.error'),
+        text2: error?.response?.data?.message || t('common.tryAgain'),
+      });
     } finally {
       setIsToggling(false);
     }
@@ -154,7 +157,11 @@ export default function WorkerDetailsScreen() {
 
   const callWorker = async () => {
     if (!workerPhone) {
-      Alert.alert(t('workerDetails.phoneUnavailable'), t('workerDetails.phoneUnavailableDesc'));
+      Toast.show({
+        type: 'info',
+        text1: t('workerDetails.phoneUnavailable'),
+        text2: t('workerDetails.phoneUnavailableDesc'),
+      });
       return;
     }
     await Linking.openURL(`tel:${workerPhone}`);
@@ -175,7 +182,11 @@ export default function WorkerDetailsScreen() {
       const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
       router.replace({ pathname: '/transaction-details', params: { id: response.data.data._id } });
     } catch (error: any) {
-      Alert.alert(t('workerDetails.unableSelect'), error?.response?.data?.message || t('workerDetails.acceptError'));
+      Toast.show({
+        type: 'error',
+        text1: t('workerDetails.unableSelect'),
+        text2: error?.response?.data?.message || t('workerDetails.acceptError'),
+      });
     } finally {
       setIsAccepting(false);
     }
