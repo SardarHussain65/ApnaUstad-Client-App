@@ -14,6 +14,7 @@ import { Shield, Radio, ChevronRight, Calendar, Zap } from 'lucide-react-native'
 import { alpha, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { JobPost } from '../../hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface ActiveBiddingBannerProps {
   job: JobPost;
@@ -22,6 +23,7 @@ interface ActiveBiddingBannerProps {
 }
 
 export function ActiveBiddingBanner({ job, activeCount = 1, onPress }: ActiveBiddingBannerProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const pulse = useSharedValue(1);
   const theme = useTheme();
@@ -30,10 +32,10 @@ export function ActiveBiddingBanner({ job, activeCount = 1, onPress }: ActiveBid
   const isInstant = job.urgency === 'instant';
   const proposalCount = job.pendingBidCount ?? job.bidCount ?? 0;
   const statusText = proposalCount > 0
-    ? `${proposalCount} PROPOSAL${proposalCount === 1 ? '' : 'S'} READY`
+    ? t('activeBiddingBanner.offersReady', { count: proposalCount })
     : isInstant
-      ? 'LIVE SEARCH'
-      : 'SCHEDULED SEARCH';
+      ? t('activeBiddingBanner.liveSearch')
+      : t('activeBiddingBanner.scheduledSearch');
 
   useEffect(() => {
     pulse.value = withRepeat(withTiming(1.5, { duration: 1500 }), -1, true);
@@ -81,19 +83,19 @@ export function ActiveBiddingBanner({ job, activeCount = 1, onPress }: ActiveBid
               <Text style={[styles.statusText, { color: colors.cyan }]}>{statusText}</Text>
             </View>
             <Text style={[styles.title, { color: theme.colors.text.primary }]} numberOfLines={1}>
-              {job.category || 'Service request'} - Finding nearby Ustads
+              {t('activeBiddingBanner.findingNearby', { category: job.category || t('jobDetails.defaultTitle') })}
             </Text>
             <View style={styles.metaRow}>
               {isInstant ? <Zap size={11} color={colors.pink} /> : <Calendar size={11} color={colors.orange} />}
               <Text style={[styles.metaText, { color: isInstant ? colors.pink : colors.orange }]}>
-                {isInstant ? 'Instant request' : 'Scheduled request'}
+                {isInstant ? t('activeBiddingBanner.instantRequest') : t('activeBiddingBanner.scheduledRequest')}
               </Text>
-              {activeCount > 1 && <Text style={[styles.countText, { color: alpha(theme.colors.text.primary, 0.5) }]}>- {activeCount} searches active</Text>}
+              {activeCount > 1 && <Text style={[styles.countText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('activeBiddingBanner.activeSearches', { count: activeCount })}</Text>}
             </View>
           </View>
 
           <View style={[styles.actionBtn, { backgroundColor: colors.cyan }]}>
-            <Text style={styles.actionText}>{proposalCount > 0 ? 'REVIEW' : 'RESUME'}</Text>
+            <Text style={styles.actionText}>{proposalCount > 0 ? t('activeBiddingBanner.review') : t('activeBiddingBanner.resume')}</Text>
             <ChevronRight size={14} color={theme.colors.button.primaryText} strokeWidth={3} />
           </View>
         </View>

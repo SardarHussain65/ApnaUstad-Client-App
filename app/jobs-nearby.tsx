@@ -98,7 +98,7 @@ export default function JobsNearbyScreen() {
                           <Calendar size={20} color={colors.worker} />
                         )}
                         <Text style={[styles.jobTypeLabel, { color: job.urgency === 'instant' ? colors.cyan : colors.worker }]}>
-                          {(job.urgency || 'Normal').toUpperCase()}
+                          {job.urgency === 'instant' ? t('jobsNearby.urgentBadge', 'URGENT') : t('jobsNearby.scheduledBadge', 'LATER')}
                         </Text>
                       </View>
 

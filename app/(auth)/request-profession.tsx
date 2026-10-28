@@ -169,25 +169,25 @@ export default function RequestProfessionScreen() {
 
   const handleSubmit = async () => {
     if (!professionName.trim() || professionName.trim().length < 3) {
-      showError(t('registerDetails.missingFields'), 'Please enter a valid profession or trade name (at least 3 characters).');
+      showError(t('registerDetails.missingFields'), t('requestProfession.invalidName'));
       return;
     }
     if (!hourlyRate || !experience || !skills.trim() || !bio.trim()) {
-      showError(t('registerDetails.missingFields'), 'Please fill in your hourly rate, experience, skills, and trade description.');
+      showError(t('registerDetails.missingFields'), t('requestProfession.fillWorkFields'));
       return;
     }
     const parsedRate = Number(hourlyRate);
     if (Number.isNaN(parsedRate) || parsedRate < 100) {
-      showError(t('registerDetails.missingFields'), 'Hourly rate must be at least Rs. 100.');
+      showError(t('registerDetails.missingFields'), t('requestProfession.minRateError'));
       return;
     }
     const parsedExp = Number(experience);
     if (Number.isNaN(parsedExp) || parsedExp < 0) {
-      showError(t('registerDetails.missingFields'), 'Please enter a valid years of experience (0 or more).');
+      showError(t('registerDetails.missingFields'), t('requestProfession.invalidExpError'));
       return;
     }
     if (bio.trim().length < 3) {
-      showError(t('registerDetails.missingFields'), 'Please provide a description of your trade (at least 3 characters).');
+      showError(t('registerDetails.missingFields'), t('requestProfession.shortBioError'));
       return;
     }
 
@@ -199,14 +199,14 @@ export default function RequestProfessionScreen() {
         if (cert.title.trim().length < 2) {
           showError(
             t('registerDetails.missingFields'),
-            `Please enter a title (at least 2 characters) for Certificate #${i + 1}, or remove it.`
+            t('requestProfession.certTitleRequired', { num: i + 1 })
           );
           return;
         }
         if (!hasImage) {
           showError(
             t('registerDetails.missingFields'),
-            `Please upload an image for Certificate #${i + 1}, or remove it.`
+            t('requestProfession.certPhotoRequired', { num: i + 1 })
           );
           return;
         }
@@ -251,7 +251,7 @@ export default function RequestProfessionScreen() {
         for (let i = 0; i < certificates.length; i++) {
           const cert = certificates[i];
           if (cert.title.trim() && cert.imageUri) {
-            setUploadProgress(`Uploading certificate ${i + 1}/${certificates.length}...`);
+            setUploadProgress(t('registerDetails.uploadingCertProgress', { current: i + 1, total: certificates.length }));
             const certUrl = await uploadImageOnce(
               cert.imageUri,
               'certificateImage',

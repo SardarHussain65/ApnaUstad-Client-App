@@ -8,6 +8,7 @@ import Toast from 'react-native-toast-message';
 import { PaymentReceivedModal } from '../components/home/PaymentReceivedModal';
 import { JobAssignedSuccessModal } from '../components/home/JobAssignedSuccessModal';
 import * as Haptics from 'expo-haptics';
+import i18n from '../i18n';
 
 interface IncomingJobContextType {
   isInstantOnline: boolean;
@@ -123,8 +124,8 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       setScheduledOnlineState(previousScheduled);
       Toast.show({
         type: 'error',
-        text1: 'Availability not updated',
-        text2: error.response?.data?.message || 'Please check your connection and try again.',
+        text1: i18n.t('realtimeAlerts.availabilityNotUpdated'),
+        text2: error.response?.data?.message || i18n.t('realtimeAlerts.checkConnection'),
       });
     }
   }, [role, updateUser, user]);
@@ -206,56 +207,60 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       console.log('📉 [IncomingJobContext] Mission Lost:', data);
       Toast.show({
         type: 'info',
-        text1: 'BOOKING CANCELLED',
-        text2: 'The client has selected another specialist.',
+        text1: i18n.t('realtimeAlerts.jobTakenTitle'),
+        text2: i18n.t('realtimeAlerts.jobTakenDesc'),
       });
     });
 
     // --- GENERIC: Booking Status Updates ---
     const unsubscribeAccepted = socketService.on('booking:accepted', (data: any) => {
+      const category = data?.category || i18n.t('jobDetails.defaultTitle');
       Toast.show({
         type: 'success',
-        text1: 'BOOKING ACTIVE 🛡️',
+        text1: i18n.t('realtimeAlerts.bookingConfirmedTitle'),
         text2: role === 'worker'
-          ? `You have accepted the job for ${data?.category || 'a new job'}.`
-          : `Specialist has accepted your request for ${data?.category || 'the job'}.`,
+          ? i18n.t('realtimeAlerts.workerAcceptedDesc', { category })
+          : i18n.t('realtimeAlerts.clientAcceptedDesc', { category }),
       });
     });
 
     const unsubscribeOngoing = socketService.on('booking:ongoing', (data: any) => {
+      const category = data?.category || i18n.t('jobDetails.defaultTitle');
       Toast.show({
         type: 'info',
-        text1: 'JOB STARTED ⚡',
+        text1: i18n.t('realtimeAlerts.jobStartedTitle'),
         text2: role === 'worker'
-          ? `You have started the job: ${data?.category || 'Task'}.`
-          : `The Ustad is now on-site performing: ${data?.category || 'Task'}`,
+          ? i18n.t('realtimeAlerts.workerStartedDesc', { category })
+          : i18n.t('realtimeAlerts.clientStartedDesc', { category }),
       });
     });
 
     const unsubscribeCompleted = socketService.on('booking:completed', (data: any) => {
+      const category = data?.category || i18n.t('jobDetails.defaultTitle');
       if (role === 'worker') {
         const earning = Number(data?.workerEarning || data?.agreement?.workerNetIncome || 0);
-        const earningText = earning > 0 ? ` You earned Rs. ${earning.toLocaleString()}! 🎉` : '';
+        const earningText = earning > 0 ? i18n.t('realtimeAlerts.workerEarnedSuffix', { amount: earning.toLocaleString() }) : '';
         Toast.show({
           type: 'success',
-          text1: 'JOB COMPLETED 🏁',
-          text2: `You have successfully completed: ${data?.category || 'Task'}.${earningText}`,
+          text1: i18n.t('realtimeAlerts.jobCompletedTitle'),
+          text2: `${i18n.t('realtimeAlerts.workerCompletedDesc', { category })}${earningText}`,
           visibilityTime: 5000,
         });
       } else {
         Toast.show({
           type: 'success',
-          text1: 'JOB COMPLETED 🏁',
-          text2: `Job completed! Your Ustad has finished: ${data?.category || 'Task'}`,
+          text1: i18n.t('realtimeAlerts.jobCompletedTitle'),
+          text2: i18n.t('realtimeAlerts.clientCompletedDesc', { category }),
         });
       }
     });
 
     const unsubscribeCancelled = socketService.on('booking:cancelled', (data: any) => {
+      const category = data?.category || i18n.t('jobDetails.defaultTitle');
       Toast.show({
         type: 'error',
-        text1: 'BOOKING CANCELLED ⚠️',
-        text2: `Job cancelled: ${data?.category || 'the job'} has been cancelled.`,
+        text1: i18n.t('realtimeAlerts.bookingCancelledTitle'),
+        text2: i18n.t('realtimeAlerts.bookingCancelledDesc', { category }),
       });
     });
 
@@ -267,10 +272,11 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         setShowPaidModal(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
+        const category = data.category || i18n.t('jobDetails.defaultTitle');
         Toast.show({
           type: 'success',
-          text1: 'PAYMENT VERIFIED ✅',
-          text2: `Your settlement for ${data.category || 'the job'} has been confirmed.`,
+          text1: i18n.t('realtimeAlerts.paymentConfirmedTitle'),
+          text2: i18n.t('realtimeAlerts.paymentConfirmedDesc', { category }),
         });
       }
     });
@@ -327,8 +333,8 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         if (response.data.success) {
           Toast.show({
             type: 'success',
-            text1: 'JOB ACCEPTED',
-            text2: 'Booking initialized. Waiting for client confirmation...',
+            text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
+            text2: i18n.t('realtimeAlerts.jobAcceptedDesc'),
           });
           // Close modal cleanly - remaining jobs (not the accepted one) go to dismissed
           const remaining = incomingJobsQueueRef.current.filter(j => j._id !== job._id);
@@ -340,8 +346,8 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       } catch (error: any) {
         Toast.show({
           type: 'error',
-          text1: 'CONNECTION FAILURE',
-          text2: error.response?.data?.message || 'Could not establish connection.',
+          text1: i18n.t('realtimeAlerts.couldNotAcceptTitle'),
+          text2: error.response?.data?.message || i18n.t('realtimeAlerts.couldNotAcceptDesc'),
         });
         removeJobFromQueue(job._id);
       } finally {
@@ -414,15 +420,15 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         if (response.data.success) {
           Toast.show({
             type: 'success',
-            text1: 'JOB ACCEPTED',
-            text2: 'Booking initialized. Waiting for client confirmation...',
+            text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
+            text2: i18n.t('realtimeAlerts.jobAcceptedDesc'),
           });
         }
       } catch (error: any) {
         Toast.show({
           type: 'error',
-          text1: 'CONNECTION FAILURE',
-          text2: error.response?.data?.message || 'Could not establish connection.',
+          text1: i18n.t('realtimeAlerts.couldNotAcceptTitle'),
+          text2: error.response?.data?.message || i18n.t('realtimeAlerts.couldNotAcceptDesc'),
         });
       } finally {
         setAcceptingJobId(null);
@@ -463,8 +469,8 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       setScheduledOnlineState(previousScheduled);
       Toast.show({
         type: 'error',
-        text1: 'Availability not updated',
-        text2: error.response?.data?.message || 'Please check your connection and try again.',
+        text1: i18n.t('realtimeAlerts.availabilityNotUpdated'),
+        text2: error.response?.data?.message || i18n.t('realtimeAlerts.checkConnection'),
       });
     }
   }, [role, updateUser, user]);

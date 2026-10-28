@@ -469,19 +469,19 @@ export function WorkerWalletView({
                           <IconComponent size={18} color={txConf.color} strokeWidth={2} />
                         </View>
 
-                        <View style={styles.txInfo}>
-                          <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                            {tx.description}
-                          </Text>
-                          <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
-                        </View>
+                         <View style={styles.txInfo}>
+                           <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                             {t(txConf.labelKey)}
+                           </Text>
+                           <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
+                         </View>
 
-                        <View style={styles.txAmountGroup}>
-                          <Text style={[styles.txAmount, { color: isPositive ? colors.success : colors.error }]}>
-                            {isPositive ? '+' : '-'}Rs. {tx.amount.toLocaleString()}
-                          </Text>
-                          <Text style={[styles.txBalanceAfter, { color: theme.colors.text.muted }]}>Bal: Rs. {tx.balanceAfter.toLocaleString()}</Text>
-                        </View>
+                         <View style={styles.txAmountGroup}>
+                           <Text style={[styles.txAmount, { color: isPositive ? colors.success : colors.error }]}>
+                             {isPositive ? '+' : '-'}Rs. {tx.amount.toLocaleString()}
+                           </Text>
+                           <Text style={[styles.txBalanceAfter, { color: theme.colors.text.muted }]}>{t('wallet.balAfterShort', { amount: tx.balanceAfter.toLocaleString() })}</Text>
+                         </View>
                       </View>
                     </GlassCard>
                   </Animated.View>

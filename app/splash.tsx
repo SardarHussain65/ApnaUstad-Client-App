@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View, Dimensions, Image, Text } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -22,6 +23,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const theme = useTheme();
   const colors = useThemeColors();
   
@@ -129,9 +131,9 @@ export default function SplashScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.taglineContainer, taglineStyle]}>
-            <Text style={[styles.tagline, Typography.threeD]}>The Service Galaxy</Text>
-<Text style={[styles.subtext, { color: colors.cyan }]}>EXPANDING POSSIBILITIES</Text>
-           </Animated.View>
+            <Text style={[styles.tagline, Typography.threeD]}>{t('splash.tagline', 'Trusted Home Services')}</Text>
+            <Text style={[styles.subtext, { color: colors.cyan }]}>{t('splash.expanding', 'SKILLED USTADS NEAR YOU')}</Text>
+          </Animated.View>
          </View>
 
          <View style={styles.footer}>
@@ -140,7 +142,7 @@ export default function SplashScreen() {
                <Animated.View style={[styles.loadingProgress, loadingStyle, { backgroundColor: colors.cyan }]} />
              </View>
            </View>
-           <Text style={[styles.versionText, { color: theme.colors.text.muted }]}>VER 2.50.0 ALPHA</Text>
+           <Text style={[styles.versionText, { color: theme.colors.text.muted }]}>{t('splash.version', 'APNAUSTAD')}</Text>
          </View>
       </View>
     </BackgroundWrapper>

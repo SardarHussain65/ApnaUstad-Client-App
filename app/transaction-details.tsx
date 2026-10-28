@@ -380,7 +380,9 @@ export default function TransactionDetailsScreen() {
     ? (booking.worker?.address || (user as any)?.address || booking.worker?.city || (user as any)?.city)
     : (booking.worker?.address || booking.worker?.city || meta?.counterParty?.address || '')
   ) || '';
-  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? t('transactionDetails.instantVisit', 'Instant visit') : t('transactionDetails.scheduledVisit', 'Scheduled visit'));
+  const missionKindLabel = booking.bookingType === 'instant'
+    ? t('transactionDetails.instantVisit', 'Urgent visit')
+    : t('transactionDetails.scheduledVisit', 'Scheduled visit');
   const paymentStatusLabel = booking.paymentStatus === 'paid' ? t('transactionDetails.paid', 'Paid') : t('transactionDetails.cashPending', 'Cash pending');
   const stepIndex = STEPS.findIndex(step => step.value === status);
   const visibleStepIndex = stepIndex < 0 ? 0 : stepIndex;
@@ -1074,26 +1076,9 @@ export default function TransactionDetailsScreen() {
                 </Text>
                 
                 <Text style={[styles.successSubtitle, { color: theme.isDark ? 'rgba(255, 255, 255, 0.7)' : '#444446' }]}>
-                  {partner ? (
-                    <>
-                      <Text style={{ fontWeight: '800', color: theme.isDark ? '#FFFFFF' : '#1C1C1E' }}>
-                        {partnerName}
-                      </Text>{' '}
-                      has accepted your job request with your price of{' '}
-                      <Text style={{ fontWeight: '800', color: theme.isDark ? '#00F5FF' : '#007AFF' }}>
-                        Rs. {amountValue.toLocaleString()}
-                      </Text>
-                      !
-                    </>
-                  ) : (
-                    <>
-                      An Ustad has accepted your job request at your offered price of{' '}
-                      <Text style={{ fontWeight: '800', color: theme.isDark ? '#00F5FF' : '#007AFF' }}>
-                        Rs. {amountValue.toLocaleString()}
-                      </Text>
-                      !
-                    </>
-                  )}
+                  {partner
+                    ? t('jobAssignedModal.clientAcceptedPrice', { name: partnerName, amount: amountValue.toLocaleString() })
+                    : t('jobAssignedModal.ustadAcceptedPrice', { amount: amountValue.toLocaleString() })}
                 </Text>
 
                 {partner && (
@@ -1121,7 +1106,7 @@ export default function TransactionDetailsScreen() {
                       <View style={styles.assignedWorkerRatingRow}>
                         <Star size={12} color="#FFD700" fill="#FFD700" />
                         <Text style={[styles.assignedWorkerRating, { color: theme.isDark ? 'rgba(255, 255, 255, 0.7)' : '#444446' }]}>
-                          {partnerRating > 0 ? partnerRating.toFixed(1) : 'New'}
+                          {partnerRating > 0 ? partnerRating.toFixed(1) : t('common.new', 'New')}
                         </Text>
                       </View>
                     </View>
@@ -1129,7 +1114,7 @@ export default function TransactionDetailsScreen() {
                 )}
 
                 <View style={[styles.successPriceRow, { borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }]}>
-                  <Text style={[styles.successPriceLabel, { color: theme.isDark ? 'rgba(255, 255, 255, 0.4)' : '#666668' }]}>AGREED PRICE:</Text>
+                  <Text style={[styles.successPriceLabel, { color: theme.isDark ? 'rgba(255, 255, 255, 0.4)' : '#666668' }]}>{t('jobAssignedModal.agreedPrice', 'AGREED RATE:')}</Text>
                   <Text style={[styles.successPriceValue, { color: theme.isDark ? '#00F5FF' : '#007AFF' }]}>Rs. {amountValue.toLocaleString()}</Text>
                 </View>
 
@@ -1144,7 +1129,7 @@ export default function TransactionDetailsScreen() {
                     end={{ x: 1, y: 0 }}
                     style={styles.successActionGradient}
                   >
-                    <Text style={[styles.successActionText, { color: theme.isDark ? '#000000' : '#FFFFFF' }]}>GOT IT</Text>
+                    <Text style={[styles.successActionText, { color: theme.isDark ? '#000000' : '#FFFFFF' }]}>{t('common.gotIt', 'Got It').toUpperCase()}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </LinearGradient>

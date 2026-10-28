@@ -512,20 +512,20 @@ export default function JobCreationScreen() {
   }, [createdJobId, router]);
 
   // Summaries for collapsible sections
-  const budgetSummary = amount ? `Rs. ${Number(amount).toLocaleString('en-PK')}` : 'Open Bid / Negotiable';
-  const scheduleSummary = `${scheduledDate.toLocaleDateString('en-GB')} at ${scheduledTime}`;
+  const budgetSummary = amount ? `Rs. ${Number(amount).toLocaleString('en-PK')}` : t('jobCreation.openNegotiable', 'Open — Ustads will send rates');
+  const scheduleSummary = `${scheduledDate.toLocaleDateString('en-GB')} • ${scheduledTime}`;
 
   const mediaCount = selectedMedia.length;
   const mediaSummary = mediaCount === 0
-    ? 'No photos or videos attached'
-    : `${mediaCount} file${mediaCount > 1 ? 's' : ''} attached`;
+    ? t('jobCreation.noMediaAttached', 'No photos or video added')
+    : t('jobCreation.filesAttached', { count: mediaCount });
 
   const voiceDuration = recorderState.durationMillis;
   const voiceSummary = recorderState.isRecording
-    ? `Recording... ${formatVoiceDuration(voiceDuration)}`
+    ? `${t('jobCreation.recordingExplanation', 'Recording voice message...')} ${formatVoiceDuration(voiceDuration)}`
     : voiceNoteUri
-      ? 'Voice brief attached'
-      : 'No voice brief recorded';
+      ? t('jobCreation.voiceBriefAttached', 'Voice message added')
+      : t('jobCreation.noVoiceRecorded', 'No voice message added');
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -562,7 +562,7 @@ export default function JobCreationScreen() {
           ]}>
             <View style={[styles.liveDot, { backgroundColor: isInstant ? palette.cyan : palette.orange }]} />
             <Text style={[styles.liveText, { color: isInstant ? palette.cyan : palette.orange }]}>
-              {isInstant ? 'NOW' : 'PLANNED'}
+              {isInstant ? t('jobCreation.nowBadge', 'NOW') : t('jobCreation.plannedBadge', 'LATER')}
             </Text>
           </View>
         </Animated.View>
@@ -608,13 +608,17 @@ export default function JobCreationScreen() {
 
                   <View style={styles.missionMeta}>
                     <Text style={[styles.missionEyebrow, { color: accentColor }]}>
-                      {targetWorkerName ? 'SELECTED USTAD' : 'SERVICE CATEGORY'}
+                      {targetWorkerName ? t('jobCreation.selectedUstad', 'SELECTED USTAD') : t('jobCreation.serviceCategoryLabel', 'SERVICE TYPE')}
                     </Text>
                     <Text style={styles.missionName} numberOfLines={1}>
-                      {targetWorkerName ?? title ?? 'General Service'}
+                      {targetWorkerName ?? title ?? t('jobDetails.defaultTitle', 'Home Service')}
                     </Text>
                     <Text style={styles.missionSub}>
-                      {targetWorkerName ? `${title ?? 'General'} service request` : `${isInstant ? 'Urgent request' : 'Scheduled visit'} for nearby Ustads`}
+                      {targetWorkerName
+                        ? t('jobCreation.directRequestSub', { category: title ?? t('jobDetails.defaultTitle', 'Home Service') })
+                        : isInstant
+                          ? t('jobCreation.urgentNearbySub', 'Urgent job for nearby Ustads')
+                          : t('jobCreation.scheduledNearbySub', 'Scheduled visit for nearby Ustads')}
                     </Text>
                   </View>
                 </View>
@@ -623,7 +627,7 @@ export default function JobCreationScreen() {
                 <View style={styles.statsRow}>
                   <StatBadge
                     label={t('jobCreation.service')}
-                    value={isInstant ? 'NOW' : 'PLANNED'}
+                    value={isInstant ? t('jobCreation.nowBadge', 'NOW') : t('jobCreation.plannedBadge', 'LATER')}
                     color={isInstant ? palette.cyan : palette.orange}
                   />
                   <View style={styles.statDivider} />
@@ -635,7 +639,7 @@ export default function JobCreationScreen() {
                   <View style={styles.statDivider} />
                   <StatBadge
                     label={t('jobCreation.budgetLabel')}
-                    value={amount ? `RS ${amount}` : 'ADD'}
+                    value={amount ? `RS ${amount}` : t('common.add', 'Add').toUpperCase()}
                     color={palette.success}
                   />
                 </View>
@@ -644,7 +648,7 @@ export default function JobCreationScreen() {
 
             {/* ── Service Details (Required) ── */}
             <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.section}>
-              <SectionLabel icon={FileText} label={t('jobCreation.describeNeed').toUpperCase()} badge="Required" />
+              <SectionLabel icon={FileText} label={t('jobCreation.describeNeed').toUpperCase()} badge={t('common.required', 'Required')} />
               <GlassInput glowColor={description.trim().length >= 10 ? palette.cyan : (description.trim().length > 0 ? palette.error : undefined)}>
                 <TextInput
                   style={styles.textArea}
@@ -824,7 +828,7 @@ export default function JobCreationScreen() {
                   <Text style={[styles.completionTitle, { color: palette.textPrimary }]}>{t('jobCreation.requiredDetails')}</Text>
                 </View>
                 <Text style={[styles.completionText, { color: palette.textSecondary }]}>
-                  {completedStepCount} of {requiredStepCount} filled
+                  {t('jobCreation.stepsFilled', { completed: completedStepCount, total: requiredStepCount })}
                 </Text>
               </View>
               <Text style={[styles.completionPercent, { color: completionPercentage === 100 ? palette.success : palette.cyan }]}>

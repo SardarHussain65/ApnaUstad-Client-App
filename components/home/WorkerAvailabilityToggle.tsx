@@ -74,14 +74,14 @@ export const WorkerAvailabilityToggle = React.memo(({
           </View>
           <Text style={[styles.statusTitle, typography.threeD, { color: theme.colors.text.primary }]}>
             {isOnline
-              ? t('home.worker.online', 'ONLINE / ACTIVE').toUpperCase()
-              : t('home.worker.offline', 'OFFLINE / INACTIVE').toUpperCase()}
+              ? t('home.worker.online', 'ONLINE').toUpperCase()
+              : t('home.worker.offline', 'OFFLINE').toUpperCase()}
           </Text>
         </View>
         <Text style={[styles.statusSub, { color: theme.colors.text.muted }]}>
           {isOnline
-            ? t('home.worker.availableSubtitle', 'Available for Jobs • کام کے لیے دستیاب')
-            : t('home.worker.offlineSubtitle', 'Not receiving new bookings • نئے آرڈر بند ہیں')}
+            ? t('home.worker.availableSubtitle', 'Ready to get new jobs')
+            : t('home.worker.offlineSubtitle', 'Turn on to get new jobs')}
         </Text>
       </View>
 

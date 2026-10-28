@@ -102,7 +102,7 @@ export default function OnboardingScreen() {
             <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
             <View>
               <Text style={[styles.brandName, { color: theme.colors.text.primary }]}>APNAUSTAD</Text>
-              <Text style={[styles.brandTagline, { color: colors.cyan }]}>SERVICES, MADE SIMPLE</Text>
+              <Text style={[styles.brandTagline, { color: colors.cyan }]}>{t('onboarding.tagline', 'HOME SERVICES MADE EASY')}</Text>
             </View>
           </View>
           {currentIndex < DATA.length - 1 && (
