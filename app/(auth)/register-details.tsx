@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   FlatList,
@@ -97,6 +96,9 @@ export default function RegisterDetailsScreen() {
 
   // Worker Optional Certificates / Degrees
   const [certificates, setCertificates] = useState<CertificateItem[]>([]);
+
+  // Cache uploaded ImageKit URLs by local URI so retries never re-upload the same file
+  const uploadedUrlsRef = useRef<Record<string, string>>({});
 
   const captureCurrentLocation = useCallback(async () => {
     try {
@@ -241,11 +243,35 @@ export default function RegisterDetailsScreen() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error(`Failed to upload ${fieldName}`);
+      if (!response.ok) {
+        let serverMessage = '';
+        try {
+          const errJson = await response.json();
+          serverMessage = errJson?.message || errJson?.error || '';
+        } catch {
+          // ignore JSON parse error
+        }
+        throw new Error(serverMessage || `Failed to upload ${fieldName}`);
+      }
       const data = await response.json();
-      return data.data.imageUrl;
+      return data.data.imageUrl as string;
     },
   });
+
+  const uploadImageOnce = async (uri: string, fieldName: string, endpoint: string): Promise<string> => {
+    if (/^https?:\/\//i.test(uri)) {
+      return uri;
+    }
+    const cacheKey = `${endpoint}::${uri}`;
+    if (uploadedUrlsRef.current[cacheKey]) {
+      return uploadedUrlsRef.current[cacheKey];
+    }
+    const uploadedUrl = await uploadImageMutation.mutateAsync({ uri, fieldName, endpoint });
+    if (uploadedUrl) {
+      uploadedUrlsRef.current[cacheKey] = uploadedUrl;
+    }
+    return uploadedUrl;
+  };
 
   const registerMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -290,19 +316,24 @@ export default function RegisterDetailsScreen() {
   });
 
   const validateStep1 = () => {
-    if (!city.trim() || !password) {
+    if (isWorker && !image) {
+      showError(
+        t('registerDetails.missingFields'),
+        t('registerDetails.missingProfilePhoto', 'Please add a profile photo before continuing.')
+      );
+      return false;
+    }
+    if (isWorker && (!cnicFront || !cnicBack)) {
+      showError(t('registerDetails.missingFields'), t('registerDetails.missingCnicPhotos'));
+      return false;
+    }
+    if (!city.trim() || city.trim().length < 2 || !password) {
       showError(t('registerDetails.missingFields'), t('registerDetails.fillRequired'));
       return false;
     }
     if (password.length < 6) {
       showError(t('registerDetails.weakPassword'), t('registerDetails.useMinCharacters'));
       return false;
-    }
-    if (isWorker) {
-      if (!cnicFront || !cnicBack) {
-        showError(t('registerDetails.missingFields'), t('registerDetails.missingCnicPhotos'));
-        return false;
-      }
     }
     return true;
   };
@@ -316,7 +347,15 @@ export default function RegisterDetailsScreen() {
 
   const navigateToRequestProfession = () => {
     setIsDropdownOpen(false);
+    if (!validateStep1()) {
+      setStep(1);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const cachedProfile = image ? uploadedUrlsRef.current[`/api/v1/workers/upload-profile-image::${image}`] || image : '';
+    const cachedFront = cnicFront ? uploadedUrlsRef.current[`/api/v1/workers/upload-cnic-front::${cnicFront}`] || cnicFront : '';
+    const cachedBack = cnicBack ? uploadedUrlsRef.current[`/api/v1/workers/upload-cnic-back::${cnicBack}`] || cnicBack : '';
+
     router.push({
       pathname: '/(auth)/request-profession' as any,
       params: {
@@ -329,17 +368,26 @@ export default function RegisterDetailsScreen() {
         latitude: latitude !== null ? String(latitude) : '',
         longitude: longitude !== null ? String(longitude) : '',
         password,
-        image: image || '',
+        image: cachedProfile,
         cnicNumber: '',
-        cnicFront: cnicFront || '',
-        cnicBack: cnicBack || '',
+        cnicFront: cachedFront,
+        cnicBack: cachedBack,
       },
     });
   };
 
   const handleCompleteRegistration = async () => {
+    // 1. Always validate Step 1 fields first before uploading any images
+    if (!validateStep1()) {
+      if (isWorker && step !== 1) {
+        setStep(1);
+      }
+      return;
+    }
+
+    // 2. Validate all Step 2 fields & certificates before uploading any images
     if (isWorker) {
-      if (!category) {
+      if (!category || category.trim().length < 3) {
         showError(t('registerDetails.missingFields'), 'Please select your profession from the dropdown.');
         return;
       }
@@ -347,8 +395,42 @@ export default function RegisterDetailsScreen() {
         showError(t('registerDetails.missingFields'), 'Please fill in your hourly rate, experience, and bio.');
         return;
       }
-    } else {
-      if (!validateStep1()) return;
+      const parsedRate = Number(hourlyRate);
+      if (Number.isNaN(parsedRate) || parsedRate < 100) {
+        showError(t('registerDetails.missingFields'), 'Hourly rate must be at least Rs. 100.');
+        return;
+      }
+      const parsedExp = Number(experience);
+      if (Number.isNaN(parsedExp) || parsedExp < 0) {
+        showError(t('registerDetails.missingFields'), 'Please enter a valid years of experience (0 or more).');
+        return;
+      }
+      if (bio.trim().length < 3) {
+        showError(t('registerDetails.missingFields'), 'Please provide a short description of your work (at least 3 characters).');
+        return;
+      }
+
+      for (let i = 0; i < certificates.length; i++) {
+        const cert = certificates[i];
+        const hasTitle = cert.title.trim().length > 0;
+        const hasImage = Boolean(cert.imageUri);
+        if (hasTitle || hasImage || cert.issuingOrg.trim().length > 0) {
+          if (cert.title.trim().length < 2) {
+            showError(
+              t('registerDetails.missingFields'),
+              `Please enter a title (at least 2 characters) for Certificate #${i + 1}, or remove it.`
+            );
+            return;
+          }
+          if (!hasImage) {
+            showError(
+              t('registerDetails.missingFields'),
+              `Please upload an image for Certificate #${i + 1}, or remove it.`
+            );
+            return;
+          }
+        }
+      }
     }
 
     try {
@@ -359,33 +441,33 @@ export default function RegisterDetailsScreen() {
 
       if (image) {
         setUploadProgress(t('registerDetails.uploadingProfile'));
-        profileImageUrl = await uploadImageMutation.mutateAsync({
-          uri: image,
-          fieldName: 'profileImage',
-          endpoint: isWorker ? '/api/v1/workers/upload-profile-image' : '/api/v1/users/upload-image',
-        });
+        profileImageUrl = await uploadImageOnce(
+          image,
+          'profileImage',
+          isWorker ? '/api/v1/workers/upload-profile-image' : '/api/v1/users/upload-image'
+        );
       }
 
       if (isWorker) {
         if (cnicFront) {
           setUploadProgress(t('registerDetails.uploadingFront'));
-          cnicFrontUrl = await uploadImageMutation.mutateAsync({
-            uri: cnicFront,
-            fieldName: 'cnicFrontImage',
-            endpoint: '/api/v1/workers/upload-cnic-front',
-          });
+          cnicFrontUrl = await uploadImageOnce(
+            cnicFront,
+            'cnicFrontImage',
+            '/api/v1/workers/upload-cnic-front'
+          );
         }
         if (cnicBack) {
           setUploadProgress(t('registerDetails.uploadingBack'));
-          cnicBackUrl = await uploadImageMutation.mutateAsync({
-            uri: cnicBack,
-            fieldName: 'cnicBackImage',
-            endpoint: '/api/v1/workers/upload-cnic-back',
-          });
+          cnicBackUrl = await uploadImageOnce(
+            cnicBack,
+            'cnicBackImage',
+            '/api/v1/workers/upload-cnic-back'
+          );
         }
       }
 
-      // Upload optional certificates
+      // Upload optional certificates (reusing cached URLs if already uploaded)
       const uploadedCertificates: any[] = [];
       if (isWorker && certificates.length > 0) {
         for (let i = 0; i < certificates.length; i++) {
@@ -398,11 +480,11 @@ export default function RegisterDetailsScreen() {
                 defaultValue: `Uploading certificate ${i + 1}/${certificates.length}...`,
               })
             );
-            const certUrl = await uploadImageMutation.mutateAsync({
-              uri: cert.imageUri,
-              fieldName: 'certificateImage',
-              endpoint: '/api/v1/workers/upload-certificate',
-            });
+            const certUrl = await uploadImageOnce(
+              cert.imageUri,
+              'certificateImage',
+              '/api/v1/workers/upload-certificate'
+            );
             uploadedCertificates.push({
               title: cert.title.trim(),
               issuingOrg: cert.issuingOrg.trim(),
@@ -419,27 +501,27 @@ export default function RegisterDetailsScreen() {
         email: params.email || undefined,
         phone: params.phone,
         password,
-        address: address || city,
-        city,
-        profileImage: profileImageUrl,
+        address: (address || city).trim(),
+        city: city.trim(),
+        ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
         ...(latitude !== null && longitude !== null ? { latitude, longitude } : {}),
         fcmToken: '',
       };
 
       if (isWorker) {
-        payload.cnicFrontImage = cnicFrontUrl;
-        payload.cnicBackImage = cnicBackUrl;
+        if (cnicFrontUrl) payload.cnicFrontImage = cnicFrontUrl;
+        if (cnicBackUrl) payload.cnicBackImage = cnicBackUrl;
         payload.category = category;
         payload.skills = [category].filter(Boolean);
         payload.hourlyRate = Number(hourlyRate);
         payload.experience = Number(experience);
-        payload.bio = bio;
+        payload.bio = bio.trim();
         payload.certificates = uploadedCertificates;
       }
 
       registerMutation.mutate(payload);
     } catch (error: any) {
-      Alert.alert(t('registerDetails.errorTitle'), error.message || t('registerDetails.uploadError'));
+      showError(t('registerDetails.errorTitle'), error.message || t('registerDetails.uploadError'));
     } finally {
       setIsUploading(false);
       setUploadProgress('');

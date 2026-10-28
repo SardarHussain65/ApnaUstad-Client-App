@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   I18nManager
@@ -81,6 +80,9 @@ export default function RequestProfessionScreen() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Cache uploaded ImageKit URLs by local URI so retries never re-upload the same file
+  const uploadedUrlsRef = useRef<Record<string, string>>({});
+
   const pickCertificateImage = async (certId: string) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -135,20 +137,80 @@ export default function RequestProfessionScreen() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error(`Failed to upload ${fieldName}`);
+      if (!response.ok) {
+        let serverMessage = '';
+        try {
+          const errJson = await response.json();
+          serverMessage = errJson?.message || errJson?.error || '';
+        } catch {
+          // ignore JSON parse error
+        }
+        throw new Error(serverMessage || `Failed to upload ${fieldName}`);
+      }
       const data = await response.json();
-      return data.data.imageUrl;
+      return data.data.imageUrl as string;
     },
   });
 
+  const uploadImageOnce = async (uri: string, fieldName: string, endpoint: string): Promise<string> => {
+    if (/^https?:\/\//i.test(uri)) {
+      return uri;
+    }
+    const cacheKey = `${endpoint}::${uri}`;
+    if (uploadedUrlsRef.current[cacheKey]) {
+      return uploadedUrlsRef.current[cacheKey];
+    }
+    const uploadedUrl = await uploadImageMutation.mutateAsync({ uri, fieldName, endpoint });
+    if (uploadedUrl) {
+      uploadedUrlsRef.current[cacheKey] = uploadedUrl;
+    }
+    return uploadedUrl;
+  };
+
   const handleSubmit = async () => {
-    if (!professionName.trim()) {
-      showError(t('registerDetails.missingFields'), 'Please enter the profession or trade name you want to add.');
+    if (!professionName.trim() || professionName.trim().length < 3) {
+      showError(t('registerDetails.missingFields'), 'Please enter a valid profession or trade name (at least 3 characters).');
       return;
     }
     if (!hourlyRate || !experience || !skills.trim() || !bio.trim()) {
       showError(t('registerDetails.missingFields'), 'Please fill in your hourly rate, experience, skills, and trade description.');
       return;
+    }
+    const parsedRate = Number(hourlyRate);
+    if (Number.isNaN(parsedRate) || parsedRate < 100) {
+      showError(t('registerDetails.missingFields'), 'Hourly rate must be at least Rs. 100.');
+      return;
+    }
+    const parsedExp = Number(experience);
+    if (Number.isNaN(parsedExp) || parsedExp < 0) {
+      showError(t('registerDetails.missingFields'), 'Please enter a valid years of experience (0 or more).');
+      return;
+    }
+    if (bio.trim().length < 3) {
+      showError(t('registerDetails.missingFields'), 'Please provide a description of your trade (at least 3 characters).');
+      return;
+    }
+
+    for (let i = 0; i < certificates.length; i++) {
+      const cert = certificates[i];
+      const hasTitle = cert.title.trim().length > 0;
+      const hasImage = Boolean(cert.imageUri);
+      if (hasTitle || hasImage || cert.issuingOrg.trim().length > 0) {
+        if (cert.title.trim().length < 2) {
+          showError(
+            t('registerDetails.missingFields'),
+            `Please enter a title (at least 2 characters) for Certificate #${i + 1}, or remove it.`
+          );
+          return;
+        }
+        if (!hasImage) {
+          showError(
+            t('registerDetails.missingFields'),
+            `Please upload an image for Certificate #${i + 1}, or remove it.`
+          );
+          return;
+        }
+      }
     }
 
     try {
@@ -159,29 +221,29 @@ export default function RequestProfessionScreen() {
 
       if (params.image) {
         setUploadProgress(t('registerDetails.uploadingProfile'));
-        profileImageUrl = await uploadImageMutation.mutateAsync({
-          uri: params.image,
-          fieldName: 'profileImage',
-          endpoint: '/api/v1/workers/upload-profile-image',
-        });
+        profileImageUrl = await uploadImageOnce(
+          params.image,
+          'profileImage',
+          '/api/v1/workers/upload-profile-image'
+        );
       }
 
       if (params.cnicFront) {
         setUploadProgress(t('registerDetails.uploadingFront'));
-        cnicFrontUrl = await uploadImageMutation.mutateAsync({
-          uri: params.cnicFront,
-          fieldName: 'cnicFrontImage',
-          endpoint: '/api/v1/workers/upload-cnic-front',
-        });
+        cnicFrontUrl = await uploadImageOnce(
+          params.cnicFront,
+          'cnicFrontImage',
+          '/api/v1/workers/upload-cnic-front'
+        );
       }
 
       if (params.cnicBack) {
         setUploadProgress(t('registerDetails.uploadingBack'));
-        cnicBackUrl = await uploadImageMutation.mutateAsync({
-          uri: params.cnicBack,
-          fieldName: 'cnicBackImage',
-          endpoint: '/api/v1/workers/upload-cnic-back',
-        });
+        cnicBackUrl = await uploadImageOnce(
+          params.cnicBack,
+          'cnicBackImage',
+          '/api/v1/workers/upload-cnic-back'
+        );
       }
 
       const uploadedCertificates: any[] = [];
@@ -190,11 +252,11 @@ export default function RequestProfessionScreen() {
           const cert = certificates[i];
           if (cert.title.trim() && cert.imageUri) {
             setUploadProgress(`Uploading certificate ${i + 1}/${certificates.length}...`);
-            const certUrl = await uploadImageMutation.mutateAsync({
-              uri: cert.imageUri,
-              fieldName: 'certificateImage',
-              endpoint: '/api/v1/workers/upload-certificate',
-            });
+            const certUrl = await uploadImageOnce(
+              cert.imageUri,
+              'certificateImage',
+              '/api/v1/workers/upload-certificate'
+            );
             uploadedCertificates.push({
               title: cert.title.trim(),
               issuingOrg: cert.issuingOrg.trim(),
@@ -206,21 +268,21 @@ export default function RequestProfessionScreen() {
 
       setUploadProgress(t('registerDetails.finalizing'));
 
-      const payload = {
+      const payload: any = {
         fullName: params.fullName,
         email: params.email || undefined,
         phone: params.phone,
         password: params.password,
         address: params.address,
         city: params.city,
-        profileImage: profileImageUrl,
+        ...(profileImageUrl ? { profileImage: profileImageUrl } : {}),
         ...(params.latitude && params.longitude
           ? { latitude: Number(params.latitude), longitude: Number(params.longitude) }
           : {}),
         fcmToken: '',
         cnicNumber: params.cnicNumber || undefined,
-        cnicFrontImage: cnicFrontUrl,
-        cnicBackImage: cnicBackUrl,
+        ...(cnicFrontUrl ? { cnicFrontImage: cnicFrontUrl } : {}),
+        ...(cnicBackUrl ? { cnicBackImage: cnicBackUrl } : {}),
         category: professionName.trim(),
         skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
         hourlyRate: Number(hourlyRate),
@@ -251,7 +313,7 @@ export default function RequestProfessionScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowSuccessModal(true);
     } catch (error: any) {
-      Alert.alert(t('registerDetails.errorTitle'), error.message || 'Something went wrong during submission.');
+      showError(t('registerDetails.errorTitle'), error.message || 'Something went wrong during submission.');
     } finally {
       setIsUploading(false);
       setUploadProgress('');

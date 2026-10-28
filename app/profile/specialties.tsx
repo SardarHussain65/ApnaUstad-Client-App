@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Image,
   Modal,
   RefreshControl,
   ScrollView,
@@ -13,13 +13,17 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ArrowDown,
   ArrowUp,
   AlertTriangle,
+  Award,
   Briefcase,
+  Building,
+  Camera,
   ChevronDown,
   ChevronLeft,
   CheckCircle,
@@ -29,7 +33,6 @@ import {
   ShieldCheck,
   Trash2,
   Wallet,
-  Check,
   Search,
   Sparkles,
   X,
@@ -38,8 +41,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
-import { BeautifulModal } from '../../components/ui';
-import { alpha, BorderRadius, Shadows, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
+import { AlertModal, BeautifulModal, ConfirmModal } from '../../components/ui';
+import { useAlertModal, useConfirmModal, useToast } from '../../hooks';
+import { BASE_URL } from '../../constants/Config';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
@@ -52,6 +57,21 @@ type Category = {
   additionalCategoryGraceDays?: number;
 };
 
+type CertificateDraft = {
+  id: string;
+  title: string;
+  issuingOrg: string;
+  imageUri: string | null;
+};
+
+type SpecialtyCertificate = {
+  title: string;
+  issuingOrg?: string;
+  certificateUrl: string;
+  categoryName?: string;
+  verificationStatus?: string;
+};
+
 type Specialty = {
   _id: string;
   categoryId: Category;
@@ -61,6 +81,7 @@ type Specialty = {
   hourlyRate: number;
   experience: number;
   bio?: string;
+  certificates?: SpecialtyCertificate[];
   isActive: boolean;
   approvalStatus: 'pending' | 'approved' | 'rejected';
   subscriptionStatus: 'free' | 'pending_activation' | 'active' | 'payment_due' | 'expired';
@@ -122,20 +143,30 @@ export default function SpecialtiesScreen() {
   const [draftRate, setDraftRate] = useState('');
   const [draftExperience, setDraftExperience] = useState('');
   const [draftBio, setDraftBio] = useState('');
+  const [draftCertificates, setDraftCertificates] = useState<CertificateDraft[]>([]);
+  const [workerCertificates, setWorkerCertificates] = useState<SpecialtyCertificate[]>([]);
+  const [previewCert, setPreviewCert] = useState<SpecialtyCertificate | null>(null);
+  const uploadedCertUrlsRef = useRef<Record<string, string>>({});
   const theme = useTheme();
   const colors = useThemeColors();
   const shadows = useThemeShadows();
+  const toast = useToast();
+  const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
 
   const load = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
     try {
-      const [specialtyResponse, categoryResponse, walletResponse] = await Promise.all([
+      const [specialtyResponse, categoryResponse, walletResponse, workerProfileResponse] = await Promise.all([
         api.get('/workers/specialties'),
         api.get('/users/categories'),
         api.get('/wallet/my-wallet'),
+        user?._id ? api.get(`/workers/${user._id}`).catch(() => null) : Promise.resolve(null),
       ]);
       const specialtyData = specialtyResponse.data.data || {};
       const walletData: WalletSnapshot = walletResponse.data.data || {};
+      const workerData = workerProfileResponse?.data?.data || user || {};
+      setWorkerCertificates(Array.isArray(workerData?.certificates) ? workerData.certificates : []);
       setData({
         specialties: specialtyData.specialties || [],
         maxSpecialties: specialtyData.maxSpecialties || 5,
@@ -145,12 +176,12 @@ export default function SpecialtiesScreen() {
       setCategories(categoryResponse.data.data || []);
       setWalletAvailableBalance(Math.max(0, Number(walletData.availableBalance ?? walletData.balance ?? 0)));
     } catch (error) {
-      Alert.alert(t('specialties.loadError'), getErrorMessage(error));
+      toast.error(t('specialties.loadError'), getErrorMessage(error));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [t]);
+  }, [t, user]);
 
   useFocusEffect(useCallback(() => {
     load();
@@ -181,7 +212,13 @@ export default function SpecialtiesScreen() {
     try {
       await action();
       await load(true);
-      Alert.alert(t('specialties.done'), successMessage);
+      alertModal.showAlert(
+        t('specialties.done'),
+        successMessage,
+        undefined,
+        'success',
+        t('common.ok', { defaultValue: 'OK' })
+      );
       return true;
     } catch (error) {
       const actionError: any = error;
@@ -197,7 +234,13 @@ export default function SpecialtiesScreen() {
         showRechargePrompt(key.startsWith('activate-') ? t('specialties.activatePay').toLowerCase() : t('specialties.requestNew').toLowerCase());
         return false;
       }
-      Alert.alert(t('specialties.unableContinue'), getErrorMessage(actionError));
+      alertModal.showAlert(
+        t('specialties.unableContinue'),
+        getErrorMessage(actionError),
+        undefined,
+        'error',
+        t('common.ok', { defaultValue: 'OK' })
+      );
       return false;
     } finally {
       setWorkingKey('');
@@ -213,6 +256,111 @@ export default function SpecialtiesScreen() {
     setDraftRate('');
     setDraftExperience('');
     setDraftBio('');
+    setDraftCertificates([]);
+  };
+
+  const addCertificateSlot = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setDraftCertificates((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        title: '',
+        issuingOrg: '',
+        imageUri: null,
+      },
+    ]);
+  };
+
+  const removeCertificateSlot = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setDraftCertificates((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const updateCertificateField = (id: string, field: 'title' | 'issuingOrg', value: string) => {
+    setDraftCertificates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+    );
+  };
+
+  const pickCertificateImage = async (id: string) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.65,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const uri = result.assets[0].uri;
+      setDraftCertificates((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, imageUri: uri } : c))
+      );
+    }
+  };
+
+  const uploadCertificateOnce = async (uri: string): Promise<string> => {
+    if (/^https?:\/\//i.test(uri)) return uri;
+    if (uploadedCertUrlsRef.current[uri]) {
+      return uploadedCertUrlsRef.current[uri];
+    }
+    const formData = new FormData();
+    const filename = uri.split('/').pop() || 'certificate.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpg';
+    formData.append('certificateImage', { uri, name: filename, type } as any);
+
+    const response = await fetch(`${BASE_URL}/api/v1/workers/upload-certificate`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let serverMsg = '';
+      try {
+        const errJson = await response.json();
+        serverMsg = errJson?.message || errJson?.error || '';
+      } catch {
+        // ignore parse error
+      }
+      throw new Error(serverMsg || 'Failed to upload certificate image');
+    }
+
+    const resData = await response.json();
+    const imageUrl = resData?.data?.imageUrl;
+    if (imageUrl) {
+      uploadedCertUrlsRef.current[uri] = imageUrl;
+    }
+    return imageUrl;
+  };
+
+  const validateAndUploadDraftCertificates = async (): Promise<SpecialtyCertificate[] | null> => {
+    for (let i = 0; i < draftCertificates.length; i++) {
+      const cert = draftCertificates[i];
+      const hasTitle = cert.title.trim().length > 0;
+      const hasImage = Boolean(cert.imageUri);
+      if ((hasTitle || cert.issuingOrg.trim().length > 0) && !hasImage) {
+        toast.warning(
+          t('specialties.completeDetails', { defaultValue: 'Complete Details' }),
+          `Please upload an image for Certificate #${i + 1}, or remove it.`
+        );
+        return null;
+      }
+    }
+
+    const uploaded: SpecialtyCertificate[] = [];
+    for (let i = 0; i < draftCertificates.length; i++) {
+      const cert = draftCertificates[i];
+      if (cert.imageUri) {
+        const certificateUrl = await uploadCertificateOnce(cert.imageUri);
+        uploaded.push({
+          title: cert.title.trim() || `Certificate #${i + 1}`,
+          issuingOrg: cert.issuingOrg.trim(),
+          certificateUrl,
+        });
+      }
+    }
+    return uploaded;
   };
 
   const isWalletReadyForAdditionalCategory = () => additionalCategoryMonthlyFee <= 0 || walletAvailableBalance >= additionalCategoryMonthlyFee;
@@ -229,14 +377,28 @@ export default function SpecialtiesScreen() {
     setShowPicker(true);
   };
 
-  const requestCustomCategory = () => {
+  const requestCustomCategory = async () => {
     const hourlyRate = Number(draftRate);
     const experience = Number(draftExperience);
     if (!customCategoryName.trim() || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
-      Alert.alert(
+      toast.warning(
         t('specialties.completeDetails', { defaultValue: 'Complete Details' }),
         t('specialties.completeCustomDetailsDesc', { defaultValue: 'Please enter category name, hourly rate (min 100), experience, and description.' })
       );
+      return;
+    }
+
+    setWorkingKey('request-custom-category');
+    let uploadedCertificates: SpecialtyCertificate[] | null = null;
+    try {
+      uploadedCertificates = await validateAndUploadDraftCertificates();
+      if (uploadedCertificates === null) {
+        setWorkingKey('');
+        return;
+      }
+    } catch (uploadErr: any) {
+      setWorkingKey('');
+      toast.error(t('specialties.unableContinue'), uploadErr?.message || 'Certificate upload failed.');
       return;
     }
 
@@ -251,6 +413,7 @@ export default function SpecialtiesScreen() {
         requesterName: user?.fullName || 'Worker',
         requesterPhone: user?.phone || '',
         workerId: user?._id || undefined,
+        certificates: uploadedCertificates,
       }),
       t('specialties.customCategorySuccessDesc', {
         defaultValue: 'Your request for a new category has been sent to admin for review and addition.'
@@ -263,9 +426,9 @@ export default function SpecialtiesScreen() {
     });
   };
 
-  const requestCategory = () => {
+  const requestCategory = async () => {
     if (isCustomMode) {
-      requestCustomCategory();
+      await requestCustomCategory();
       return;
     }
 
@@ -273,11 +436,25 @@ export default function SpecialtiesScreen() {
     const hourlyRate = Number(draftRate);
     const experience = Number(draftExperience);
     if (!draftCategoryId || !draftBio.trim() || !Number.isFinite(hourlyRate) || hourlyRate < 100 || !Number.isFinite(experience) || experience < 0) {
-      Alert.alert(t('specialties.completeDetails'), t('specialties.completeDetailsDesc'));
+      toast.warning(t('specialties.completeDetails'), t('specialties.completeDetailsDesc'));
       return;
     }
     if (!isWalletReadyForAdditionalCategory()) {
       showRechargePrompt();
+      return;
+    }
+
+    setWorkingKey('request-category');
+    let uploadedCertificates: SpecialtyCertificate[] | null = null;
+    try {
+      uploadedCertificates = await validateAndUploadDraftCertificates();
+      if (uploadedCertificates === null) {
+        setWorkingKey('');
+        return;
+      }
+    } catch (uploadErr: any) {
+      setWorkingKey('');
+      toast.error(t('specialties.unableContinue'), uploadErr?.message || 'Certificate upload failed.');
       return;
     }
 
@@ -289,6 +466,7 @@ export default function SpecialtiesScreen() {
         hourlyRate,
         experience,
         bio: draftBio.trim(),
+        certificates: uploadedCertificates,
       }),
       t('specialties.requestSentDesc')
     ).then((success) => {
@@ -305,20 +483,21 @@ export default function SpecialtiesScreen() {
       showRechargePrompt(t('specialties.activatePay').toLowerCase());
       return;
     }
-    Alert.alert(
+    confirmModal.showConfirm(
       t('specialties.activateConfirmTitle'),
       t('specialties.activateConfirmDesc', { fee: formatPKR(fee) }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('specialties.activatePayBtn', { defaultValue: 'Activate & Pay' }),
-          onPress: () => runAction(
-            `activate-${specialty._id}`,
-            () => api.patch(`/workers/specialties/${specialty.categoryId._id}/activate`),
-            t('specialties.activatedDesc', { defaultValue: 'Your specialty is active and can receive matching jobs.' })
-          ),
-        },
-      ]
+      () => {
+        confirmModal.closeConfirm();
+        void runAction(
+          `activate-${specialty._id}`,
+          () => api.patch(`/workers/specialties/${specialty.categoryId._id}/activate`),
+          t('specialties.activatedDesc', { defaultValue: 'Your specialty is active and can receive matching jobs.' })
+        );
+      },
+      undefined,
+      t('specialties.activatePayBtn', { defaultValue: 'Activate & Pay' }),
+      t('common.cancel'),
+      theme.colors.brand.primary
     );
   };
 
@@ -334,39 +513,45 @@ export default function SpecialtiesScreen() {
     );
   };
 
-  const remove = (specialty: Specialty) => Alert.alert(
-    t('specialties.removeConfirmTitle'),
-    t('specialties.removeConfirmDesc', { category: specialty.categoryId.name }),
-    [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.remove', { defaultValue: 'Remove' }),
-        style: 'destructive',
-        onPress: () => runAction(
+  const remove = (specialty: Specialty) => {
+    confirmModal.showConfirm(
+      t('specialties.removeConfirmTitle'),
+      t('specialties.removeConfirmDesc', { category: specialty.categoryId.name }),
+      () => {
+        confirmModal.closeConfirm();
+        void runAction(
           `remove-${specialty._id}`,
           () => api.delete(`/workers/specialties/${specialty.categoryId._id}`),
           t('specialties.removedDesc')
-        ),
+        );
       },
-]
-  );
+      undefined,
+      t('common.remove', { defaultValue: 'Remove' }),
+      t('common.cancel'),
+      colors.error
+    );
+  };
 
   return (
     <BackgroundWrapper>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.cyan} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-      <TouchableOpacity style={[styles.iconButton, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
-        <ChevronLeft size={22} color={theme.colors.text.primary} />
-      </TouchableOpacity>
-      <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('specialties.title')}</Text>
-      <View style={[styles.headerCounter, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.25) }]}><Text style={[styles.headerCounterText, { color: theme.colors.brand.primary }]}>{specialties.length}/{data.maxSpecialties}</Text></View>
-    </View>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <View style={[styles.header, { paddingHorizontal: Spacing.l, paddingTop: 6 }]}>
+          <TouchableOpacity style={[styles.iconButton, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
+            <ChevronLeft size={22} color={theme.colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('specialties.title')}</Text>
+          <View style={[styles.headerCounter, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.25) }]}>
+            <Text style={[styles.headerCounterText, { color: theme.colors.brand.primary }]}>{specialties.length}/{data.maxSpecialties}</Text>
+          </View>
+        </View>
 
-    <Animated.View entering={FadeInDown.delay(80)} style={[styles.hero, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.primary, 0.24) }]}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingTop: 4, paddingBottom: Math.max(insets.bottom + 40, 60) }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.cyan} />}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Animated.View entering={FadeInDown.delay(80)} style={[styles.hero, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.primary, 0.24) }]}>
       <LinearGradient colors={[alpha(theme.colors.brand.primary, 0.18), alpha(theme.colors.brand.secondary, 0.1)]} style={StyleSheet.absoluteFillObject} />
       <View style={[styles.heroIcon, { backgroundColor: alpha(theme.colors.brand.primary, 0.12) }]}><Layers3 size={23} color={theme.colors.brand.primary} /></View>
       <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>{t('specialties.heroTitle')}</Text>
@@ -465,22 +650,9 @@ export default function SpecialtiesScreen() {
             ) : (
               /* Custom Category Mode */
               <View style={styles.customCategorySection}>
-                <View style={styles.customModeHeader}>
-                  <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 0, marginBottom: 0 }]}>
-                    {t('specialties.customCategoryNameLabel', 'REQUESTED CATEGORY / PROFESSION')}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsCustomMode(false);
-                      setCustomCategoryName('');
-                    }}
-                    hitSlop={8}
-                  >
-                    <Text style={[styles.switchBackText, { color: theme.colors.brand.primary }]}>
-                      {t('specialties.chooseFromList', '← Choose from available list')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 4 }]}>
+                  {t('specialties.customCategoryNameLabel', 'REQUESTED CATEGORY / PROFESSION')}
+                </Text>
                 <TextInput
                   style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
                   placeholder={t('specialties.customCategoryNamePlaceholder', 'e.g., Solar Technician, Welder, etc.')}
@@ -488,76 +660,168 @@ export default function SpecialtiesScreen() {
                   value={customCategoryName}
                   onChangeText={setCustomCategoryName}
                 />
+                <TouchableOpacity
+                  style={styles.switchModeBtn}
+                  onPress={() => {
+                    setIsCustomMode(false);
+                    setCustomCategoryName('');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.switchBackText, { color: theme.colors.brand.primary }]}>
+                    {t('specialties.chooseFromList', '← Choose from available list')}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
 
-            {/* Shared Form Fields: Rate, Experience, Description (Shown when a category is selected OR in custom mode) */}
-            {(draftCategoryId || isCustomMode) && (
-              <>
-                <View style={styles.formRow}>
-                  <View style={styles.formHalf}>
-                    <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.rateLabel')}</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                      placeholder={t('specialties.ratePlaceholder')}
-                      placeholderTextColor={theme.colors.input.placeholder}
-                      keyboardType="numeric"
-                      value={draftRate}
-                      onChangeText={setDraftRate}
-                    />
-                  </View>
-                  <View style={styles.formHalf}>
-                    <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.experienceLabel')}</Text>
-                    <TextInput
-                      style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                      placeholder={t('specialties.experiencePlaceholder')}
-                      placeholderTextColor={theme.colors.input.placeholder}
-                      keyboardType="numeric"
-                      value={draftExperience}
-                      onChangeText={setDraftExperience}
-                    />
-                  </View>
-                </View>
-
-                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.descriptionLabel')}</Text>
+            {/* Shared Form Fields: Rate, Experience, Description, Certificates */}
+            <View style={styles.formRow}>
+              <View style={styles.formHalf}>
+                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.rateLabel')}</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                  placeholder={t('specialties.descriptionPlaceholder')}
+                  style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                  placeholder={t('specialties.ratePlaceholder')}
                   placeholderTextColor={theme.colors.input.placeholder}
-                  value={draftBio}
-                  onChangeText={setDraftBio}
-                  multiline
+                  keyboardType="numeric"
+                  value={draftRate}
+                  onChangeText={setDraftRate}
                 />
+              </View>
+              <View style={styles.formHalf}>
+                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.experienceLabel')}</Text>
+                <TextInput
+                  style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                  placeholder={t('specialties.experiencePlaceholder')}
+                  placeholderTextColor={theme.colors.input.placeholder}
+                  keyboardType="numeric"
+                  value={draftExperience}
+                  onChangeText={setDraftExperience}
+                />
+              </View>
+            </View>
 
-                {!isCustomMode && (
-                  <View style={[styles.feeBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                    <Wallet size={14} color={colors.worker} />
-                    <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
-                      {draftCategory
-                        ? t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })
-                        : t('specialties.selectCategoryInfo', { fee: formatPKR(additionalCategoryMonthlyFee) })}
-                    </Text>
-                  </View>
-                )}
+            <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.descriptionLabel')}</Text>
+            <TextInput
+              style={[styles.input, styles.textArea, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+              placeholder={t('specialties.descriptionPlaceholder')}
+              placeholderTextColor={theme.colors.input.placeholder}
+              value={draftBio}
+              onChangeText={setDraftBio}
+              multiline
+            />
 
-                <TouchableOpacity
-                  disabled={!!workingKey}
-                  style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]}
-                  onPress={requestCategory}
+            {/* Optional Certificates / Diplomas Section */}
+            <View style={[styles.certSection, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
+              <View style={styles.certSectionHeader}>
+                <Award size={15} color={theme.colors.brand.primary} />
+                <Text style={[styles.certSectionTitle, { color: theme.colors.text.primary }]}>
+                  {t('registerDetails.certificatesSection', 'CERTIFICATES / DIPLOMAS (OPTIONAL)')}
+                </Text>
+              </View>
+              <Text style={[styles.certSectionDesc, { color: theme.colors.text.muted }]}>
+                {t('specialties.certHint', 'Attach relevant trade certificates or diplomas so admin can review them with this specialty request.')}
+              </Text>
+
+              {draftCertificates.map((cert, idx) => (
+                <View
+                  key={cert.id}
+                  style={[styles.certItemCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}
                 >
-                  {workingKey ? (
-                    <ActivityIndicator size="small" color={theme.colors.button.primaryText} />
-                  ) : (
-                    <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
-                  )}
-                  <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>
-                    {isCustomMode
-                      ? t('specialties.sendReviewBtn', 'Send for admin review')
-                      : t('specialties.sendReviewBtn')}
+                  <View style={styles.certItemHeader}>
+                    <Text style={[styles.certItemTitle, { color: theme.colors.text.primary }]}>
+                      Certificate #{idx + 1}
+                    </Text>
+                    <TouchableOpacity onPress={() => removeCertificateSlot(cert.id)} hitSlop={8} style={styles.removeCertRow}>
+                      <Trash2 size={14} color={colors.error} />
+                      <Text style={[styles.removeCertLabel, { color: colors.error }]}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 6 }]}>
+                    {t('registerDetails.certificateTitle', 'CERTIFICATE / DEGREE TITLE')}
                   </Text>
-                </TouchableOpacity>
-              </>
+                  <TextInput
+                    style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                    placeholder={t('registerDetails.certificateTitlePlaceholder', 'e.g., DAE Electrical, HVAC Diploma')}
+                    placeholderTextColor={theme.colors.input.placeholder}
+                    value={cert.title}
+                    onChangeText={(val) => updateCertificateField(cert.id, 'title', val)}
+                  />
+
+                  <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 10 }]}>
+                    {t('registerDetails.issuingOrg', 'INSTITUTE / ISSUING BOARD')}
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                    placeholder={t('registerDetails.issuingOrgPlaceholder', 'e.g., TEVTA, Technical Board')}
+                    placeholderTextColor={theme.colors.input.placeholder}
+                    value={cert.issuingOrg}
+                    onChangeText={(val) => updateCertificateField(cert.id, 'issuingOrg', val)}
+                  />
+
+                  <TouchableOpacity
+                    style={[
+                      styles.certImagePicker,
+                      {
+                        borderColor: cert.imageUri ? theme.colors.brand.primary : theme.colors.border.subtle,
+                        backgroundColor: theme.colors.input.background,
+                      },
+                    ]}
+                    onPress={() => pickCertificateImage(cert.id)}
+                    activeOpacity={0.8}
+                  >
+                    {cert.imageUri ? (
+                      <Image source={{ uri: cert.imageUri }} style={styles.certImagePreview} />
+                    ) : (
+                      <View style={styles.certImagePlaceholder}>
+                        <Camera size={18} color={theme.colors.brand.primary} />
+                        <Text style={[styles.certImagePlaceholderText, { color: theme.colors.brand.primary }]}>
+                          {t('registerDetails.uploadCertImage', 'TAP TO UPLOAD CERTIFICATE')}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={[styles.addCertBtn, { borderColor: alpha(theme.colors.brand.primary, 0.45), backgroundColor: alpha(theme.colors.brand.primary, 0.06) }]}
+                onPress={addCertificateSlot}
+                activeOpacity={0.75}
+              >
+                <Plus size={15} color={theme.colors.brand.primary} />
+                <Text style={[styles.addCertBtnText, { color: theme.colors.brand.primary }]}>
+                  {t('registerDetails.addCertificate', '+ ADD CERTIFICATE / DIPLOMA')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {!isCustomMode && (
+              <View style={[styles.feeBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <Wallet size={14} color={colors.worker} />
+                <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
+                  {t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })}
+                </Text>
+              </View>
             )}
+
+            <TouchableOpacity
+              disabled={!!workingKey}
+              style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]}
+              onPress={requestCategory}
+            >
+              {workingKey ? (
+                <ActivityIndicator size="small" color={theme.colors.button.primaryText} />
+              ) : (
+                <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
+              )}
+              <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>
+                {isCustomMode
+                  ? t('specialties.sendReviewBtn', 'Send for admin review')
+                  : t('specialties.sendReviewBtn')}
+              </Text>
+            </TouchableOpacity>
           </Animated.View>
         )}
 
@@ -569,6 +833,26 @@ export default function SpecialtiesScreen() {
             && isPaid
             && ['pending_activation', 'expired'].includes(specialty.subscriptionStatus);
           const showRenew = isPaid && ['active', 'payment_due'].includes(specialty.subscriptionStatus);
+          const catNameLower = String(specialty.categoryId?.name || '').trim().toLowerCase();
+          const matchedWorkerCerts = workerCertificates.filter((wc) => {
+            const wcCat = String(wc.categoryName || '').trim().toLowerCase();
+            if (wcCat && catNameLower) return wcCat === catNameLower;
+            if (!wcCat && specialty.priority === 1) return true;
+            return false;
+          });
+          const mergedCertMap = new Map<string, SpecialtyCertificate>();
+          for (const certItem of [...(specialty.certificates || []), ...matchedWorkerCerts]) {
+            if (certItem?.certificateUrl) {
+              const prev = mergedCertMap.get(certItem.certificateUrl);
+              mergedCertMap.set(certItem.certificateUrl, {
+                title: certItem.title || prev?.title || 'Certificate',
+                issuingOrg: certItem.issuingOrg || prev?.issuingOrg || '',
+                certificateUrl: certItem.certificateUrl,
+                verificationStatus: certItem.verificationStatus || prev?.verificationStatus,
+              });
+            }
+          }
+          const specialtyCertificates = Array.from(mergedCertMap.values());
           return (
             <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(color, 0.28) }]}>
               <View style={styles.cardTop}>
@@ -632,6 +916,48 @@ export default function SpecialtiesScreen() {
                   </View>
                 )}
                 {!!specialty.bio && <Text style={[styles.bioText, { color: theme.colors.text.muted }]} numberOfLines={2}>{specialty.bio}</Text>}
+                {specialtyCertificates.length > 0 && (
+                  <View style={[styles.cardCertContainer, { borderTopColor: theme.colors.border.subtle }]}>
+                    <View style={styles.cardCertHeader}>
+                      <Award size={13} color={theme.colors.brand.primary} />
+                      <Text style={[styles.cardCertHeaderLabel, { color: theme.colors.text.muted }]}>
+                        {t('specialties.certificatesAttached', 'CERTIFICATES & DEGREES')} ({specialtyCertificates.length})
+                      </Text>
+                    </View>
+                    <View style={styles.cardCertList}>
+                      {specialtyCertificates.map((cert, certIdx) => (
+                        <TouchableOpacity
+                          key={`${cert.certificateUrl}-${certIdx}`}
+                          style={[
+                            styles.cardCertItem,
+                            {
+                              backgroundColor: theme.colors.surface.card,
+                              borderColor: alpha(theme.colors.brand.primary, 0.22),
+                            },
+                          ]}
+                          activeOpacity={0.8}
+                          onPress={() => setPreviewCert(cert)}
+                        >
+                          <Image
+                            source={{ uri: cert.certificateUrl }}
+                            style={[styles.cardCertThumb, { backgroundColor: theme.colors.input.background }]}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.cardCertInfo}>
+                            <Text style={[styles.cardCertTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                              {cert.title}
+                            </Text>
+                            {!!cert.issuingOrg && (
+                              <Text style={[styles.cardCertSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                                {cert.issuingOrg}
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
               </View>
 
               <View style={styles.cardActions}>
@@ -676,7 +1002,8 @@ export default function SpecialtiesScreen() {
         })}
       </>
     )}
-  </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
 
   <BeautifulModal
     visible={rechargePromptVisible}
@@ -834,13 +1161,48 @@ export default function SpecialtiesScreen() {
       </View>
     </View>
   </Modal>
+
+  {/* Certificate Preview Modal */}
+  <Modal
+    visible={!!previewCert}
+    transparent
+    animationType="fade"
+    onRequestClose={() => setPreviewCert(null)}
+  >
+    <View style={styles.certModalOverlay}>
+      <View style={[styles.certModalCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+        <View style={styles.certModalHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.certModalTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+              {previewCert?.title || 'Certificate'}
+            </Text>
+            {!!previewCert?.issuingOrg && (
+              <Text style={[styles.certModalSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                {previewCert.issuingOrg}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity onPress={() => setPreviewCert(null)} hitSlop={10} style={styles.pickerCloseBtn}>
+            <X size={20} color={theme.colors.text.muted} />
+          </TouchableOpacity>
+        </View>
+        {previewCert?.certificateUrl ? (
+          <Image
+            source={{ uri: previewCert.certificateUrl }}
+            style={[styles.certModalImage, { backgroundColor: theme.colors.input.background }]}
+            resizeMode="contain"
+          />
+        ) : null}
+      </View>
+    </View>
+  </Modal>
   </BackgroundWrapper>
 );
 }
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.l, paddingBottom: 60 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
   iconButton: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   headerTitle: { fontSize: 18, fontWeight: '900' },
   headerCounter: { minWidth: 40, height: 30, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
@@ -1006,6 +1368,170 @@ const styles = StyleSheet.create({
   formHalf: { flex: 1 },
   input: { minHeight: 46, borderRadius: 14, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 11, fontSize: 13, fontWeight: '700' },
   textArea: { minHeight: 84, textAlignVertical: 'top' },
+  certSection: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  certSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  certSectionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  certSectionDesc: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  certItemCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 11,
+    marginBottom: 10,
+  },
+  certItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  certItemTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  removeCertRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  removeCertLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  certImagePicker: {
+    height: 78,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+  certImagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  certImagePlaceholder: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  certImagePlaceholderText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  addCertBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    gap: 6,
+  },
+  addCertBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  cardCertContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  cardCertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 8,
+  },
+  cardCertHeaderLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  cardCertList: {
+    gap: 7,
+  },
+  cardCertItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 11,
+    borderWidth: 1,
+    padding: 7,
+    gap: 10,
+  },
+  cardCertThumb: {
+    width: 46,
+    height: 34,
+    borderRadius: 7,
+  },
+  cardCertInfo: {
+    flex: 1,
+  },
+  cardCertTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  cardCertSub: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  certModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  certModalCard: {
+    width: '100%',
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+  },
+  certModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 12,
+  },
+  certModalTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  certModalSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  certModalImage: {
+    width: '100%',
+    height: 280,
+    borderRadius: 12,
+  },
   feeBox: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, padding: 12, marginTop: 13 },
   feeText: { flex: 1, fontSize: 11, fontWeight: '600', lineHeight: 16 },
   submitButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 14, paddingVertical: 12, marginTop: 13 },
