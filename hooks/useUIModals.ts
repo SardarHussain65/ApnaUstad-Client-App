@@ -42,8 +42,16 @@ export function useConfirmModal() {
     onCancel: () => {},
     confirmText: 'Confirm',
     cancelText: 'Cancel',
+    confirmColor: undefined as string | undefined,
     isLoading: false,
   });
+
+  const closeConfirm = useCallback(() => {
+    setConfirmState(prev => ({
+      ...prev,
+      visible: false,
+    }));
+  }, []);
 
   const showConfirm = useCallback(
     (
@@ -52,33 +60,31 @@ export function useConfirmModal() {
       onConfirm: () => void,
       onCancel?: () => void,
       confirmText?: string,
-      cancelText?: string
+      cancelText?: string,
+      confirmColor?: string
     ) => {
       setConfirmState({
         visible: true,
         title,
         message,
         onConfirm,
-        onCancel: onCancel || (() => {}),
+        onCancel: () => {
+          closeConfirm();
+          onCancel?.();
+        },
         confirmText: confirmText || 'Confirm',
         cancelText: cancelText || 'Cancel',
+        confirmColor,
         isLoading: false,
       });
     },
-    []
+    [closeConfirm]
   );
 
   const setLoading = useCallback((isLoading: boolean) => {
     setConfirmState(prev => ({
       ...prev,
       isLoading,
-    }));
-  }, []);
-
-  const closeConfirm = useCallback(() => {
-    setConfirmState(prev => ({
-      ...prev,
-      visible: false,
     }));
   }, []);
 
@@ -100,6 +106,13 @@ export function useAlertModal() {
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
   });
 
+  const closeAlert = useCallback(() => {
+    setAlertState(prev => ({
+      ...prev,
+      visible: false,
+    }));
+  }, []);
+
   const showAlert = useCallback(
     (
       title: string,
@@ -112,20 +125,16 @@ export function useAlertModal() {
         visible: true,
         title,
         message,
-        onDismiss: onDismiss || (() => {}),
+        onDismiss: () => {
+          closeAlert();
+          onDismiss?.();
+        },
         buttonText: buttonText || 'OK',
         type: type || 'info',
       });
     },
-    []
+    [closeAlert]
   );
-
-  const closeAlert = useCallback(() => {
-    setAlertState(prev => ({
-      ...prev,
-      visible: false,
-    }));
-  }, []);
 
   return {
     ...alertState,

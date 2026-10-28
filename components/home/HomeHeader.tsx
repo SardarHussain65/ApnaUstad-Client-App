@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     ...Shadows.glow,
   },
   badgeText: {
-    color: '#000',
+    color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '900',
   },

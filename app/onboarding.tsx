@@ -75,9 +75,8 @@ export default function OnboardingScreen() {
     scrollX.value = event.contentOffset.x;
   });
 
-  const completeOnboarding = async () => {
-    await AsyncStorage.setItem('onboarding_completed', 'true');
-    router.replace('/role-selection');
+  const completeOnboarding = () => {
+    router.replace('/theme-language');
   };
 
   const handleNext = async () => {
@@ -103,7 +102,7 @@ export default function OnboardingScreen() {
             <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
             <View>
               <Text style={[styles.brandName, { color: theme.colors.text.primary }]}>APNAUSTAD</Text>
-              <Text style={[styles.brandTagline, { color: colors.cyan }]}>SERVICES, MADE SIMPLE</Text>
+              <Text style={[styles.brandTagline, { color: colors.cyan }]}>{t('onboarding.tagline', 'HOME SERVICES MADE EASY')}</Text>
             </View>
           </View>
           {currentIndex < DATA.length - 1 && (

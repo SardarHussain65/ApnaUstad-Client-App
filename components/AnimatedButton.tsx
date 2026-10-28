@@ -52,7 +52,11 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
       ? theme.colors.status.success
       : theme.colors.brand.primary;
   const isAlt = variant === 'outline' || variant === 'ghost';
-  const textColor = isAlt ? theme.colors.text.primary : theme.colors.button.primaryText;
+  const textColor = isAlt
+    ? theme.colors.text.primary
+    : variant === 'orange'
+      ? theme.colors.button.workerText
+      : theme.colors.button.primaryText;
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

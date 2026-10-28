@@ -66,18 +66,24 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const accentColor = meta?.statusInfo?.accentColor || colors.worker;
   const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
-  const clientName = meta?.counterParty?.fullName || customer?.fullName || t('common.client', 'Client');
-  const clientRole = meta?.counterParty?.roleLabel || t('common.client', 'Client');
+  const clientName = meta?.counterParty?.fullName || customer?.fullName || t('common.client', 'Customer');
+  const clientRole = (!meta?.counterParty?.roleLabel || meta?.counterParty?.roleLabel === 'Client' || meta?.counterParty?.roleLabel === 'Customer')
+    ? t('common.client', 'Customer')
+    : meta.counterParty.roleLabel;
   const clientAvatar = meta?.primaryImageUrl || meta?.counterParty?.profileImage || customer?.profileImage || '';
   const completedJobs = Number(meta?.counterParty?.completedJobs || 0);
-  const title = meta?.title || job?.category || t('home.worker.pendingJob', 'Pending job');
-  const description = meta?.description || job?.description || bid.message || t('home.worker.waitingClientReview', 'Your proposal is waiting for client review.');
-  const missionKindLabel = meta?.missionKindLabel || (isInstant ? t('home.worker.instant', 'Instant') : t('home.worker.scheduled', 'Scheduled'));
-  const dateLabel = meta?.schedule?.dateLabel || fallbackDate(job?.scheduledDate);
-  const timeLabel = meta?.schedule?.timeLabel || job?.scheduledTime || 'ASAP';
-  const locationLabel = meta?.location?.address || job?.address || t('incomingJobModal.serviceLocation', 'Service location');
+  const title = meta?.title || job?.category || t('home.worker.pendingJob', 'Open Job');
+  const description = meta?.description || job?.description || bid.message || t('home.worker.waitingClientReview', 'Waiting for the customer to check your rate.');
+  const missionKindLabel = isInstant ? t('home.worker.instant', 'URGENT') : t('home.worker.scheduled', 'LATER');
+  const rawDateLabel = meta?.schedule?.dateLabel || fallbackDate(job?.scheduledDate);
+  const dateLabel = rawDateLabel === 'Today' ? t('common.today', 'Today') : rawDateLabel;
+  const rawTimeLabel = meta?.schedule?.timeLabel || job?.scheduledTime || 'ASAP';
+  const timeLabel = rawTimeLabel === 'ASAP' ? t('common.asap', 'Right Away') : rawTimeLabel;
+  const locationLabel = meta?.location?.address || job?.address || t('incomingJobModal.serviceLocation', 'Job Address');
   const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
-  const statusLabel = meta?.statusInfo?.label || t('pendingBidDetails.awaitingClient', 'Awaiting client');
+  const statusLabel = bid.status === 'pending' || !meta?.statusInfo?.label
+    ? t('pendingBidDetails.awaitingClient', 'Waiting for customer')
+    : meta.statusInfo.label;
 
   const gradientColors: [string, string, string] = [
     alpha(accentColor, 0.2),
@@ -173,13 +179,13 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
           <View style={[styles.amountBox, { borderColor: alpha(colors.success, 0.2), backgroundColor: alpha(colors.success, 0.06) }]}>
             <Banknote size={14} color={colors.success} strokeWidth={2.4} />
             <View>
-              <Text style={[styles.amountLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>Your quote</Text>
+              <Text style={[styles.amountLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('pendingBidDetails.yourQuote', 'Your rate')}</Text>
               <Text style={[styles.amountValue, { color: colors.success }]}>{amountText}</Text>
             </View>
           </View>
           <View style={[styles.sentState, { borderColor: alpha(colors.cyan, 0.15), backgroundColor: alpha(colors.cyan, 0.05) }]}>
             <Radar size={14} color={colors.cyan} strokeWidth={2.4} />
-            <Text style={[styles.sentText, { color: colors.cyan }]}>Interest sent</Text>
+            <Text style={[styles.sentText, { color: colors.cyan }]}>{t('pendingBidDetails.interestSent', 'Offer sent')}</Text>
           </View>
         </View>
       </TouchableOpacity>

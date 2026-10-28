@@ -74,13 +74,13 @@ const typography = useThemeTypography();
   const personName =
     meta?.counterParty?.fullName ||
     booking.worker?.fullName ||
-    'Assigned Ustad';
+    t('common.ustad', 'Ustad');
   const getLocalizedRole = (role: string) => {
-    if (role === 'Ustad') return t('common.ustad', 'Ustad');
-    if (role === 'Client') return t('common.client', 'Client');
+    if (role === 'Ustad' || role === 'Accepted Ustad') return t('common.ustad', 'Ustad');
+    if (role === 'Client' || role === 'Customer') return t('common.client', 'Customer');
     return role;
   };
-  const personRole = getLocalizedRole(meta?.counterParty?.roleLabel || (booking.worker ? 'Ustad' : 'Client'));
+  const personRole = getLocalizedRole(meta?.counterParty?.roleLabel || (booking.worker ? 'Ustad' : 'Customer'));
   const avatarUrl =
     meta?.primaryImageUrl ||
     meta?.counterParty?.profileImage ||
@@ -89,15 +89,20 @@ const typography = useThemeTypography();
 
   const title = meta?.title || booking.category;
   const description = meta?.description || booking.description;
-  const dateLabel = meta?.schedule?.dateLabel || fallbackDate(booking.scheduledDate);
-  const timeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
-  const locationLabel = meta?.location?.address || booking.address || t('bookings.openDetailsToViewLocation', 'Service location');
-  const missionKindLabel = meta?.missionKindLabel || (isInstant ? t('transactionDetails.instantVisit', 'Instant visit') : t('transactionDetails.scheduledVisit', 'Scheduled visit'));
+  const rawDateLabel = meta?.schedule?.dateLabel || fallbackDate(booking.scheduledDate);
+  const dateLabel = rawDateLabel === 'Today' ? t('common.today', 'Today') : rawDateLabel;
+  const rawTimeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
+  const timeLabel = rawTimeLabel === 'ASAP' ? t('common.asap', 'Right Away') : rawTimeLabel;
+  const locationLabel = meta?.location?.address || booking.address || t('bookings.openDetailsToViewLocation', 'Tap to see full address');
+  const missionKindLabel = isInstant
+    ? t('transactionDetails.instantVisit', 'Urgent visit')
+    : t('transactionDetails.scheduledVisit', 'Scheduled visit');
   
   const getLocalizedAmountLabel = (label: string) => {
-    if (label === 'Total') return t('bookings.totalLabel', 'Total');
-    if (label === 'Earning') return t('bookings.earningLabel', 'Earning');
+    if (label === 'Total') return t('bookings.totalLabel', 'Total Price');
+    if (label === 'Earning') return t('bookings.earningLabel', 'You Earn');
     if (label === 'Budget') return t('bookings.budgetLabel', 'Budget');
+    if (label === 'Accepted Bid' || label === 'Agreed Rate') return t('bookings.acceptedBidLabel', 'Agreed Rate');
     return label;
   };
   const amountLabel = getLocalizedAmountLabel(meta?.financial?.label || 'Total');
@@ -107,10 +112,10 @@ const typography = useThemeTypography();
   
   const getLocalizedActionLabel = (label: string) => {
     if (label === 'View details' || label === 'View Details') return t('bookings.actionViewDetails', 'View Details');
-    if (label === 'View Receipt') return t('bookings.actionViewReceipt', 'View Receipt');
-    if (label === 'Track Live Job') return t('bookings.actionTrackLiveJob', 'Track Live Job');
-    if (label === 'Track Job') return t('bookings.actionTrackJob', 'Track Job');
-return label;
+    if (label === 'View Receipt' || label === 'View receipt') return t('bookings.actionViewReceipt', 'View Details');
+    if (label === 'Track Live Job' || label === 'Open live job' || label === 'Track live') return t('bookings.actionTrackLiveJob', 'Track Live');
+    if (label === 'Track Job' || label === 'Track booking' || label === 'Track request' || label === 'Open job') return t('bookings.actionTrackJob', 'Open Job');
+    return label;
   };
   const actionLabel = getLocalizedActionLabel(meta?.actionLabel || meta?.statusInfo?.actionLabel || 'View details');
 
@@ -173,7 +178,7 @@ return label;
         >
           <StatusIcon size={12} color={statusColor} strokeWidth={2.5} />
           <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-            {meta?.statusInfo?.label || t(`bookingStatus.${booking.status}.label`, baseStatus.label)}
+            {t(`bookingStatus.${booking.status}.label`, meta?.statusInfo?.label || baseStatus.label)}
           </Text>
         </View>
       </View>

@@ -304,20 +304,21 @@ export default function BookingsTab() {
                 ? Number(isWorker ? booking.workerEarning : booking.totalAmount || 0)
                 : Number(job.amount || 0)));
               const getLocalizedAmountLabel = (label: string) => {
-                if (label === 'Total') return t('bookings.totalLabel', 'Total');
-                if (label === 'Earning') return t('bookings.earningLabel', 'Earning');
-                if (label === 'Budget') return t('bookings.budgetLabel', 'Budget');
+                if (label === 'Total') return t('bookings.totalLabel', 'Total Price');
+                if (label === 'Earning') return t('bookings.earningLabel', 'You Earn');
+                if (label === 'Budget' || label === 'Client budget' || label === 'Customer budget') return t('bookings.budgetLabel', 'Budget');
+                if (label === 'Accepted Bid' || label === 'Agreed Rate') return t('bookings.acceptedBidLabel', 'Agreed Rate');
                 return label;
               };
               const amountLabel = getLocalizedAmountLabel(meta?.financial?.label || (isBooking ? (isWorker ? 'Earning' : 'Total') : 'Budget'));
               
               const getLocalizedActionLabel = (label: string) => {
                 if (label === 'View details' || label === 'View Details') return t('bookings.actionViewDetails', 'View Details');
-                if (label === 'View Receipt') return t('bookings.actionViewReceipt', 'View Receipt');
-                if (label === 'Track Live Job') return t('bookings.actionTrackLiveJob', 'Track Live Job');
-                if (label === 'Track Job') return t('bookings.actionTrackJob', 'Track Job');
-                if (label === 'Review Proposals') return t('bookings.actionReviewProposals', 'Review Proposals');
-                if (label === 'Resume Search') return t('bookings.actionResumeSearch', 'Resume Search');
+                if (label === 'View Receipt' || label === 'View receipt') return t('bookings.actionViewReceipt', 'View Details');
+                if (label === 'Track Live Job' || label === 'Open live job' || label === 'Track live') return t('bookings.actionTrackLiveJob', 'Track Live');
+                if (label === 'Track Job' || label === 'Track booking' || label === 'Track request' || label === 'Open job') return t('bookings.actionTrackJob', 'Open Job');
+                if (label === 'Review Proposals') return t('bookings.actionReviewProposals', 'View Offers');
+                if (label === 'Resume Search') return t('bookings.actionResumeSearch', 'Check Status');
                 return label;
               };
               const actionLabel = getLocalizedActionLabel(isAwaitingProposals
@@ -333,21 +334,35 @@ export default function BookingsTab() {
                       : 'View Details');
 
               const getLocalizedRole = (role: string) => {
-                if (role === 'Ustad') return t('common.ustad', 'Ustad');
-                if (role === 'Client') return t('common.client', 'Client');
+                if (role === 'Ustad' || role === 'Accepted Ustad') return t('common.ustad', 'Ustad');
+                if (role === 'Client' || role === 'Customer') return t('common.client', 'Customer');
+                if (role === 'Bids' || role === 'Offers') return t('findingWorker.offersLabel', 'Offers');
+                if (role === 'Mission' || role === 'Job' || role === 'Request') return t('bookings.jobRoleLabel', 'Request');
                 return role;
               };
-              let counterPartyName = meta?.counterParty?.fullName || 'Searching...';
+              const localizeCounterPartyName = (rawName?: string) => {
+                if (!rawName || rawName === 'Open broadcast' || rawName === 'Finding Ustads' || rawName === 'Searching...') {
+                  return t('bookings.searching', 'Finding Ustads...');
+                }
+                if (/^\d+\s+(bids|offers)\s+received$/i.test(rawName)) {
+                  const count = Number(job?.bidCount || parseInt(rawName, 10) || 0);
+                  return t('bookings.bidsReceived', { count });
+                }
+                return rawName;
+              };
+              let counterPartyName = localizeCounterPartyName(meta?.counterParty?.fullName);
               let counterPartyImage = meta?.primaryImageUrl || meta?.counterParty?.profileImage || '';
-              let counterPartyRole = getLocalizedRole(meta?.counterParty?.roleLabel || (isWorker ? 'Client' : 'Ustad'));
+              let counterPartyRole = getLocalizedRole(meta?.counterParty?.roleLabel || (isWorker ? 'Customer' : 'Ustad'));
               if (isBooking) {
                 const person = isWorker ? booking.customer : booking.worker;
-                counterPartyName = meta?.counterParty?.fullName || person?.fullName || 'Searching...';
+                counterPartyName = meta?.counterParty?.fullName || person?.fullName || t('bookings.searching', 'Finding Ustads...');
                 counterPartyImage = meta?.primaryImageUrl || meta?.counterParty?.profileImage || person?.profileImage || '';
               } else if (!meta?.counterParty) {
-                counterPartyName = job.bidCount > 0 ? `${job.bidCount} bids received` : 'Open broadcast';
+                counterPartyName = job.bidCount > 0
+                  ? t('bookings.bidsReceived', { count: job.bidCount })
+                  : t('bookings.searching', 'Finding Ustads...');
                 counterPartyImage = job.imageUrl || job.imageUrls?.[0] || '';
-                counterPartyRole = 'Job';
+                counterPartyRole = getLocalizedRole(job.bidCount > 0 ? 'Offers' : 'Request');
               }
               const openDetails = () => {
                 if (isBooking) {
@@ -477,7 +492,9 @@ export default function BookingsTab() {
                         </View>
                         <View style={styles.detailChip}>
                           <Clock size={14} color={colors.orange} />
-                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{scheduledTime || 'ASAP'}</Text>
+                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>
+                            {!scheduledTime || scheduledTime === 'ASAP' ? t('common.asap', 'Right Away') : scheduledTime}
+                          </Text>
                         </View>
                       </View>
 

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -22,9 +21,11 @@ import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useAlertModal } from '../../hooks';
 import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
@@ -34,6 +35,7 @@ export default function LoginScreen() {
   const { setAuth } = useAuth();
   const theme = useTheme();
   const typography = useThemeTypography();
+  const alertModal = useAlertModal();
   const isWorker = urlRole === 'worker';
   const accentColor = isWorker ? theme.colors.brand.worker : theme.colors.brand.primary;
 
@@ -79,7 +81,12 @@ export default function LoginScreen() {
       const finalRole = (urlRole || user?.role || 'client') as 'client' | 'worker';
 
       if (!token || !refreshToken || !user) {
-        Alert.alert(t('auth.loginError', 'Login error'), t('auth.incompleteResponse', 'The server returned an incomplete response. Please try again.'));
+        alertModal.showAlert(
+          t('auth.loginError', 'Login error'),
+          t('auth.incompleteResponse', 'The server returned an incomplete response. Please try again.'),
+          undefined,
+          'error'
+        );
         return;
       }
 
@@ -88,7 +95,12 @@ export default function LoginScreen() {
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('auth.unableSignIn', 'Unable to sign in'), error.message);
+      alertModal.showAlert(
+        t('auth.unableSignIn', 'Unable to sign in'),
+        error.message,
+        undefined,
+        'error'
+      );
     },
   });
 
@@ -252,6 +264,14 @@ export default function LoginScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        buttonText={alertModal.buttonText}
+        type={alertModal.type}
+      />
     </BackgroundWrapper>
   );
 }

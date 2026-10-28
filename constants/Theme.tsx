@@ -106,6 +106,7 @@ export interface AppTheme {
       secondaryBackground: AppGradient;
       secondaryText: string;
       workerBackground: AppGradient;
+      workerText: string;
       outlineText: string;
       outlineBorder: string;
       disabledOpacity: number;
@@ -274,7 +275,7 @@ const lightLegacy: LegacyColors = {
   cardSelected: '#EAF2FF',
   text: '#111827',
   textMuted: '#64748B',
-  textDim: '#94A3B8',
+  textDim: '#64748B',
   primary: '#2563EB',
   secondary: '#0F766E',
   worker: '#F97316',
@@ -287,7 +288,7 @@ const lightLegacy: LegacyColors = {
   purple: '#7C3AED',
   deepBlue: '#EAF2FF',
   yellow: '#D97706',
-  border: '#E2E8F0',
+  border: '#CBD5E1',
   inputBackground: '#FFFFFF',
   surface: '#F1F5F9',
   surfaceLight: '#FFFFFF',
@@ -306,7 +307,7 @@ const darkLegacy: LegacyColors = {
   cardSelected: '#222731',
   text: '#F8FAFC',
   textMuted: '#A7B0C0',
-  textDim: '#64748B',
+  textDim: '#7E8B9F',
   primary: '#60A5FA',
   secondary: '#2DD4BF',
   worker: '#FB923C',
@@ -319,7 +320,7 @@ const darkLegacy: LegacyColors = {
   purple: '#A78BFA',
   deepBlue: '#16181D',
   yellow: '#FBBF24',
-  border: '#2A303A',
+  border: '#2E3544',
   inputBackground: '#171A20',
   surface: '#15171C',
   surfaceLight: '#222731',
@@ -357,7 +358,7 @@ const buildTheme = (
       raised: id === 'light' ? '#FFFFFF' : legacy.surfaceLight,
       selected: legacy.cardSelected,
       highlight: legacy.surfaceHighlight,
-      subtle: id === 'light' ? '#EEF2F7' : alpha('#FFFFFF', isDark ? 0.045 : 0.08),
+      subtle: id === 'light' ? '#F1F5F9' : alpha('#FFFFFF', isDark ? 0.055 : 0.08),
     },
     text: {
       primary: legacy.text,
@@ -368,10 +369,10 @@ const buildTheme = (
       onBrand: id === 'light' ? '#FFFFFF' : '#001014',
     },
     border: {
-      default: legacy.border,
-      strong: id === 'light' ? '#CBD5E1' : alpha('#FFFFFF', isDark ? 0.13 : 0.18),
+      default: id === 'light' ? '#CBD5E1' : alpha('#FFFFFF', isDark ? 0.14 : 0.18),
+      strong: id === 'light' ? '#94A3B8' : alpha('#FFFFFF', isDark ? 0.22 : 0.26),
       focus: legacy.primary,
-      subtle: id === 'light' ? '#EDF2F7' : alpha('#FFFFFF', 0.07),
+      subtle: id === 'light' ? '#E2E8F0' : alpha('#FFFFFF', isDark ? 0.09 : 0.08),
     },
     brand: {
       primary: legacy.primary,
@@ -387,7 +388,7 @@ const buildTheme = (
     },
     input: {
       background: legacy.inputBackground,
-      border: id === 'light' ? '#CBD5E1' : alpha('#FFFFFF', 0.11),
+      border: id === 'light' ? '#CBD5E1' : alpha('#FFFFFF', 0.14),
       focusedBorder: legacy.primary,
       placeholder: legacy.textDim,
       text: legacy.text,
@@ -398,6 +399,7 @@ const buildTheme = (
       secondaryBackground: id === 'light' ? ['#F1F5F9', '#E2E8F0'] : [legacy.card, legacy.cardSelected],
       secondaryText: legacy.text,
       workerBackground: legacy.orangeGradient,
+      workerText: '#FFFFFF',
       outlineText: legacy.text,
       outlineBorder: legacy.border,
       disabledOpacity: 0.5,

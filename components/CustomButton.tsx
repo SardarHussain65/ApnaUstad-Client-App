@@ -41,9 +41,11 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
     }
   };
 
-  const textColor = variant === 'primary' || variant === 'worker'
-    ? theme.colors.button.primaryText
-    : theme.colors.button.outlineText;
+  const textColor = variant === 'worker'
+    ? theme.colors.button.workerText
+    : variant === 'primary'
+      ? theme.colors.button.primaryText
+      : theme.colors.button.outlineText;
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 }]

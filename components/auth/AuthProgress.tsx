@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { I18nManager, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 
 interface AuthProgressProps {
@@ -8,29 +9,35 @@ interface AuthProgressProps {
   labels?: string[];
 }
 
-const DEFAULT_LABELS = ['Account', 'Verify', 'Profile'];
-
 export function AuthProgress({
   accentColor,
   currentStep,
-  labels = DEFAULT_LABELS,
+  labels,
 }: AuthProgressProps) {
+  const { t } = useTranslation();
   const theme = useTheme();
   const colors = useThemeColors();
   const resolvedAccentColor = accentColor ?? colors.cyan;
   const trackColor = theme.id === 'light' ? alpha('#0F172A', 0.1) : alpha('#FFFFFF', 0.1);
 
+  const defaultLabels = [
+    t('auth.stepAccount', 'Account'),
+    t('auth.stepVerify', 'Verify'),
+    t('auth.stepProfile', 'Profile'),
+  ];
+  const stepLabels = labels || defaultLabels;
+
   return (
     <View style={styles.container}>
       <View style={styles.stepsRow}>
-        {labels.map((label, index) => {
+        {stepLabels.map((label, index) => {
           const step = index + 1;
           const isActive = step === currentStep;
           const isComplete = step < currentStep;
           const highlighted = isActive || isComplete;
 
           return (
-            <View key={label} style={styles.step}>
+            <View key={`${step}-${label}`} style={styles.step}>
               <View
                 style={[
                   styles.bar,
@@ -41,7 +48,14 @@ export function AuthProgress({
                   !highlighted && { backgroundColor: trackColor },
                 ]}
               />
-              <Text style={[styles.label, { color: theme.colors.text.muted }, highlighted && { color: resolvedAccentColor }]}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  { color: theme.colors.text.muted },
+                  highlighted && { color: resolvedAccentColor },
+                ]}
+              >
                 0{step} {label}
               </Text>
             </View>
@@ -58,7 +72,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.s,
   },
   stepsRow: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     gap: Spacing.s,
   },
   step: {
@@ -73,6 +87,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.7,
+    textAlign: 'center',
     textTransform: 'uppercase',
   },
 });

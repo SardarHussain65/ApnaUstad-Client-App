@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, Alert, ScrollView, TextInput, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, ScrollView, TextInput, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Shield, Star, MapPin, Check, Briefcase, Award, Clock, Eye, ChevronRight, MessageSquare, ArrowLeft, Search, Users, Radio, Image as ImageIcon, CalendarDays, Tag, Percent, Zap } from 'lucide-react-native';
@@ -15,6 +15,8 @@ import Animated, {
 import { useTranslation } from 'react-i18next';
 import { useTheme, useThemeColors, useThemeTypography, Colors, alpha } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { ConfirmModal } from '../components/ui';
+import { useConfirmModal } from '../hooks';
 import { socketService } from '../services/socketService';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -53,6 +55,7 @@ export default function FindingWorkerScreen() {
   const [applicants, setApplicants] = useState<any[]>([]);
   const [selectedWorker, setSelectedWorker] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const confirmModal = useConfirmModal();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -222,17 +225,17 @@ export default function FindingWorkerScreen() {
   });
 
   const handleCancelJob = () => {
-    Alert.alert(
+    confirmModal.showConfirm(
       t('findingWorker.cancelJob', 'Cancel Request'),
       t('findingWorker.cancelJobConfirm', 'Are you sure you want to stop searching and cancel this service request?'),
-      [
-        { text: t('findingWorker.keepSearching', 'Keep Searching'), style: 'cancel' },
-        {
-          text: t('findingWorker.cancelRequest', 'Cancel Request'),
-          style: 'destructive',
-          onPress: () => cancelJob({ jobId: jobId as string })
-        }
-      ]
+      () => {
+        confirmModal.closeConfirm();
+        cancelJob({ jobId: jobId as string });
+      },
+      undefined,
+      t('findingWorker.cancelRequest', 'Cancel Request'),
+      t('findingWorker.keepSearching', 'Keep Searching'),
+      colors.status.error
     );
   };
 
@@ -1277,6 +1280,16 @@ export default function FindingWorkerScreen() {
           </View>
         </Modal>
 
+        <ConfirmModal
+          visible={confirmModal.visible}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={confirmModal.onCancel}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmText={confirmModal.confirmText}
+          cancelText={confirmModal.cancelText}
+          confirmColor={confirmModal.confirmColor}
+        />
 
       </SafeAreaView>
     </BackgroundWrapper>

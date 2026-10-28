@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,15 +18,19 @@ import { AuthHero } from '../../components/auth/AuthHero';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
-import { BorderRadius, Colors, Spacing, useThemeColors } from '../../constants/Theme';
+import { BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
+import { useAlertModal } from '../../hooks';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const isWorker = role === 'worker';
+  const theme = useTheme();
   const colors = useThemeColors();
+  const alertModal = useAlertModal();
   const accentColor = isWorker ? colors.worker : colors.cyan;
 
   const [email, setEmail] = useState('');
@@ -52,21 +55,25 @@ export default function ForgotPasswordScreen() {
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
+      alertModal.showAlert(
         t('forgotPassword.recoveryCodeSent'),
         t('forgotPassword.checkEmail'),
-        [{
-          text: t('forgotPassword.continue'),
-          onPress: () => router.push({
-            pathname: '/(auth)/reset-password' as never,
-            params: { email: email.trim().toLowerCase(), role },
-          }),
-        }],
+        () => router.push({
+          pathname: '/(auth)/reset-password' as never,
+          params: { email: email.trim().toLowerCase(), role },
+        }),
+        'success',
+        t('forgotPassword.continue')
       );
     },
     onError: (error: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('forgotPassword.unableSendCode'), error.message || t('forgotPassword.checkEmailError'));
+      alertModal.showAlert(
+        t('forgotPassword.unableSendCode'),
+        error.message || t('forgotPassword.checkEmailError'),
+        undefined,
+        'error'
+      );
     },
   });
 
@@ -112,7 +119,7 @@ export default function ForgotPasswordScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={styles.recoveryCard}
+              style={[styles.recoveryCard, { borderColor: theme.colors.border.subtle }]}
               gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
             >
               <InputField
@@ -146,6 +153,14 @@ export default function ForgotPasswordScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        buttonText={alertModal.buttonText}
+        type={alertModal.type}
+      />
     </BackgroundWrapper>
   );
 }
@@ -161,7 +176,7 @@ const styles = StyleSheet.create({
   },
   recoveryCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
   },
   actionButton: {
     marginTop: Spacing.s,

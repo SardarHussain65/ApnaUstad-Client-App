@@ -111,7 +111,7 @@ export function ClientWalletView({
         date: new Date(tx.createdAt),
         rawDate: tx.createdAt,
         bookingId: tx.reference?.booking,
-        description: tx.description.split('(Dispute ID:')[0].trim(), // clean display description
+        description: tx.description.replace(/\s*\(Dispute[^)]*\):?\s*/i, ' — ').trim() || t('wallet.refundCredited'),
       })),
     ];
 

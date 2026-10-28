@@ -15,6 +15,7 @@ interface GlassCardProps {
   onPress?: () => void;
   intensity?: number;
   glowColor?: string;
+  borderColor?: string;
   hasGlow?: boolean;
   gradient?: [string, string, ...string[]];
   padding?: number; // Added padding prop
@@ -29,6 +30,7 @@ export function GlassCard({
   onPress, 
   intensity = 40,
   glowColor,
+  borderColor,
   hasGlow = false,
   gradient,
   padding = Spacing.l, // Default to standard padding
@@ -40,9 +42,9 @@ export function GlassCard({
   const cardBackground = theme.id === 'current'
     ? alpha('#FFFFFF', 0.03)
     : theme.colors.surface.card;
-  const cardBorder = theme.id === 'current'
+  const cardBorder = borderColor ?? (theme.id === 'current'
     ? alpha('#FFFFFF', 0.12)
-    : theme.colors.border.default;
+    : theme.colors.border.default);
   const fallbackBackground = theme.id === 'current'
     ? alpha(theme.legacy.surface, 0.6)
     : theme.colors.surface.card;

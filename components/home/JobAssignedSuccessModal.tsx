@@ -24,7 +24,7 @@ export function JobAssignedSuccessModal({ visible, booking, onClose, onContinue 
 
   if (!booking) return null;
 
-  const clientName = booking.customer?.fullName || booking.clientMeta?.fullName || 'Client';
+  const clientName = booking.customer?.fullName || booking.clientMeta?.fullName || t('common.client', 'Customer');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -79,12 +79,12 @@ export function JobAssignedSuccessModal({ visible, booking, onClose, onContinue 
                 }
               ]}>
                 <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>SERVICE CATEGORY:</Text>
-                  <Text style={[styles.detailVal, { color: theme.colors.text.primary }]}>{booking.category || 'Service request'}</Text>
+                  <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('jobAssignedModal.serviceCategory', 'WORK TYPE:')}</Text>
+                  <Text style={[styles.detailVal, { color: theme.colors.text.primary }]}>{booking.category || t('jobDetails.defaultTitle', 'Home Service')}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>AGREED PRICE:</Text>
-                  <Text style={[styles.detailVal, { color: theme.isDark ? '#00F5FF' : '#007AFF', fontWeight: '900' }]}>
+                  <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('jobAssignedModal.agreedPrice', 'AGREED RATE:')}</Text>
+                  <Text style={[styles.detailVal, { color: theme.colors.text.primary, fontWeight: '900' }]}>
                     Rs. {Number(booking.totalAmount || booking.amount || booking.subtotal || 0).toLocaleString()}
                   </Text>
                 </View>

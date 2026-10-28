@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Dimensions,
+  I18nManager,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,8 +23,10 @@ import { AuthProgress } from '../../components/auth/AuthProgress';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
+import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
-import { alpha, BorderRadius, Colors, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
+import { useAlertModal, useToast } from '../../hooks';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +42,8 @@ export default function VerifyScreen() {
   const isWorker = role === 'worker';
   const theme = useTheme();
   const colors = useThemeColors();
+  const toast = useToast();
+  const alertModal = useAlertModal();
   const accentColor = isWorker ? colors.worker : colors.cyan;
 
   const [otp, setOtp] = useState('');
@@ -59,7 +63,7 @@ export default function VerifyScreen() {
   const handleVerify = async () => {
     if (otp.length !== 6) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('verify.codeRequired'), t('verify.enterCode'));
+      toast.warning(t('verify.codeRequired'), t('verify.enterCode'));
       return;
     }
 
@@ -83,7 +87,12 @@ export default function VerifyScreen() {
       });
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('verify.verificationFailed'), error.message || t('verify.invalidCode'));
+      alertModal.showAlert(
+        t('verify.verificationFailed'),
+        error.message || t('verify.invalidCode'),
+        undefined,
+        'error'
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -107,10 +116,10 @@ export default function VerifyScreen() {
 
       setResendCooldown(30);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(t('verify.codeSent'), t('verify.freshCode'));
+      toast.success(t('verify.codeSent'), t('verify.freshCode'));
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('verify.unableResend'), error.message || t('verify.tryAgain'));
+      toast.error(t('verify.unableResend'), error.message || t('verify.tryAgain'));
     } finally {
       setIsResending(false);
     }
@@ -155,13 +164,18 @@ export default function VerifyScreen() {
                 onTextChange={setOtp}
                 theme={{
                   containerStyle: styles.otpContainer,
-                  pinCodeContainerStyle: styles.otpCell,
-                  pinCodeTextStyle: styles.otpText,
+                  pinCodeContainerStyle: {
+                    ...styles.otpCell,
+                    borderColor: theme.colors.border.default,
+                    backgroundColor: theme.colors.input.background,
+                  },
+                  pinCodeTextStyle: { ...styles.otpText, color: theme.colors.text.primary },
                   focusStickStyle: { ...styles.focusStick, backgroundColor: accentColor },
                   focusedPinCodeContainerStyle: {
                     ...styles.activeOtpCell,
                     borderColor: accentColor,
                     shadowColor: accentColor,
+                    backgroundColor: alpha(accentColor, 0.08),
                   },
                 }}
               />
@@ -176,7 +190,7 @@ export default function VerifyScreen() {
             </GlassCard>
 
             <View style={styles.resendRow}>
-              <Text style={styles.resendHint}>{t('verify.resendHint')}</Text>
+              <Text style={[styles.resendHint, { color: theme.colors.text.muted }]}>{t('verify.resendHint')}</Text>
               <TouchableOpacity
                 activeOpacity={0.7}
                 disabled={isResending || resendCooldown > 0}
@@ -197,6 +211,14 @@ export default function VerifyScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        buttonText={alertModal.buttonText}
+        type={alertModal.type}
+      />
     </BackgroundWrapper>
   );
 }
@@ -215,7 +237,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   otpLabel: {
-    color: Colors.textMuted,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.1,
@@ -224,7 +245,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   otpContainer: {
-    flexDirection: 'row',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
     width: '100%',
   },
@@ -233,19 +254,16 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: BorderRadius.m,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.11)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   activeOtpCell: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1.5,
     shadowOpacity: 0.35,
     shadowRadius: 10,
   },
   otpText: {
-    color: '#fff',
     fontSize: 22,
     fontWeight: '900',
+    textAlign: 'center',
   },
   focusStick: {
     width: 2,
@@ -261,7 +279,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
   },
   resendHint: {
-    color: 'rgba(255,255,255,0.46)',
     fontSize: 12,
     fontWeight: '600',
   },

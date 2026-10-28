@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import * as Location from 'expo-location';
 import { ChevronRight, ShieldCheck, Radio, Hourglass } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography, useThemeS
 import { HomeHeader } from './HomeHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
+import { ConfirmModal } from '../ui';
 import api from '../../services/api';
 import { WorkerAlertJobCard } from './WorkerAlertJobCard';
 import { WorkerEarningsChart } from './WorkerEarningsChart';
@@ -27,7 +28,7 @@ import { RecentBookingCard } from './RecentBookingCard';
 import { Booking } from '../../hooks/queries/useData';
 import { socketService } from '../../services/socketService';
 import { WorkerPendingBidCard } from './WorkerPendingBidCard';
-import { useWorkerBids, useWithdrawBidMutation, Bid } from '../../hooks';
+import { useConfirmModal, useToast, useWorkerBids, useWithdrawBidMutation, Bid } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
 
 type WorkerCoordinates = {
@@ -43,6 +44,8 @@ export function WorkerHome() {
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const shadows = useThemeShadows();
+  const toast = useToast();
+  const confirmModal = useConfirmModal();
   const {
     dismissedJobs,
     clearDismissedJob,
@@ -290,35 +293,33 @@ export function WorkerHome() {
   }, [router]);
 
   const handleWithdrawBid = useCallback((bid: Bid) => {
-    Alert.alert(
+    confirmModal.showConfirm(
       t('home.worker.withdrawBidTitle', 'Withdraw Bid'),
       t('home.worker.withdrawBidConfirm', 'Are you sure you want to withdraw your bid for this job?'),
-      [
-        { text: t('common.cancel', 'Cancel'), style: 'cancel' },
-        {
-          text: t('pendingBidDetails.withdraw', 'Withdraw'),
-          style: 'destructive',
-          onPress: () => {
-            setWithdrawingBidId(bid._id);
-            withdrawBid(
-              { bidId: bid._id },
-              {
-                onSuccess: () => {
-                   refetchBids();
-                   setWithdrawingBidId(null);
-                },
-                onError: (error) => {
-                   console.error('Error withdrawing bid:', error);
-                   setWithdrawingBidId(null);
-                   Alert.alert(t('common.error', 'Error'), t('home.worker.withdrawBidFailed', 'Failed to withdraw the bid. Please try again.'));
-                },
-              }
-            );
-          },
-        },
-      ]
+      () => {
+        confirmModal.closeConfirm();
+        setWithdrawingBidId(bid._id);
+        withdrawBid(
+          { bidId: bid._id },
+          {
+            onSuccess: () => {
+              refetchBids();
+              setWithdrawingBidId(null);
+            },
+            onError: (error) => {
+              console.error('Error withdrawing bid:', error);
+              setWithdrawingBidId(null);
+              toast.error(t('common.error', 'Error'), t('home.worker.withdrawBidFailed', 'Failed to withdraw the bid. Please try again.'));
+            },
+          }
+        );
+      },
+      undefined,
+      t('pendingBidDetails.withdraw', 'Withdraw'),
+      t('common.cancel', 'Cancel'),
+      colors.error
     );
-  }, [withdrawBid, refetchBids, t]);
+  }, [colors.error, confirmModal, toast, withdrawBid, refetchBids, t]);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -533,6 +534,17 @@ refreshControl={
         onReject={handleDismissSignalJob}
         onClose={() => setSelectedSignalJob(null)}
         acceptingJobId={acceptingAlertJobId}
+      />
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmColor={confirmModal.confirmColor}
+        isLoading={Boolean(withdrawingBidId)}
       />
     </BackgroundWrapper>
   );
