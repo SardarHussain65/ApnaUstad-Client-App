@@ -75,87 +75,49 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
     ? worker.profileImage
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(worker.fullName || 'W')}&background=0d0d1a&color=fff&size=200&bold=true`;
 
-
-  console.log("This is the profile image", avatarUri)
-
-  // ─── LEARNING: Derived star-fill logic ────────────────────────────────────
-  // We build an array of 5 elements and decide per-star whether it's full,
-  // half, or empty by comparing the loop index to the numeric rating.
-  // ──────────────────────────────────────────────────────────────────────────
-  const stars = Array.from({ length: 5 }, (_, i) => {
-    if (i < Math.floor(ratingNum)) return 'full';
-    if (i < ratingNum) return 'half';
-    return 'empty';
-  });
+  const ctaTextColor = theme.colors.button.primaryText;
 
   return (
-    // ─── LEARNING: Animated.View + entering prop ───────────────────────────
-    // entering={FadeInDown.delay(index * 100)} staggers each card's entrance
-    // by 100ms × its position in the list, creating a cascading reveal effect.
-    // ──────────────────────────────────────────────────────────────────────────
     <Animated.View
-      entering={FadeInDown.delay(index * 80).duration(500).springify()}
+      entering={FadeInDown.delay(index * 60).duration(420)}
       style={styles.cardWrapper}
     >
-      {/* ── Accent glow border behind the card ─────────────────────────── */}
-      <View style={[styles.cardGlow, { shadowColor: themeColor }]} />
-
       <View style={[styles.workerCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-        {/* ── Top gradient strip ─────────────────────────────────────────── */}
-        <LinearGradient
-          colors={[themeColor + '22', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.cardTopGradient}
-        />
-
-        {/* ── LEFT STRIPE — category color accent ─────────────────────── */}
         <View style={[styles.leftStripe, { backgroundColor: themeColor }]} />
 
-        {/* ── CARD INNER CONTENT ───────────────────────────────────────── */}
         <TouchableOpacity
           style={styles.cardInner}
           activeOpacity={0.9}
           onPress={() => onViewDetails(worker._id)}
         >
-
-          {/* ── ROW 1: Avatar + Name Block ─────────────────────────────── */}
+          {/* ── ROW 1: Avatar + Name + Essential Meta ──────────────────── */}
           <View style={styles.topRow}>
-
-            {/* Avatar with status ring */}
             <View style={styles.avatarContainer}>
-              <View style={[styles.avatarRing, { borderColor: themeColor + '60' }]}>
+              <View style={[styles.avatarRing, { borderColor: themeColor + '50', backgroundColor: theme.colors.surface.subtle }]}>
                 <Image
                   source={{ uri: avatarUri }}
                   style={styles.avatar}
                   onError={() => setImageError(true)}
                 />
               </View>
-              {/* ─── LEARNING: Conditional rendering with && ──────────────
-                  If worker.isAvailable is truthy, the dot renders. If falsy,
-                  nothing renders (React ignores `false`). Clean & idiomatic.
-              ──────────────────────────────────────────────────────────── */}
               <View
                 style={[
                   styles.availabilityDot,
                   {
-                    backgroundColor: worker.isAvailable
-                      ? '#00E5A0'   // neon green = online
-                      : '#FF4C6A', // red = offline
-                    borderColor: theme.id === 'light' ? '#FFFFFF' : '#0a0a1a',
+                    backgroundColor: worker.isAvailable ? theme.colors.status.success : theme.colors.text.dim,
+                    borderColor: theme.colors.surface.card,
                   },
                 ]}
               />
             </View>
 
-            {/* Name + meta */}
             <View style={styles.nameBlock}>
               <View style={styles.nameRow}>
                 <Text style={[styles.workerName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                   {worker.fullName}
                 </Text>
                 {worker.isVerified && (
-                  <BadgeCheck size={16} color={themeColor} fill={themeColor + '30'} />
+                  <BadgeCheck size={16} color={theme.colors.brand.primary} fill={theme.colors.brand.primary + '25'} />
                 )}
                 {isFavorite && (
                   <Heart size={14} color="#FF4D8D" fill="#FF4D8D" style={{ marginLeft: 'auto' }} />
@@ -164,121 +126,65 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
 
               <View style={styles.metaRow}>
                 <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
-                  <Briefcase size={9} color={themeColor} />
-                  {/* ─── LEARNING: toUpperCase() for consistent visual style */}
+                  <Briefcase size={10} color={themeColor} />
                   <Text style={[styles.metaChipText, { color: themeColor }]}>
-                    {worker.category.toUpperCase()}
+                    {worker.category}
                   </Text>
                 </View>
-                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
-                  <MapPin size={9} color={theme.colors.text.muted} />
-                  {/* ─── LEARNING: Nullish coalescing (??) ────────────────
-                      Returns right-hand side only when left side is null
-                      or undefined — NOT when it's 0 or ''. Safer than ||.
-                  ──────────────────────────────────────────────────────── */}
-                  <Text style={[styles.metaChipText, { color: theme.colors.text.secondary }]}>
-                    {worker.city ?? t('common.remote', { defaultValue: 'Remote' })}
-                  </Text>
-                </View>
+                {!!worker.city && (
+                  <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
+                    <MapPin size={10} color={theme.colors.text.muted} />
+                    <Text style={[styles.metaChipText, { color: theme.colors.text.secondary }]}>
+                      {worker.city}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* Star rating row */}
               <View style={styles.starsRow}>
-                {stars.map((type, i) => (
-                  <Star
-                    key={i}
-                    size={11}
-                    color="#FFD700"
-                    fill={type === 'full' ? '#FFD700' : type === 'half' ? '#FFD70080' : 'transparent'}
-                  />
-                ))}
-                <Text style={styles.ratingText}>{ratingStr}</Text>
+                <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                <Text style={[styles.ratingText, { color: theme.colors.text.primary }]}>{ratingStr}</Text>
+                <Text style={[styles.inlineStatText, { color: theme.colors.text.muted }]}>
+                  • {worker.totalJobs ?? 0} {t('workerDetails.jobsLabel', 'Jobs')} • {worker.isAvailable ? t('workerList.open', 'Available') : t('workerList.busy', 'Busy')}
+                </Text>
               </View>
             </View>
           </View>
 
-          {/* ── ROW 2: Stats Bar ────────────────────────────────────────── */}
-          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-            <View style={styles.statItem}>
-              <TrendingUp size={12} color={themeColor} />
-              <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.jobsLabel')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
-            <View style={styles.statItem}>
-              <Award size={12} color={themeColor} />
-              <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalReviews ?? 0}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.reviews')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
-            <View style={styles.statItem}>
-              <Zap size={12} color={themeColor} />
-              <Text style={[styles.statValue, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
-                {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('common.status')}</Text>
-            </View>
-          </View>
-
-          {/* ── ROW 3: Skills chips ──────────────────────────────────────── */}
-          {/* ─── LEARNING: Optional chaining (?.) + slice() ─────────────────
-              worker.skills?.slice(0, 3) safely accesses skills even if it's
-              undefined — preventing a crash. slice(0,3) takes first 3 items.
-          ──────────────────────────────────────────────────────────────────── */}
-          {(worker.skills?.length ?? 0) > 0 && (
-            <View style={styles.skillsRow}>
-              {worker.skills?.slice(0, 3).map((skill) => (
-                <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35', backgroundColor: theme.colors.surface.subtle }]}>
-                  <Text style={[styles.skillText, { color: themeColor }]}>#{skill}</Text>
-                </View>
-              ))}
-              {(worker.skills?.length ?? 0) > 3 && (
-                <View style={[styles.skillPill, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
-                  <Text style={[styles.skillTextMore, { color: theme.colors.text.muted }]}>+{(worker.skills?.length ?? 0) - 3}</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* ── Bio ──────────────────────────────────────────────────────── */}
           {!!worker.bio && (
-            <Text style={[styles.bioText, { color: theme.colors.text.secondary }]} numberOfLines={2}>
+            <Text style={[styles.bioText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
               {worker.bio}
             </Text>
           )}
 
-          {/* ── ROW 4: DEPLOY button ─────────────────────────────────────── */}
-          {/* ─── LEARNING: TouchableOpacity + activeOpacity ──────────────────
-              activeOpacity={0.75} dims the button to 75% opacity when pressed,
-              giving tactile visual feedback. Default is 0.2 (too dim). 0.75–0.85
-              feels polished for prominent CTAs.
-          ──────────────────────────────────────────────────────────────────── */}
+          {/* ── ROW 2: Hourly Rate + Hire CTA ─────────────────────────── */}
           <TouchableOpacity
             style={styles.deployBtn}
             onPress={() => onHire(worker)}
-            activeOpacity={0.78}
+            activeOpacity={0.82}
           >
             <LinearGradient
-              colors={[themeColor, themeColor + 'CC']}
+              colors={theme.colors.gradients.primary as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.deployBtnGradient}
             >
               <View style={styles.deployBtnLeft}>
-                <Text style={[styles.deployRateLabel, { color: theme.id === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)' }]}>{t('wallet.totalEarnings')}</Text>
-                <Text style={[styles.deployRateValue, { color: theme.id === 'light' ? '#FFFFFF' : '#050510' }]}>
-                  Rs. {worker.totalEarnings ?? '0'}
+                <Text style={[styles.deployRateLabel, { color: ctaTextColor, opacity: 0.8 }]}>
+                  {t('workerDetails.rateLabel', 'Hourly Rate')}
+                </Text>
+                <Text style={[styles.deployRateValue, { color: ctaTextColor }]}>
+                  {worker.hourlyRate ? `Rs. ${worker.hourlyRate.toLocaleString()}/hr` : t('workerDetails.openRate', 'Negotiable')}
                 </Text>
               </View>
-              <View style={[styles.deployBtnRight, { borderLeftColor: theme.id === 'light' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)' }]}>
-                <Zap size={14} color={theme.id === 'light' ? '#FFFFFF' : '#050510'} fill={theme.id === 'light' ? '#FFFFFF' : '#050510'} />
-                <Text style={[styles.deployBtnText, { color: theme.id === 'light' ? '#FFFFFF' : '#050510' }]}>{t('workerList.hire')}</Text>
+              <View style={[styles.deployBtnRight, { borderLeftColor: ctaTextColor + '28' }]}>
+                <Zap size={14} color={ctaTextColor} fill={ctaTextColor} />
+                <Text style={[styles.deployBtnText, { color: ctaTextColor }]}>{t('workerList.hire')}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
-
-        </TouchableOpacity>{/* end cardInner */}
-      </View>{/* end workerCard */}
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 });
@@ -690,13 +596,16 @@ const styles = StyleSheet.create({
   starsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
+    marginTop: 2,
   },
   ratingText: {
-    color: '#FFD700',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    marginLeft: 4,
+  },
+  inlineStatText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // ── Stats Bar ────────────────────────────────────────────────────────────

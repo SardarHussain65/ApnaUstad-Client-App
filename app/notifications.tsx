@@ -29,7 +29,6 @@ import {
   ChevronRight,
   CreditCard,
   ShieldCheck,
-  Sparkles,
   Star,
   Scale,
   XCircle,
@@ -38,7 +37,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Spacing, Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
+import { Spacing, useTheme, useThemeTypography, alpha } from '../constants/Theme';
 import { useMarkNotificationReadMutation, useNotifications, type AppNotification } from '../hooks';
 import { socketService } from '../services/socketService';
 
@@ -56,8 +55,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const theme = useTheme();
-  const colors = useThemeColors();
-  const legacyColors = theme.legacy;
+  const themedTypography = useThemeTypography();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data, isLoading, isRefetching, refetch } = useNotifications();
   const { mutate: markRead, isPending: isMarkingRead } = useMarkNotificationReadMutation();
@@ -130,56 +128,20 @@ export default function NotificationsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerText}>
-            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('notifications.eyebrow')}</Text>
-            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('notifications.title')}</Text>
+            <Text style={[styles.headerTitle, themedTypography.threeD, { color: theme.colors.text.primary, marginTop: 0 }]}>{t('notifications.title')}</Text>
           </View>
 
-          <View style={[
-            styles.unreadPill,
-            {
-              borderColor: theme.isDark ? 'rgba(0,245,255,0.42)' : theme.colors.border.subtle,
-            }
-          ]}>
-            <LinearGradient
-              colors={['rgba(0,245,255,0.28)', 'rgba(191,90,242,0.14)']}
-              style={StyleSheet.absoluteFill}
-            />
-            <Text style={[styles.unreadText, { color: theme.colors.brand.primary }]}>{unreadCount}</Text>
-          </View>
+          {unreadCount > 0 ? (
+            <TouchableOpacity disabled={isMarkingRead} onPress={markAllRead} style={[styles.markAllBtn, { marginLeft: 0, borderColor: alpha(theme.colors.brand.primary, 0.3), backgroundColor: alpha(theme.colors.brand.primary, 0.1) }]} activeOpacity={0.8}>
+              <CheckCircle2 size={13} color={theme.colors.brand.primary} />
+              <Text style={[styles.markAllText, { color: theme.colors.brand.primary }]}>{t('notifications.readBtn')}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 46 }} />
+          )}
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(520)}>
-          <GlassCard
-            padding={0}
-            intensity={28}
-            hasGlow={unreadCount > 0}
-            glowColor={theme.colors.brand.primary}
-            style={styles.summaryCard}
-            contentStyle={styles.summaryContent}
-          >
-            <View style={styles.summaryLeft}>
-              <View style={styles.summaryIcon}>
-                <Sparkles size={18} color={theme.colors.brand.primary} />
-              </View>
-              <View style={styles.summaryCopy}>
-                <Text style={[styles.summaryTitle, { color: theme.colors.text.primary }]}>{t('notifications.updatesTitle')}</Text>
-                <Text style={[styles.summaryText, { color: theme.colors.text.muted }]}>
-                  {unreadCount > 0
-                    ? (unreadCount === 1 ? t('notifications.waitingSingular') : t('notifications.waitingPlural', { count: unreadCount }))
-                    : t('notifications.upToDate')}
-                </Text>
-              </View>
-            </View>
-            {unreadCount > 0 && (
-              <TouchableOpacity disabled={isMarkingRead} onPress={markAllRead} style={styles.markAllBtn} activeOpacity={0.8}>
-                <CheckCircle2 size={13} color={theme.colors.brand.primary} />
-                <Text style={[styles.markAllText, { color: theme.colors.brand.primary }]}>{t('notifications.readBtn')}</Text>
-              </TouchableOpacity>
-            )}
-          </GlassCard>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(140).duration(520)} style={styles.filters}>
+        <Animated.View entering={FadeInDown.delay(100).duration(420)} style={styles.filters}>
           {FILTERS.map((filter) => {
             const selected = activeFilter === filter.key;
             return (
@@ -274,11 +236,12 @@ function NotificationCard({ notification, onPress, theme }: { notification: AppN
       <GlassCard
         padding={0}
         intensity={unread ? 34 : 18}
-        style={[styles.notificationShell, unread && { borderColor: accent + '66' }]}
+        borderColor={unread ? alpha(accent, 0.45) : theme.colors.border.subtle}
+        style={styles.notificationShell}
         contentStyle={styles.notificationContent}
       >
         <LinearGradient
-          colors={[accent + '40', 'rgba(255,255,255,0.00)']}
+          colors={[alpha(accent, theme.isDark ? 0.22 : 0.08), 'rgba(255,255,255,0.00)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.cardWash}

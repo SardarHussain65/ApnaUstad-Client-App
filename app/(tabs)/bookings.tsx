@@ -5,7 +5,7 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap, Star, BriefcaseBusiness, Banknote, Radio, Inbox, Scale } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap, Star, Inbox, Scale } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
@@ -291,9 +291,6 @@ export default function BookingsTab() {
               const scheduledDate = isBooking ? booking.scheduledDate : job.scheduledDate;
               const scheduledTime = isBooking ? booking.scheduledTime : job.scheduledTime;
               const address = isBooking ? booking.address : job.address;
-              const workerLoc = isBooking
-                ? (booking.worker?.address || booking.worker?.city)
-                : (job?.acceptedBid?.worker?.address || job?.acceptedBid?.worker?.city);
               const status = item.status;
               const canReview = !isWorker && isBooking && status === 'completed' && !booking?.isReviewed;
               const isAwaitingProposals = !isBooking && ['open', 'reviewing'].includes(status);
@@ -342,12 +339,12 @@ export default function BookingsTab() {
               let counterPartyRole = getLocalizedRole(meta?.counterParty?.roleLabel || (isWorker ? 'Client' : 'Ustad'));
               if (isBooking) {
                 const person = isWorker ? booking.customer : booking.worker;
-                counterPartyName = meta?.counterParty?.fullName || person?.fullName || 'Searching...';
+                counterPartyName = meta?.counterParty?.fullName || person?.fullName || t('bookings.searching', 'Searching...');
                 counterPartyImage = meta?.primaryImageUrl || meta?.counterParty?.profileImage || person?.profileImage || '';
               } else if (!meta?.counterParty) {
-                counterPartyName = job.bidCount > 0 ? `${job.bidCount} bids received` : 'Open broadcast';
+                counterPartyName = job.bidCount > 0 ? t('bookings.offersReceived', { count: job.bidCount, defaultValue: `${job.bidCount} offers received` }) : t('bookings.waitingForOffers', 'Waiting for Ustad offers');
                 counterPartyImage = job.imageUrl || job.imageUrls?.[0] || '';
-                counterPartyRole = 'Job';
+                counterPartyRole = t('bookings.jobRequest', 'Request');
               }
               const openDetails = () => {
                 if (isBooking) {
@@ -371,145 +368,109 @@ export default function BookingsTab() {
               return (
                 <Animated.View
                   key={item._id}
-                  entering={FadeInDown.delay(index * 100).duration(500)}
+                  entering={FadeInDown.delay(index * 80).duration(450)}
                   layout={Layout.springify()}
                 >
                   <GlassCard
                     style={styles.bookingCard}
+                    borderColor={alpha(statusColor, theme.id === 'light' ? 0.22 : 0.32)}
                     intensity={30}
                     glowColor={statusColor}
-                    hasGlow
+                    hasGlow={theme.id === 'current'}
                     gradient={getMissionCardGradient(status, isInstant, statusColor, isDisputed)}
                     padding={0}
                     onPress={openDetails}
                   >
-<LinearGradient
-                       colors={[statusColor, colors.cyan, alpha(statusColor, 0.4)]}
-                       start={{ x: 0, y: 0 }}
-                       end={{ x: 1, y: 0 }}
-                       style={styles.cardAccentLine}
-                     />
-<LinearGradient
-                       pointerEvents="none"
-                       colors={[alpha(statusColor, 0.3), 'rgba(0,0,0,0)', alpha(colors.cyan, 0.08)]}
-                       start={{ x: 0, y: 0 }}
-                       end={{ x: 1, y: 1 }}
-                       style={styles.cardAtmosphere}
-                     />
                     <View style={[styles.cardSideAccent, { backgroundColor: statusColor }]} />
                     <View style={styles.cardBody}>
                       <View style={styles.cardTopStrip}>
-                        <View
-                          style={[
-                            styles.missionTypePill,
-                            {
-                              backgroundColor: alpha(colors.cyan, theme.id === 'current' ? 0.08 : 0.1),
-                              borderColor: alpha(colors.cyan, 0.18),
-                            },
-                          ]}
-                        >
-                          {isInstant ? <Zap size={12} color={colors.cyan} /> : <Calendar size={12} color={colors.cyan} />}
-                          <Text style={[styles.missionTypeText, { color: colors.cyan }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={[styles.itemTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                            {title}
+                          </Text>
                         </View>
-                        <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
-                           {isDisputed ? <Scale size={12} color={statusColor} /> : getStatusIcon(status, statusColor)}
-                           <Text style={[styles.statusText, { color: statusColor }]}>
-                             {isDisputed ? t('bookings.disputed', 'DISPUTED') : t(`bookingStatus.${status}.label`, statusLabel(status))}
-                           </Text>
+                        <View style={[styles.statusBadge, { borderColor: alpha(statusColor, 0.3), backgroundColor: alpha(statusColor, 0.1) }]}>
+                          {isDisputed ? <Scale size={12} color={statusColor} /> : getStatusIcon(status, statusColor)}
+                          <Text style={[styles.statusText, { color: statusColor }]}>
+                            {isDisputed ? t('bookings.disputed', 'DISPUTED') : t(`bookingStatus.${status}.label`, statusLabel(status))}
+                          </Text>
                         </View>
                       </View>
 
                       <View style={styles.identityRow}>
-                        <View style={[styles.avatarRing, { borderColor: statusColor + '55' }]}>
+                        <View style={[styles.avatarRing, { borderColor: alpha(statusColor, 0.4) }]}>
                           {counterPartyImage ? (
                             <Image source={{ uri: counterPartyImage }} style={styles.avatarImage} />
                           ) : (
                             <LinearGradient
-                              colors={[statusColor + '55', 'rgba(0,245,255,0.25)']}
+                              colors={[alpha(statusColor, 0.3), alpha(colors.cyan, 0.18)]}
                               style={styles.avatarFallback}
                             >
-                              <Text style={styles.avatarInitials}>{initialsFor(counterPartyName)}</Text>
+                              <Text style={[styles.avatarInitials, { color: theme.colors.text.primary }]}>{initialsFor(counterPartyName)}</Text>
                             </LinearGradient>
                           )}
                         </View>
 
                         <View style={styles.identityTextGroup}>
                           <Text style={[styles.personRole, { color: theme.colors.text.dim }]}>{counterPartyRole}</Text>
-                          <Text style={[styles.personName, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                          <Text style={[styles.personName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                             {counterPartyName}
                           </Text>
                         </View>
 
                         {!!amountValue && (
-                          <View style={[styles.amountPill, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.22) }]}>
-                            <Banknote size={13} color={colors.success} />
-                            <View>
-                              <Text style={[styles.amountLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
-                              <Text style={[styles.amountValue, { color: colors.success }]}>Rs. {amountValue.toLocaleString()}</Text>
-                            </View>
+                          <View style={[styles.amountPill, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.25) }]}>
+                            <Text style={[styles.amountLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
+                            <Text style={[styles.amountValue, { color: colors.success }]}>Rs. {amountValue.toLocaleString()}</Text>
                           </View>
                         )}
                       </View>
 
-<LinearGradient
-                       colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(colors.cyan, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
-                       start={{ x: 0, y: 0 }}
-                       end={{ x: 1, y: 1 }}
-                       style={styles.serviceBlock}
-                     >
-                        <View style={styles.serviceIconBox}>
-                          <BriefcaseBusiness size={19} color={colors.cyan} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.itemTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
-                          {!!description && (
-                            <Text style={[styles.descriptionText, { color: theme.colors.text.muted }]} numberOfLines={2}>
-                              {description}
-                            </Text>
-                          )}
-                        </View>
-                      </LinearGradient>
-
-                      <View style={styles.detailGrid}>
-                        <View style={styles.detailChip}>
-                          <Calendar size={14} color={colors.cyan} />
-                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{formatMissionDate(scheduledDate)}</Text>
-                        </View>
-                        <View style={styles.detailChip}>
-                          <Clock size={14} color={colors.orange} />
-                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{scheduledTime || 'ASAP'}</Text>
-                        </View>
-                      </View>
-
-                      <View style={[styles.locationBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                        <MapPin size={15} color={theme.colors.text.muted} />
-                        <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={2}>
-                          {address || t('bookings.openDetailsToViewLocation', 'Open details to view the service location')}
+                      {!!description && (
+                        <Text style={[styles.descriptionText, { color: theme.colors.text.secondary, marginBottom: 10 }]} numberOfLines={2}>
+                          {description}
                         </Text>
+                      )}
+
+                      <View style={[styles.metaStrip, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                        <View style={styles.metaStripRow}>
+                          <Calendar size={13} color={colors.cyan} />
+                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                            {formatMissionDate(scheduledDate)} • {scheduledTime || t('transactionDetails.asap', 'ASAP')}
+                          </Text>
+                          <View style={[styles.missionTypePill, { backgroundColor: alpha(colors.cyan, 0.1), borderColor: alpha(colors.cyan, 0.2) }]}>
+                            {isInstant ? <Zap size={10} color={colors.cyan} /> : <Clock size={10} color={colors.cyan} />}
+                            <Text style={[styles.missionTypeText, { color: colors.cyan }]}>
+                              {isInstant ? t('home.worker.instant', 'Urgent') : t('home.worker.scheduled', 'Scheduled')}
+                            </Text>
+                          </View>
+                        </View>
+                        {!!address && (
+                          <View style={[styles.metaStripRow, { marginTop: 6 }]}>
+                            <MapPin size={13} color={theme.colors.text.muted} />
+                            <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                              {address}
+                            </Text>
+                          </View>
+                        )}
                       </View>
 
-                      <View style={styles.actionDivider} />
-
-<LinearGradient
-                         colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(statusColor, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
-                         start={{ x: 0, y: 0 }}
-                         end={{ x: 1, y: 0 }}
-                         style={styles.actionPanel}
-                       >
-                        <TouchableOpacity
-                          style={styles.actionBtn}
-                          activeOpacity={0.85}
-                          onPress={openDetails}
-                        >
-                          <View style={styles.actionLabelGroup}>
-                            <Radio size={14} color={colors.cyan} />
-                            <Text style={[styles.actionBtnText, { color: theme.colors.text.primary }]}>{actionLabel}</Text>
-                          </View>
-                          <View style={[styles.actionCircle, { backgroundColor: colors.cyan }]}>
-                            <ChevronRight size={16} color={theme.colors.button.primaryText} />
-                          </View>
-                        </TouchableOpacity>
-                      </LinearGradient>
+                      <TouchableOpacity
+                        style={[
+                          styles.cleanActionBtn,
+                          {
+                            backgroundColor: alpha(colors.cyan, theme.id === 'light' ? 0.1 : 0.14),
+                            borderColor: alpha(colors.cyan, 0.28),
+                          },
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={openDetails}
+                      >
+                        <Text style={[styles.actionBtnText, { color: theme.id === 'light' ? theme.colors.brand.primary : colors.cyan }]}>
+                          {actionLabel}
+                        </Text>
+                        <ChevronRight size={16} color={theme.id === 'light' ? theme.colors.brand.primary : colors.cyan} />
+                      </TouchableOpacity>
 
                       {canReview && (
                         <TouchableOpacity
@@ -529,7 +490,7 @@ export default function BookingsTab() {
                             style={styles.reviewGradient}
                           >
                             <Star size={15} color="#000" fill="#000" />
-                            <Text style={styles.reviewBtnText}>{t('bookings.rateUstad', 'RATE USTAD')}</Text>
+                            <Text style={[styles.reviewBtnText, { color: '#000' }]}>{t('bookings.rateUstad', 'Rate Ustad')}</Text>
                           </LinearGradient>
                         </TouchableOpacity>
                       )}
@@ -718,12 +679,31 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   amountPill: {
+    alignItems: 'flex-end',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  metaStrip: {
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  metaStripRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    borderRadius: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: 8,
+  },
+  cleanActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     borderWidth: 1,
   },
   amountLabel: {

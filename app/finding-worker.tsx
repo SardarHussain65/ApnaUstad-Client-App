@@ -737,28 +737,29 @@ export default function FindingWorkerScreen() {
                     <Zap size={18} color={legacyColors.orange} fill={legacyColors.orange} />
                   </View>
                   <View style={styles.boosterHeadingCopy}>
-                    <Text style={styles.boosterEyebrow}>🔥 {t('findingWorker.boosterTitle', "Ustads Aren't Satisfied")}</Text>
-                    <Text style={[styles.boosterUrduTitle, { color: colors.text.secondary }]}>استاد اس ریٹ پر راضی نہیں ہیں</Text>
+                    <Text style={[styles.boosterEyebrow, { color: colors.brand.worker }]}>
+                      {t('findingWorker.boosterTitle', 'Need an Ustad faster?')}
+                    </Text>
                   </View>
                 </View>
 
                 <Text style={[styles.boosterDescription, { color: colors.text.secondary }]}>
-                  {t('findingWorker.boosterDesc', "Workers near you are active but haven't accepted this price. Boost your offer by 15% to attract them quickly!")}
+                  {t('findingWorker.boosterDesc', "Nearby Ustads haven't accepted this offer yet. Increase your offer by 15% to attract them faster.")}
                 </Text>
-                
-                <TouchableOpacity 
-                  style={[styles.boostButton, { backgroundColor: colors.brand.worker }]} 
-                  onPress={handleBoostPrice} 
+
+                <TouchableOpacity
+                  style={[styles.boostButton, { backgroundColor: colors.brand.worker }]}
+                  onPress={handleBoostPrice}
                   disabled={isBoosting}
                   activeOpacity={0.78}
                 >
                   {isBoosting ? (
-                    <ActivityIndicator size="small" color={theme.isDark ? "#050510" : "#FFFFFF"} />
+                    <ActivityIndicator size="small" color={colors.button.workerText} />
                   ) : (
                     <>
-                      <Zap size={16} color={theme.isDark ? "#050510" : "#FFFFFF"} fill={theme.isDark ? "#050510" : "#FFFFFF"} style={{ marginRight: 6 }} />
-                      <Text style={[styles.boostButtonText, { color: theme.isDark ? "#050510" : "#FFFFFF" }]}>
-                        {t('findingWorker.boosterBtn', "Boost Price (+15%)")} • ریٹ بڑھائیں (+15%)
+                      <Zap size={16} color={colors.button.workerText} fill={colors.button.workerText} style={{ marginRight: 6 }} />
+                      <Text style={[styles.boostButtonText, { color: colors.button.workerText }]}>
+                        {t('findingWorker.boosterBtn', 'Increase Offer (+15%)')}
                       </Text>
                     </>
                   )}
@@ -965,38 +966,6 @@ export default function FindingWorkerScreen() {
             </View>
           )}
 
-          <View style={[
-            styles.statsRow,
-            {
-              backgroundColor: theme.isDark ? 'rgba(3,8,25,0.76)' : colors.surface.card,
-              borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle,
-            }
-          ]}>
-            <View style={styles.statItem}>
-              <Users size={15} color={colors.brand.primary} />
-              <Text style={[styles.statVal, { color: colors.text.primary }]}>{applicants.length}</Text>
-              <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.offersLabel')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : colors.border.subtle }]} />
-            <View style={styles.statItem}>
-              <Radio size={15} color={colors.brand.worker} />
-              <Text style={[styles.statVal, { color: colors.text.primary }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
-              <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.jobTypeLabel')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : colors.border.subtle }]} />
-            <View style={styles.statItem}>
-              <Clock size={15} color={colors.brand.worker} />
-              <Text style={[styles.statVal, { color: colors.text.primary }]}>{formatElapsedTime(elapsedSeconds)}</Text>
-              <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.elapsedLabel')}</Text>
-            </View>
-          </View>
-
-          {averageApplicantRating !== null && (
-            <Text style={[styles.ratingSummary, { color: colors.text.secondary }]}>
-              {t('findingWorker.avgRating', { rating: averageApplicantRating.toFixed(1) })}
-            </Text>
-          )}
-
           <TouchableOpacity
             style={[
               styles.cancelBtn,
@@ -1026,29 +995,28 @@ export default function FindingWorkerScreen() {
           animationType="fade"
           onRequestClose={() => setShowModal(false)}
         >
-          <View style={styles.modalBackdrop}>
-            <BlurView intensity={30} style={StyleSheet.absoluteFill} tint="dark" />
-            <TouchableOpacity 
-              style={StyleSheet.absoluteFill} 
-              onPress={() => setShowModal(false)} 
+          <View style={[styles.modalBackdrop, { backgroundColor: colors.modal.backdrop }]}>
+            <BlurView intensity={30} style={StyleSheet.absoluteFill} tint={theme.blurTint} />
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              onPress={() => setShowModal(false)}
             />
-            
-            <Animated.View 
+
+            <Animated.View
               entering={SlideInDown.springify().damping(15)}
-              style={styles.modalContent}
+              style={[styles.modalContent, { borderColor: colors.modal.border }]}
             >
-              <LinearGradient
-                colors={['#0C0E24', '#080916']}
-                style={styles.modalGradient}
+              <View
+                style={[styles.modalGradient, { backgroundColor: colors.modal.card }]}
               >
-                <View style={styles.modalHandle} />
+                <View style={[styles.modalHandle, { backgroundColor: colors.border.strong }]} />
                 <View style={styles.modalHeader}>
                   <View style={styles.modalHeaderCopy}>
-                    <Text style={styles.modalTitle}>{t('findingWorker.ustadOffer', 'USTAD OFFER')}</Text>
-                    <Text style={styles.modalSubtitle}>{t('findingWorker.reviewOfferSubtitle', 'Review the offer and Ustad profile')}</Text>
+                    <Text style={[styles.modalTitle, { color: colors.brand.primary }]}>{t('findingWorker.ustadOffer', 'USTAD OFFER')}</Text>
+                    <Text style={[styles.modalSubtitle, { color: colors.text.secondary }]}>{t('findingWorker.reviewOfferSubtitle', 'Review the offer and Ustad profile')}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
-                    <X size={19} color={legacyColors.textMuted} />
+                  <TouchableOpacity onPress={() => setShowModal(false)} style={[styles.closeBtn, { backgroundColor: colors.modal.closeBackground, borderColor: colors.border.subtle }]}>
+                    <X size={19} color={colors.text.muted} />
                   </TouchableOpacity>
                 </View>
 
@@ -1058,10 +1026,10 @@ export default function FindingWorkerScreen() {
                   contentContainerStyle={styles.modalScroll}
                 >
                   <LinearGradient
-                    colors={['rgba(0,245,255,0.10)', 'rgba(255,255,255,0.025)']}
+                    colors={theme.isDark ? ['rgba(0,245,255,0.10)', 'rgba(255,255,255,0.025)'] : [alpha(colors.brand.primary, 0.08), colors.surface.subtle]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.identityCard}
+                    style={[styles.identityCard, { borderColor: colors.border.subtle }]}
                   >
                     <View style={styles.identityImageWrapper}>
                       <Image
@@ -1072,64 +1040,57 @@ export default function FindingWorkerScreen() {
                     </View>
 
                     <View style={styles.identityCopy}>
-                      <Text style={styles.workerName} numberOfLines={1}>{selectedProfile.fullName || t('findingWorker.specialist', 'Specialist')}</Text>
-                      <Text style={styles.workerCategory} numberOfLines={1}>{selectedProfile.category || t('findingWorker.ustadSpecialist', 'Ustad Specialist')}</Text>
+                      <Text style={[styles.workerName, { color: colors.text.primary }]} numberOfLines={1}>{selectedProfile.fullName || t('findingWorker.specialist', 'Specialist')}</Text>
+                      <Text style={[styles.workerCategory, { color: colors.brand.primary }]} numberOfLines={1}>{selectedProfile.category || t('findingWorker.ustadSpecialist', 'Ustad Specialist')}</Text>
                       <View style={styles.identityMetaRow}>
                         <View style={styles.ratingRow}>
                           <Star size={13} color={legacyColors.yellow} fill={legacyColors.yellow} />
-                          <Text style={styles.ratingText}>
+                          <Text style={[styles.ratingText, { color: colors.text.secondary }]}>
                             {selectedRating > 0 ? selectedRating.toFixed(1) : t('common.new', 'New')} · {selectedReviews} {selectedReviews === 1 ? t('workerDetails.reviewsOne', 'review') : t('workerDetails.reviews', 'reviews')}
-                          </Text>
-                        </View>
-                        <View style={styles.identityMetaDivider} />
-                        <View style={styles.availabilityRow}>
-                          <View style={[styles.availabilityDot, !selectedProfile.isAvailable && styles.statusOffline]} />
-                          <Text style={[styles.availabilityText, selectedProfile.isAvailable === false && styles.availabilityTextBusy]}>
-                            {selectedAvailabilityLabel}
                           </Text>
                         </View>
                       </View>
                     </View>
 
                     <View style={[styles.verificationBadge, !selectedProfile.isVerified && styles.verificationBadgePending]}>
-                      <Shield size={12} color={selectedProfile.isVerified ? legacyColors.green : legacyColors.orange} />
-                      <Text style={[styles.verificationBadgeText, !selectedProfile.isVerified && styles.verificationBadgeTextPending]}>
-                        {selectedProfile.isVerified ? t('findingWorker.verified', 'VERIFIED') : t('findingWorker.pending', 'REVIEWING')}
+                      <Shield size={12} color={selectedProfile.isVerified ? colors.status.success : colors.brand.worker} />
+                      <Text style={[styles.verificationBadgeText, { color: selectedProfile.isVerified ? colors.status.success : colors.brand.worker }]}>
+                        {selectedProfile.isVerified ? t('findingWorker.verified', 'VERIFIED') : t('findingWorker.pending', 'PENDING')}
                       </Text>
                     </View>
                   </LinearGradient>
 
-                  <View style={styles.proposalCard}>
+                  <View style={[styles.proposalCard, { backgroundColor: colors.surface.subtle, borderColor: colors.border.subtle }]}>
                     <View style={styles.proposalHeader}>
-                      <MessageSquare size={14} color={legacyColors.cyan} />
-                      <Text style={styles.proposalTitle}>{t('findingWorker.offerNote', 'OFFER NOTE')}</Text>
+                      <MessageSquare size={14} color={colors.brand.primary} />
+                      <Text style={[styles.proposalTitle, { color: colors.brand.primary }]}>{t('findingWorker.offerNote', 'OFFER NOTE')}</Text>
                     </View>
-                    <Text style={styles.proposalText}>
+                    <Text style={[styles.proposalText, { color: colors.text.primary }]}>
                       {selectedWorker?.message || t('findingWorker.noNote', 'I am ready to help you with this job.')}
                     </Text>
-                    <View style={styles.proposalDivider} />
+                    <View style={[styles.proposalDivider, { backgroundColor: colors.border.subtle }]} />
                     <View style={styles.proposalFooter}>
                       <View>
-                        <Text style={styles.proposalLabel}>{t('bidSubmission.offer', 'OFFERED PRICE')}</Text>
+                        <Text style={[styles.proposalLabel, { color: colors.text.muted }]}>{t('bidSubmission.offer', 'OFFERED PRICE')}</Text>
                         {appliedPromo?.isValid ? (
                           <View style={styles.priceContainer}>
-                            <Text style={styles.strikethroughAmount}>{formatMoney(selectedPrice)}</Text>
-                            <Text style={[styles.proposalAmount, { color: Colors.green }]}>
+                            <Text style={[styles.strikethroughAmount, { color: colors.text.muted }]}>{formatMoney(selectedPrice)}</Text>
+                            <Text style={[styles.proposalAmount, { color: colors.status.success }]}>
                               {formatMoney(appliedPromo.finalAmount)}
                             </Text>
                           </View>
                         ) : (
-                          <Text style={styles.proposalAmount}>{formatMoney(selectedPrice)}</Text>
+                          <Text style={[styles.proposalAmount, { color: colors.text.primary }]}>{formatMoney(selectedPrice)}</Text>
                         )}
                       </View>
                       <View style={styles.proposalTimeline}>
-                        <Clock size={14} color={legacyColors.orange} />
+                        <Clock size={14} color={colors.brand.worker} />
                         <View>
-                          <Text style={styles.proposalTimelineLabel}>{t('findingWorker.estTime', 'ESTIMATED TIME')}</Text>
-                          <Text style={styles.proposalTimelineValue}>
+                          <Text style={[styles.proposalTimelineLabel, { color: colors.text.muted }]}>{t('findingWorker.estTime', 'ESTIMATED TIME')}</Text>
+                          <Text style={[styles.proposalTimelineValue, { color: colors.text.primary }]}>
                             {selectedEstimatedDays > 0
-                              ? (selectedEstimatedDays === 1 
-                                  ? t('findingWorker.days', { count: 1 }) 
+                              ? (selectedEstimatedDays === 1
+                                  ? t('findingWorker.days', { count: 1 })
                                   : t('findingWorker.daysPlural', { count: selectedEstimatedDays }))
                               : t('findingWorker.flexible', 'Flexible')}
                           </Text>
@@ -1139,16 +1100,16 @@ export default function FindingWorkerScreen() {
                   </View>
 
                   {/* Promo Code Input Panel */}
-                  <View style={styles.promoContainer}>
+                  <View style={[styles.promoContainer, { backgroundColor: colors.surface.subtle, borderColor: colors.border.subtle }]}>
                     <View style={styles.promoHeader}>
-                      <Tag size={14} color={legacyColors.cyan} strokeWidth={2.4} />
-                      <Text style={styles.promoHeaderTitle}>{t('findingWorker.promoTitle', 'PROMO & COUPONS')}</Text>
+                      <Tag size={14} color={colors.brand.primary} strokeWidth={2.4} />
+                      <Text style={[styles.promoHeaderTitle, { color: colors.text.secondary }]}>{t('findingWorker.promoTitle', 'PROMO CODE (OPTIONAL)')}</Text>
                     </View>
-                    <View style={styles.promoInputWrapper}>
+                    <View style={[styles.promoInputWrapper, { backgroundColor: colors.input.background, borderColor: colors.input.border }]}>
                       <TextInput
-                        style={styles.promoInput}
-                        placeholder={t('findingWorker.promoPlaceholder', 'Enter Promo Code (e.g. SPECIAL30)')}
-                        placeholderTextColor="#646B7E"
+                        style={[styles.promoInput, { color: colors.input.text }]}
+                        placeholder={t('findingWorker.promoPlaceholder', 'Enter Promo Code')}
+                        placeholderTextColor={colors.input.placeholder}
                         value={promoCodeInput}
                         onChangeText={setPromoCodeInput}
                         autoCapitalize="characters"
@@ -1167,22 +1128,22 @@ export default function FindingWorkerScreen() {
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity
-                          style={[styles.promoApplyBtn, !promoCodeInput.trim() && styles.promoApplyBtnDisabled]}
+                          style={[styles.promoApplyBtn, { backgroundColor: colors.brand.primary }, !promoCodeInput.trim() && styles.promoApplyBtnDisabled]}
                           onPress={handleApplyPromo}
                           disabled={!promoCodeInput.trim() || isApplyingPromo}
                           activeOpacity={0.8}
                         >
                           {isApplyingPromo ? (
-                            <ActivityIndicator size="small" color="#001014" />
+                            <ActivityIndicator size="small" color={colors.button.primaryText} />
                           ) : (
-                            <Text style={styles.promoApplyText}>{t('findingWorker.apply', 'APPLY')}</Text>
+                            <Text style={[styles.promoApplyText, { color: colors.button.primaryText }]}>{t('findingWorker.apply', 'APPLY')}</Text>
                           )}
                         </TouchableOpacity>
                       )}
                     </View>
                     {appliedPromo && (
                       <View style={[
-                        styles.promoFeedbackCard, 
+                        styles.promoFeedbackCard,
                         appliedPromo.isValid ? styles.promoFeedbackSuccess : styles.promoFeedbackError
                       ]}>
                         {appliedPromo.isValid ? (
@@ -1201,55 +1162,35 @@ export default function FindingWorkerScreen() {
                     )}
                   </View>
 
-                  <View style={styles.trustStrip}>
+                  <View style={[styles.trustStrip, { backgroundColor: colors.surface.subtle, borderColor: colors.border.subtle }]}>
                     <View style={styles.trustMetric}>
-                      <Award size={16} color={legacyColors.cyan} />
-                      <Text style={styles.trustValue}>{selectedExperience > 0 ? `${selectedExperience} yrs` : t('common.new', 'New')}</Text>
-                      <Text style={styles.trustLabel}>{t('registerDetails.experience', 'EXPERIENCE')}</Text>
+                      <Award size={16} color={colors.brand.primary} />
+                      <Text style={[styles.trustValue, { color: colors.text.primary }]}>{selectedExperience > 0 ? `${selectedExperience} yrs` : t('common.new', 'New')}</Text>
+                      <Text style={[styles.trustLabel, { color: colors.text.muted }]}>{t('registerDetails.experience', 'EXPERIENCE')}</Text>
                     </View>
-                    <View style={styles.trustDivider} />
+                    <View style={[styles.trustDivider, { backgroundColor: colors.border.subtle }]} />
                     <View style={styles.trustMetric}>
-                      <Briefcase size={16} color={legacyColors.green} />
-                      <Text style={styles.trustValue}>{selectedJobs}</Text>
-                      <Text style={styles.trustLabel}>{t('profile.jobs', 'JOBS')}</Text>
+                      <Briefcase size={16} color={colors.status.success} />
+                      <Text style={[styles.trustValue, { color: colors.text.primary }]}>{selectedJobs}</Text>
+                      <Text style={[styles.trustLabel, { color: colors.text.muted }]}>{t('profile.jobs', 'JOBS')}</Text>
                     </View>
-                    <View style={styles.trustDivider} />
+                    <View style={[styles.trustDivider, { backgroundColor: colors.border.subtle }]} />
                     <View style={styles.trustMetric}>
-                      <MapPin size={16} color={legacyColors.pink} />
-                      <Text style={styles.trustValue} numberOfLines={1} adjustsFontSizeToFit>{selectedProfile.city || t('common.nearby', 'Nearby')}</Text>
-                      <Text style={styles.trustLabel}>{t('auth.city', 'CITY')}</Text>
+                      <MapPin size={16} color={colors.brand.worker} />
+                      <Text style={[styles.trustValue, { color: colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>{selectedProfile.city || t('common.nearby', 'Nearby')}</Text>
+                      <Text style={[styles.trustLabel, { color: colors.text.muted }]}>{t('auth.city', 'CITY')}</Text>
                     </View>
                   </View>
-
-                  {!!selectedProfile.bio && (
-                    <View style={styles.bioCard}>
-                      <Text style={styles.bioLabel}>{t('findingWorker.aboutSpecialist', 'ABOUT SPECIALIST')}</Text>
-                      <Text style={styles.bioText} numberOfLines={3}>{selectedProfile.bio}</Text>
-                    </View>
-                  )}
-
-                  {selectedSkills.length > 0 && (
-                    <View style={styles.skillsSection}>
-                      <Text style={styles.skillsLabel}>{t('findingWorker.specialistSkills', 'SPECIALIST SKILLS')}</Text>
-                      <View style={styles.skillsWrap}>
-                        {selectedSkills.map((skill: string) => (
-                          <View key={skill} style={styles.skillPill}>
-                            <Text style={styles.skillText}>{skill}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
                 </ScrollView>
 
-                <View style={styles.modalActions}>
+                <View style={[styles.modalActions, { borderTopColor: colors.border.subtle }]}>
                   <TouchableOpacity
-                    style={styles.profileBtn}
+                    style={[styles.profileBtn, { backgroundColor: colors.surface.subtle, borderColor: colors.border.subtle }]}
                     onPress={handleViewWorkerProfile}
                     activeOpacity={0.8}
                   >
-                    <Eye size={17} color={legacyColors.cyan} />
-                    <Text style={styles.profileBtnText}>{t('profile.title', 'PROFILE')}</Text>
+                    <Eye size={17} color={colors.brand.primary} />
+                    <Text style={[styles.profileBtnText, { color: colors.text.primary }]}>{t('profile.title', 'PROFILE')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1258,24 +1199,24 @@ export default function FindingWorkerScreen() {
                     disabled={isAccepting}
                   >
                     <LinearGradient
-                      colors={['#00F0FF', '#0066FF']}
+                      colors={colors.gradients.primary as [string, string, ...string[]]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.hireGradient}
                     >
                       {isAccepting ? (
-                        <ActivityIndicator color="#000" />
+                        <ActivityIndicator color={colors.button.primaryText} />
                       ) : (
                         <>
-                          <Check size={19} color="#000" strokeWidth={3} />
-                          <Text style={styles.hireText}>{t('findingWorker.selectUstad', 'SELECT USTAD')}</Text>
-                          <ChevronRight size={18} color="#000" strokeWidth={3} />
+                          <Check size={19} color={colors.button.primaryText} strokeWidth={3} />
+                          <Text style={[styles.hireText, { color: colors.button.primaryText }]}>{t('findingWorker.selectUstad', 'SELECT USTAD')}</Text>
+                          <ChevronRight size={18} color={colors.button.primaryText} strokeWidth={3} />
                         </>
                       )}
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
-              </LinearGradient>
+              </View>
             </Animated.View>
           </View>
         </Modal>

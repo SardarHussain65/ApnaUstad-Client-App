@@ -18,12 +18,11 @@ import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
 import { AuthProgress } from '../../components/auth/AuthProgress';
 import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
-import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
-import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme } from '../../constants/Theme';
 import { useAlertModal } from '../../hooks';
 import { useTranslation } from 'react-i18next';
 
@@ -32,7 +31,6 @@ export default function SignupScreen() {
   const { t } = useTranslation();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const theme = useTheme();
-  const typography = useThemeTypography();
   const alertModal = useAlertModal();
   const isWorker = role === 'worker';
   const accentColor = isWorker ? theme.colors.brand.worker : theme.colors.brand.primary;
@@ -151,11 +149,16 @@ export default function SignupScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title={t('auth.secureSignUp')} onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader
+              title={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+              onBack={() => router.back()}
+              accentColor={accentColor}
+            />
             <AuthProgress currentStep={1} accentColor={accentColor} />
             <AuthHero
+              compact
               accentColor={accentColor}
-              eyebrow={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+              eyebrow={t('auth.stepAccount', 'Step 1')}
               title={t('auth.secureSignUp')}
               highlight=""
               description={t('auth.signUpDesc')}
@@ -165,7 +168,7 @@ export default function SignupScreen() {
               intensity={25}
               padding={Spacing.l}
               style={[styles.formCard, { borderColor: theme.colors.border.subtle }]}
-              gradient={[`${accentColor}16`, alpha(theme.colors.brand.secondary, 0.06)]}
+              gradient={[`${accentColor}14`, alpha(theme.colors.brand.secondary, 0.05)]}
             >
               <InputField
                 accentColor={accentColor}
@@ -182,6 +185,20 @@ export default function SignupScreen() {
               />
               <InputField
                 accentColor={accentColor}
+                autoComplete="tel"
+                error={phoneError}
+                icon={<Phone size={18} color={accentColor} />}
+                keyboardType="phone-pad"
+                label={t('auth.phone')}
+                onChangeText={(value) => {
+                  setPhoneNumber(value);
+                  if (phoneError) setPhoneError('');
+                }}
+                placeholder={t('auth.phonePlaceholder', '+92 300 0000000')}
+                value={phoneNumber}
+              />
+              <InputField
+                accentColor={accentColor}
                 autoCapitalize="none"
                 autoComplete="email"
                 error={emailError}
@@ -194,20 +211,6 @@ export default function SignupScreen() {
                 }}
                 placeholder={t('auth.emailPlaceholder', 'name@example.com')}
                 value={email}
-              />
-              <InputField
-                accentColor={accentColor}
-                autoComplete="tel"
-                error={phoneError}
-                icon={<Phone size={18} color={accentColor} />}
-                keyboardType="phone-pad"
-                label={t('auth.phone')}
-                onChangeText={(value) => {
-                  setPhoneNumber(value);
-                  if (phoneError) setPhoneError('');
-                }}
-                placeholder={t('auth.phonePlaceholder', '+92 300 0000000')}
-                value={phoneNumber}
               />
 
               <AnimatedButton
@@ -236,8 +239,6 @@ export default function SignupScreen() {
                 <Text style={[styles.footerLink, { color: accentColor }]}> {t('auth.signIn')}</Text>
               </TouchableOpacity>
             </View>
-
-            <SecurityNote accentColor={accentColor} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

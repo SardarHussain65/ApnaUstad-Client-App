@@ -44,51 +44,54 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
 
   return (
     <View style={styles.section}>
-      <SectionLabel icon={Zap} label={t('jobCreation.urgentFixedPricing', 'URGENT FIXED PRICING')} color={palette.cyan} badge={t('jobCreation.locked', 'Locked')} />
-      
+      <SectionLabel
+        icon={Zap}
+        label={t('jobCreation.urgentFixedPricing', 'OFFERED PRICE & DURATION')}
+        color={palette.cyan}
+      />
+
       <GlassInput glowColor={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)}>
         <View style={styles.container}>
-          {/* Header section explaining fixed pricing */}
+          {/* Duration Stepper */}
           <View style={styles.headerRow}>
             <View style={styles.textColumn}>
-              <Text style={[styles.titleText, { color: palette.textPrimary }]}>{t('jobCreation.jobDuration', 'Job Duration (Hours)')}</Text>
+              <Text style={[styles.titleText, { color: palette.textPrimary }]}>{t('jobCreation.jobDuration', 'Estimated Work Time')}</Text>
               <Text style={[styles.subtitleText, { color: palette.textSecondary }]}>
-                {t('jobCreation.estimateHoursDesc', 'Estimate the hours needed. Rate is Rs. {{rate}}/hr.', { rate: baseRate })}
+                {t('jobCreation.estimateHoursDesc', 'Standard rate: Rs. {{rate}}/hr', { rate: baseRate })}
               </Text>
             </View>
 
-            {/* Stepper Control */}
             <View style={[styles.stepperContainer, { borderColor: palette.border, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : alpha(theme.colors.text.primary, 0.03) }]}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   styles.stepperButton,
                   {
                     backgroundColor: palette.surfaceHigh,
                     borderColor: palette.borderMedium,
                   },
-                  estimatedHours <= 1 && styles.stepperButtonDisabled
-                ]} 
+                  estimatedHours <= 1 && styles.stepperButtonDisabled,
+                ]}
                 onPress={decrementHours}
                 disabled={estimatedHours <= 1}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.stepperButtonText, { color: palette.textPrimary }]}>-</Text>
               </TouchableOpacity>
-              
+
               <View style={styles.hoursDisplay}>
                 <Text style={[styles.hoursText, { color: palette.cyan }]}>{estimatedHours}</Text>
                 <Text style={[styles.hoursLabel, { color: palette.textSecondary }]}>{estimatedHours === 1 ? t('jobCreation.hr', 'Hr') : t('jobCreation.hrs', 'Hrs')}</Text>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[
                   styles.stepperButton,
                   {
                     backgroundColor: palette.surfaceHigh,
                     borderColor: palette.borderMedium,
                   },
-                  estimatedHours >= 8 && styles.stepperButtonDisabled
-                ]} 
+                  estimatedHours >= 8 && styles.stepperButtonDisabled,
+                ]}
                 onPress={incrementHours}
                 disabled={estimatedHours >= 8}
                 activeOpacity={0.7}
@@ -100,22 +103,22 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
 
           {/* Editable Price Banner */}
           <View style={[
-            styles.priceBanner, 
+            styles.priceBanner,
             {
               backgroundColor: addAlpha(isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan), '10'),
               borderColor: addAlpha(isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan), '25'),
             },
-            isBelowMin && styles.priceBannerError, 
-            isBelowRecommended && !isBelowMin && styles.priceBannerWarning
+            isBelowMin && styles.priceBannerError,
+            isBelowRecommended && !isBelowMin && styles.priceBannerWarning,
           ]}>
-            <Zap 
-              size={18} 
-              color={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)} 
-              fill={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)} 
-              style={styles.zapIcon} 
+            <Zap
+              size={18}
+              color={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)}
+              fill={isBelowMin ? palette.error : (isBelowRecommended ? palette.orange : palette.cyan)}
+              style={styles.zapIcon}
             />
             <View style={styles.bannerTextColumn}>
-              <Text style={[styles.bannerLabel, { color: palette.textSecondary }]}>{t('jobCreation.offeredUrgentPrice', 'Your Offered Price')}</Text>
+              <Text style={[styles.bannerLabel, { color: palette.textSecondary }]}>{t('jobCreation.offeredUrgentPrice', 'Your Offer')}</Text>
               <View style={styles.inputRow}>
                 <Text style={[styles.currencyPrefix, { color: palette.textPrimary }]}>Rs.</Text>
                 <TextInput
@@ -134,21 +137,20 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
           {/* Feedback messages */}
           {isBelowMin ? (
             <Text style={[styles.feedbackText, { color: palette.error }]}>
-              {t('jobCreation.minPriceRequired', 'Minimum price required is Rs. {{price}}', { price: minPrice })}
+              {t('jobCreation.minPriceRequired', 'Minimum price is Rs. {{price}}', { price: minPrice })}
             </Text>
           ) : isBelowRecommended ? (
             <Text style={[styles.feedbackText, { color: palette.orange }]}>
-              {t('jobCreation.lowOfferWarning', 'Offer is below the recommended estimate. Ustads might take longer to accept.')}
+              {t('jobCreation.lowOfferWarning', 'Lower than suggested Rs. {{price}} — Ustads may take longer to accept.', { price: fixedPrice.toLocaleString() })}
             </Text>
           ) : currentPrice > fixedPrice ? (
             <Text style={[styles.feedbackText, { color: palette.success }]}>
-              {t('jobCreation.highOfferTip', 'Higher offers attract Ustads faster! 🚀')}
+              {t('jobCreation.highOfferTip', 'Higher offers attract nearby Ustads faster.')}
             </Text>
           ) : null}
 
-          {/* Recommended Estimate Display */}
           <View style={styles.breakdownRow}>
-            <Text style={[styles.breakdownLabel, { color: palette.textSecondary }]}>{t('jobCreation.recommendedEstimate', 'Recommended Estimate:')}</Text>
+            <Text style={[styles.breakdownLabel, { color: palette.textSecondary }]}>{t('jobCreation.recommendedEstimate', 'Suggested Price:')}</Text>
             <Text style={[styles.breakdownValue, { color: palette.textPrimary }]}>
               {t('common.rupeesFormat', 'Rs. {{amount}}', { amount: fixedPrice.toLocaleString() })}
             </Text>
@@ -158,22 +160,14 @@ export function UrgentPricingCard({ category, estimatedHours, onChangeHours, amo
             <View style={styles.minPriceAlert}>
               <ShieldCheck size={12} color={palette.success} />
               <Text style={[styles.minPriceAlertText, { color: palette.textSecondary }]}>
-                {t('jobCreation.minPriceApplied', 'Platform minimum booking rate (Rs. {{price}}) applied.', { price: minPrice })}
+                {t('jobCreation.minPriceApplied', 'Minimum visit charge (Rs. {{price}}) included.', { price: minPrice })}
               </Text>
             </View>
           )}
 
-          <View style={[
-            styles.infoBox, 
-            { 
-              borderColor: palette.border,
-              backgroundColor: theme.isDark ? 'rgba(255,255,255,0.02)' : alpha(theme.colors.text.primary, 0.02)
-            }
-          ]}>
-            <Text style={[styles.infoText, { color: palette.textSecondary }]}>
-              {t('jobCreation.urgentFixedPriceInfo', '⚡ Clients and Ustads are matched instantly. The price is locked before posting and cannot be negotiated. The first Ustad to accept is hired instantly.')}
-            </Text>
-          </View>
+          <Text style={[styles.infoText, { color: palette.textSecondary, marginTop: 4, paddingHorizontal: 4 }]}>
+            {t('jobCreation.urgentFixedPriceInfo', 'The first nearby Ustad to accept this price is booked right away.')}
+          </Text>
         </View>
       </GlassInput>
     </View>

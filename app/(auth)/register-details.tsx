@@ -26,7 +26,7 @@ import {
   BadgeDollarSign, FileText, CheckCircle, Eye, EyeOff,
   ChevronDown, Search, X, Plus, Trash2, ArrowRight, ArrowLeft, ShieldCheck, HelpCircle
 } from 'lucide-react-native';
-import { AppTheme, BorderRadius, Shadows, Spacing, useTheme, useThemeColors, alpha } from '../../constants/Theme';
+import { AppTheme, BorderRadius, Spacing, useTheme, useThemeColors, useThemeShadows, alpha } from '../../constants/Theme';
 import { BASE_URL } from '../../constants/Config';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../../hooks';
@@ -36,7 +36,6 @@ import { GlassCard } from '../../components/home/GlassCard';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
 import { AuthProgress } from '../../components/auth/AuthProgress';
-import { SecurityNote } from '../../components/auth/SecurityNote';
 
 interface CertificateItem {
   id: string;
@@ -59,9 +58,11 @@ export default function RegisterDetailsScreen() {
   }>();
   const theme = useTheme();
   const colors = useThemeColors();
-  const styles = createStyles(theme, colors);
+  const shadows = useThemeShadows();
   const isWorker = params.role === 'worker';
   const accentColor = isWorker ? colors.worker : colors.cyan;
+  const ctaTextColor = isWorker ? theme.colors.button.workerText : theme.colors.button.primaryText;
+  const styles = createStyles(theme, colors, shadows, ctaTextColor);
 
   // Step state for worker registration (1: Profile & Credentials, 2: Profession & Trust)
   const [step, setStep] = useState<1 | 2>(1);
@@ -615,7 +616,7 @@ export default function RegisterDetailsScreen() {
                 {/* Profile Image Picker */}
                 <View style={styles.avatarWrap}>
                   <TouchableOpacity
-                    style={[styles.imagePicker, { borderColor: image ? accentColor : 'rgba(255,255,255,0.15)' }]}
+                    style={[styles.imagePicker, { borderColor: image ? accentColor : theme.colors.border.default }]}
                     onPress={() => pickImage('profile')}
                     activeOpacity={0.8}
                   >
@@ -733,7 +734,7 @@ export default function RegisterDetailsScreen() {
                       <TextInput
                         style={styles.input}
                         placeholder={t('registerDetails.cityPlaceholder')}
-                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        placeholderTextColor={theme.colors.input.placeholder}
                         value={city}
                         onChangeText={setCity}
                       />
@@ -748,7 +749,7 @@ export default function RegisterDetailsScreen() {
                       <TextInput
                         style={styles.input}
                         placeholder="••••••••••••"
-                        placeholderTextColor="rgba(255,255,255,0.3)"
+                        placeholderTextColor={theme.colors.input.placeholder}
                         secureTextEntry={!showPassword}
                         value={password}
                         onChangeText={setPassword}
@@ -773,12 +774,12 @@ export default function RegisterDetailsScreen() {
                     onPress={handleNextStep}
                   >
                     <Text style={styles.completeBtnText}>
-                      {t('registerDetails.continueToProfession', 'CONTINUE TO PROFESSION')}
+                      {t('registerDetails.continueToProfession', 'Continue to Profession')}
                     </Text>
                     {I18nManager.isRTL ? (
-                      <ArrowLeft size={18} color="#000" />
+                      <ArrowLeft size={18} color={ctaTextColor} />
                     ) : (
-                      <ArrowRight size={18} color="#000" />
+                      <ArrowRight size={18} color={ctaTextColor} />
                     )}
                   </TouchableOpacity>
                 ) : (
@@ -793,19 +794,17 @@ export default function RegisterDetailsScreen() {
                   >
                     {isUploading || registerMutation.isPending ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <ActivityIndicator color="#000" style={{ marginRight: 10 }} />
+                        <ActivityIndicator color={ctaTextColor} style={{ marginRight: 10 }} />
                         <Text style={styles.completeBtnText}>{uploadProgress || t('registerDetails.uploading')}</Text>
                       </View>
                     ) : (
                       <>
                         <Text style={styles.completeBtnText}>{t('registerDetails.createProfile')}</Text>
-                        <CheckCircle size={20} color="#000" />
+                        <CheckCircle size={20} color={ctaTextColor} />
                       </>
                     )}
                   </TouchableOpacity>
                 )}
-
-                <SecurityNote accentColor={accentColor} text={t('registerDetails.privacySecured')} />
               </View>
             )}
 
@@ -829,12 +828,12 @@ export default function RegisterDetailsScreen() {
                     onPress={() => setIsDropdownOpen(true)}
                   >
                     <View style={styles.dropdownTriggerContent}>
-                      <Briefcase size={18} color={category ? accentColor : 'rgba(255,255,255,0.4)'} />
-                      <Text style={[styles.dropdownTriggerText, category && { color: '#fff', fontWeight: '600' }]}>
+                      <Briefcase size={18} color={category ? accentColor : theme.colors.text.muted} />
+                      <Text style={[styles.dropdownTriggerText, category && { color: theme.colors.text.primary, fontWeight: '600' }]}>
                         {category || t('registerDetails.selectProfession', 'Select your profession')}
                       </Text>
                     </View>
-                    <ChevronDown size={20} color={category ? accentColor : 'rgba(255,255,255,0.5)'} />
+                    <ChevronDown size={20} color={category ? accentColor : theme.colors.text.muted} />
                   </TouchableOpacity>
 
                   {/* Experience & Rate per hour */}
@@ -846,7 +845,7 @@ export default function RegisterDetailsScreen() {
                         <TextInput
                           style={styles.input}
                           placeholder="500"
-                          placeholderTextColor="rgba(255,255,255,0.3)"
+                          placeholderTextColor={theme.colors.input.placeholder}
                           keyboardType="numeric"
                           value={hourlyRate}
                           onChangeText={setHourlyRate}
@@ -860,7 +859,7 @@ export default function RegisterDetailsScreen() {
                         <TextInput
                           style={styles.input}
                           placeholder="5"
-                          placeholderTextColor="rgba(255,255,255,0.3)"
+                          placeholderTextColor={theme.colors.input.placeholder}
                           keyboardType="numeric"
                           value={experience}
                           onChangeText={setExperience}
@@ -876,7 +875,7 @@ export default function RegisterDetailsScreen() {
                     <TextInput
                       style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
                       placeholder={t('registerDetails.aboutPlaceholder')}
-                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      placeholderTextColor={theme.colors.input.placeholder}
                       multiline
                       value={bio}
                       onChangeText={setBio}
@@ -884,94 +883,95 @@ export default function RegisterDetailsScreen() {
                   </View>
                 </GlassCard>
 
-                {/* Optional Certificates & Technical Degrees (Trust Booster) */}
-                <GlassCard intensity={25} style={[styles.formSection, { marginTop: 16 }]}>
-                  <View style={styles.sectionHeader}>
-                    <Award size={18} color={accentColor} />
-                    <Text style={[styles.sectionTitle, { color: accentColor }]}>
-                      {t('registerDetails.certificatesSection', 'CERTIFICATES & DEGREES (OPTIONAL)')}
-                    </Text>
-                  </View>
-
-                  <View style={styles.certTrustBanner}>
-                    <ShieldCheck size={18} color={colors.success} style={{ marginTop: 2 }} />
-                    <Text style={styles.certTrustText}>
-                      {t(
-                        'registerDetails.certificatesDesc',
-                        'Upload vocational diplomas, trade licenses, or technical degrees to earn a "Verified Specialist" badge and get more bookings.'
-                      )}
-                    </Text>
-                  </View>
-
-                  {/* List of Added Certificates */}
-                  {certificates.map((cert, index) => (
-                    <View key={cert.id} style={styles.certCard}>
-                      <View style={styles.certCardHeader}>
-                        <Text style={styles.certCardIndex}>
-                          {t('registerDetails.certificateNumber', { number: index + 1, defaultValue: `Certificate #${index + 1}` })}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => removeCertificateSlot(cert.id)}
-                          hitSlop={8}
-                          style={styles.removeCertBtn}
-                        >
-                          <Trash2 size={16} color={colors.error} />
-                          <Text style={[styles.removeCertText, { color: colors.error }]}>
-                            {t('registerDetails.removeCertificate', 'Remove')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <Text style={styles.label}>{t('registerDetails.certificateTitle', 'CERTIFICATE / DEGREE TITLE')}</Text>
-                      <View style={styles.inputWrapper}>
-                        <View style={styles.iconContainer}><Award size={16} color={accentColor} /></View>
-                        <TextInput
-                          style={styles.input}
-                          placeholder={t('registerDetails.certificateTitlePlaceholder', 'e.g., DAE Electrical, HVAC Diploma')}
-                          placeholderTextColor="rgba(255,255,255,0.3)"
-                          value={cert.title}
-                          onChangeText={(val) => updateCertificate(cert.id, 'title', val)}
-                        />
-                      </View>
-
-                      <Text style={[styles.label, { marginTop: 10 }]}>{t('registerDetails.issuingOrg', 'INSTITUTE / ISSUING BOARD')}</Text>
-                      <View style={styles.inputWrapper}>
-                        <View style={styles.iconContainer}><Building size={16} color={accentColor} /></View>
-                        <TextInput
-                          style={styles.input}
-                          placeholder={t('registerDetails.issuingOrgPlaceholder', 'e.g., TEVTA, Technical Board')}
-                          placeholderTextColor="rgba(255,255,255,0.3)"
-                          value={cert.issuingOrg}
-                          onChangeText={(val) => updateCertificate(cert.id, 'issuingOrg', val)}
-                        />
-                      </View>
-
-                      <TouchableOpacity
-                        style={[styles.certImagePicker, cert.imageUri && { borderColor: accentColor }]}
-                        onPress={() => pickImage(`cert-${cert.id}`)}
-                      >
-                        {cert.imageUri ? (
-                          <Image source={{ uri: cert.imageUri }} style={styles.certPreview} />
-                        ) : (
-                          <View style={styles.certPlaceholder}>
-                            <Camera size={20} color={accentColor} />
-                            <Text style={[styles.certPlaceholderText, { color: accentColor }]}>
-                              {t('registerDetails.uploadCertImage', 'TAP TO UPLOAD CERTIFICATE')}
-                            </Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-
-                  {/* Add Certificate Button */}
-                  <TouchableOpacity style={[styles.addCertBtn, { borderColor: accentColor + '60' }]} onPress={addCertificateSlot}>
-                    <Plus size={16} color={accentColor} />
+                {/* Optional Certificates & Technical Degrees — collapsed until tapped */}
+                {certificates.length === 0 ? (
+                  <TouchableOpacity
+                    style={[styles.addCertBtn, { borderColor: alpha(accentColor, 0.45), marginTop: 14 }]}
+                    onPress={addCertificateSlot}
+                    activeOpacity={0.8}
+                  >
+                    <Award size={16} color={accentColor} />
                     <Text style={[styles.addCertBtnText, { color: accentColor }]}>
-                      {t('registerDetails.addCertificate', '+ ADD CERTIFICATE / DEGREE')}
+                      {t('registerDetails.addCertificateOptional', '+ Add Certificate or Diploma (Optional)')}
                     </Text>
                   </TouchableOpacity>
-                </GlassCard>
+                ) : (
+                  <GlassCard intensity={25} style={[styles.formSection, { marginTop: 16 }]}>
+                    <View style={styles.sectionHeader}>
+                      <Award size={18} color={accentColor} />
+                      <Text style={[styles.sectionTitle, { color: accentColor }]}>
+                        {t('registerDetails.certificatesSection', 'Certificates & Diplomas (Optional)')}
+                      </Text>
+                    </View>
+
+                    {certificates.map((cert, index) => (
+                      <View key={cert.id} style={styles.certCard}>
+                        <View style={styles.certCardHeader}>
+                          <Text style={styles.certCardIndex}>
+                            {t('registerDetails.certificateNumber', { number: index + 1, defaultValue: `Certificate #${index + 1}` })}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => removeCertificateSlot(cert.id)}
+                            hitSlop={8}
+                            style={styles.removeCertBtn}
+                          >
+                            <Trash2 size={16} color={colors.error} />
+                            <Text style={[styles.removeCertText, { color: colors.error }]}>
+                              {t('registerDetails.removeCertificate', 'Remove')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.label}>{t('registerDetails.certificateTitle', 'Certificate / Diploma Title')}</Text>
+                        <View style={styles.inputWrapper}>
+                          <View style={styles.iconContainer}><Award size={16} color={accentColor} /></View>
+                          <TextInput
+                            style={styles.input}
+                            placeholder={t('registerDetails.certificateTitlePlaceholder', 'e.g., DAE Electrical, HVAC Diploma')}
+                            placeholderTextColor={theme.colors.input.placeholder}
+                            value={cert.title}
+                            onChangeText={(val) => updateCertificate(cert.id, 'title', val)}
+                          />
+                        </View>
+
+                        <Text style={[styles.label, { marginTop: 10 }]}>{t('registerDetails.issuingOrg', 'Institute / Issuing Board')}</Text>
+                        <View style={styles.inputWrapper}>
+                          <View style={styles.iconContainer}><Building size={16} color={accentColor} /></View>
+                          <TextInput
+                            style={styles.input}
+                            placeholder={t('registerDetails.issuingOrgPlaceholder', 'e.g., TEVTA, Technical Board')}
+                            placeholderTextColor={theme.colors.input.placeholder}
+                            value={cert.issuingOrg}
+                            onChangeText={(val) => updateCertificate(cert.id, 'issuingOrg', val)}
+                          />
+                        </View>
+
+                        <TouchableOpacity
+                          style={[styles.certImagePicker, cert.imageUri && { borderColor: accentColor }]}
+                          onPress={() => pickImage(`cert-${cert.id}`)}
+                        >
+                          {cert.imageUri ? (
+                            <Image source={{ uri: cert.imageUri }} style={styles.certPreview} />
+                          ) : (
+                            <View style={styles.certPlaceholder}>
+                              <Camera size={20} color={accentColor} />
+                              <Text style={[styles.certPlaceholderText, { color: accentColor }]}>
+                                {t('registerDetails.uploadCertImage', 'Tap to upload certificate photo')}
+                              </Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    <TouchableOpacity style={[styles.addCertBtn, { borderColor: alpha(accentColor, 0.45) }]} onPress={addCertificateSlot}>
+                      <Plus size={16} color={accentColor} />
+                      <Text style={[styles.addCertBtnText, { color: accentColor }]}>
+                        {t('registerDetails.addCertificate', '+ Add Another Certificate')}
+                      </Text>
+                    </TouchableOpacity>
+                  </GlassCard>
+                )}
 
                 {/* Step 2 Action Buttons */}
                 <View style={styles.step2Actions}>
@@ -987,13 +987,13 @@ export default function RegisterDetailsScreen() {
                   >
                     {isUploading || registerMutation.isPending ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <ActivityIndicator color="#000" style={{ marginRight: 8 }} />
+                        <ActivityIndicator color={ctaTextColor} style={{ marginRight: 8 }} />
                         <Text style={styles.completeBtnText}>{uploadProgress || t('registerDetails.uploading')}</Text>
                       </View>
                     ) : (
                       <>
                         <Text style={styles.completeBtnText}>{t('registerDetails.createProfile')}</Text>
-                        <CheckCircle size={20} color="#000" />
+                        <CheckCircle size={20} color={ctaTextColor} />
                       </>
                     )}
                   </TouchableOpacity>
@@ -1013,8 +1013,6 @@ export default function RegisterDetailsScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-
-                <SecurityNote accentColor={accentColor} text={t('registerDetails.privacySecured')} />
               </View>
             )}
 
@@ -1026,30 +1024,30 @@ export default function RegisterDetailsScreen() {
               onRequestClose={() => setIsDropdownOpen(false)}
             >
               <View style={styles.modalOverlay}>
-                <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface.card || '#121826' }]}>
+                <View style={[styles.modalSheet, { backgroundColor: theme.colors.modal.card }]}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>
                       {t('registerDetails.selectProfession', 'Select your profession')}
                     </Text>
                     <TouchableOpacity onPress={() => setIsDropdownOpen(false)} hitSlop={12}>
-                      <X size={22} color="rgba(255,255,255,0.7)" />
+                      <X size={22} color={theme.colors.text.muted} />
                     </TouchableOpacity>
                   </View>
 
                   {/* Search Bar */}
                   <View style={styles.searchWrapper}>
-                    <Search size={18} color="rgba(255,255,255,0.4)" style={{ marginRight: 8 }} />
+                    <Search size={18} color={theme.colors.text.muted} style={{ marginRight: 8 }} />
                     <TextInput
                       style={styles.searchInput}
                       placeholder={t('registerDetails.searchProfession', 'Search profession or trade...')}
-                      placeholderTextColor="rgba(255,255,255,0.3)"
+                      placeholderTextColor={theme.colors.input.placeholder}
                       value={categorySearchQuery}
                       onChangeText={setCategorySearchQuery}
                       autoCapitalize="none"
                     />
                     {categorySearchQuery.length > 0 && (
                       <TouchableOpacity onPress={() => setCategorySearchQuery('')}>
-                        <X size={16} color="rgba(255,255,255,0.5)" />
+                        <X size={16} color={theme.colors.text.muted} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1119,7 +1117,7 @@ export default function RegisterDetailsScreen() {
   );
 }
 
-const createStyles = (theme: AppTheme, colors: any) =>
+const createStyles = (theme: AppTheme, colors: any, shadows: any, ctaTextColor: string) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -1518,13 +1516,13 @@ const createStyles = (theme: AppTheme, colors: any) =>
       borderRadius: BorderRadius.xl,
       marginTop: 16,
       gap: 8,
-      ...Shadows.card,
+      ...shadows.card,
     },
     completeBtnText: {
       fontSize: 13,
       fontWeight: '800',
       letterSpacing: 0.6,
-      color: theme.colors.button.primaryText,
+      color: ctaTextColor,
     },
     step2Actions: {
       marginTop: 18,

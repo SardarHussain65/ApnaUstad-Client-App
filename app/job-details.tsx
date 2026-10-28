@@ -44,7 +44,7 @@ import {
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { ConfirmModal } from '../components/ui';
-import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
+import { alpha, BorderRadius, Colors, Shadows, Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import {
   useAcceptInstantJobMutation,
@@ -212,6 +212,7 @@ function PrimaryAction({
 export default function JobDetailsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const themedTypography = useThemeTypography();
   const colors = theme.legacy;
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -335,11 +336,20 @@ export default function JobDetailsScreen() {
   const detailMeta = job.detailMeta;
   const baseStatus = STATUS_CONFIG[job.status] || STATUS_CONFIG.open;
   const trans = getStatusInfo(job.status);
+  const resolvedBaseColor = baseStatus.color === 'cyan'
+    ? colors.cyan
+    : baseStatus.color === 'worker'
+      ? colors.worker
+      : baseStatus.color === 'success'
+        ? colors.green
+        : baseStatus.color === 'error'
+          ? colors.error
+          : theme.colors.text.muted;
   const status = {
     ...baseStatus,
     label: detailMeta?.statusInfo?.label || trans.label,
     description: trans.description,
-    color: detailMeta?.statusInfo?.accentColor || baseStatus.color,
+    color: detailMeta?.statusInfo?.accentColor || resolvedBaseColor,
   };
   const StatusIcon = status.Icon;
   const isInstant = (detailMeta?.missionKind || job.urgency) === 'instant';
@@ -468,13 +478,16 @@ export default function JobDetailsScreen() {
             <GlassCard
               padding={0}
               intensity={50}
-              hasGlow
+              borderColor={theme.colors.border.subtle}
+              hasGlow={theme.id === 'current'}
               glowColor={status.color}
               style={styles.heroCard}
               contentStyle={styles.heroContent}
             >
               <LinearGradient
-                colors={[`${status.color}26`, 'rgba(8,10,30,0.96)', 'rgba(0,245,255,0.08)']}
+                colors={theme.isDark
+                  ? [`${status.color}26`, 'rgba(8,10,30,0.96)', 'rgba(0,245,255,0.08)']
+                  : [alpha(status.color, 0.1), theme.colors.surface.card, theme.colors.surface.subtle]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
@@ -482,24 +495,24 @@ export default function JobDetailsScreen() {
               <View style={[styles.heroAccent, { backgroundColor: status.color }]} />
 
               <View style={styles.heroTopRow}>
-                <View style={[styles.statusBadge, { backgroundColor: `${status.color}14`, borderColor: `${status.color}40` }]}>
+                <View style={[styles.statusBadge, { backgroundColor: alpha(status.color, 0.12), borderColor: alpha(status.color, 0.35) }]}>
                   <StatusIcon size={12} color={status.color} strokeWidth={2.5} />
                   <Text style={[styles.statusBadgeText, { color: status.color }]}>{status.label}</Text>
                 </View>
-                <View style={styles.amountBadge}>
+                <View style={[styles.amountBadge, { backgroundColor: alpha(colors.green, 0.1), borderColor: alpha(colors.green, 0.26) }]}>
                   <Banknote size={13} color={colors.green} strokeWidth={2.4} />
                   <Text style={[styles.amountBadgeText, { color: colors.green }]}>{amountText}</Text>
                 </View>
               </View>
 
               <View style={styles.heroTitleRow}>
-                <View style={[styles.heroIcon, { backgroundColor: isInstant ? `${colors.worker}18` : `${colors.cyan}18` }]}>
+                <View style={[styles.heroIcon, { backgroundColor: isInstant ? alpha(colors.worker, 0.12) : alpha(colors.cyan, 0.12), borderColor: theme.colors.border.subtle }]}>
                   <MissionIcon size={24} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.3} />
                 </View>
                 <View style={styles.heroTitleCopy}>
                   <Text style={[styles.heroLabel, { color: colors.primary }]}>{missionKindLabel}</Text>
-                  <Text style={[styles.heroTitle, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
-                  <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={3}>{description}</Text>
+                  <Text style={[styles.heroTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
+                  <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]}>{description}</Text>
                 </View>
               </View>
 
@@ -585,7 +598,7 @@ export default function JobDetailsScreen() {
                     </View>
                     <View style={styles.clientCopy}>
                       <Text style={[styles.clientRole, { color: colors.worker }]}>{t('jobDetails.serviceClientLabel')}</Text>
-                      <Text style={[styles.clientName, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
+                      <Text style={[styles.clientName, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
                       <Text style={[styles.clientHistory, { color: theme.colors.text.muted }]}>
                         {clientJobs > 0 ? t('jobDetails.clientJobsCount', { count: clientJobs }) : t('jobDetails.newClient')}
                       </Text>
@@ -637,18 +650,6 @@ export default function JobDetailsScreen() {
               </GlassCard>
             </Animated.View>
           )}
-
-          <Animated.View entering={FadeInDown.delay(280).duration(460)} style={styles.section}>
-            <SectionHeader
-              icon={FileText}
-              title={t('jobDetails.briefTitle')}
-              subtitle={t('jobDetails.briefSub')}
-              color={colors.green}
-            />
-            <GlassCard padding={14} intensity={34} borderColor={theme.colors.border.subtle} style={styles.briefCard}>
-              <Text style={[styles.briefText, { color: theme.colors.text.secondary }]}>{description}</Text>
-            </GlassCard>
-          </Animated.View>
 
           {(job.status === 'cancelled' || job.status === 'closed' || job.status === 'assigned') ? (
             <Animated.View entering={FadeInDown.delay(350).duration(460)} style={styles.section}>

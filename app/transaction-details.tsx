@@ -5,7 +5,6 @@ import {
   Linking,
   Modal,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -22,24 +21,20 @@ import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import {
   Banknote,
-  BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
   CreditCard,
-  Eye,
   Image as ImageIcon,
   MapPin,
   MessageCircle,
   Navigation,
   Phone,
-  Share2,
   ShieldCheck,
   Star,
   UserRound,
-  Volume2,
   XCircle,
   Zap,
   Scale,
@@ -47,7 +42,7 @@ import {
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
-import { Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
+import { useTheme, useThemeTypography, alpha } from '../constants/Theme';
 import { useAlertModal, useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
@@ -95,12 +90,6 @@ const formatDate = (value?: string) => {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return 'Today';
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-};
-
-const formatSince = (value?: string) => {
-  const date = value ? new Date(value) : null;
-  if (!date || Number.isNaN(date.getTime())) return 'New member';
-  return `Since ${date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
 };
 
 const initialsFor = (name?: string) => {
@@ -188,35 +177,37 @@ function FloatingAction({
   primary?: boolean;
   disabled?: boolean;
 }) {
-  // Determine gradient colors based on button role
-  let gradientColors: readonly [string, string] = ['#00F5FF', '#0066FF']; // default cyan for CHAT
+  const theme = useTheme();
+  let gradientColors: readonly [string, string] = ['#00F5FF', '#0066FF'];
   let shadowColor = '#00F5FF';
+  let activeTextColor = '#FFFFFF';
 
   if (primary) {
-    gradientColors = ['#FF2A6D', '#FF5E62']; // high attention sunset coral gradient for CALL
+    gradientColors = ['#FF2A6D', '#FF5E62'];
     shadowColor = '#FF2A6D';
+    activeTextColor = '#FFFFFF';
   } else if (color === P.green) {
-    gradientColors = ['#00FF7F', '#00A85A']; // neon green for TRACK
-    shadowColor = '#00FF7F';
+    gradientColors = ['#00E676', '#00A85A'];
+    shadowColor = '#00E676';
+    activeTextColor = '#001014';
   }
-
-  const activeIconColor = '#001014'; // high contrast dark navy icon on vibrant solid backgrounds
 
   return (
     <TouchableOpacity
-      activeOpacity={0.75}
+      activeOpacity={0.8}
       onPress={onPress}
       disabled={disabled}
       style={[
         styles.floatingAction,
+        { borderColor: theme.colors.border.subtle },
         !disabled && {
           shadowColor,
-          shadowOpacity: 0.35,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 5 },
-          elevation: 6,
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 5,
         },
-        disabled && styles.floatingActionDisabled,
+        disabled && [styles.floatingActionDisabled, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }],
       ]}
     >
       {!disabled ? (
@@ -226,28 +217,28 @@ function FloatingAction({
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.04)' }]} />
-      )}
-      <Icon size={22} color={disabled ? P.textDim : activeIconColor} strokeWidth={2.4} />
+      ) : null}
+      <Icon size={17} color={disabled ? theme.colors.text.muted : activeTextColor} strokeWidth={2.4} />
+      <Text style={[styles.floatingActionText, { color: disabled ? theme.colors.text.muted : activeTextColor }]} numberOfLines={1}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
 
 export default function TransactionDetailsScreen() {
   const theme = useTheme();
-  const colors = useThemeColors();
+  const themedTypography = useThemeTypography();
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
   const { id, amount: initialAmount, autoAssigned } = useLocalSearchParams<{ id: string; amount?: string; autoAssigned?: string }>();
-  const { role, user } = useAuth();
+  const { role } = useAuth();
   const isWorker = role === 'worker';
 
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [showDisputeModal, setShowDisputeModal] = useState(false);
@@ -290,8 +281,8 @@ export default function TransactionDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loading}>
-          <ActivityIndicator color={P.cyan} size="large" />
-          <Text style={styles.loadingText}>{t('transactionDetails.loadingDetails', 'Loading booking details')}</Text>
+          <ActivityIndicator color={theme.colors.brand.primary} size="large" />
+          <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('transactionDetails.loadingDetails', 'Loading booking details')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -301,9 +292,9 @@ export default function TransactionDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loading}>
-          <Text style={styles.emptyTitle}>{t('transactionDetails.bookingNotFound', 'Booking not found')}</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.emptyButton}>
-            <Text style={styles.emptyButtonText}>{t('transactionDetails.goBack', 'Go back')}</Text>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('transactionDetails.bookingNotFound', 'Booking not found')}</Text>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.emptyButton, { backgroundColor: theme.colors.brand.primary }]}>
+            <Text style={[styles.emptyButtonText, { color: theme.colors.button.primaryText }]}>{t('transactionDetails.goBack', 'Go back')}</Text>
           </TouchableOpacity>
         </View>
       </BackgroundWrapper>
@@ -339,8 +330,6 @@ export default function TransactionDetailsScreen() {
   const partnerCity = meta?.counterParty?.city || partner?.city || '';
   const partnerAddress = meta?.counterParty?.address || partner?.address || partnerCity || '';
   const partnerRating = Number(meta?.counterParty?.rating ?? partner?.rating ?? 0);
-  const partnerReviews = Number(meta?.counterParty?.totalReviews ?? partner?.totalReviews ?? 0);
-  const partnerJobs = Number(meta?.counterParty?.totalJobs ?? partner?.totalJobs ?? 0);
   const partnerHourlyRate = Number(meta?.counterParty?.hourlyRate ?? partner?.hourlyRate ?? booking.hourlyRate ?? 0);
   const partnerExperience = Number(meta?.counterParty?.experience ?? partner?.experience ?? 0);
   const partnerJoinedAt = meta?.counterParty?.joinedAt || partner?.createdAt;
@@ -352,20 +341,13 @@ export default function TransactionDetailsScreen() {
     return t('transactionDetails.memberSince', `Since ${dateStr}`, { date: dateStr });
   };
 
-  const partnerStatusText = isWorker
-    ? (meta?.counterParty?.isActive === false || partner?.isActive === false 
-        ? t('transactionDetails.inactiveAccount', 'Inactive account') 
-        : t('transactionDetails.activeClient', 'Active client'))
-    : (meta?.counterParty?.isVerified || partner?.isVerified 
-        ? t('transactionDetails.verifiedUstad', 'Verified Ustad') 
-        : t('transactionDetails.verificationPending', 'Verification pending'));
   const partnerSubtitle = isWorker
-    ? (partnerAddress || partnerPhone || t('transactionDetails.clientProfileAvailable', 'Client profile available'))
+    ? (partnerAddress || partnerPhone || t('transactionDetails.clientProfileAvailable', 'Tap to view profile'))
     : `${partnerCategory}${partnerExperience > 0 ? ` • ${t('transactionDetails.yearsExp', '{{count}}y exp', { count: partnerExperience })}` : ''}`;
   const canTrackMission = Boolean(customerId && workerId);
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking.workerEarning : booking.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
-  const amountLabel = isWorker ? t('transactionDetails.yourEarning', 'Your Earning') : t('transactionDetails.bookingValue', 'Booking Value');
+  const amountLabel = isWorker ? t('transactionDetails.yourEarning', 'Your Earning') : t('transactionDetails.bookingValue', 'Total Price');
   const serviceTitle = meta?.title || booking.category || t('transactionDetails.jobDetails', 'Service Booking');
   const serviceDescription = meta?.description || booking.description || t('transactionDetails.serviceDescription', 'Service request details');
   
@@ -376,11 +358,7 @@ export default function TransactionDetailsScreen() {
   const timeLabel = rawTimeLabel === 'ASAP' ? t('transactionDetails.asap', 'ASAP') : rawTimeLabel;
 
   const addressLabel = meta?.location?.address || booking.address || t('transactionDetails.serviceLocation', 'Service location');
-  const workerLocation = (isWorker
-    ? (booking.worker?.address || (user as any)?.address || booking.worker?.city || (user as any)?.city)
-    : (booking.worker?.address || booking.worker?.city || meta?.counterParty?.address || '')
-  ) || '';
-  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? t('transactionDetails.instantVisit', 'Instant visit') : t('transactionDetails.scheduledVisit', 'Scheduled visit'));
+  const missionKindLabel = meta?.missionKindLabel || (booking.bookingType === 'instant' ? t('transactionDetails.instantVisit', 'Urgent visit') : t('transactionDetails.scheduledVisit', 'Scheduled visit'));
   const paymentStatusLabel = booking.paymentStatus === 'paid' ? t('transactionDetails.paid', 'Paid') : t('transactionDetails.cashPending', 'Cash pending');
   const stepIndex = STEPS.findIndex(step => step.value === status);
   const visibleStepIndex = stepIndex < 0 ? 0 : stepIndex;
@@ -413,12 +391,6 @@ export default function TransactionDetailsScreen() {
         latitude,
         longitude,
       },
-    });
-  };
-
-  const shareMission = () => {
-    Share.share({
-      message: `${serviceTitle} booking - ${statusInfo.label} - ${amountText}`,
     });
   };
 
@@ -506,7 +478,7 @@ export default function TransactionDetailsScreen() {
           )}
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + (status === 'completed' || status === 'cancelled' ? 24 : 40) }]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + (isJobEnded ? 24 : 96) }]}>
           <Animated.View 
             entering={FadeInDown.duration(450)} 
             style={[
@@ -546,8 +518,8 @@ export default function TransactionDetailsScreen() {
               </View>
               <View style={styles.heroTitleCopy}>
                 <Text style={[styles.heroStage, { color: theme.colors.text.muted }]}>{statusTitle}</Text>
-                <Text style={[styles.heroTitle, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{serviceTitle}</Text>
-                <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={2}>{serviceDescription}</Text>
+                <Text style={[styles.heroTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{serviceTitle}</Text>
+                <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={3}>{serviceDescription}</Text>
               </View>
             </View>
 
@@ -636,7 +608,7 @@ export default function TransactionDetailsScreen() {
                 </View>
                 <View style={styles.partnerCopy}>
                   <Text style={[styles.partnerRoleText, { color: theme.colors.text.muted }]}>{partnerRole}</Text>
-                  <Text style={[styles.partnerName, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{partnerName}</Text>
+                  <Text style={[styles.partnerName, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{partnerName}</Text>
                   <Text style={[styles.partnerSubText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{partnerSubtitle}</Text>
                 </View>
                 <View style={[styles.partnerCue, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08), borderColor: theme.isDark ? P.borderStrong : theme.colors.border.subtle }]}>
@@ -647,177 +619,30 @@ export default function TransactionDetailsScreen() {
               <View style={styles.partnerInsightRow}>
                 {isWorker ? (
                   <>
-                    <PartnerInsight icon={Phone} label={t('transactionDetails.contact', 'Contact')} value={isCommunicationLocked ? t('transactionDetails.closedAfterCompletion', 'Closed after job completion') : partnerPhone || t('chat.inApp', 'In app')} color={theme.colors.brand.primary} />
+                    <PartnerInsight icon={Phone} label={t('transactionDetails.contact', 'Contact')} value={isCommunicationLocked ? t('transactionDetails.closedAfterCompletion', 'Closed') : partnerPhone || t('chat.inApp', 'In app')} color={theme.colors.brand.primary} />
                     <PartnerInsight icon={MapPin} label={t('transactionDetails.area', 'Area')} value={partnerCity || partnerAddress || t('common.notShared', 'Not shared')} color={P.green} />
                     <PartnerInsight icon={CalendarDays} label={t('transactionDetails.member', 'Member')} value={formatSince(partnerJoinedAt)} color={P.orange} />
                   </>
                 ) : (
-                  <>
-                    <PartnerInsight icon={Banknote} label={t('transactionDetails.rate', 'Rate')} value={formatCurrency(partnerHourlyRate)} color={theme.colors.brand.primary} />
-                  </>
+                  <PartnerInsight icon={Banknote} label={t('transactionDetails.rate', 'Rate')} value={formatCurrency(partnerHourlyRate)} color={theme.colors.brand.primary} />
                 )}
-              </View>
-
-              <View style={[styles.partnerProfileRow, { borderColor: theme.isDark ? 'rgba(0,245,255,0.16)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(0,0,0,0.18)' : theme.colors.surface.subtle }]}>
-                <View style={[styles.partnerStatusDot, { backgroundColor: isWorker ? P.green : (partnerStatusText.includes('Verified') ? P.green : P.orange) }]} />
-                <Text style={[styles.partnerStatusText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{partnerStatusText}</Text>
-                <View style={styles.partnerProfileLink}>
-                  <Eye size={13} color={theme.colors.brand.primary} strokeWidth={2.4} />
-                  <Text style={[styles.partnerProfileText, { color: theme.colors.brand.primary }]}>
-                    {isWorker ? t('transactionDetails.viewClientProfile', 'View client profile') : t('transactionDetails.viewUstadProfile', 'View Ustad profile')}
-                  </Text>
-                </View>
               </View>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Unified Collapsible Job Details Card */}
-          {(voiceBriefs.length > 0 || photosAndVideos.length > 0 || !!booking.description || !!booking.category) && (
-            <Animated.View entering={FadeInDown.delay(260).duration(450)} style={styles.section}>
-              <SectionHeader icon={BriefcaseBusiness} title={t('transactionDetails.jobDetails', 'Job Details')} />
-              
-              <View style={[styles.unifiedJobCard, { borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle }]}>
-                <LinearGradient
-                  colors={theme.isDark 
-                    ? ['rgba(9, 12, 32, 0.94)', 'rgba(12, 16, 42, 0.98)']
-                    : [theme.colors.surface.card, theme.colors.surface.card]}
-                  style={StyleSheet.absoluteFillObject}
-                />
-                
-                {/* Primary Info: Written Description (Always visible, max 3 lines when collapsed) */}
-                {!!booking.description && (
-                  <View style={styles.primaryDescBlock}>
-                    <Text style={[styles.primaryDescLabel, { color: theme.colors.text.muted }]}>{t('transactionDetails.descriptionLabel', 'DESCRIPTION')}</Text>
-                    <Text 
-                      style={[styles.primaryDescText, { color: theme.colors.text.primary }]} 
-                      numberOfLines={isDetailsExpanded ? undefined : 3}
-                    >
-                      {booking.description}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Primary Specifications: Category & Duration Badges */}
-                <View style={styles.primaryBadgesRow}>
-                  <View style={[styles.primaryBadge, { borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.25)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.06)' : theme.colors.surface.subtle }]}>
-                    <BriefcaseBusiness size={11} color={theme.colors.brand.primary} />
-                    <Text style={[styles.primaryBadgeText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
-                      {booking.category || serviceTitle}
-                    </Text>
-                  </View>
-                  <View style={[styles.primaryBadge, { borderColor: theme.isDark ? 'rgba(255, 140, 0, 0.25)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(255, 140, 0, 0.06)' : theme.colors.surface.subtle }]}>
-                    <Clock3 size={11} color={P.orange} />
-                    <Text style={[styles.primaryBadgeText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
-                      {booking.estimatedHours === 1 
-                        ? t('transactionDetails.durationHours', { count: 1 }) 
-                        : t('transactionDetails.durationHoursPlural', { count: booking.estimatedHours || 1 })}
-                    </Text>
-                  </View>
+          {/* Photos & Voice Note (only rendered when attachments exist — no duplicate text) */}
+          {(voiceBriefs.length > 0 || photosAndVideos.length > 0) && (
+            <Animated.View entering={FadeInDown.delay(220).duration(450)} style={styles.section}>
+              <SectionHeader icon={ImageIcon} title={t('transactionDetails.photosVideos', 'Photos & Voice Note')} color={theme.colors.brand.primary} />
+              <View style={[styles.unifiedJobCard, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.card }]}>
+                <View style={{ gap: 14 }}>
+                  {photosAndVideos.length > 0 && (
+                    <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} cardWidth={galleryCardWidth} />
+                  )}
+                  {voiceBriefs.length > 0 && (
+                    <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} cardWidth={galleryCardWidth} />
+                  )}
                 </View>
-
-                {/* Collapsed Preview Item Indicators (Photo pile, Voice, Specs) */}
-                {!isDetailsExpanded && (
-                  <View style={styles.collapsedPreviewContainer}>
-                    {/* Photos/Videos stack preview */}
-                    {photosAndVideos.length > 0 && (
-                      <View style={styles.previewItem}>
-                        <View style={styles.thumbnailPile}>
-                          {photosAndVideos.slice(0, 3).map((item, idx) => (
-                            <Image 
-                              key={idx}
-                              source={{ uri: item.url }} 
-                              style={[
-                                styles.previewThumbnail, 
-                                { marginLeft: idx > 0 ? -12 : 0, zIndex: 3 - idx }
-                              ]} 
-                            />
-                          ))}
-                        </View>
-                        <Text style={[styles.previewItemText, { color: theme.colors.text.secondary }]}>
-                          {photosAndVideos.length === 1 
-                            ? t('transactionDetails.filesCount', { count: 1 }) 
-                            : t('transactionDetails.filesCountPlural', { count: photosAndVideos.length })}
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Voice Brief indicator preview */}
-                    {voiceBriefs.length > 0 && (
-                      <View style={styles.previewItem}>
-                        <View style={[styles.voicePreviewIcon, { backgroundColor: theme.isDark ? P.orangeMuted : alpha(P.orange, 0.08) }]}>
-                          <Volume2 size={10} color={P.orange} strokeWidth={2.5} />
-                        </View>
-                        <Text style={[styles.previewItemText, { color: P.orange }]}>
-                          {t('transactionDetails.voiceBrief', 'Voice Brief')}
-                        </Text>
-                      </View>
-                    )}
-
-                    {/* Spec Indicators preview */}
-                    <View style={styles.previewItem}>
-                      <View style={[styles.specsPreviewIcon, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08) }]}>
-                        <MapPin size={10} color={theme.colors.brand.primary} strokeWidth={2.5} />
-                      </View>
-                      <Text style={[styles.previewItemText, { color: theme.colors.brand.primary }]}>
-                        {t('transactionDetails.locRates', 'Loc & Rates')}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Collapsible Content */}
-                {isDetailsExpanded && (
-                  <Animated.View entering={FadeInDown.duration(300)} style={styles.expandedContentBlock}>
-                    
-                    {/* 1. Photos & Videos section (if any) */}
-                    {photosAndVideos.length > 0 && (
-                      <View style={styles.detailsSubSection}>
-                        <Text style={[styles.detailsSubSectionTitle, { color: theme.colors.text.muted }]}>{t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}</Text>
-                        <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} cardWidth={galleryCardWidth} />
-                      </View>
-                    )}
-
-                    {/* 2. Voice brief player (if any) */}
-                    {voiceBriefs.length > 0 && (
-                      <View style={styles.detailsSubSection}>
-                        <Text style={[styles.detailsSubSectionTitle, { color: theme.colors.text.muted }]}>
-                          {isWorker ? t('transactionDetails.clientVoiceBrief', "CLIENT'S VOICE BRIEF") : t('transactionDetails.yourVoiceBrief', "YOUR VOICE BRIEF")}
-                        </Text>
-                        <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} cardWidth={galleryCardWidth} />
-                      </View>
-                    )}
-
-                    {/* 3. Fully detailed specifications (Location & Rates) */}
-                    <View style={styles.detailsSubSection}>
-                      <Text style={[styles.detailsSubSectionTitle, { color: theme.colors.text.muted }]}>{t('transactionDetails.additionalDetails', 'ADDITIONAL DETAILS')}</Text>
-                      <View style={[styles.detailSpecsCard, { borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.12)' : theme.colors.surface.subtle }]}>
-                        <InfoRow icon={MapPin} label={t('transactionDetails.serviceLocation', 'Service Location')} value={addressLabel} />
-                        <InfoRow 
-                          icon={Banknote} 
-                          label={isWorker ? t('transactionDetails.hourlyRate', 'Hourly Rate') : t('transactionDetails.quotedRate', 'Quoted Rate')} 
-                          value={formatCurrency(booking.hourlyRate)} 
-                        />
-                      </View>
-                    </View>
-
-                  </Animated.View>
-                )}
-
-                {/* Expansion Toggle Button */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setIsDetailsExpanded(prev => !prev)}
-                  style={styles.unifiedCardToggle}
-                >
-                  <Text style={[styles.unifiedCardToggleText, { color: theme.colors.brand.primary }]}>
-                    {isDetailsExpanded ? t('transactionDetails.showLess', 'Show Less') : t('transactionDetails.showMoreDetails', 'Show More Details')}
-                  </Text>
-                  <ChevronRight
-                    size={14}
-                    color={theme.colors.brand.primary}
-                    style={{ transform: [{ rotate: isDetailsExpanded ? '270deg' : '90deg' }] }}
-                  />
-                </TouchableOpacity>
               </View>
             </Animated.View>
           )}
@@ -884,16 +709,16 @@ export default function TransactionDetailsScreen() {
 
           {!isWorker && status === 'completed' && (
             <Animated.View entering={FadeInDown.delay(560).duration(450)} style={styles.section}>
-              <SectionHeader icon={Star} title={t('transactionDetails.serviceReview', 'Service Review')} color={booking.isReviewed ? P.green : P.gold} />
+              <SectionHeader icon={Star} title={t('transactionDetails.serviceReview', 'Service Review')} color={booking.isReviewed ? theme.colors.status.success : P.gold} />
               {booking.isReviewed ? (
-                <View style={styles.noticeCard}>
-                  <CheckCircle2 size={18} color={P.green} />
-                  <Text style={styles.noticeText}>{t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}</Text>
+                <View style={[styles.noticeCard, { backgroundColor: alpha(theme.colors.status.success, 0.1), borderColor: alpha(theme.colors.status.success, 0.25) }]}>
+                  <CheckCircle2 size={18} color={theme.colors.status.success} />
+                  <Text style={[styles.noticeText, { color: theme.colors.status.success }]}>{t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}</Text>
                 </View>
               ) : (
-                <View style={styles.inlineReviewCard}>
-                  <Text style={styles.inlineReviewTitle}>{t('transactionDetails.ratePartner', `Rate ${partnerName}`, { name: partnerName })}</Text>
-                  <Text style={styles.inlineReviewSubtitle}>
+                <View style={[styles.inlineReviewCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+                  <Text style={[styles.inlineReviewTitle, { color: theme.colors.text.primary }]}>{t('transactionDetails.ratePartner', `Rate ${partnerName}`, { name: partnerName })}</Text>
+                  <Text style={[styles.inlineReviewSubtitle, { color: theme.colors.text.muted }]}>
                     {t('transactionDetails.reviewSubtitle', 'A quick review helps improve service quality for future customers.')}
                   </Text>
 
@@ -913,7 +738,7 @@ export default function TransactionDetailsScreen() {
                         >
                           <Star 
                             size={32} 
-                            color={active ? P.gold : 'rgba(255,255,255,0.15)'} 
+                            color={active ? P.gold : alpha(theme.colors.text.primary, 0.22)} 
                             fill={active ? P.gold : 'transparent'} 
                           />
                         </TouchableOpacity>
@@ -923,9 +748,9 @@ export default function TransactionDetailsScreen() {
 
                   {/* Comment Input */}
                   <TextInput
-                    style={styles.reviewInput}
+                    style={[styles.reviewInput, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.input.border, color: theme.colors.text.primary }]}
                     placeholder={t('transactionDetails.commentPlaceholder', 'Write a comment about their work... (optional)')}
-                    placeholderTextColor={P.textDim}
+                    placeholderTextColor={theme.colors.text.muted}
                     value={reviewComment}
                     onChangeText={setReviewComment}
                     multiline
@@ -980,17 +805,15 @@ export default function TransactionDetailsScreen() {
           )}
 
           {status === 'completed' && booking.paymentStatus === 'paid' && (
-            <View style={styles.noticeCard}>
-              <CheckCircle2 size={18} color={P.green} />
-              <Text style={styles.noticeText}>{t('transactionDetails.paymentConfirmed', 'Cash payment has been confirmed for this job.')}</Text>
+            <View style={[styles.noticeCard, { backgroundColor: alpha(theme.colors.status.success, 0.1), borderColor: alpha(theme.colors.status.success, 0.25) }]}>
+              <CheckCircle2 size={18} color={theme.colors.status.success} />
+              <Text style={[styles.noticeText, { color: theme.colors.status.success }]}>{t('transactionDetails.paymentConfirmed', 'Cash payment has been confirmed for this job.')}</Text>
             </View>
           )}
         </ScrollView>
 
-
-
         {status !== 'completed' && status !== 'cancelled' && (
-          <Animated.View entering={FadeInDown.delay(620).duration(420)} style={[styles.floatingActions, { bottom: insets.bottom + 20 }]}>
+          <Animated.View entering={FadeInDown.delay(420).duration(420)} style={[styles.floatingActions, { bottom: insets.bottom + 14 }]}>
             <FloatingAction icon={Navigation} label={t('transactionDetails.track', 'Track')} onPress={openRoute} color={P.green} disabled={!canTrackMission} />
             <FloatingAction icon={MessageCircle} label={t('transactionDetails.chat', 'Chat')} onPress={navigateToChat} color={P.cyan} disabled={!partnerProfileId} />
             <FloatingAction icon={Phone} label={t('transactionDetails.call', 'Call')} onPress={callPartner} primary disabled={!partnerPhone} />
@@ -1153,21 +976,6 @@ export default function TransactionDetailsScreen() {
         </View>
       </Modal>
     </BackgroundWrapper>
-  );
-}
-
-function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<any>; label: string; value: string }) {
-  const theme = useTheme();
-  return (
-    <View style={[styles.infoRow, { borderBottomColor: theme.colors.border.subtle }]}>
-      <View style={[styles.infoRowIcon, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08) }]}>
-        <Icon size={16} color={theme.colors.brand.primary} strokeWidth={2.4} />
-      </View>
-      <View style={styles.infoRowCopy}>
-        <Text style={[styles.infoRowLabel, { color: theme.colors.text.muted }]}>{label}</Text>
-        <Text style={[styles.infoRowValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{value}</Text>
-      </View>
-    </View>
   );
 }
 
@@ -1855,19 +1663,23 @@ const styles = StyleSheet.create({
   },
   floatingActions: {
     position: 'absolute',
+    left: 20,
     right: 20,
-    gap: 14,
+    flexDirection: 'row',
+    gap: 10,
     alignItems: 'center',
   },
   floatingAction: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1.5,
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
     overflow: 'hidden',
   },
   floatingActionPrimary: {

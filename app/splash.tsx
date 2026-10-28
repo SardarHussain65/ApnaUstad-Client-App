@@ -1,84 +1,69 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View, Dimensions, Image, Text } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withDelay, 
-  withRepeat, 
-  withSequence, 
-  withSpring, 
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSpring,
   withTiming,
-  interpolate,
-  Easing
+  Easing,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Spacing, Typography, Animation, useTheme, useThemeColors } from '../constants/Theme';
+import { useTranslation } from 'react-i18next';
+import { Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const theme = useTheme();
   const colors = useThemeColors();
-  
-  // Animation values
-  const logoScale = useSharedValue(0.1);
+  const typography = useThemeTypography();
+
+  const logoScale = useSharedValue(0.82);
   const logoOpacity = useSharedValue(0);
-  const logoTranslateY = useSharedValue(0);
   const taglineOpacity = useSharedValue(0);
-  const taglineTranslateY = useSharedValue(20);
-  const glowScale = useSharedValue(0.5);
+  const taglineTranslateY = useSharedValue(12);
+  const glowScale = useSharedValue(0.8);
   const glowOpacity = useSharedValue(0);
   const loadingWidth = useSharedValue(0);
 
   useEffect(() => {
-    // 1. Logo Entrance - High Impact
-    logoOpacity.value = withDelay(300, withTiming(1, { duration: 1000 }));
+    logoOpacity.value = withDelay(40, withTiming(1, { duration: 420 }));
     logoScale.value = withDelay(
-      300,
-      withSpring(1, { 
-        damping: 12, 
-        stiffness: 60,
-        mass: 1,
-      } as any)
+      40,
+      withSpring(1, {
+        damping: 14,
+        stiffness: 90,
+      })
     );
 
-    // 2. Floating Idle 
-    logoTranslateY.value = withDelay(
-      1500,
-      withRepeat(
-        withTiming(-12, { duration: 2500, easing: Easing.inOut(Easing.sin) }),
-        -1,
-        true
-      )
-    );
-
-    // 3. Tagline Entrance
-    taglineOpacity.value = withDelay(1600, withTiming(1, { duration: 1200 }));
+    taglineOpacity.value = withDelay(180, withTiming(1, { duration: 420 }));
     taglineTranslateY.value = withDelay(
-      1600,
-      withSpring(0, { damping: 15, stiffness: 80 })
+      180,
+      withSpring(0, { damping: 16, stiffness: 100 })
     );
 
-    // 4. Pulsing Cosmic Glow
-    glowOpacity.value = withDelay(800, withTiming(0.6, { duration: 2000 }));
+    glowOpacity.value = withDelay(
+      80,
+      withTiming(theme.id === 'light' ? 0.18 : 0.45, { duration: 500 })
+    );
     glowScale.value = withDelay(
-      800,
+      80,
       withRepeat(
-        withTiming(1.5, { duration: 3500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.25, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       )
     );
 
-    // 5. Loading Progress
-    loadingWidth.value = withTiming(100, { duration: 4000 });
+    loadingWidth.value = withTiming(100, { duration: 1050 });
 
-    // 6. Navigation Logic
     const timeout = setTimeout(async () => {
       const onboarded = await AsyncStorage.getItem('onboarding_completed');
       if (onboarded === 'true') {
@@ -86,16 +71,13 @@ export default function SplashScreen() {
       } else {
         router.replace('/onboarding');
       }
-    }, 5000);
+    }, 1200);
 
     return () => clearTimeout(timeout);
   }, []);
 
   const logoStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: logoScale.value },
-      { translateY: logoTranslateY.value }
-    ] as any,
+    transform: [{ scale: logoScale.value }],
     opacity: logoOpacity.value,
   }));
 
@@ -116,32 +98,42 @@ export default function SplashScreen() {
   return (
     <BackgroundWrapper>
       <View style={styles.container}>
-{/* Central Cosmic Glow */}
-         <Animated.View style={[styles.glow, glowStyle, { backgroundColor: colors.cyan, shadowColor: colors.cyan }]} />
+        <Animated.View style={[styles.glow, glowStyle, { backgroundColor: colors.cyan, shadowColor: colors.cyan }]} />
 
         <View style={styles.contentContainer}>
           <Animated.View style={[styles.logoContainer, logoStyle]}>
-            <Image 
-              source={require('../assets/images/logo_premium.png')} 
+            <Image
+              source={require('../assets/images/logo_premium.png')}
               style={styles.logo}
               resizeMode="contain"
             />
           </Animated.View>
 
           <Animated.View style={[styles.taglineContainer, taglineStyle]}>
-            <Text style={[styles.tagline, Typography.threeD]}>The Service Galaxy</Text>
-<Text style={[styles.subtext, { color: colors.cyan }]}>EXPANDING POSSIBILITIES</Text>
-           </Animated.View>
-         </View>
+            <Text style={[styles.tagline, typography.threeD, { color: theme.colors.text.primary }]}>
+              {t('splash.title', 'ApnaUstad')}
+            </Text>
+            <Text style={[styles.subtext, { color: colors.cyan }]}>
+              {t('splash.subtitle', 'TRUSTED LOCAL USTADS NEAR YOU')}
+            </Text>
+          </Animated.View>
+        </View>
 
-         <View style={styles.footer}>
-           <View style={styles.loadingContainer}>
-             <View style={styles.loadingBar}>
-               <Animated.View style={[styles.loadingProgress, loadingStyle, { backgroundColor: colors.cyan }]} />
-             </View>
-           </View>
-           <Text style={[styles.versionText, { color: theme.colors.text.muted }]}>VER 2.50.0 ALPHA</Text>
-         </View>
+        <View style={styles.footer}>
+          <View
+            style={[
+              styles.loadingContainer,
+              {
+                borderColor: theme.colors.border.subtle,
+                backgroundColor: theme.colors.surface.subtle,
+              },
+            ]}
+          >
+            <View style={styles.loadingBar}>
+              <Animated.View style={[styles.loadingProgress, loadingStyle, { backgroundColor: colors.cyan }]} />
+            </View>
+          </View>
+        </View>
       </View>
     </BackgroundWrapper>
   );
@@ -155,14 +147,14 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    width: width * 0.5,
-    height: width * 0.5,
-    borderRadius: (width * 0.5) / 2,
+    width: width * 0.48,
+    height: width * 0.48,
+    borderRadius: (width * 0.48) / 2,
     opacity: 0,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 60,
-    elevation: 20,
+    shadowOpacity: 0.8,
+    shadowRadius: 50,
+    elevation: 16,
   },
   contentContainer: {
     alignItems: 'center',
@@ -170,8 +162,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logoContainer: {
-    width: width * 0.55,
-    height: width * 0.55,
+    width: width * 0.46,
+    height: width * 0.46,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -180,38 +172,34 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   taglineContainer: {
-    marginTop: Spacing.xl,
+    marginTop: Spacing.l,
     alignItems: 'center',
+    paddingHorizontal: Spacing.l,
   },
   tagline: {
-    fontSize: 24,
-    color: '#fff',
+    fontSize: 28,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.4,
     textAlign: 'center',
   },
   subtext: {
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 4,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.8,
     marginTop: 8,
     textAlign: 'center',
-    opacity: 0.8,
   },
   footer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 72,
     alignItems: 'center',
-    width: width * 0.7,
+    width: width * 0.56,
   },
   loadingContainer: {
     width: '100%',
     padding: 2,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    marginBottom: 15,
   },
   loadingBar: {
     width: '100%',
@@ -223,9 +211,4 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2,
   },
-  versionText: {
-    fontSize: 9,
-    letterSpacing: 5,
-    fontWeight: '900',
-  }
 });

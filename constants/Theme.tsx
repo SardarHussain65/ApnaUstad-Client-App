@@ -7,10 +7,12 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { useColorScheme } from 'react-native';
 
 export type ThemeId = 'current' | 'light' | 'dark';
+export type ThemePreference = 'system' | ThemeId;
 
-export const THEME_STORAGE_KEY = 'app-theme';
+export const THEME_STORAGE_KEY = 'app-theme-v2';
 
 export type AppGradient = [string, string, ...string[]];
 
@@ -454,35 +456,38 @@ const buildTheme = (
 });
 
 export const themes: Record<ThemeId, AppTheme> = {
-  current: buildTheme('current', 'Current Theme', currentLegacy, true, true),
+  current: buildTheme('current', 'Cosmic Theme', currentLegacy, true, true),
   light: buildTheme('light', 'Light Theme', lightLegacy, false, false),
   dark: buildTheme('dark', 'Dark Theme', darkLegacy, true, false),
 };
 
-const isThemeId = (value: string | null): value is ThemeId => {
-  return value === 'current' || value === 'light' || value === 'dark';
+const isThemePreference = (value: string | null): value is ThemePreference => {
+  return value === 'system' || value === 'current' || value === 'light' || value === 'dark';
 };
 
 interface ThemeContextValue {
   themeId: ThemeId;
+  themePreference: ThemePreference;
   theme: AppTheme;
   isHydrated: boolean;
-  setThemeId: (themeId: ThemeId) => Promise<void>;
+  setThemeId: (nextPreference: ThemePreference) => Promise<void>;
+  setThemePreference: (nextPreference: ThemePreference) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeId, setThemeIdState] = useState<ThemeId>('current');
+  const systemColorScheme = useColorScheme();
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('system');
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
     AsyncStorage.getItem(THEME_STORAGE_KEY)
-      .then((storedThemeId) => {
-        if (isMounted && isThemeId(storedThemeId)) {
-          setThemeIdState(storedThemeId);
+      .then((storedPref) => {
+        if (isMounted && isThemePreference(storedPref)) {
+          setThemePreferenceState(storedPref);
         }
       })
       .catch((error) => {
@@ -497,19 +502,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const setThemeId = useCallback(async (nextThemeId: ThemeId) => {
-    setThemeIdState(nextThemeId);
-    await AsyncStorage.setItem(THEME_STORAGE_KEY, nextThemeId);
+  const setThemePreference = useCallback(async (nextPreference: ThemePreference) => {
+    setThemePreferenceState(nextPreference);
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, nextPreference);
   }, []);
+
+  const resolvedThemeId: ThemeId =
+    themePreference === 'system'
+      ? (systemColorScheme === 'dark' ? 'dark' : 'light')
+      : themePreference;
 
   const value = useMemo(
     () => ({
-      themeId,
-      theme: themes[themeId],
+      themeId: resolvedThemeId,
+      themePreference,
+      theme: themes[resolvedThemeId],
       isHydrated,
-      setThemeId,
+      setThemeId: setThemePreference,
+      setThemePreference,
     }),
-    [isHydrated, setThemeId, themeId],
+    [isHydrated, resolvedThemeId, setThemePreference, themePreference],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

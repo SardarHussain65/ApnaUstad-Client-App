@@ -18,12 +18,11 @@ import { InputField } from '../../components/InputField';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
 import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
-import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { AlertModal } from '../../components/ui';
 import { BASE_URL } from '../../constants/Config';
-import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useAlertModal } from '../../hooks';
 import { useTranslation } from 'react-i18next';
@@ -34,12 +33,11 @@ export default function LoginScreen() {
   const { role: urlRole } = useLocalSearchParams<{ role?: string }>();
   const { setAuth } = useAuth();
   const theme = useTheme();
-  const typography = useThemeTypography();
   const alertModal = useAlertModal();
   const isWorker = urlRole === 'worker';
   const accentColor = isWorker ? theme.colors.brand.worker : theme.colors.brand.primary;
 
-  const [loginType, setLoginType] = useState<'phone' | 'email'>('email');
+  const [loginType, setLoginType] = useState<'phone' | 'email'>('phone');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -142,10 +140,15 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title={t('auth.secureSignIn')} onBack={() => router.back()} accentColor={accentColor} />
-            <AuthHero
+            <AuthHeader
+              title={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+              onBack={() => router.back()}
               accentColor={accentColor}
-              eyebrow={isWorker ? t('roleSelection.worker.label') : t('roleSelection.client.label')}
+            />
+            <AuthHero
+              compact
+              accentColor={accentColor}
+              eyebrow={t('auth.secureSignIn')}
               title={t('home.client.welcomeBack')}
               highlight=""
               description={isWorker ? t('auth.workerDesc') : t('auth.clientDesc')}
@@ -155,25 +158,25 @@ export default function LoginScreen() {
               intensity={25}
               padding={Spacing.l}
               style={[styles.loginCard, { borderColor: theme.colors.border.subtle }]}
-              gradient={[`${accentColor}16`, alpha(theme.colors.brand.secondary, 0.06)]}
+              gradient={[`${accentColor}14`, alpha(theme.colors.brand.secondary, 0.05)]}
             >
               <View style={[styles.tabContainer, {
                 backgroundColor: theme.colors.surface.subtle,
                 borderColor: theme.colors.border.subtle,
               }]}>
                 <LoginTab
-                  active={loginType === 'email'}
-                  accentColor={accentColor}
-                  icon={<Mail size={15} color={loginType === 'email' ? accentColor : theme.colors.text.muted} />}
-                  label={t('auth.emailTab', 'Email')}
-                  onPress={() => handleTabChange('email')}
-                />
-                <LoginTab
                   active={loginType === 'phone'}
                   accentColor={accentColor}
                   icon={<Phone size={15} color={loginType === 'phone' ? accentColor : theme.colors.text.muted} />}
                   label={t('auth.phoneTab', 'Phone')}
                   onPress={() => handleTabChange('phone')}
+                />
+                <LoginTab
+                  active={loginType === 'email'}
+                  accentColor={accentColor}
+                  icon={<Mail size={15} color={loginType === 'email' ? accentColor : theme.colors.text.muted} />}
+                  label={t('auth.emailTab', 'Email')}
+                  onPress={() => handleTabChange('email')}
                 />
               </View>
 
@@ -259,8 +262,6 @@ export default function LoginScreen() {
                 <Text style={[styles.footerLink, { color: accentColor }]}> {t('auth.signUp')}</Text>
               </TouchableOpacity>
             </View>
-
-            <SecurityNote accentColor={accentColor} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -334,6 +335,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: BorderRadius.m,
     borderWidth: 1,
+    borderColor: 'transparent',
   },
   tabText: {
     fontSize: 12,

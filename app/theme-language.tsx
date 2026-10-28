@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import {
   Globe,
   Moon,
   Palette,
+  Smartphone,
   Sparkles,
   Sun,
 } from 'lucide-react-native';
@@ -30,16 +30,13 @@ import {
   alpha,
   BorderRadius,
   Spacing,
-  ThemeId,
+  ThemePreference,
   useTheme,
   useThemeColors,
   useThemeMode,
-  useThemeShadows,
   useThemeTypography,
 } from '../constants/Theme';
 import { changeAppLanguage } from '../i18n';
-
-const { width } = Dimensions.get('window');
 
 export default function ThemeLanguageScreen() {
   const router = useRouter();
@@ -47,17 +44,16 @@ export default function ThemeLanguageScreen() {
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
-  const shadows = useThemeShadows();
-  const { themeId, setThemeId } = useThemeMode();
+  const { themePreference, setThemePreference } = useThemeMode();
 
   const [selectedLang, setSelectedLang] = useState<'en' | 'ur'>(
     i18n.language === 'ur' ? 'ur' : 'en'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSelectTheme = (id: ThemeId) => {
+  const handleSelectTheme = (id: ThemePreference) => {
     Haptics.selectionAsync();
-    setThemeId(id);
+    setThemePreference(id);
   };
 
   const handleSelectLanguage = (lang: 'en' | 'ur') => {
@@ -90,23 +86,31 @@ export default function ThemeLanguageScreen() {
     router.replace('/role-selection');
   };
 
-  const themeOptions: Array<{
-    id: ThemeId;
+  const themeOptions: {
+    id: ThemePreference;
     title: string;
     description: string;
     tag?: string;
     accentColor: string;
     icon: any;
     previewColors: [string, string];
-  }> = [
+  }[] = [
     {
-      id: 'current',
-      title: t('themeLanguageSetup.themeCosmic'),
-      description: t('themeLanguageSetup.themeCosmicDesc'),
-      tag: t('themeLanguageSetup.themeCosmicTag'),
+      id: 'system',
+      title: t('settings.themeSystem', { defaultValue: 'Match Phone (Auto)' }),
+      description: t('settings.themeSystemDesc', { defaultValue: 'Automatically follows your phone Light or Dark mode' }),
+      tag: 'AUTO',
       accentColor: colors.cyan,
-      icon: Sparkles,
-      previewColors: ['#050510', '#0E1A38'],
+      icon: Smartphone,
+      previewColors: ['#F8FAFC', '#1E293B'],
+    },
+    {
+      id: 'light',
+      title: t('themeLanguageSetup.themeLight'),
+      description: t('themeLanguageSetup.themeLightDesc'),
+      accentColor: '#0284C7',
+      icon: Sun,
+      previewColors: ['#F1F5F9', '#FFFFFF'],
     },
     {
       id: 'dark',
@@ -117,12 +121,13 @@ export default function ThemeLanguageScreen() {
       previewColors: ['#0B0B14', '#171728'],
     },
     {
-      id: 'light',
-      title: t('themeLanguageSetup.themeLight'),
-      description: t('themeLanguageSetup.themeLightDesc'),
-      accentColor: '#0284C7',
-      icon: Sun,
-      previewColors: ['#F1F5F9', '#FFFFFF'],
+      id: 'current',
+      title: t('themeLanguageSetup.themeCosmic'),
+      description: t('themeLanguageSetup.themeCosmicDesc'),
+      tag: t('themeLanguageSetup.themeCosmicTag'),
+      accentColor: '#00F5FF',
+      icon: Sparkles,
+      previewColors: ['#050510', '#0E1A38'],
     },
   ];
 
@@ -238,7 +243,7 @@ export default function ThemeLanguageScreen() {
 
             <View style={styles.cardsList}>
               {themeOptions.map((item) => {
-                const isSelected = themeId === item.id;
+                const isSelected = themePreference === item.id;
                 const IconComponent = item.icon;
 
                 return (

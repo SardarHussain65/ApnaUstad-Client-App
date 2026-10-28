@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import * as Location from 'expo-location';
-import { ChevronRight, ShieldCheck, Radio, Hourglass } from 'lucide-react-native';
+import { ChevronRight, ShieldCheck, Radio, Hourglass, MapPin } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,6 @@ import { BackgroundWrapper } from '../common/BackgroundWrapper';
 import { ConfirmModal } from '../ui';
 import api from '../../services/api';
 import { WorkerAlertJobCard } from './WorkerAlertJobCard';
-import { WorkerEarningsChart } from './WorkerEarningsChart';
 import { WorkerQuickInsights } from './WorkerQuickInsights';
 import { IncomingJobModal } from './IncomingJobModal';
 import { WorkerAvailabilityToggle } from './WorkerAvailabilityToggle';
@@ -43,7 +42,6 @@ export function WorkerHome() {
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
-  const shadows = useThemeShadows();
   const toast = useToast();
   const confirmModal = useConfirmModal();
   const {
@@ -342,7 +340,7 @@ refreshControl={
           <WorkerAvailabilityToggle isOnline={isOnline} onToggle={toggleOnline} />
         </View>
 
-        {/* ── Worker Earnings Dashboard ── */}
+        {/* ── Quick Earnings Summary + Nearby Jobs Shortcut ── */}
         <View style={styles.dashboardSection}>
           {analyticsData?.summary ? (
             <WorkerQuickInsights summary={analyticsData.summary} />
@@ -353,33 +351,31 @@ refreshControl={
               <SkeletonBox translateX={translateX} width={'31%'} height={110} borderRadius={20} />
             </View>
           ) : null}
-          {analyticsData ? (
-            <WorkerEarningsChart
-              daily={analyticsData.daily}
-              weekly={analyticsData.weekly}
-              monthly={analyticsData.monthly}
-              summary={analyticsData.summary}
-            />
-          ) : analyticsLoading ? (
-            <SkeletonBox translateX={translateX} width={'100%'} height={300} borderRadius={24} style={{ marginTop: 14 }} />
-          ) : (
-            <WorkerEarningsChart
-              daily={[]}
-              weekly={[]}
-              monthly={[]}
-              summary={{
-                todayEarnings: 0,
-                thisWeekEarnings: 0,
-                thisMonthEarnings: 0,
-                todayJobs: 0,
-                thisWeekJobs: 0,
-                thisMonthJobs: 0,
-                bestDay: { label: '-', earnings: 0 },
-                streak: 0,
-                trendPercent: 0,
-              }}
-            />
-          )}
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push('/jobs-nearby' as any)}
+            style={[
+              styles.nearbyShortcut,
+              {
+                backgroundColor: alpha(colors.cyan, 0.08),
+                borderColor: alpha(colors.cyan, 0.25),
+              },
+            ]}
+          >
+            <View style={[styles.nearbyIconWrap, { backgroundColor: alpha(colors.cyan, 0.14) }]}>
+              <MapPin size={16} color={colors.cyan} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.nearbyShortcutTitle, { color: theme.colors.text.primary }]}>
+                {t('home.worker.browseNearbyJobs', 'Browse Open Jobs Near You')}
+              </Text>
+              <Text style={[styles.nearbyShortcutSub, { color: theme.colors.text.muted }]}>
+                {t('home.worker.browseNearbySub', 'View scheduled and urgent requests in your area')}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={colors.cyan} />
+          </TouchableOpacity>
         </View>
 
         {/* ── Section 1: Recent Signals (dismissed + missed-while-offline) ── */}
@@ -469,7 +465,9 @@ refreshControl={
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: theme.colors.text.primary }]}>No bookings yet.{'\n'}Accepted bookings will appear here.</Text>
+                <Text style={[styles.emptyText, { color: theme.colors.text.muted }]}>
+                  {t('home.worker.noBookingsYet', 'No active bookings right now. Stay online to receive new jobs.')}
+                </Text>
               </View>
             )}
           </View>
@@ -566,6 +564,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 9,
     marginBottom: 0,
+  },
+  nearbyShortcut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  nearbyIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nearbyShortcutTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  nearbyShortcutSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   section: {
     paddingHorizontal: Spacing.l,

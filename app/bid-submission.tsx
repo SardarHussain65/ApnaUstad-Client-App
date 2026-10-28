@@ -46,7 +46,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useJobDetails, useToast, useWorkerWallet } from '../hooks';
 import api from '../services/api';
-import { useTheme, useThemeColors, alpha, useThemedStyles, type AppTheme } from '../constants/Theme';
+import { useTheme, alpha, useThemedStyles, type AppTheme } from '../constants/Theme';
 
 const formatMoney = (amount: number) => `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`;
 
@@ -897,7 +897,6 @@ function AudioEvidenceTile({ url }: { url: string }) {
 
 export default function BidSubmissionScreen() {
   const theme = useTheme();
-  const colors = useThemeColors();
   const styles = useThemedStyles(createStyles);
   const CYAN = theme.legacy.cyan;
   const GREEN = theme.legacy.green;
@@ -981,7 +980,6 @@ export default function BidSubmissionScreen() {
   const distanceText = signalMeta?.distanceText || 'Nearby';
   const clientTotalJobs = Number(client?.totalJobs || 0);
   const clientCompletedJobs = Number(client?.completedJobs || 0);
-  const completionRate = clientTotalJobs > 0 ? Math.round((clientCompletedJobs / clientTotalJobs) * 100) : 0;
   const proposalReady = parsedPrice > 0 && message.trim().length > 0;
 
   useEffect(() => {
@@ -1199,7 +1197,7 @@ export default function BidSubmissionScreen() {
                 <View style={styles.evidenceSection}>
                   <SectionTitle
                     icon={ImageIcon}
-                    title={t('bidSubmission.workEvidence', 'Work evidence')}
+                    title={t('bidSubmission.workEvidence', 'Photos & Voice Note')}
                     detail={media.totalCount === 1 ? t('bidSubmission.filesCount', { count: 1 }) : t('bidSubmission.filesCountPlural', { count: media.totalCount })}
                     color={PURPLE}
                   />
@@ -1221,13 +1219,12 @@ export default function BidSubmissionScreen() {
 
           <Animated.View entering={FadeInUp.delay(80).duration(450)}>
             <Surface accent={GREEN} style={styles.clientSurface}>
-              <SectionTitle icon={UserRound} title={t('bidSubmission.clientHistory', 'Client history')} color={GREEN} />
               <View style={styles.clientRow}>
                 {client?.profileImage ? (
                   <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
                 ) : (
                   <View style={styles.clientAvatarFallback}>
-                    <UserRound size={22} color={GREEN} />
+                    <UserRound size={20} color={GREEN} />
                   </View>
                 )}
                 <View style={styles.clientCopy}>
@@ -1235,16 +1232,10 @@ export default function BidSubmissionScreen() {
                   <View style={styles.clientStatusRow}>
                     <ShieldCheck size={12} color={GREEN} />
                     <Text style={styles.clientStatusText}>
-                      {clientTotalJobs > 0 ? t('bidSubmission.completedJobsCount', { completed: clientCompletedJobs, total: clientTotalJobs }) : t('bidSubmission.newClientProfile', 'New client profile')}
+                      {clientTotalJobs > 0 ? t('bidSubmission.completedJobsCount', { completed: clientCompletedJobs, total: clientTotalJobs }) : t('bidSubmission.newClientProfile', 'New client')}
                     </Text>
                   </View>
                 </View>
-                {clientTotalJobs > 0 && (
-                  <View style={styles.reliabilityBadge}>
-                    <Text style={styles.reliabilityValue}>{completionRate}%</Text>
-                    <Text style={styles.reliabilityLabel}>{t('bidSubmission.history', 'HISTORY')}</Text>
-                  </View>
-                )}
               </View>
             </Surface>
           </Animated.View>
@@ -1343,8 +1334,8 @@ export default function BidSubmissionScreen() {
 
                 <View style={styles.settlementBlock}>
                   <View style={styles.settlementHeader}>
-                    <Text style={styles.settlementTitle}>{t('bidSubmission.estSettlement', 'Estimated settlement')}</Text>
-                    <Text style={styles.settlementHint}>{t('bidSubmission.cashCollected', 'Cash collected after completion')}</Text>
+                    <Text style={styles.settlementTitle}>{t('bidSubmission.estSettlement', 'Earnings Breakdown')}</Text>
+                    <Text style={styles.settlementHint}>{t('bidSubmission.cashCollected', 'Cash paid after work')}</Text>
                   </View>
                   <View style={styles.settlementRow}>
                     <SettlementItem label={t('bidSubmission.yourQuote', 'Your quote')} value={formatMoney(parsedPrice)} />

@@ -19,25 +19,26 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import { ArrowRight } from 'lucide-react-native';
+import { ArrowRight, Globe } from 'lucide-react-native';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { OnboardingSlide } from '../components/OnboardingSlide';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../constants/Theme';
+import { changeAppLanguage } from '../i18n';
 
 import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const theme = useTheme();
   const colors = useThemeColors();
-  const typography = useThemeTypography();
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const isUrdu = i18n.language === 'ur';
 
   const DATA = [
     {
@@ -75,8 +76,9 @@ export default function OnboardingScreen() {
     scrollX.value = event.contentOffset.x;
   });
 
-  const completeOnboarding = () => {
-    router.replace('/theme-language');
+  const completeOnboarding = async () => {
+    await AsyncStorage.setItem('onboarding_completed', 'true');
+    router.replace('/role-selection');
   };
 
   const handleNext = async () => {
@@ -86,6 +88,10 @@ export default function OnboardingScreen() {
       return;
     }
     await completeOnboarding();
+  };
+
+  const toggleLanguage = () => {
+    changeAppLanguage(isUrdu ? 'en' : 'ur');
   };
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -101,18 +107,45 @@ export default function OnboardingScreen() {
           <View style={styles.brand}>
             <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
             <View>
-              <Text style={[styles.brandName, { color: theme.colors.text.primary }]}>APNAUSTAD</Text>
-              <Text style={[styles.brandTagline, { color: colors.cyan }]}>SERVICES, MADE SIMPLE</Text>
+              <Text style={[styles.brandName, { color: theme.colors.text.primary }]}>ApnaUstad</Text>
+              <Text style={[styles.brandTagline, { color: colors.cyan }]}>
+                {t('onboarding.tagline', 'HOME SERVICES MADE EASY')}
+              </Text>
             </View>
           </View>
-          {currentIndex < DATA.length - 1 && (
-            <TouchableOpacity activeOpacity={0.7} onPress={completeOnboarding} style={[styles.skipButton, {
-              backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.05),
-              borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.08 : 0.1),
-            }]}>
-              <Text style={[styles.skipText, { color: theme.colors.text.muted }]}>{t('common.skip')}</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={toggleLanguage}
+              style={[
+                styles.langButton,
+                {
+                  backgroundColor: alpha(colors.cyan, 0.08),
+                  borderColor: alpha(colors.cyan, 0.25),
+                },
+              ]}
+            >
+              <Globe size={13} color={colors.cyan} />
+              <Text style={[styles.langText, { color: colors.cyan }]}>
+                {isUrdu ? 'EN' : 'اردو'}
+              </Text>
             </TouchableOpacity>
-          )}
+            {currentIndex < DATA.length - 1 && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={completeOnboarding}
+                style={[
+                  styles.skipButton,
+                  {
+                    backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.05),
+                    borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.08 : 0.1),
+                  },
+                ]}
+              >
+                <Text style={[styles.skipText, { color: theme.colors.text.muted }]}>{t('common.skip')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <Animated.FlatList
@@ -138,7 +171,7 @@ export default function OnboardingScreen() {
           <View style={styles.paginationRow}>
             <Text style={[styles.slideCount, { color: currentSlide.accent }]}>
               0{currentIndex + 1}
-              <Text style={styles.slideTotal}> / 0{DATA.length}</Text>
+              <Text style={[styles.slideTotal, { color: theme.colors.text.dim }]}> / 0{DATA.length}</Text>
             </Text>
             <View style={styles.pagination}>
               {DATA.map((item, index) => (
@@ -153,7 +186,7 @@ export default function OnboardingScreen() {
           </View>
 
           <AnimatedButton
-            icon={<ArrowRight size={18} color={colors.cyan} strokeWidth={2.8} />}
+            icon={<ArrowRight size={18} color={theme.colors.button.primaryText} strokeWidth={2.6} />}
             onPress={handleNext}
             style={styles.nextButton}
             title={currentIndex === DATA.length - 1 ? t('common.getStarted') : t('common.continue')}
@@ -216,10 +249,28 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
   },
   brandTagline: {
-    fontSize: 7,
-    fontWeight: '900',
-    letterSpacing: 1.3,
-    marginTop: 3,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  langText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
   skipButton: {
     paddingHorizontal: 14,

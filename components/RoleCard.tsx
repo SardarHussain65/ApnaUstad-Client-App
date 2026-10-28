@@ -1,6 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CheckCircle2 } from 'lucide-react-native';
+import { I18nManager, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { GlassCard } from './home/GlassCard';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 
@@ -57,11 +57,19 @@ export const RoleCard: React.FC<RoleCardProps> = ({
           <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{title}</Text>
           <Text style={[styles.description, { color: theme.colors.text.muted }]}>{description}</Text>
         </View>
-        <CheckCircle2
-          color={isSelected ? mainColor : theme.colors.text.dim}
-          size={21}
-          strokeWidth={isSelected ? 2.8 : 1.8}
-        />
+        {I18nManager.isRTL ? (
+          <ChevronLeft
+            color={isSelected ? mainColor : theme.colors.text.muted}
+            size={22}
+            strokeWidth={2.4}
+          />
+        ) : (
+          <ChevronRight
+            color={isSelected ? mainColor : theme.colors.text.muted}
+            size={22}
+            strokeWidth={2.4}
+          />
+        )}
       </GlassCard>
     </TouchableOpacity>
   );

@@ -38,10 +38,13 @@ export function HomeHeader() {
     <View style={styles.container}>
       <View style={styles.topRow}>
         <View style={styles.profileSection}>
-          <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.8}>
-            {/* Glowing Ring */}
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(tabs)/profile' as any)}
+          >
             <LinearGradient
-              colors={theme.colors.gradients.primary}
+              colors={role === 'worker' ? theme.colors.gradients.worker : theme.colors.gradients.primary}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.avatarGlow}
@@ -53,8 +56,12 @@ export function HomeHeader() {
             <View style={[styles.activeIndicator, { backgroundColor: colors.success, borderColor: theme.colors.background.app }]} />
           </TouchableOpacity>
           <View style={styles.welcomeText}>
-            <Text style={[styles.greetingLabel, typography.caption, { color: accentColor }]} numberOfLines={1}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
-            <Text style={[styles.greetingHeader, typography.h3, { color: theme.colors.text.primary }]} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.6}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
+            <Text style={[styles.greetingLabel, typography.caption, { color: accentColor }]} numberOfLines={1}>
+              {t('home.greeting', 'Assalam-o-Alaikum')}
+            </Text>
+            <Text style={[styles.greetingHeader, typography.h3, { color: theme.colors.text.primary }]} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.7}>
+              {user?.fullName || t('home.client.welcomeBack', 'Welcome')}
+            </Text>
           </View>
         </View>
 
@@ -147,10 +154,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greetingLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
     marginBottom: 2,
   },
   greetingHeader: {

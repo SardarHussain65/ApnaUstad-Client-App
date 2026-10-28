@@ -50,9 +50,12 @@ function SummaryChip({ label, value, color, theme }: { label: string; value: num
     <GlassCard
       intensity={24}
       padding={12}
-      style={[styles.chipCard, { borderColor: color + '48' }]}
+      borderColor={alpha(color, 0.25)}
+      style={styles.chipCard}
       glowColor={color}
-      gradient={[color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]}
+      gradient={theme.id === 'current'
+        ? [color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]
+        : [alpha(color, theme.id === 'light' ? 0.08 : 0.14), theme.colors.surface.card, theme.colors.surface.card]}
     >
       <View style={[styles.chipDot, { backgroundColor: color }]} />
       <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
@@ -152,8 +155,11 @@ export function ClientWalletView({
           <GlassCard
             style={styles.balanceCard}
             intensity={42}
+            borderColor={theme.colors.border.subtle}
             glowColor={colors.cyan}
-            gradient={[alpha(colors.cyan, 0.58), alpha(colors.cyan, 0.34), alpha(theme.colors.surface.card, 0.16)]}
+            gradient={theme.id === 'current'
+              ? [alpha(colors.cyan, 0.58), alpha(colors.cyan, 0.34), alpha(theme.colors.surface.card, 0.16)]
+              : [alpha(colors.cyan, 0.1), theme.colors.surface.card, theme.colors.surface.card]}
           >
             <View style={styles.balanceContent}>
               <View style={styles.balanceTextGroup}>
@@ -165,7 +171,7 @@ export function ClientWalletView({
                   {t('home.client.totalSpent')}: Rs. {summary.total.toLocaleString()}
                 </Text>
               </View>
-              <View style={styles.walletIconWrap}>
+              <View style={[styles.walletIconWrap, { borderColor: alpha(colors.cyan, 0.3), backgroundColor: alpha(colors.cyan, 0.08) }]}>
                 <Wallet size={28} color={colors.cyan} strokeWidth={1.8} />
               </View>
             </View>
@@ -225,9 +231,12 @@ export function ClientWalletView({
               >
                 <GlassCard
                   intensity={20}
-                  style={[styles.transactionCard, { borderColor: statusConf.color + '48' }]}
+                  borderColor={alpha(statusConf.color, 0.25)}
+                  style={styles.transactionCard}
                   padding={14}
-                  gradient={[statusConf.color + '5C', '#00B8FF' + '26', alpha(theme.colors.surface.card, 0.18)]}
+                  gradient={theme.id === 'current'
+                    ? [statusConf.color + '5C', '#00B8FF' + '26', alpha(theme.colors.surface.card, 0.18)]
+                    : [alpha(statusConf.color, theme.id === 'light' ? 0.08 : 0.14), theme.colors.surface.card, theme.colors.surface.card]}
                   onPress={() => {
                     if (item.bookingId) {
                       router.push({

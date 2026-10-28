@@ -37,7 +37,7 @@ import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography } from '..
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMyBookings, useWorkerBookings, useWorker, useUpdateProfileMutation } from '../../hooks';
+import { useMyBookings, useWorkerBookings, useWorker } from '../../hooks';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BlurView } from 'expo-blur';
 import api from '../../services/api';
@@ -126,7 +126,7 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View entering={FadeInRight.delay(delay).springify()} style={anim}>
-      <Pressable style={styles.menuItem} onPress={onPress}
+      <Pressable style={[styles.menuItem, { borderColor: theme.colors.border.subtle }]} onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}>
         {Platform.OS === 'ios'
@@ -164,7 +164,6 @@ export default function ProfileTab() {
   const bookings = bookingsQuery.data || [];
 
   const { data: workerProfile } = useWorker(role === 'worker' ? user?._id : undefined);
-  const { mutateAsync: updateProfile } = useUpdateProfileMutation();
 
   const [verificationStatus, setVerificationStatus] = useState<string>('Verify identity');
 
@@ -217,11 +216,6 @@ export default function ProfileTab() {
 
   const scrollHandler = useAnimatedScrollHandler(e => { scrollY.value = e.contentOffset.y; });
 
-  const heroStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, HEADER_HEIGHT * 0.6], [1, 0], 'clamp'),
-    transform: [{ translateY: interpolate(scrollY.value, [0, HEADER_HEIGHT], [0, -HEADER_HEIGHT * 0.4], 'clamp') }],
-  }));
-
   const avatarParallax = useAnimatedStyle(() => ({
     transform: [{ translateY: interpolate(scrollY.value, [0, HEADER_HEIGHT], [0, -30], 'clamp') }],
   }));
@@ -239,7 +233,7 @@ export default function ProfileTab() {
         <Animated.View style={[styles.avatarSection, avatarParallax]}>
           <View style={styles.avatarWrap}>
             <Image source={{ uri: avatarUri }} style={[styles.avatar, { borderColor: theme.id === 'light' ? '#FFFFFF' : alpha('#FFFFFF', 0.9) }]} />
-            <TouchableOpacity style={styles.cameraBtn} onPress={() => router.push('/profile/personal-info')}>
+            <TouchableOpacity style={[styles.cameraBtn, { borderColor: theme.colors.surface.card }]} onPress={() => router.push('/profile/personal-info')}>
               <LinearGradient colors={theme.colors.gradients.primary} style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]} />
               <Camera size={12} color={theme.colors.text.onBrand} strokeWidth={2.5} />
             </TouchableOpacity>

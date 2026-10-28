@@ -56,6 +56,7 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
           key={key}
           intensity={28}
           glowColor={color}
+          borderColor={theme.colors.border.subtle}
           style={styles.card}
           padding={0}
           contentStyle={styles.cardContent}

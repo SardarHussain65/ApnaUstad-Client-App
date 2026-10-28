@@ -23,10 +23,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { GlassCard } from '../home/GlassCard';
+import { WorkerEarningsChart } from '../home/WorkerEarningsChart';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WorkerWallet } from '../../hooks';
+import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
 
 // ─── Constants & Types ────────────────────────────────────────────────────────
 interface WalletTransaction {
@@ -80,24 +82,6 @@ const formatMoney = (value = 0) => `Rs. ${Number(value || 0).toLocaleString(unde
   maximumFractionDigits: 2,
 })}`;
 
-function SummaryChip({ label, value, color, theme }: { label: string; value: number; color: string; theme: ReturnType<typeof useTheme> }) {
-  return (
-    <GlassCard
-      intensity={24}
-      padding={12}
-      style={[styles.chipCard, { borderColor: color + '48' }]}
-      glowColor={color}
-      gradient={[color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]}
-    >
-      <View style={[styles.chipDot, { backgroundColor: color }]} />
-      <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-        {formatMoney(value)}
-      </Text>
-      <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{label}</Text>
-    </GlassCard>
-  );
-}
-
 export function WorkerWalletView({
   wallet,
   transactions,
@@ -116,6 +100,7 @@ export function WorkerWalletView({
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
+  const { data: analyticsData } = useWorkerAnalytics();
 
   const requiredBalance = wallet?.requiredBalance ?? 500;
   const availableBalance = wallet?.availableBalance ?? wallet?.balance ?? 0;
@@ -124,16 +109,10 @@ export function WorkerWalletView({
 
   const totalEarnings = (summary.paid || 0) + (summary.payable || 0);
 
-  const topUpSummary = topUps.reduce((acc, item) => {
-    acc[item.status] = (acc[item.status] || 0) + item.amount;
-    return acc;
-  }, { pending: 0, approved: 0, rejected: 0 } as Record<WalletTopUpRequest['status'], number>);
-
-  const cardGradient = (color: string, secondary: string): [string, string, ...string[]] => [
-    color + '5C',
-    secondary + '26',
-    alpha(theme.colors.surface.card, 0.18),
-  ];
+  const cardGradient = (color: string, secondary: string): [string, string, ...string[]] =>
+    theme.id === 'current'
+      ? [color + '5C', secondary + '26', alpha(theme.colors.surface.card, 0.18)]
+      : [alpha(color, theme.id === 'light' ? 0.08 : 0.14), theme.colors.surface.card, theme.colors.surface.card];
 
   return (
     <ScrollView
@@ -176,11 +155,16 @@ export function WorkerWalletView({
           style={styles.balanceCard}
           intensity={44}
           padding={20}
+          borderColor={isBalanceLow ? alpha(colors.error, 0.35) : theme.colors.border.subtle}
           hasGlow
           glowColor={isBalanceLow ? colors.error : colors.cyan}
-          gradient={isBalanceLow
-            ? [alpha(colors.error, 0.68), alpha(theme.colors.brand.accent, 0.28), alpha(theme.colors.surface.card, 0.16)]
-            : [alpha(colors.cyan, 0.62), alpha(theme.colors.brand.primary, 0.36), alpha(theme.colors.brand.secondary, 0.18)]}
+          gradient={theme.id === 'current'
+            ? (isBalanceLow
+              ? [alpha(colors.error, 0.68), alpha(theme.colors.brand.accent, 0.28), alpha(theme.colors.surface.card, 0.16)]
+              : [alpha(colors.cyan, 0.62), alpha(theme.colors.brand.primary, 0.36), alpha(theme.colors.brand.secondary, 0.18)])
+            : (isBalanceLow
+              ? [alpha(colors.error, 0.12), theme.colors.surface.card, theme.colors.surface.card]
+              : [alpha(colors.cyan, 0.1), theme.colors.surface.card, theme.colors.surface.card])}
         >
           <View style={styles.balanceHeaderRow}>
             <View style={styles.balanceEyebrowRow}>
@@ -295,66 +279,12 @@ export function WorkerWalletView({
         </GlassCard>
       </Animated.View>
 
-      {/* Wallet Statistics Grid */}
-      <View style={styles.walletStatsHeader}>
-        <Text style={[styles.walletStatsTitle, { color: theme.colors.text.primary }]}>{t('wallet.walletActivity')}</Text>
-        <Text style={[styles.walletStatsCaption, { color: theme.colors.text.muted }]}>{t('wallet.walletActivityDesc')}</Text>
-      </View>
-      <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.summaryRow}>
-        <GlassCard
-          intensity={24}
-          padding={12}
-          style={[styles.chipCard, { borderColor: colors.success + '48' }]}
-          glowColor={colors.success}
-          gradient={cardGradient(colors.success, colors.cyan)}
-        >
-          <View style={[styles.chipDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-            {formatMoney(wallet?.totalRecharged)}
-          </Text>
-          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.approvedTopUps')}</Text>
-        </GlassCard>
-
-        <GlassCard
-          intensity={24}
-          padding={12}
-          style={[styles.chipCard, { borderColor: '#FF8C0048' }]}
-          glowColor="#FF8C00"
-          gradient={cardGradient('#FF8C00', '#FF1493')}
-        >
-          <View style={[styles.chipDot, { backgroundColor: '#FF8C00' }]} />
-          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-            {formatMoney(wallet?.totalCommissionDeducted)}
-          </Text>
-          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.commissionsTaken')}</Text>
-        </GlassCard>
-
-        <GlassCard
-          intensity={24}
-          padding={12}
-          style={[styles.chipCard, { borderColor: '#BF5AF248' }]}
-          glowColor="#BF5AF2"
-          gradient={cardGradient('#BF5AF2', colors.cyan)}
-        >
-          <View style={[styles.chipDot, { backgroundColor: '#BF5AF2' }]} />
-          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-            {formatMoney(wallet?.totalSubscriptionDeducted)}
-          </Text>
-          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.categoryRenewals')}</Text>
-        </GlassCard>
-      </Animated.View>
-
-      <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.summaryRow}>
-        <SummaryChip label={t('wallet.pendingProofs')} value={topUpSummary.pending} color="#FFB020" theme={theme} />
-        <SummaryChip label={t('wallet.rejectedProofs')} value={topUpSummary.rejected} color={colors.error} theme={theme} />
-      </Animated.View>
-
       {/* Wallet & Earnings History Section */}
       <View style={styles.transactionsSection}>
         <View style={styles.walletRecordsHeader}>
           <View>
-            <Text style={[styles.walletRecordsTitle, { color: theme.colors.text.primary }]}>{t('wallet.walletRecords')}</Text>
-            <Text style={[styles.walletRecordsCaption, { color: theme.colors.text.muted }]}>{t('wallet.walletRecordsDesc')}</Text>
+            <Text style={[styles.walletRecordsTitle, { color: theme.colors.text.primary }]}>{t('wallet.walletRecords', 'History')}</Text>
+            <Text style={[styles.walletRecordsCaption, { color: theme.colors.text.muted }]}>{t('wallet.walletRecordsDesc', 'View your wallet transactions, top-ups, and job earnings')}</Text>
           </View>
           <View style={[styles.walletRecordsCount, { borderColor: alpha(colors.cyan, 0.3), backgroundColor: alpha(colors.cyan, 0.08) }]}>
             <Text style={[styles.walletRecordsCountText, { color: colors.cyan }]}>
@@ -573,6 +503,16 @@ export function WorkerWalletView({
 
           {workerTab === 'earnings' && (
             <>
+              {analyticsData && (
+                <View style={{ marginBottom: 8 }}>
+                  <WorkerEarningsChart
+                    daily={analyticsData.daily}
+                    weekly={analyticsData.weekly}
+                    monthly={analyticsData.monthly}
+                    summary={analyticsData.summary}
+                  />
+                </View>
+              )}
               {payments.map((item, index) => {
                 const statusConf = {
                   paid: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },

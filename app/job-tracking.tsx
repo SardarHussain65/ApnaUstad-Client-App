@@ -26,6 +26,7 @@ import {
 } from '../utils/mapUtils';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
+import { alpha, useTheme } from '../constants/Theme';
 
 const COLORS = {
   bg: '#0A0E1A',
@@ -97,6 +98,9 @@ function PulseDot({ color }: { color: string }) {
 export default function JobTrackingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const theme = useTheme();
+  const accentCyan = theme.colors.brand.primary;
+  const accentPurple = theme.colors.brand.secondary;
   const params = useLocalSearchParams<{
     bookingId?: string | string[];
     customerId?: string | string[];
@@ -378,15 +382,15 @@ export default function JobTrackingScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
+    <View style={[styles.root, { backgroundColor: theme.colors.background.screen }]}>
+      <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background.screen} />
 
       <Map
         style={StyleSheet.absoluteFill}
         logo={false}
         compass={false}
         touchZoom={true}
-        mapStyle={`https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_API_KEY}`}
+        mapStyle={`https://api.maptiler.com/maps/${theme.isDark ? 'dataviz-dark' : 'streets-v2'}/style.json?key=${MAPTILER_API_KEY}`}
         onDidFinishLoadingMap={() => setMapReady(true)}
         onDidFinishLoadingStyle={() => setMapReady(true)}
       >
@@ -402,9 +406,9 @@ export default function JobTrackingScreen() {
               id="routeGlow"
               type="line"
               style={{
-                lineColor: COLORS.cyan,
+                lineColor: accentCyan,
                 lineWidth: 12,
-                lineOpacity: 0.12,
+                lineOpacity: 0.14,
                 lineCap: 'round',
                 lineJoin: 'round',
               }}
@@ -413,7 +417,7 @@ export default function JobTrackingScreen() {
               id="routeLine"
               type="line"
               style={{
-                lineColor: COLORS.cyan,
+                lineColor: accentCyan,
                 lineWidth: 4,
                 lineOpacity: 0.9,
                 lineCap: 'round',
@@ -424,14 +428,14 @@ export default function JobTrackingScreen() {
         )}
 
         <Marker id="customer" lngLat={[destinationLocation.longitude, destinationLocation.latitude]}>
-          <View style={[styles.marker, { backgroundColor: COLORS.cyan }]}>
+          <View style={[styles.marker, { backgroundColor: accentCyan }]}>
             <Text style={styles.markerEmoji}>📍</Text>
           </View>
         </Marker>
 
         {workerMarkerLocation && (
           <Marker id="worker" lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}>
-            <View style={[styles.marker, { backgroundColor: COLORS.purple }]}>
+            <View style={[styles.marker, { backgroundColor: accentPurple }]}>
               <Text style={styles.markerEmoji}>🔧</Text>
             </View>
           </Marker>
@@ -439,7 +443,9 @@ export default function JobTrackingScreen() {
       </Map>
 
       <LinearGradient
-        colors={['rgba(10,14,26,0.95)', 'rgba(10,14,26,0.6)', 'transparent']}
+        colors={theme.isDark
+          ? ['rgba(10,14,26,0.92)', 'rgba(10,14,26,0.55)', 'transparent']
+          : ['rgba(255,255,255,0.94)', 'rgba(255,255,255,0.65)', 'transparent']}
         style={styles.topGradient}
         pointerEvents="none"
       />
@@ -448,93 +454,100 @@ export default function JobTrackingScreen() {
         <Animated.View
           style={[styles.header, { transform: [{ translateY: headerAnim }] }]}
         >
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+            style={[
+              styles.headerBackBtn,
+              {
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.subtle,
+              },
+            ]}
+          >
+            <Ionicons name="chevron-back" size={20} color={theme.colors.text.primary} />
+          </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <PulseDot color={COLORS.cyan} />
-            <Text style={styles.headerTitle}>{t('jobTracking.title')}</Text>
+            <PulseDot color={accentCyan} />
+            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('jobTracking.title', 'Live Tracking')}</Text>
           </View>
 
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>{t('jobTracking.liveBadge')}</Text>
+          <View style={[styles.liveBadge, { backgroundColor: alpha(accentCyan, 0.12), borderColor: alpha(accentCyan, 0.25) }]}>
+            <View style={[styles.liveDot, { backgroundColor: accentCyan }]} />
+            <Text style={[styles.liveText, { color: accentCyan }]}>{t('jobTracking.liveBadge', 'LIVE')}</Text>
           </View>
         </Animated.View>
       </SafeAreaView>
 
       <Animated.View
-        style={[styles.bottomSheet, { transform: [{ translateY: sheetAnim }] }]}
+        style={[
+          styles.bottomSheet,
+          {
+            transform: [{ translateY: sheetAnim }],
+            backgroundColor: theme.colors.surface.card,
+            borderColor: theme.colors.border.subtle,
+          },
+        ]}
       >
-        <View style={styles.sheetHandle} />
+        <View style={[styles.sheetHandle, { backgroundColor: alpha(theme.colors.text.primary, 0.16) }]} />
 
         <View style={styles.distanceSummary}>
-          <View style={styles.distanceIcon}>
-            <Ionicons name="navigate" size={19} color={COLORS.cyan} />
+          <View style={[styles.distanceIcon, { backgroundColor: alpha(accentCyan, 0.12), borderColor: alpha(accentCyan, 0.24) }]}>
+            <Ionicons name="navigate" size={19} color={accentCyan} />
           </View>
           <View style={styles.distanceCopy}>
-            <Text style={styles.sheetEyebrow}>{t('jobTracking.liveDistanceLabel')}</Text>
-            <Text style={styles.distanceValue}>{distDisplay}</Text>
+            <Text style={[styles.sheetEyebrow, { color: accentCyan }]}>{t('jobTracking.liveDistanceLabel', 'DISTANCE')}</Text>
+            <Text style={[styles.distanceValue, { color: theme.colors.text.primary }]}>{distDisplay}</Text>
           </View>
-          <PulseDot color={COLORS.cyan} />
+          <PulseDot color={accentCyan} />
         </View>
 
-        <View style={styles.routeCard}>
+        <View style={[styles.routeCard, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
           <View style={styles.routeRail}>
-            <View style={[styles.routeNode, { borderColor: COLORS.purple }]}>
-              <View style={[styles.routeNodeCore, { backgroundColor: COLORS.purple }]} />
+            <View style={[styles.routeNode, { borderColor: accentPurple }]}>
+              <View style={[styles.routeNodeCore, { backgroundColor: accentPurple }]} />
             </View>
-            <View style={styles.routeRailLine} />
-            <View style={[styles.routeNode, { borderColor: COLORS.cyan }]}>
-              <View style={[styles.routeNodeCore, { backgroundColor: COLORS.cyan }]} />
+            <View style={[styles.routeRailLine, { backgroundColor: alpha(accentCyan, 0.34) }]} />
+            <View style={[styles.routeNode, { borderColor: accentCyan }]}>
+              <View style={[styles.routeNodeCore, { backgroundColor: accentCyan }]} />
             </View>
           </View>
           <View style={styles.routeStops}>
             <View style={styles.routeStop}>
-              <Text style={styles.routeStopLabel}>{t('jobTracking.liveOriginLabel')}</Text>
-              <Text style={styles.routeStopValue} numberOfLines={2}>{originAddress || t('jobTracking.waitingLive')}</Text>
+              <Text style={[styles.routeStopLabel, { color: theme.colors.text.muted }]}>{t('jobTracking.liveOriginLabel', 'USTAD LOCATION')}</Text>
+              <Text style={[styles.routeStopValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{originAddress || t('jobTracking.waitingLive', 'Waiting for live GPS...')}</Text>
             </View>
             <View style={styles.routeStop}>
-              <Text style={styles.routeStopLabel}>{t('jobTracking.serviceLocationLabel')}</Text>
-              <Text style={styles.routeStopValue} numberOfLines={2}>{destinationAddress || addressLabel}</Text>
+              <Text style={[styles.routeStopLabel, { color: theme.colors.text.muted }]}>{t('jobTracking.serviceLocationLabel', 'SERVICE LOCATION')}</Text>
+              <Text style={[styles.routeStopValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{destinationAddress || addressLabel}</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => router.back()} activeOpacity={0.82}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.09)', 'rgba(255,255,255,0.035)']}
-              style={styles.actionBtnInner}
-            >
-              <Ionicons name="arrow-back" size={21} color={COLORS.text} />
-              <Text style={[styles.actionLabel, { color: COLORS.text }]}>{t('jobTracking.back')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+        {!isCommunicationLocked && (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity style={[styles.actionBtn, { borderColor: alpha(accentPurple, 0.28) }]} onPress={handleOpenChat} activeOpacity={0.82}>
+              <LinearGradient
+                colors={[alpha(accentPurple, 0.14), alpha(accentPurple, 0.05)]}
+                style={styles.actionBtnInner}
+              >
+                <Ionicons name="chatbubble-ellipses" size={20} color={accentPurple} />
+                <Text style={[styles.actionLabel, { color: accentPurple }]}>{t('jobTracking.chat', 'Chat')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {!isCommunicationLocked && (
-            <>
-              <TouchableOpacity style={styles.actionBtn} onPress={handleOpenChat} activeOpacity={0.82}>
-                <LinearGradient
-                  colors={[COLORS.purpleDim, 'rgba(191,90,242,0.05)']}
-                  style={styles.actionBtnInner}
-                >
-                  <Ionicons name="chatbubble-ellipses" size={22} color={COLORS.purple} />
-                  <Text style={[styles.actionLabel, { color: COLORS.purple }]}>{t('jobTracking.chat')}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.actionBtn} onPress={handleCallPartner} activeOpacity={0.82}>
-                <LinearGradient
-                  colors={[COLORS.cyanDim, 'rgba(0,229,255,0.05)']}
-                  style={styles.actionBtnInner}
-                >
-                  <Ionicons name="call" size={21} color={COLORS.cyan} />
-                  <Text style={[styles.actionLabel, { color: COLORS.cyan }]}>{t('jobTracking.call')}</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+            <TouchableOpacity style={[styles.actionBtn, { borderColor: alpha(accentCyan, 0.28) }]} onPress={handleCallPartner} activeOpacity={0.82}>
+              <LinearGradient
+                colors={[alpha(accentCyan, 0.14), alpha(accentCyan, 0.05)]}
+                style={styles.actionBtnInner}
+              >
+                <Ionicons name="call" size={20} color={accentCyan} />
+                <Text style={[styles.actionLabel, { color: accentCyan }]}>{t('jobTracking.call', 'Call')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
       </Animated.View>
     </View>
   );
@@ -569,8 +582,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
   },
-  headerSpacer: {
+  headerBackBtn: {
     width: 40,
+    height: 40,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
     flexDirection: 'row',

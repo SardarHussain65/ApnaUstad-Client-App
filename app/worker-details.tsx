@@ -378,7 +378,7 @@ export default function WorkerDetailsScreen() {
                     />
                   ))}
                 </View>
-                <Text style={styles.ratingText}>{rating > 0 ? rating.toFixed(1) : t('workerDetails.newProfile')}</Text>
+                <Text style={[styles.ratingText, { color: colors.text.primary }]}>{rating > 0 ? rating.toFixed(1) : t('workerDetails.newProfile')}</Text>
                 <Text style={[styles.ratingMeta, { color: colors.text.dim }]}>{t('workerDetails.reviewsCount', { count: reviewCount })}</Text>
               </View>
               <View style={[styles.availabilityPill, !isAvailable && styles.availabilityPillBusy]}>
@@ -415,15 +415,15 @@ export default function WorkerDetailsScreen() {
             <Text style={[styles.bioText, { color: colors.text.muted }]}>{worker.bio || t('workerDetails.bioPlaceholder')}</Text>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(180).duration(520)} style={[
-            styles.sectionCard,
-            {
-              backgroundColor: colors.surface.card,
-              borderColor: colors.border.subtle,
-            }
-          ]}>
-            <SectionTitle icon={Wrench} title={t('workerDetails.skillsTitle')} color={legacyColors.pink} />
-            {skills.length > 0 ? (
+          {skills.length > 0 && (
+            <Animated.View entering={FadeInDown.delay(180).duration(520)} style={[
+              styles.sectionCard,
+              {
+                backgroundColor: colors.surface.card,
+                borderColor: colors.border.subtle,
+              }
+            ]}>
+              <SectionTitle icon={Wrench} title={t('workerDetails.skillsTitle')} color={legacyColors.pink} />
               <View style={styles.skillsWrap}>
                 {skills.map((skill) => (
                   <View key={skill} style={[
@@ -438,10 +438,8 @@ export default function WorkerDetailsScreen() {
                   </View>
                 ))}
               </View>
-            ) : (
-              <Text style={[styles.emptySectionText, { color: colors.text.dim }]}>{t('workerDetails.skillsPlaceholder')}</Text>
-            )}
-          </Animated.View>
+            </Animated.View>
+          )}
 
           <Animated.View entering={FadeInDown.delay(230).duration(520)} style={[
             styles.sectionCard,
@@ -508,14 +506,19 @@ export default function WorkerDetailsScreen() {
               )}
               {!hasBooking && (
                 <TouchableOpacity style={styles.primaryAction} onPress={handlePrimaryAction} activeOpacity={0.86} disabled={isAccepting}>
-                  <LinearGradient colors={[legacyColors.cyan, C.blue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
+                  <LinearGradient
+                    colors={colors.gradients.primary as [string, string, ...string[]]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
                   {isAccepting ? (
-                    <ActivityIndicator color="#001018" size="small" />
+                    <ActivityIndicator color={colors.button.primaryText} size="small" />
                   ) : (
                     <>
-                      <Zap size={18} color="#001018" fill="#001018" />
-                      <Text style={styles.primaryActionText}>{primaryLabel}</Text>
-                      <ChevronRight size={18} color="#001018" strokeWidth={3} />
+                      <Zap size={18} color={colors.button.primaryText} fill={colors.button.primaryText} />
+                      <Text style={[styles.primaryActionText, { color: colors.button.primaryText }]}>{primaryLabel}</Text>
+                      <ChevronRight size={18} color={colors.button.primaryText} strokeWidth={3} />
                     </>
                   )}
                 </TouchableOpacity>

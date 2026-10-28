@@ -127,8 +127,7 @@ function TabItem({
 
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
-      opacity: prog.value,
-      transform: [{ translateY: withSpring(isFocused ? 0 : 5, { damping: 12 }) }],
+      opacity: 0.72 + prog.value * 0.28,
       color: interpolateColor(prog.value, [0, 1], [inactiveColor, activeColor])
     };
   });

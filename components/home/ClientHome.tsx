@@ -27,20 +27,20 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import { ChevronRight, Search, CreditCard, Clock, CheckCircle2, Star, Briefcase } from 'lucide-react-native';
+import { ChevronRight, Search } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
-import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
-import { useShimmerTranslateX, CategoriesSkeleton, DashboardSkeleton, ListSkeleton, BookingCardSkeleton } from './HomeSkeletonLoader';
+import { useShimmerTranslateX, CategoriesSkeleton, BookingCardSkeleton } from './HomeSkeletonLoader';
 import { ClientToast, ToastState } from './ClientToast';
 import { RecentBookingCard } from './RecentBookingCard';
 import { ActiveBiddingBanner } from './ActiveBiddingBanner';
@@ -50,15 +50,7 @@ import { ActiveBiddingBanner } from './ActiveBiddingBanner';
 const GRID_GAP = 12;
 const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
 const INITIAL_CATEGORY_LIMIT = 9;
-const RECENT_BOOKINGS_LIMIT = 3;
-const EMPTY_HOME_STATS = {
-  total: 0,
-  active: 0,
-  completed: 0,
-  successRate: 0,
-  successRateLabel: '100%',
-  totalSpent: 0,
-};
+const RECENT_BOOKINGS_LIMIT = 2;
 
 // ─── CategoryCard ─────────────────────────────────────────────────────────────
 // Extracted so React keeps a stable identity across parent re-renders.
@@ -79,7 +71,6 @@ interface CategoryCardProps {
 
 const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => {
   const theme = useTheme();
-  const colors = useThemeColors();
   const Icon = getIconForCategory(cat);
   const gradient: [string, string] = cat.color
     ? [cat.color, `${cat.color}40`]
@@ -155,11 +146,6 @@ export function ClientHome() {
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
-  const shadows = useThemeShadows();
-
-  const innerBorderColor = theme.id === 'current'
-    ? alpha('#FFFFFF', 0.12)
-    : theme.colors.border.default;
 
   // Responsive grid dimensions
   const numColumns = windowWidth > 600 ? 4 : 3;
@@ -240,13 +226,8 @@ export function ClientHome() {
     return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
   }, [filteredCategories, showAllServices, searchQuery]);
 
-  const stats = homeSummary?.stats ?? EMPTY_HOME_STATS;
-  const recentBookings: Booking[] = homeSummary?.recentBookings ?? [];
-  const successPercent = stats.total > 0 ? Math.round(stats.successRate * 100) : 0;
-  const completedSummary = `${stats.completed}/${stats.total || 0} ${t('common.completed').toLowerCase()}`;
-  const activeSummary = stats.active > 0
-    ? `${stats.active} ${t('home.client.active').toLowerCase()}`
-    : t('home.client.noBookings');
+  const totalBookingsCount = homeSummary?.stats?.total ?? 0;
+  const recentBookings: Booking[] = (homeSummary?.recentBookings ?? []).slice(0, RECENT_BOOKINGS_LIMIT);
 
   const activeMissions = useMemo<JobPost[]>(
     () =>
@@ -266,16 +247,15 @@ export function ClientHome() {
   const handleCategoryPress = useCallback(
     (cat: CategoryItem) => {
       router.push({
-        pathname: '/category-details' as any,
+        pathname: '/job-creation' as any,
         params: {
           id: cat._id,
           title: cat.name,
-          color: cat.color ?? '#fff',
-          description: cat.description,
+          color: cat.color ?? colors.cyan,
         },
       });
     },
-    [router]
+    [router, colors.cyan]
   );
 
   const handleBookingPress = useCallback(
@@ -371,108 +351,14 @@ export function ClientHome() {
           )}
         </View>
 
-        {/* ── Activity Dashboard ── */}
-        <Animated.View
-          entering={FadeInDown.delay(150).duration(700)}
-          style={styles.dashboardSection}
-        >
-          <Text style={[styles.sectionTitle, typography.threeD, styles.dashboardLabel, { color: theme.colors.text.primary }]}>
-            {t('home.client.yourActivity')}
-          </Text>
-
-          {homeSummaryLoading && !isRefreshing ? (
-            <DashboardSkeleton translateX={translateX} />
-          ) : (
-            <GlassCard
-              intensity={42}
-              glowColor={colors.cyan}
-              gradient={[alpha(colors.cyan, 0.16), alpha(theme.colors.brand.secondary, 0.12), alpha(theme.colors.surface.card, 0.18)]}
-              padding={0}
-              style={styles.activityDashboardCard}
-              contentStyle={styles.activityDashboardContent}
-            >
-              <View style={styles.activityGlowOne} />
-              <View style={styles.activityGlowTwo} />
-
-              <View style={styles.activityTopRow}>
-                <View style={styles.spentCluster}>
-                  <View style={[styles.heroIconBox, { borderColor: innerBorderColor }]}>
-                    <CreditCard size={22} color={colors.cyan} strokeWidth={2.5} />
-                  </View>
-                  <View style={styles.heroTextContainer}>
-                    <Text style={[styles.heroLabel, { color: theme.colors.text.muted }]}>{t('home.client.totalSpent')}</Text>
-                    <Text style={[styles.heroValue, typography.threeD, { color: theme.colors.text.primary }]}>
-                      Rs. {stats.totalSpent.toLocaleString()}
-                    </Text>
-                    <Text style={[styles.heroSubText, { color: theme.colors.text.muted }]}>{activeSummary}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.successBadge}>
-                  <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
-                  <View>
-                    <Text style={styles.successPercent}>{successPercent}%</Text>
-                    <Text style={styles.successLabel}>{t('common.success')}</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={[styles.progressBlock, { borderColor: innerBorderColor }]}>
-                <View style={styles.progressHeader}>
-                  <Text style={[styles.progressTitle, { color: theme.colors.text.muted }]}>{t('home.client.completionRate')}</Text>
-                  <Text style={[styles.progressValue, { color: theme.colors.text.primary }]}>{completedSummary}</Text>
-                </View>
-                <View style={[styles.progressTrack, { backgroundColor: theme.colors.surface.subtle }]}>
-                  <View style={[styles.progressFill, { width: `${successPercent}%`, backgroundColor: colors.success }]} />
-                </View>
-              </View>
-
-              <View style={styles.activityStatsRow}>
-                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
-                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.cyan, 0.1) }]}>
-                    <Clock size={14} color={colors.cyan} />
-                  </View>
-                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.active}</Text>
-                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.active')}</Text>
-                </View>
-
-                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
-                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.success, 0.1) }]}>
-                    <CheckCircle2 size={14} color={colors.success} />
-                  </View>
-                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.completed}</Text>
-                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.completed')}</Text>
-                </View>
-
-                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
-                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.purple, 0.12) }]}>
-                    <Briefcase size={14} color={colors.purple} />
-                  </View>
-                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.total}</Text>
-                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.totalJobs')}</Text>
-                </View>
-              </View>
-            </GlassCard>
-          )}
-        </Animated.View>
-
-        {/* ── Recent Bookings ── */}
+        {/* ── Recent Bookings (shown only when user has bookings) ── */}
         {homeSummaryLoading && !isRefreshing ? (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                  {t('home.client.recentBookings', 'Recent Bookings')}
-                </Text>
-                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>{t('home.client.latestActivity', 'Your latest activity')}</Text>
-              </View>
-            </View>
-            <BookingCardSkeleton translateX={translateX} />
             <BookingCardSkeleton translateX={translateX} />
           </View>
-        ) : (
+        ) : recentBookings.length > 0 ? (
           <Animated.View
-            entering={FadeInDown.delay(220).duration(700)}
+            entering={FadeInDown.delay(140).duration(500)}
             style={styles.section}
           >
             <View style={styles.sectionHeader}>
@@ -480,10 +366,12 @@ export function ClientHome() {
                 <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
                   {t('home.client.recentBookings')}
                 </Text>
-                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>{t('home.client.latestActivity')}</Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
+                  {t('home.client.latestActivity')}
+                </Text>
               </View>
 
-              {stats.total > RECENT_BOOKINGS_LIMIT && (
+              {totalBookingsCount > RECENT_BOOKINGS_LIMIT && (
                 <TouchableOpacity
                   onPress={handleViewAllBookings}
                   hitSlop={styles.hitSlop}
@@ -495,23 +383,15 @@ export function ClientHome() {
               )}
             </View>
 
-            {recentBookings.length > 0 ? (
-              recentBookings.map(booking => (
-                <RecentBookingCard
-                  key={booking._id}
-                  booking={booking}
-                  onPress={() => handleBookingPress(booking._id)}
-                />
-              ))
-            ) : (
-              <View style={[styles.emptyBookings, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-                <Text style={[styles.emptyBookingsText, { color: theme.colors.text.muted }]}>
-                  {t('home.client.noBookings')}
-                </Text>
-              </View>
-            )}
+            {recentBookings.map(booking => (
+              <RecentBookingCard
+                key={booking._id}
+                booking={booking}
+                onPress={() => handleBookingPress(booking._id)}
+              />
+            ))}
           </Animated.View>
-        )}
+        ) : null}
 
         <View style={{ height: activeSearchJob ? 190 : 120 }} />
       </ScrollView>

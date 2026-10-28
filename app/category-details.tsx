@@ -87,10 +87,13 @@ export default function CategoryDetailsScreen() {
 
         {/* Dynamic Header */}
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}
+            onPress={() => router.back()}
+          >
             <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
+          <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{title}</Text>
           <View style={styles.placeholderBtn} />
         </View>
 
@@ -164,7 +167,7 @@ export default function CategoryDetailsScreen() {
                   <Text style={[styles.optionSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.hireDirectly')}</Text>
                 </View>
                 <View style={[styles.deployHint, { backgroundColor: theme.colors.brand.worker, shadowColor: theme.colors.brand.worker }]}>
-                  <Text style={[styles.deployHintText, { color: theme.colors.button.primaryText }]}>{t('categoryDetails.browse')}</Text>
+                  <Text style={[styles.deployHintText, { color: theme.colors.button.workerText }]}>{t('categoryDetails.browse')}</Text>
                 </View>
               </TouchableOpacity>
             </Animated.View>

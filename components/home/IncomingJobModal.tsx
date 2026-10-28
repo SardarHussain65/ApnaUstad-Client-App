@@ -29,7 +29,6 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Banknote,
   BriefcaseBusiness,
   CalendarDays,
   Check,
@@ -44,8 +43,6 @@ import {
   PauseCircle,
   PlayCircle,
   Radio,
-  Send,
-  ShieldAlert,
   ShieldCheck,
   Star,
   UserRound,
@@ -111,7 +108,7 @@ const formatMoney = (value: unknown) => `Rs. ${Number(value || 0).toLocaleString
 
 const formatAge = (value?: string, t?: any) => {
   const timestamp = value ? new Date(value).getTime() : 0;
-  if (!timestamp || Number.isNaN(timestamp)) return t ? t('incomingJobModal.newSignal', 'New signal') : 'New signal';
+  if (!timestamp || Number.isNaN(timestamp)) return t ? t('incomingJobModal.newSignal', 'New request') : 'New request';
   const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
   if (minutes < 1) return t ? t('incomingJobModal.postedJustNow', 'Posted just now') : 'Posted just now';
   if (minutes < 60) return t ? t('incomingJobModal.postedMinutesAgo', 'Posted {{count}}m ago', { count: minutes }) : `Posted ${minutes}m ago`;
@@ -247,7 +244,6 @@ function JobDecisionCard({
   colors: ReturnType<typeof useThemeColors>;
   shadows: ReturnType<typeof useThemeShadows>;
 }) {
-  const { user } = useAuth();
   const { t } = useTranslation();
   const signal = job.signalMeta || {};
   const isInstant = job.urgency === 'instant';
@@ -441,73 +437,54 @@ function JobDecisionCard({
             />
           </View>
 
-          <View style={[styles.detailCard, { backgroundColor: alpha(theme.colors.background.screen, 0.2) }]}>
-            <DetailRow icon={MapPin} label={t('incomingJobModal.serviceLocation', 'Service location')} value={job.address || t('incomingJobModal.nearbyServiceArea', 'Nearby service area')} color={accent} theme={theme} />
-            <DetailRow icon={CalendarDays} label={t('incomingJobModal.visitTiming', 'Visit timing')} value={timingText} color={isInstant ? colors.success : colors.worker} theme={theme} isLast />
-            <DetailRow
-              icon={Banknote}
-              label={t('incomingJobModal.clientOffer', 'Client offer')}
-              value={signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'))}
-              color={colors.success}
-              isLast={false}
-              theme={theme}
-            />
+          <View style={[styles.detailCard, { backgroundColor: alpha(theme.colors.text.primary, 0.03), borderColor: theme.colors.border.subtle }]}>
+            <DetailRow icon={MapPin} label={t('incomingJobModal.serviceLocation', 'Location')} value={job.address || t('incomingJobModal.nearbyServiceArea', 'Nearby area')} color={accent} theme={theme} />
+            <DetailRow icon={CalendarDays} label={t('incomingJobModal.visitTiming', 'Time')} value={timingText} color={isInstant ? colors.success : colors.worker} theme={theme} isLast />
           </View>
 
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderTitle}>
-              <ImageIcon size={14} color={accent} strokeWidth={2.4} />
-              <Text style={[styles.sectionTitle, { color: accent }]}>{t('incomingJobModal.workEvidence', 'Work evidence')}</Text>
-            </View>
-            <Text style={[styles.sectionMeta, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('incomingJobModal.attachmentsLabel', '{{count}} attachments', { count: media.totalCount })}</Text>
-          </View>
+          {media.items.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionHeaderTitle}>
+                  <ImageIcon size={14} color={accent} strokeWidth={2.4} />
+                  <Text style={[styles.sectionTitle, { color: accent }]}>{t('incomingJobModal.workEvidence', 'Photos & Voice Note')}</Text>
+                </View>
+                <Text style={[styles.sectionMeta, { color: theme.colors.text.muted }]}>{t('incomingJobModal.attachmentsLabel', '{{count}} attached', { count: media.totalCount })}</Text>
+              </View>
 
-          {media.items.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.mediaRail}
-              onTouchStart={() => onScrollActive?.(false)}
-              onTouchEnd={() => onScrollActive?.(true)}
-              onTouchCancel={() => onScrollActive?.(true)}
-            >
-              {media.items.map((item: MediaItem, index: number) => (
-                <EvidenceTile key={`${item.type}-${item.url}-${index}`} item={item} index={index} accent={accent} theme={theme} />
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={[styles.emptyEvidence, { backgroundColor: alpha(theme.colors.text.primary, 0.03) }]}>
-              <ImageIcon size={18} color={alpha(theme.colors.text.primary, 0.3)} />
-              <Text style={[styles.emptyEvidenceText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('incomingJobModal.noEvidenceMsg', 'No work evidence attached. Review the brief carefully.')}</Text>
-            </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.mediaRail}
+                onTouchStart={() => onScrollActive?.(false)}
+                onTouchEnd={() => onScrollActive?.(true)}
+                onTouchCancel={() => onScrollActive?.(true)}
+              >
+                {media.items.map((item: MediaItem, index: number) => (
+                  <EvidenceTile key={`${item.type}-${item.url}-${index}`} item={item} index={index} accent={accent} theme={theme} />
+                ))}
+              </ScrollView>
+            </>
           )}
 
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionHeaderTitle}>
-              <UserRound size={14} color={accent} strokeWidth={2.4} />
-              <Text style={[styles.sectionTitle, { color: accent }]}>{t('incomingJobModal.clientContext', 'Client context')}</Text>
-            </View>
-          </View>
-
-          <View style={[styles.clientCard, { backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
+          <View style={[styles.clientCard, { backgroundColor: alpha(theme.colors.text.primary, 0.03), borderColor: theme.colors.border.subtle }]}>
             {client?.profileImage ? (
               <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
             ) : (
-              <View style={[styles.clientAvatarFallback, { borderColor: alpha(accent, 0.4) }]}>
-                <UserRound size={20} color={accent} />
+              <View style={[styles.clientAvatarFallback, { borderColor: alpha(accent, 0.35), backgroundColor: alpha(accent, 0.08) }]}>
+                <UserRound size={18} color={accent} />
               </View>
             )}
             <View style={styles.clientCopy}>
-              <Text style={[styles.clientLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('incomingJobModal.serviceClient', 'Service client')}</Text>
-              <Text style={[styles.clientName, { color: theme.colors.text.primary }]} numberOfLines={1}>{client?.fullName || t('incomingJobModal.defaultClientName', 'ApnaUstad client')}</Text>
+              <Text style={[styles.clientName, { color: theme.colors.text.primary }]} numberOfLines={1}>{client?.fullName || t('incomingJobModal.defaultClientName', 'Client')}</Text>
               <View style={styles.clientStats}>
                 <View style={styles.clientStat}>
                   <Star size={11} color="#FFD700" fill={clientRating > 0 ? '#FFD700' : 'transparent'} />
-                  <Text style={[styles.clientStatText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{clientRating > 0 ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: clientRating.toFixed(1) }) : t('incomingJobModal.newClient', 'New client')}</Text>
+                  <Text style={[styles.clientStatText, { color: theme.colors.text.muted }]}>{clientRating > 0 ? t('incomingJobModal.clientRating', '{{rating}} rating', { rating: clientRating.toFixed(1) }) : t('incomingJobModal.newClient', 'New client')}</Text>
                 </View>
                 <View style={styles.clientStat}>
                   <ShieldCheck size={11} color={colors.success} />
-                  <Text style={[styles.clientStatText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('incomingJobModal.jobsCompleted', '{{completed}}/{{total}} jobs completed', { completed: completedJobs, total: totalJobsPosted })}</Text>
+                  <Text style={[styles.clientStatText, { color: theme.colors.text.muted }]}>{t('incomingJobModal.jobsCompleted', '{{completed}} jobs completed', { completed: completedJobs, total: totalJobsPosted })}</Text>
                 </View>
               </View>
             </View>
@@ -549,7 +526,7 @@ function JobDecisionCard({
               )}
 
               <View style={styles.inlineCounterRow}>
-                <View style={styles.inlineCounterInputWrapper}>
+                <View style={[styles.inlineCounterInputWrapper, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.input.border }]}>
                   <Text style={[styles.inlineCounterPrefix, { color: colors.cyan }]}>PKR</Text>
                   <TextInput
                     style={[styles.inlineCounterInputField, { color: theme.colors.text.primary }]}
@@ -557,7 +534,7 @@ function JobDecisionCard({
                     onChangeText={(val) => setCounterPrice(val.replace(/[^\d]/g, ''))}
                     keyboardType="number-pad"
                     placeholder={String(activeCounterPrice ?? offerAmount)}
-                    placeholderTextColor={alpha(theme.colors.text.primary, 0.3)}
+                    placeholderTextColor={theme.colors.text.muted}
                   />
                 </View>
 
@@ -587,10 +564,10 @@ function JobDecisionCard({
           )}
         </ScrollView>
 
-        <View style={[styles.footer, { backgroundColor: alpha(theme.colors.background.screen, 0.84), borderTopColor: alpha(theme.colors.text.primary, 0.06) }]}>
-          <TouchableOpacity style={[styles.skipButton, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
-            <X size={18} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.5} />
-            <Text style={[styles.skipButtonText, { color: alpha(theme.colors.text.primary, 0.6) }]}>{t('common.skip', 'Skip')}</Text>
+        <View style={[styles.footer, { backgroundColor: alpha(theme.colors.background.screen, 0.92), borderTopColor: theme.colors.border.subtle, paddingBottom: 14 }]}>
+          <TouchableOpacity style={[styles.skipButton, { backgroundColor: alpha(theme.colors.text.primary, 0.05), borderColor: theme.colors.border.subtle }]} onPress={onReject} disabled={isLoading} activeOpacity={0.75}>
+            <X size={18} color={theme.colors.text.secondary} strokeWidth={2.5} />
+            <Text style={[styles.skipButtonText, { color: theme.colors.text.secondary }]}>{t('common.skip', 'Skip')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -611,7 +588,7 @@ function JobDecisionCard({
                 <>
                   <Check size={19} color={theme.colors.text.onBrand} strokeWidth={3} />
                   <Text style={[styles.primaryButtonText, { color: theme.colors.text.onBrand }]}>
-                    {isInstant ? t('incomingJobModal.acceptOffer', 'Accept offer') : t('incomingJobModal.continueBid', 'Continue to bid')}
+                    {isInstant ? t('incomingJobModal.acceptOffer', 'Accept Job') : t('incomingJobModal.continueBid', 'Send Price')}
                   </Text>
                   <ChevronRight size={17} color={theme.colors.text.onBrand} strokeWidth={3} />
                 </>
@@ -624,13 +601,6 @@ function JobDecisionCard({
               )}
             </LinearGradient>
           </TouchableOpacity>
-        </View>
-
-        <View style={[styles.footerNote, { backgroundColor: alpha(theme.colors.background.screen, 0.84) }]}>
-          <ShieldAlert size={11} color={alpha(theme.colors.text.primary, 0.4)} />
-          <Text style={[styles.footerNoteText, { color: alpha(theme.colors.text.primary, 0.4) }]}>
-            {isInstant ? t('incomingJobModal.instantFooterNote', 'Acceptance sends your interest to the client for confirmation.') : t('incomingJobModal.scheduledFooterNote', 'Submit your quote after reviewing the complete request.')}
-          </Text>
         </View>
       </View>
     </Animated.View>
@@ -653,13 +623,13 @@ function DecisionMetric({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={styles.metric}>
+    <View style={[styles.metric, { borderColor: theme.colors.border.subtle, backgroundColor: alpha(theme.colors.text.primary, 0.03) }]}>
       <View style={styles.metricHeader}>
         <Icon size={15} color={color} strokeWidth={2.5} />
-        <Text style={[styles.metricLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>{label}</Text>
+        <Text style={[styles.metricLabel, { color: theme.colors.text.muted }]}>{label}</Text>
       </View>
       <Text style={[styles.metricValue, { color: theme.colors.text.primary }]} numberOfLines={1}>{value}</Text>
-      <Text style={[styles.metricHint, { color: alpha(theme.colors.text.primary, 0.4) }]} numberOfLines={1}>{hint}</Text>
+      <Text style={[styles.metricHint, { color: theme.colors.text.muted }]} numberOfLines={1}>{hint}</Text>
     </View>
   );
 }
@@ -680,13 +650,13 @@ function DetailRow({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={[styles.detailRow, !isLast && styles.detailRowBorder]}>
+    <View style={[styles.detailRow, !isLast && { borderBottomWidth: 1, borderBottomColor: theme.colors.border.subtle }]}>
       <View style={[styles.detailIcon, { backgroundColor: alpha(color, 0.1) }]}>
         <Icon size={15} color={color} strokeWidth={2.4} />
       </View>
       <View style={styles.detailCopy}>
-        <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{label}</Text>
-        <Text style={[styles.detailValue, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={2}>{value}</Text>
+        <Text style={[styles.detailLabel, { color: theme.colors.text.muted }]}>{label}</Text>
+        <Text style={[styles.detailValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{value}</Text>
       </View>
     </View>
   );

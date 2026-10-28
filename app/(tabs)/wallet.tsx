@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Share, Platform, View, Text } from 'react-native';
+import { Platform, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
@@ -140,8 +140,6 @@ export default function WalletTab() {
   );
   const selectedMethodIsConfigured = selectedMethod ? selectedMethod.isConfigured !== false : false;
 
-  const totalEarnings = (summary.paid || 0) + (summary.payable || 0);
-
   const handleWorkerRefresh = useCallback(async () => {
     setIsWorkerRefreshing(true);
     try {
@@ -230,26 +228,6 @@ export default function WalletTab() {
     } finally {
       setIsSubmittingRecharge(false);
     }
-  };
-
-  const handleShareStatement = async () => {
-    const availableBalance = wallet?.availableBalance ?? wallet?.balance ?? 0;
-    const lines = [
-      'ApnaUstad Worker Wallet Statement',
-      `${t('wallet.availableBalance')}: Rs. ${availableBalance.toLocaleString()}`,
-      `${t('wallet.heldActive')}: Rs. ${(wallet?.reservedBalance ?? 0).toLocaleString()}`,
-      `${t('wallet.totalEarnings')}: Rs. ${totalEarnings.toLocaleString()}`,
-      `${t('wallet.readyCollect')}: Rs. ${summary.payable.toLocaleString()}`,
-      `${t('wallet.totalRecharged')}: Rs. ${wallet?.totalRecharged?.toLocaleString() ?? '0'}`,
-      `${t('wallet.commissionDeducted')}: Rs. ${wallet?.totalCommissionDeducted?.toLocaleString() ?? '0'}`,
-      `${t('wallet.renewalsDeducted')}: Rs. ${wallet?.totalSubscriptionDeducted?.toLocaleString() ?? '0'}`,
-      '',
-      ...transactions.slice(0, 20).map((tx) => {
-        const sign = ['recharge', 'refund'].includes(tx.type) ? '+' : '-';
-        return `${new Date(tx.createdAt).toLocaleDateString()} | ${tx.description} | ${sign}Rs. ${tx.amount.toLocaleString()} | Bal Rs. ${tx.balanceAfter.toLocaleString()}`;
-      }),
-    ];
-    await Share.share({ message: lines.join('\n') });
   };
 
   // Determine full page loading state

@@ -17,14 +17,13 @@ import {
   Calendar,
   Camera,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
-  ClipboardList,
   Clock,
   FileText,
   Mic,
   Send,
-  ShieldCheck,
-  Target,
+  Users,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -41,16 +40,10 @@ import {
 import Animated, {
   FadeInDown,
   FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { AlertModal, ConfirmModal } from '../components/ui';
-import { useConfirmModal, useCreateJobMutation, useToast, useUploadJobImagesMutation } from '../hooks';
+import { useCreateJobMutation, useToast, useUploadJobImagesMutation } from '../hooks';
 import { addAlpha } from '../utils/colorUtils';
 import { useTranslation } from 'react-i18next';
 import { useTheme, alpha } from '../constants/Theme';
@@ -60,7 +53,7 @@ import { BudgetInput } from '../components/job-creation/BudgetInput';
 import { LocationSelector } from '../components/job-creation/LocationSelector';
 import { MediaEvidencePicker } from '../components/job-creation/MediaEvidencePicker';
 import { SchedulePickerModal } from '../components/job-creation/SchedulePickerModal';
-import { GlassInput, P, SectionLabel, StatBadge, useJobCreationPalette } from '../components/job-creation/shared';
+import { GlassInput, P, SectionLabel, useJobCreationPalette } from '../components/job-creation/shared';
 import { UrgencyToggle } from '../components/job-creation/UrgencyToggle';
 import { VoiceBriefRecorder } from '../components/job-creation/VoiceBriefRecorder';
 import { UrgentPricingCard } from '../components/job-creation/UrgentPricingCard';
@@ -142,13 +135,7 @@ export default function JobCreationScreen() {
   const palette = useJobCreationPalette();
   const theme = useTheme();
   const { success, error: showError } = useToast();
-  const {
-    visible: confirmVisible,
-    showConfirm,
-    closeConfirm,
-    isLoading: isConfirming,
-    setLoading: setConfirmLoading,
-  } = useConfirmModal();
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const {
     title,
@@ -181,14 +168,11 @@ export default function JobCreationScreen() {
   const [isGettingLocation, setIsGettingLocation] = useState<boolean>(false);
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date(Date.now() + 86_400_000));
   const [scheduledTime, setScheduledTime] = useState<string>('10:00');
-  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
-  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
-
   const [showPickerModal, setShowPickerModal] = useState<boolean>(false);
 
   const [expandedSections, setExpandedSections] = useState({
-    budget: false,
-    schedule: false,
+    budget: true,
+    schedule: true,
     media: false,
     voice: false,
   });
@@ -262,36 +246,12 @@ export default function JobCreationScreen() {
     success('Schedule Saved', `Visit scheduled for ${date.toLocaleDateString('en-GB')} at ${time}`);
   }, [success]);
 
-  // --- DEPLOY BUTTON HEARTBEAT PULSE ---
-  const deployBtnScale = useSharedValue(1);
-  useEffect(() => {
-    deployBtnScale.value = withRepeat(
-      withSequence(
-        withTiming(1.025, { duration: 1100 }),
-        withTiming(1, { duration: 1100 })
-      ),
-      -1,
-      true
-    );
-  }, [deployBtnScale]);
-
-  const deployBtnStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: deployBtnScale.value }],
-  }));
-
   const { mutate: createJob, isPending: isSubmittingJob } = useCreateJobMutation();
   const { mutateAsync: uploadImages } = useUploadJobImagesMutation();
-  const isSubmitting = isSubmittingJob || isConfirming;
+  const isSubmitting = isSubmittingJob || isUploadingMedia;
 
   const accentColor: string = color ?? palette.cyan;
   const isInstant = urgency === 'instant';
-  const selectedImageCount = selectedMedia.filter((asset) => asset.type === 'image').length;
-  const selectedVideoCount = selectedMedia.filter((asset) => asset.type === 'video').length;
-  const hasDescription = description.trim().length >= 10;
-  const hasLocation = Boolean(address.trim() && address !== 'Detecting location...' && address !== 'Detecting location');
-  const requiredStepCount = 3;
-  const completedStepCount = [true, hasDescription, hasLocation].filter(Boolean).length;
-  const completionPercentage = Math.round((completedStepCount / requiredStepCount) * 100);
   const submitLabel = targetWorkerId
     ? t('jobCreation.submitDirect')
     : isInstant
@@ -378,8 +338,9 @@ export default function JobCreationScreen() {
   }, []);
 
   // ─── Submit flow ──────────────────────────────────────────────────────────
-  const handlePostJob = useCallback(() => {
-    if (description.trim().length < 10) {
+  const handlePostJob = useCallback(async () => {
+    const trimmedDesc = description.trim();
+    if (trimmedDesc.length < 3 && !voiceNoteUri) {
       showError(t('jobCreation.descTooShortTitle'), t('jobCreation.descTooShortDesc'));
       return;
     }
@@ -394,7 +355,7 @@ export default function JobCreationScreen() {
       if (currentPrice < minPrice) {
         showError(
           t('common.error', 'Error'),
-          t('jobCreation.minPriceRequired', 'Minimum price required is Rs. {{price}}', { price: minPrice })
+          t('jobCreation.minPriceRequired', 'Minimum price is Rs. {{price}}', { price: minPrice })
         );
         return;
       }
@@ -408,23 +369,8 @@ export default function JobCreationScreen() {
         return;
       }
     }
-    
-    const fixedPrice = isInstant ? calculateUrgentPrice(title ?? 'General', estimatedHours) : 0;
-    showConfirm(
-      isInstant ? t('jobCreation.postUrgentTitle') : t('jobCreation.postServiceTitle'),
-      isInstant 
-        ? t('jobCreation.postUrgentConfirm', { price: fixedPrice.toLocaleString() })
-        : t('jobCreation.postServiceConfirm'),
-      handleConfirmSubmit,
-      closeConfirm,
-      t('jobCreation.postRequest'),
-      t('jobCreation.keepEditing'),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, address, amount, estimatedHours, isInstant, scheduledDate, scheduledTime, validateSchedule, t]);
 
-  const handleConfirmSubmit = useCallback(async () => {
-    setConfirmLoading(true);
+    setIsUploadingMedia(true);
     try {
       let uploadedImageUrls: string[] = [];
       let uploadedVideoUrls: string[] = [];
@@ -468,7 +414,7 @@ export default function JobCreationScreen() {
 
       const payload = {
         category: title ?? 'General',
-        description,
+        description: trimmedDesc || t('jobCreation.voiceNoteFallback', 'Voice note attached'),
         urgency,
         address,
         amount: fixedPrice,
@@ -483,37 +429,29 @@ export default function JobCreationScreen() {
         scheduledTime: !isInstant ? scheduledTime : undefined,
       };
 
+      setIsUploadingMedia(false);
       createJob(payload, {
         onSuccess: (response) => {
-          setConfirmLoading(false);
-          closeConfirm();
-          setCreatedJobId(response._id as string);
-          setShowSuccessModal(true);
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          success(t('jobCreation.successTitle', 'Request Sent'), t('findingWorker.searchingUstads', 'Finding nearby Ustads...'));
+          router.replace({ pathname: '/finding-worker', params: { jobId: response._id as string } });
         },
         onError: (err: Error) => {
-          setConfirmLoading(false);
           showError(t('jobCreation.requestFailed'), err.message || t('jobDetails.toastUnableRespond'));
         },
       });
     } catch (err) {
-      setConfirmLoading(false);
+      setIsUploadingMedia(false);
       showError(t('jobCreation.uploadFailed'), err instanceof Error ? err.message : t('registerDetails.uploadError'));
     }
   }, [
-    selectedMedia, voiceNoteUri, uploadImages, title, description, urgency,
-    address, amount, estimatedHours, longitude, latitude, targetWorkerId,
-    isInstant, scheduledDate, scheduledTime,
-    createJob, closeConfirm, showError, setConfirmLoading, t
+    description, voiceNoteUri, address, isInstant, title, amount, validateSchedule,
+    scheduledDate, scheduledTime, selectedMedia, uploadImages, estimatedHours,
+    urgency, longitude, latitude, targetWorkerId, createJob, showError, success, router, t,
   ]);
-
-  const handleSuccessModalDismiss = useCallback(() => {
-    setShowSuccessModal(false);
-    router.push({ pathname: '/finding-worker', params: { jobId: createdJobId } });
-  }, [createdJobId, router]);
 
   // Summaries for collapsible sections
   const budgetSummary = amount ? `Rs. ${Number(amount).toLocaleString('en-PK')}` : 'Open Bid / Negotiable';
-  const scheduleSummary = `${scheduledDate.toLocaleDateString('en-GB')} at ${scheduledTime}`;
 
   const mediaCount = selectedMedia.length;
   const mediaSummary = mediaCount === 0
@@ -533,42 +471,34 @@ export default function JobCreationScreen() {
       <SafeAreaView style={styles.safe}>
 
         {/* ── Header ── */}
-        <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={[
               styles.backBtn,
               {
                 backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.colors.text.primary, 0.04),
                 borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
-              }
+              },
             ]}
           >
             <ArrowLeft color={palette.textPrimary} size={18} strokeWidth={2} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerEyebrow, { color: palette.textMuted }]}>{t('jobCreation.urgent').toUpperCase()}</Text>
-            <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>{t('jobCreation.findUstad')}</Text>
-          </View>
-
-          {/* Live status indicator */}
-          <View style={[
-            styles.liveIndicator,
-            {
-              backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : alpha(theme.colors.text.primary, 0.03),
-              borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : theme.colors.border.subtle,
-            }
-          ]}>
-            <View style={[styles.liveDot, { backgroundColor: isInstant ? palette.cyan : palette.orange }]} />
-            <Text style={[styles.liveText, { color: isInstant ? palette.cyan : palette.orange }]}>
-              {isInstant ? 'NOW' : 'PLANNED'}
+            <Text style={[styles.headerEyebrow, { color: accentColor }]}>
+              {targetWorkerName ? t('jobCreation.directRequest', 'DIRECT REQUEST') : t('jobCreation.findUstad', 'BOOK AN USTAD').toUpperCase()}
+            </Text>
+            <Text style={[styles.headerTitle, { color: palette.textPrimary }]} numberOfLines={1}>
+              {targetWorkerName ? `${targetWorkerName} • ${title ?? ''}` : (title ?? t('jobCreation.findUstad', 'Book an Ustad'))}
             </Text>
           </View>
+
+          <View style={{ width: 36 }} />
         </Animated.View>
 
         {/* ── Urgency Toggle ── */}
-        <Animated.View entering={FadeInDown.delay(80).duration(500)}>
+        <Animated.View entering={FadeInDown.delay(60).duration(400)}>
           <UrgencyToggle
             urgency={urgency}
             onChange={setUrgency}
@@ -586,97 +516,102 @@ export default function JobCreationScreen() {
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
           >
-
-            {/* ── Request Summary Card ── */}
-            <Animated.View entering={FadeInDown.delay(150).duration(600)} style={[styles.missionCard, { borderColor: addAlpha(accentColor, '20') }]}>
-              <LinearGradient
-                colors={[addAlpha(accentColor, '22'), 'rgba(10,16,35,0.94)', 'rgba(123,97,255,0.10)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1.2, y: 1.2 }}
-                style={styles.missionCardGradient}
+            {/* ── Browse Ustads Option Pill (replaces category-details interstitial) ── */}
+            {!targetWorkerId && (
+              <TouchableOpacity
+                activeOpacity={0.78}
+                onPress={() =>
+                  router.push({
+                    pathname: '/worker-list',
+                    params: { category: title ?? '', color: accentColor, title: title ?? '' },
+                  })
+                }
+                style={[
+                  styles.browseUstadsPill,
+                  {
+                    backgroundColor: alpha(palette.orange, 0.08),
+                    borderColor: alpha(palette.orange, 0.25),
+                  },
+                ]}
               >
-                <View style={styles.missionCardInner}>
-                  <View style={[styles.categoryIcon, { borderColor: addAlpha(accentColor, '50') }]}>
-                    <LinearGradient
-                      colors={[addAlpha(accentColor, '25'), addAlpha(accentColor, '05')]}
-                      style={StyleSheet.absoluteFill}
-                    />
-                    {targetWorkerName
-                      ? <Target color={accentColor} size={24} strokeWidth={1.5} />
-                      : <ClipboardList color={accentColor} size={24} strokeWidth={1.5} />}
-                  </View>
+                <Users size={16} color={palette.orange} />
+                <Text style={[styles.browseUstadsText, { color: palette.textPrimary }]}>
+                  {t('jobCreation.preferBrowseUstads', 'Prefer to choose an Ustad yourself?')}
+                </Text>
+                <Text style={[styles.browseUstadsLink, { color: palette.orange }]}>
+                  {t('categoryDetails.browse', 'Browse')}
+                </Text>
+                <ChevronRight size={14} color={palette.orange} />
+              </TouchableOpacity>
+            )}
 
-                  <View style={styles.missionMeta}>
-                    <Text style={[styles.missionEyebrow, { color: accentColor }]}>
-                      {targetWorkerName ? 'SELECTED USTAD' : 'SERVICE CATEGORY'}
-                    </Text>
-                    <Text style={styles.missionName} numberOfLines={1}>
-                      {targetWorkerName ?? title ?? 'General Service'}
-                    </Text>
-                    <Text style={styles.missionSub}>
-                      {targetWorkerName ? `${title ?? 'General'} service request` : `${isInstant ? 'Urgent request' : 'Scheduled visit'} for nearby Ustads`}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Stats row */}
-                <View style={styles.statsRow}>
-                  <StatBadge
-                    label={t('jobCreation.service')}
-                    value={isInstant ? 'NOW' : 'PLANNED'}
-                    color={isInstant ? palette.cyan : palette.orange}
-                  />
-                  <View style={styles.statDivider} />
-                  <StatBadge
-                    label={t('jobCreation.evidence')}
-                    value={`${selectedMedia.length}/5`}
-                    color={palette.purple}
-                  />
-                  <View style={styles.statDivider} />
-                  <StatBadge
-                    label={t('jobCreation.budgetLabel')}
-                    value={amount ? `RS ${amount}` : 'ADD'}
-                    color={palette.success}
-                  />
-                </View>
-              </LinearGradient>
-            </Animated.View>
-
-            {/* ── Service Details (Required) ── */}
-            <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.section}>
-              <SectionLabel icon={FileText} label={t('jobCreation.describeNeed').toUpperCase()} badge="Required" />
-              <GlassInput glowColor={description.trim().length >= 10 ? palette.cyan : (description.trim().length > 0 ? palette.error : undefined)}>
+            {/* ── 1. Problem Description + Voice / Photos ── */}
+            <Animated.View entering={FadeInDown.delay(100).duration(450)} style={styles.section}>
+              <SectionLabel icon={FileText} label={t('jobCreation.describeNeed').toUpperCase()} />
+              <GlassInput glowColor={description.trim().length >= 3 || voiceNoteUri ? palette.cyan : undefined}>
                 <TextInput
-                  style={styles.textArea}
+                  style={[styles.textArea, { color: palette.textPrimary }]}
                   placeholder={t('jobCreation.placeholder')}
                   placeholderTextColor={palette.textMuted}
                   multiline
-                  numberOfLines={5}
+                  numberOfLines={4}
                   maxLength={1000}
                   value={description}
                   onChangeText={setDescription}
                   textAlignVertical="top"
                 />
                 <View style={styles.inputFooter}>
-                  {description.trim().length > 0 && description.trim().length < 10 ? (
-                    <Text style={[styles.inputHint, { color: palette.error, fontWeight: '700' }]}>
-                      {t('jobCreation.descTooShort')}
-                    </Text>
-                  ) : (
-                    <Text style={styles.inputHint}>{t('jobCreation.descHint')}</Text>
-                  )}
-                  <Text style={[
-                    styles.charCount,
-                    description.trim().length > 0 && description.trim().length < 10 && { color: palette.error, fontWeight: '700' }
-                  ]}>
+                  <Text style={[styles.inputHint, { color: palette.textMuted }]}>
+                    {t('jobCreation.descHint', 'Write briefly or record a voice note below')}
+                  </Text>
+                  <Text style={[styles.charCount, { color: palette.textMuted }]}>
                     {description.length}/1000
                   </Text>
                 </View>
               </GlassInput>
+
+              {/* Quick Voice & Photo Attachments right below description */}
+              <View style={{ marginTop: 12 }}>
+                <CollapsibleCard
+                  title={t('jobCreation.voiceBrief')}
+                  icon={Mic}
+                  color={palette.orange}
+                  summary={voiceSummary}
+                  isExpanded={expandedSections.voice || Boolean(voiceNoteUri) || recorderState.isRecording}
+                  onToggle={() => toggleSection('voice')}
+                >
+                  <VoiceBriefRecorder
+                    isRecording={recorderState.isRecording}
+                    durationMillis={recorderState.durationMillis}
+                    voiceNoteUri={voiceNoteUri}
+                    onStartRecord={startVoiceNote}
+                    onStopRecord={stopVoiceNote}
+                    onRemoveRecord={() => setVoiceNoteUri(null)}
+                    hideLabel
+                  />
+                </CollapsibleCard>
+
+                <CollapsibleCard
+                  title={t('jobCreation.photosOrVideo')}
+                  icon={Camera}
+                  color={palette.purple}
+                  summary={mediaSummary}
+                  isExpanded={expandedSections.media || selectedMedia.length > 0}
+                  onToggle={() => toggleSection('media')}
+                >
+                  <MediaEvidencePicker
+                    selectedMedia={selectedMedia}
+                    onPickMedia={pickMedia}
+                    onRemoveMedia={removeMedia}
+                    onClearAll={() => setSelectedMedia([])}
+                    hideLabel
+                  />
+                </CollapsibleCard>
+              </View>
             </Animated.View>
 
-            {/* ── Location Selector (Required) ── */}
-            <Animated.View entering={FadeInDown.delay(260).duration(600)}>
+            {/* ── 2. Location Selector ── */}
+            <Animated.View entering={FadeInDown.delay(150).duration(450)}>
               <LocationSelector
                 address={address}
                 latitude={latitude}
@@ -687,16 +622,36 @@ export default function JobCreationScreen() {
               />
             </Animated.View>
 
-            {/* ── Optional Details Divider ── */}
-            <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.optionalDividerRow}>
-              <View style={[styles.optionalLine, { backgroundColor: palette.border }]} />
-              <Text style={[styles.optionalDividerText, { color: palette.textSecondary }]}>{t('jobCreation.optionalDetails')}</Text>
-              <View style={[styles.optionalLine, { backgroundColor: palette.border }]} />
-            </Animated.View>
+            {/* ── 3. Schedule (when Scheduled) ── */}
+            {!isInstant && (
+              <Animated.View entering={FadeInDown.delay(190).duration(450)} style={styles.section}>
+                <SectionLabel icon={Calendar} label={t('jobCreation.visitSchedule', 'VISIT DATE & TIME').toUpperCase()} color={palette.orange} />
+                <View style={styles.scheduleRow}>
+                  <TouchableOpacity
+                    style={[styles.scheduleCard, { borderColor: addAlpha(palette.orange, '35'), backgroundColor: palette.orangeMuted }]}
+                    activeOpacity={0.7}
+                    onPress={() => setShowPickerModal(true)}
+                  >
+                    <Calendar size={15} color={palette.orange} strokeWidth={1.8} />
+                    <Text style={[styles.scheduleValue, { color: palette.orange }]}>
+                      {scheduledDate.toLocaleDateString('en-GB')}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.scheduleCard, { borderColor: addAlpha(palette.orange, '35'), backgroundColor: palette.orangeMuted }]}
+                    activeOpacity={0.7}
+                    onPress={() => setShowPickerModal(true)}
+                  >
+                    <Clock size={15} color={palette.orange} strokeWidth={1.8} />
+                    <Text style={[styles.scheduleValue, { color: palette.orange }]}>{scheduledTime}</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            )}
 
-            {/* ── Budget / Urgent Fixed Price Card ── */}
+            {/* ── 4. Budget / Price ── */}
             {isInstant ? (
-              <Animated.View entering={FadeInDown.delay(320).duration(600)}>
+              <Animated.View entering={FadeInDown.delay(220).duration(450)}>
                 <UrgentPricingCard
                   category={title ?? 'General'}
                   estimatedHours={estimatedHours}
@@ -706,7 +661,7 @@ export default function JobCreationScreen() {
                 />
               </Animated.View>
             ) : (
-              <Animated.View entering={FadeInDown.delay(320).duration(600)}>
+              <Animated.View entering={FadeInDown.delay(220).duration(450)}>
                 <CollapsibleCard
                   title={t('jobCreation.yourOffer')}
                   icon={Banknote}
@@ -724,195 +679,72 @@ export default function JobCreationScreen() {
               </Animated.View>
             )}
 
-            {/* ── Schedule (Collapsible Optional, conditional) ── */}
-            {!isInstant && (
-              <Animated.View entering={FadeInDown.delay(340).duration(500)}>
-                <CollapsibleCard
-                  title={t('jobCreation.visitSchedule')}
-                  icon={Calendar}
-                  color={palette.orange}
-                  summary={scheduleSummary}
-                  isExpanded={expandedSections.schedule}
-                  onToggle={() => toggleSection('schedule')}
-                >
-                  <View style={styles.scheduleRow}>
-                    <TouchableOpacity
-                      style={[styles.scheduleCard, { borderColor: addAlpha(palette.orange, '35'), backgroundColor: palette.orangeMuted }]}
-                      activeOpacity={0.7}
-                      onPress={() => setShowPickerModal(true)}
-                    >
-                      <Calendar size={15} color={palette.orange} strokeWidth={1.5} />
-                      <Text style={[styles.scheduleValue, { color: palette.orange }]}>
-                        {scheduledDate.toLocaleDateString('en-GB')}
-                      </Text>
-                      <Clock size={13} color={addAlpha(palette.orange, '80')} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.scheduleCard, { borderColor: addAlpha(palette.orange, '35'), backgroundColor: palette.orangeMuted }]}
-                      activeOpacity={0.7}
-                      onPress={() => setShowPickerModal(true)}
-                    >
-                      <Clock size={15} color={palette.orange} strokeWidth={1.5} />
-                      <Text style={[styles.scheduleValue, { color: palette.orange }]}>{scheduledTime}</Text>
-                      <Clock size={13} color={addAlpha(palette.orange, '80')} />
-                    </TouchableOpacity>
-                  </View>
-                </CollapsibleCard>
-              </Animated.View>
-            )}
-
-            {/* ── Media Evidence Picker (Collapsible Optional) ── */}
-            <Animated.View entering={FadeInDown.delay(380).duration(600)}>
-              <CollapsibleCard
-                title={t('jobCreation.photosOrVideo')}
-                icon={Camera}
-                color={palette.purple}
-                summary={mediaSummary}
-                isExpanded={expandedSections.media}
-                onToggle={() => toggleSection('media')}
-              >
-                <MediaEvidencePicker
-                  selectedMedia={selectedMedia}
-                  onPickMedia={pickMedia}
-                  onRemoveMedia={removeMedia}
-                  onClearAll={() => setSelectedMedia([])}
-                  hideLabel
-                />
-              </CollapsibleCard>
-            </Animated.View>
-
-            {/* ── Voice Brief Recorder (Collapsible Optional) ── */}
-            <Animated.View entering={FadeInDown.delay(420).duration(600)}>
-              <CollapsibleCard
-                title={t('jobCreation.voiceBrief')}
-                icon={Mic}
-                color={palette.orange}
-                summary={voiceSummary}
-                isExpanded={expandedSections.voice}
-                onToggle={() => toggleSection('voice')}
-              >
-                <VoiceBriefRecorder
-                  isRecording={recorderState.isRecording}
-                  durationMillis={recorderState.durationMillis}
-                  voiceNoteUri={voiceNoteUri}
-                  onStartRecord={startVoiceNote}
-                  onStopRecord={stopVoiceNote}
-                  onRemoveRecord={() => setVoiceNoteUri(null)}
-                  hideLabel
-                />
-              </CollapsibleCard>
-            </Animated.View>
-
             <View style={styles.scrollBottomSpace} />
           </ScrollView>
 
-          {/* ── Persistent Submit Panel ── */}
-          <Animated.View 
-            entering={FadeInUp.delay(450).duration(600)} 
+          {/* ── Clean Sticky Submit Button ── */}
+          <Animated.View
+            entering={FadeInUp.delay(260).duration(450)}
             style={[
               styles.stickyFooter,
               {
                 backgroundColor: theme.isDark ? 'rgba(4,8,20,0.94)' : alpha(theme.colors.background.elevated, 0.96),
                 borderTopColor: theme.isDark ? 'rgba(0,245,255,0.12)' : theme.colors.border.subtle,
-              }
+              },
             ]}
           >
-            <View style={styles.completionRow}>
-              <View style={styles.completionCopy}>
-                <View style={styles.completionTitleRow}>
-                  <ShieldCheck size={14} color={completionPercentage === 100 ? palette.success : palette.cyanDim} strokeWidth={2.3} />
-                  <Text style={[styles.completionTitle, { color: palette.textPrimary }]}>{t('jobCreation.requiredDetails')}</Text>
-                </View>
-                <Text style={[styles.completionText, { color: palette.textSecondary }]}>
-                  {completedStepCount} of {requiredStepCount} filled
-                </Text>
-              </View>
-              <Text style={[styles.completionPercent, { color: completionPercentage === 100 ? palette.success : palette.cyan }]}>
-                {completionPercentage}%
-              </Text>
-            </View>
-            <View style={[styles.completionTrack, { backgroundColor: palette.border }]}>
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={handlePostJob}
+              disabled={isSubmitting}
+              style={[
+                styles.submitWrapper,
+                {
+                  shadowColor: isInstant ? theme.colors.brand.primary : theme.colors.brand.worker,
+                  shadowOpacity: 0.28,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 8,
+                },
+                isSubmitting && { opacity: 0.7 },
+              ]}
+            >
               <LinearGradient
-                colors={completionPercentage === 100 ? [palette.success, palette.cyan] : [palette.cyan, palette.purple]}
+                colors={
+                  isInstant
+                    ? (theme.colors.gradients.primary as [string, string, ...string[]])
+                    : (theme.colors.gradients.worker as [string, string, ...string[]])
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={[styles.completionFill, { width: `${completionPercentage}%` }]}
-              />
-            </View>
-            <Animated.View style={deployBtnStyle}>
-              <TouchableOpacity
-                activeOpacity={0.76}
-                onPress={handlePostJob}
-                disabled={isSubmitting}
-                style={[
-                  styles.submitWrapper,
-                  {
-                    shadowColor: isInstant ? '#007AFF' : '#FF6B00',
-                    shadowOpacity: 0.38,
-                    shadowRadius: 16,
-                    shadowOffset: { width: 0, height: 8 },
-                    elevation: 10,
-                  },
-                  isSubmitting && { opacity: 0.7 }
-                ]}
+                style={styles.submitGradient}
               >
-                <LinearGradient
-                  colors={isInstant
-                    ? ['#00F5FF', '#007AFF', '#7D00FF']
-                    : ['#FF6B00', '#FF8F00', '#FF3D00']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitGradient}
-                >
-                  <LinearGradient
-                    colors={['rgba(255, 255, 255, 0.22)', 'rgba(255, 255, 255, 0.0)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={styles.glassHighlight}
+                {isSubmitting ? (
+                  <ActivityIndicator
+                    color={isInstant ? theme.colors.button.primaryText : theme.colors.button.workerText}
+                    size="small"
                   />
-
-                  {isSubmitting ? (
-                    <ActivityIndicator color={isInstant ? '#FFFFFF' : '#001014'} size="small" />
-                  ) : (
-                    <View style={styles.submitInner}>
-                      <Send size={18} color={isInstant ? '#FFFFFF' : '#001014'} strokeWidth={2.5} />
-                      <Text style={[styles.submitText, { color: isInstant ? '#FFFFFF' : '#001014' }]}>
-                        {submitLabel}
-                      </Text>
-                    </View>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
+                ) : (
+                  <View style={styles.submitInner}>
+                    <Send
+                      size={18}
+                      color={isInstant ? theme.colors.button.primaryText : theme.colors.button.workerText}
+                      strokeWidth={2.4}
+                    />
+                    <Text
+                      style={[
+                        styles.submitText,
+                        { color: isInstant ? theme.colors.button.primaryText : theme.colors.button.workerText },
+                      ]}
+                    >
+                      {submitLabel}
+                    </Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </Animated.View>
         </KeyboardAvoidingView>
-
-        {/* ── Modals ── */}
-        <ConfirmModal
-          visible={confirmVisible}
-          onConfirm={handleConfirmSubmit}
-          onCancel={closeConfirm}
-          title={isInstant ? t('jobCreation.postUrgentConfirmQuestion') : t('jobCreation.postJobConfirmQuestion')}
-          message={isInstant 
-            ? t('jobCreation.postUrgentAlertConfirm', { price: (amount && Number(amount) > 0 ? parseFloat(amount) : calculateUrgentPrice(title ?? 'General', estimatedHours)).toLocaleString() })
-            : t('jobCreation.postJobAlertConfirm')
-          }
-          confirmText={t('jobCreation.yesPostJob')}
-          cancelText={t('jobCreation.cancel')}
-          isLoading={isConfirming}
-          confirmColor={isInstant ? palette.cyan : palette.orange}
-        />
-        <AlertModal
-          visible={showSuccessModal}
-          onDismiss={handleSuccessModalDismiss}
-          title={t('jobCreation.successTitle')}
-          type="success"
-          buttonText={t('common.done')}
-          message={isInstant 
-            ? t('jobCreation.successModalUrgentDesc') 
-            : t('jobCreation.successModalScheduledDesc')
-          }
-        />
 
         {/* ── Schedule Selector Modal ── */}
         <SchedulePickerModal
@@ -965,6 +797,26 @@ const styles = StyleSheet.create({
   // Scroll
   scroll: { paddingHorizontal: 20, paddingTop: 4 },
   scrollBottomSpace: { height: 22 },
+
+  browseUstadsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 18,
+  },
+  browseUstadsText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  browseUstadsLink: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
 
   // Mission Card
   missionCard: {
