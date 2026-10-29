@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassCard } from './GlassCard';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { EarningsDataPoint, EarningsSummary } from '../../hooks/useWorkerAnalytics';
+import { useIsRTL } from '../../context/LanguageContext';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
@@ -77,6 +78,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
   summary,
 }: WorkerEarningsChartProps) {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
@@ -305,7 +307,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
             </View>
             <View>
               <Text style={[styles.summaryValue, {
-                color: summary.trendPercent >= 0 ? colors.success : colors.error
+                color: summary.trendPercent >= 0 ? colors.success : colors.error,
               }]}>
                 {summary.trendPercent >= 0 ? '+' : ''}{summary.trendPercent || 0}%
               </Text>

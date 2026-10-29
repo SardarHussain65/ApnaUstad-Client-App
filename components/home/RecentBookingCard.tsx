@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
   Clock,
   Clock3,
   MapPin,
@@ -16,6 +17,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { Booking } from '../../hooks';
+import { useIsRTL } from '../../context/LanguageContext';
 
 type StatusConfig = {
   label: string;
@@ -60,6 +62,7 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
   onPress,
 }: RecentBookingCardProps) {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const colors = useThemeColors();
 const typography = useThemeTypography();

@@ -26,6 +26,7 @@ import {
   Camera,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   CheckCircle,
   Clock3,
   Layers3,
@@ -40,6 +41,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../../context/LanguageContext';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { AlertModal, BeautifulModal, ConfirmModal } from '../../components/ui';
 import { useAlertModal, useConfirmModal, useToast } from '../../hooks';
@@ -146,6 +148,7 @@ export default function SpecialtiesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const [data, setData] = useState<SpecialtyResponse>({ specialties: [], maxSpecialties: 5, freeSpecialtyLimit: 1, additionalCategoryMonthlyFee: 500 });
   const [categories, setCategories] = useState<Category[]>([]);
   const [walletAvailableBalance, setWalletAvailableBalance] = useState(0);
@@ -581,7 +584,11 @@ export default function SpecialtiesScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={[styles.header, { paddingHorizontal: Spacing.l, paddingTop: 6 }]}>
           <TouchableOpacity style={[styles.iconButton, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
-            <ChevronLeft size={22} color={theme.colors.text.primary} />
+            {isRTL ? (
+              <ChevronRight size={22} color={theme.colors.text.primary} />
+            ) : (
+              <ChevronLeft size={22} color={theme.colors.text.primary} />
+            )}
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('specialties.title')}</Text>
           <View style={[styles.headerCounter, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.25) }]}>
@@ -596,812 +603,814 @@ export default function SpecialtiesScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View entering={FadeInDown.delay(80)} style={[styles.hero, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.primary, 0.24) }]}>
-      <LinearGradient colors={[alpha(theme.colors.brand.primary, 0.18), alpha(theme.colors.brand.secondary, 0.1)]} style={StyleSheet.absoluteFillObject} />
-      <View style={[styles.heroIcon, { backgroundColor: alpha(theme.colors.brand.primary, 0.12) }]}><Layers3 size={23} color={theme.colors.brand.primary} /></View>
-      <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>{t('specialties.heroTitle')}</Text>
-      <Text style={[styles.heroText, { color: theme.colors.text.muted }]}>{t('specialties.heroText', { fee: formatPKR(additionalCategoryMonthlyFee) })}</Text>
-    </Animated.View>
+            <LinearGradient colors={[alpha(theme.colors.brand.primary, 0.18), alpha(theme.colors.brand.secondary, 0.1)]} style={StyleSheet.absoluteFillObject} />
+            <View style={[styles.heroIcon, { backgroundColor: alpha(theme.colors.brand.primary, 0.12) }]}><Layers3 size={23} color={theme.colors.brand.primary} /></View>
+            <Text style={[styles.heroTitle, { color: theme.colors.text.primary }]}>{t('specialties.heroTitle')}</Text>
+            <Text style={[styles.heroText, { color: theme.colors.text.muted }]}>{t('specialties.heroText', { fee: formatPKR(additionalCategoryMonthlyFee) })}</Text>
+          </Animated.View>
 
-    {loading ? (
-      <View style={styles.loading}><ActivityIndicator color={colors.cyan} /><Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('specialties.loadingText')}</Text></View>
-    ) : (
-      <>
-        <View style={styles.sectionRow}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('specialties.mySpecialties')}</Text>
-          {specialties.length < data.maxSpecialties && (
-            <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.brand.primary }]} onPress={openAddCategory}>
-              <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
-              <Text style={[styles.addButtonText, { color: theme.colors.button.primaryText }]}>{t('specialties.addCategory')}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {showPicker && (
-          <Animated.View entering={FadeInDown.duration(220)} style={[styles.picker, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.secondary, 0.35) }]}>
-            <View style={styles.pickerHeaderRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.pickerTitle, { color: theme.colors.text.primary }]}>
-                  {isCustomMode ? t('specialties.customCategoryTitle', 'Request New / Other Category') : t('specialties.requestNew')}
-                </Text>
-                <Text style={[styles.pickerText, { color: theme.colors.text.muted }]}>
-                  {isCustomMode
-                    ? t('specialties.customCategoryDesc', 'If your desired category or profession is not listed, enter details below so admin can review and add it.')
-                    : t('specialties.pickerText')}
-                </Text>
+          {loading ? (
+            <View style={styles.loading}><ActivityIndicator color={colors.cyan} /><Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('specialties.loadingText')}</Text></View>
+          ) : (
+            <>
+              <View style={styles.sectionRow}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('specialties.mySpecialties')}</Text>
+                {specialties.length < data.maxSpecialties && (
+                  <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.colors.brand.primary }]} onPress={openAddCategory}>
+                    <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
+                    <Text style={[styles.addButtonText, { color: theme.colors.button.primaryText }]}>{t('specialties.addCategory')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <TouchableOpacity
-                onPress={() => {
-                  resetDraft();
-                  setShowPicker(false);
-                }}
-                hitSlop={10}
-                style={styles.pickerCloseBtn}
-              >
-                <X size={18} color={theme.colors.text.muted} />
-              </TouchableOpacity>
-            </View>
 
-            {/* Standard Category Selection via Dropdown Trigger */}
-            {!isCustomMode ? (
-              <View style={{ marginTop: 4 }}>
-                <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 4 }]}>
-                  {t('specialties.selectCategoryLabel', 'SERVICE CATEGORY')}
-                </Text>
-
-                {/* Dropdown Selector Trigger */}
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownTrigger,
-                    {
-                      borderColor: draftCategoryId ? theme.colors.brand.primary : theme.colors.border.subtle,
-                      backgroundColor: theme.colors.input.background,
-                    },
-                  ]}
-                  onPress={() => setIsDropdownOpen(true)}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.dropdownTriggerContent}>
-                    <Briefcase size={18} color={draftCategoryId ? theme.colors.brand.primary : theme.colors.text.muted} />
-                    <Text
-                      style={[
-                        styles.dropdownTriggerText,
-                        { color: draftCategory ? theme.colors.text.primary : theme.colors.input.placeholder },
-                        draftCategory && { fontWeight: '700' },
-                      ]}
-                      numberOfLines={1}
+              {showPicker && (
+                <Animated.View entering={FadeInDown.duration(220)} style={[styles.picker, { backgroundColor: theme.colors.surface.card, borderColor: alpha(theme.colors.brand.secondary, 0.35) }]}>
+                  <View style={styles.pickerHeaderRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.pickerTitle, { color: theme.colors.text.primary }]}>
+                        {isCustomMode ? t('specialties.customCategoryTitle', 'Request New / Other Category') : t('specialties.requestNew')}
+                      </Text>
+                      <Text style={[styles.pickerText, { color: theme.colors.text.muted }]}>
+                        {isCustomMode
+                          ? t('specialties.customCategoryDesc', 'If your desired category or profession is not listed, enter details below so admin can review and add it.')
+                          : t('specialties.pickerText')}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        resetDraft();
+                        setShowPicker(false);
+                      }}
+                      hitSlop={10}
+                      style={styles.pickerCloseBtn}
                     >
-                      {draftCategory?.name || t('specialties.selectCategoryPlaceholder', 'Select category from list...')}
-                    </Text>
-                  </View>
-                  <ChevronDown size={20} color={draftCategoryId ? theme.colors.brand.primary : theme.colors.text.muted} />
-                </TouchableOpacity>
-
-                {/* Suggest Other Category button */}
-                <TouchableOpacity
-                  style={styles.switchModeBtn}
-                  onPress={() => {
-                    setIsCustomMode(true);
-                    setDraftCategoryId('');
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Sparkles size={14} color={theme.colors.brand.primary} />
-                  <Text style={[styles.switchModeText, { color: theme.colors.brand.primary }]}>
-                    {t('specialties.cantFindCategory', "Can't find your category? Request other here")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* Custom Category Mode */
-              <View style={styles.customCategorySection}>
-                <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 4 }]}>
-                  {t('specialties.customCategoryNameLabel', 'REQUESTED CATEGORY / PROFESSION')}
-                </Text>
-                <TextInput
-                  style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                  placeholder={t('specialties.customCategoryNamePlaceholder', 'e.g., Solar Technician, Welder, etc.')}
-                  placeholderTextColor={theme.colors.input.placeholder}
-                  value={customCategoryName}
-                  onChangeText={setCustomCategoryName}
-                />
-                <TouchableOpacity
-                  style={styles.switchModeBtn}
-                  onPress={() => {
-                    setIsCustomMode(false);
-                    setCustomCategoryName('');
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.switchBackText, { color: theme.colors.brand.primary }]}>
-                    {t('specialties.chooseFromList', '← Choose from available list')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Shared Form Fields: Rate, Experience, Description, Certificates */}
-            <View style={styles.formRow}>
-              <View style={styles.formHalf}>
-                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.rateLabel')}</Text>
-                <TextInput
-                  style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                  placeholder={t('specialties.ratePlaceholder')}
-                  placeholderTextColor={theme.colors.input.placeholder}
-                  keyboardType="numeric"
-                  value={draftRate}
-                  onChangeText={setDraftRate}
-                />
-              </View>
-              <View style={styles.formHalf}>
-                <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.experienceLabel')}</Text>
-                <TextInput
-                  style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                  placeholder={t('specialties.experiencePlaceholder')}
-                  placeholderTextColor={theme.colors.input.placeholder}
-                  keyboardType="numeric"
-                  value={draftExperience}
-                  onChangeText={setDraftExperience}
-                />
-              </View>
-            </View>
-
-            <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.descriptionLabel')}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-              placeholder={t('specialties.descriptionPlaceholder')}
-              placeholderTextColor={theme.colors.input.placeholder}
-              value={draftBio}
-              onChangeText={setDraftBio}
-              multiline
-            />
-
-            {/* Optional Certificates / Diplomas Section */}
-            <View style={[styles.certSection, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
-              <View style={styles.certSectionHeader}>
-                <Award size={15} color={theme.colors.brand.primary} />
-                <Text style={[styles.certSectionTitle, { color: theme.colors.text.primary }]}>
-                  {t('registerDetails.certificatesSection', 'CERTIFICATES / DIPLOMAS (OPTIONAL)')}
-                </Text>
-              </View>
-              <Text style={[styles.certSectionDesc, { color: theme.colors.text.muted }]}>
-                {t('specialties.certHint', 'Attach relevant trade certificates or diplomas so admin can review them with this specialty request.')}
-              </Text>
-
-              {draftCertificates.map((cert, idx) => (
-                <View
-                  key={cert.id}
-                  style={[styles.certItemCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}
-                >
-                  <View style={styles.certItemHeader}>
-                    <Text style={[styles.certItemTitle, { color: theme.colors.text.primary }]}>
-                      Certificate #{idx + 1}
-                    </Text>
-                    <TouchableOpacity onPress={() => removeCertificateSlot(cert.id)} hitSlop={8} style={styles.removeCertRow}>
-                      <Trash2 size={14} color={colors.error} />
-                      <Text style={[styles.removeCertLabel, { color: colors.error }]}>Remove</Text>
+                      <X size={18} color={theme.colors.text.muted} />
                     </TouchableOpacity>
                   </View>
 
-                  <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 6 }]}>
-                    {t('registerDetails.certificateTitle', 'CERTIFICATE / DEGREE TITLE')}
-                  </Text>
+                  {/* Standard Category Selection via Dropdown Trigger */}
+                  {!isCustomMode ? (
+                    <View style={{ marginTop: 4 }}>
+                      <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 4 }]}>
+                        {t('specialties.selectCategoryLabel', 'SERVICE CATEGORY')}
+                      </Text>
+
+                      {/* Dropdown Selector Trigger */}
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdownTrigger,
+                          {
+                            borderColor: draftCategoryId ? theme.colors.brand.primary : theme.colors.border.subtle,
+                            backgroundColor: theme.colors.input.background,
+                          },
+                        ]}
+                        onPress={() => setIsDropdownOpen(true)}
+                        activeOpacity={0.75}
+                      >
+                        <View style={styles.dropdownTriggerContent}>
+                          <Briefcase size={18} color={draftCategoryId ? theme.colors.brand.primary : theme.colors.text.muted} />
+                          <Text
+                            style={[
+                              styles.dropdownTriggerText,
+                              { color: draftCategory ? theme.colors.text.primary : theme.colors.input.placeholder },
+                              draftCategory && { fontWeight: '700' },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {draftCategory?.name || t('specialties.selectCategoryPlaceholder', 'Select category from list...')}
+                          </Text>
+                        </View>
+                        <ChevronDown size={20} color={draftCategoryId ? theme.colors.brand.primary : theme.colors.text.muted} />
+                      </TouchableOpacity>
+
+                      {/* Suggest Other Category button */}
+                      <TouchableOpacity
+                        style={styles.switchModeBtn}
+                        onPress={() => {
+                          setIsCustomMode(true);
+                          setDraftCategoryId('');
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Sparkles size={14} color={theme.colors.brand.primary} />
+                        <Text style={[styles.switchModeText, { color: theme.colors.brand.primary }]}>
+                          {t('specialties.cantFindCategory', "Can't find your category? Request other here")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    /* Custom Category Mode */
+                    <View style={styles.customCategorySection}>
+                      <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 4 }]}>
+                        {t('specialties.customCategoryNameLabel', 'REQUESTED CATEGORY / PROFESSION')}
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                        placeholder={t('specialties.customCategoryNamePlaceholder', 'e.g., Solar Technician, Welder, etc.')}
+                        placeholderTextColor={theme.colors.input.placeholder}
+                        value={customCategoryName}
+                        onChangeText={setCustomCategoryName}
+                      />
+                      <TouchableOpacity
+                        style={styles.switchModeBtn}
+                        onPress={() => {
+                          setIsCustomMode(false);
+                          setCustomCategoryName('');
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.switchBackText, { color: theme.colors.brand.primary }]}>
+                          {t('specialties.chooseFromList', '← Choose from available list')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* Shared Form Fields: Rate, Experience, Description, Certificates */}
+                  <View style={styles.formRow}>
+                    <View style={styles.formHalf}>
+                      <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.rateLabel')}</Text>
+                      <TextInput
+                        style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                        placeholder={t('specialties.ratePlaceholder')}
+                        placeholderTextColor={theme.colors.input.placeholder}
+                        keyboardType="numeric"
+                        value={draftRate}
+                        onChangeText={setDraftRate}
+                      />
+                    </View>
+                    <View style={styles.formHalf}>
+                      <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.experienceLabel')}</Text>
+                      <TextInput
+                        style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                        placeholder={t('specialties.experiencePlaceholder')}
+                        placeholderTextColor={theme.colors.input.placeholder}
+                        keyboardType="numeric"
+                        value={draftExperience}
+                        onChangeText={setDraftExperience}
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={[styles.formLabel, { color: theme.colors.text.muted }]}>{t('specialties.descriptionLabel')}</Text>
                   <TextInput
-                    style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                    placeholder={t('registerDetails.certificateTitlePlaceholder', 'e.g., DAE Electrical, HVAC Diploma')}
+                    style={[styles.input, styles.textArea, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                    placeholder={t('specialties.descriptionPlaceholder')}
                     placeholderTextColor={theme.colors.input.placeholder}
-                    value={cert.title}
-                    onChangeText={(val) => updateCertificateField(cert.id, 'title', val)}
+                    value={draftBio}
+                    onChangeText={setDraftBio}
+                    multiline
                   />
 
-                  <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 10 }]}>
-                    {t('registerDetails.issuingOrg', 'INSTITUTE / ISSUING BOARD')}
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
-                    placeholder={t('registerDetails.issuingOrgPlaceholder', 'e.g., TEVTA, Technical Board')}
-                    placeholderTextColor={theme.colors.input.placeholder}
-                    value={cert.issuingOrg}
-                    onChangeText={(val) => updateCertificateField(cert.id, 'issuingOrg', val)}
-                  />
+                  {/* Optional Certificates / Diplomas Section */}
+                  <View style={[styles.certSection, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
+                    <View style={styles.certSectionHeader}>
+                      <Award size={15} color={theme.colors.brand.primary} />
+                      <Text style={[styles.certSectionTitle, { color: theme.colors.text.primary }]}>
+                        {t('registerDetails.certificatesSection', 'CERTIFICATES / DIPLOMAS (OPTIONAL)')}
+                      </Text>
+                    </View>
+                    <Text style={[styles.certSectionDesc, { color: theme.colors.text.muted }]}>
+                      {t('specialties.certHint', 'Attach relevant trade certificates or diplomas so admin can review them with this specialty request.')}
+                    </Text>
+
+                    {draftCertificates.map((cert, idx) => (
+                      <View
+                        key={cert.id}
+                        style={[styles.certItemCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}
+                      >
+                        <View style={styles.certItemHeader}>
+                          <Text style={[styles.certItemTitle, { color: theme.colors.text.primary }]}>
+                            Certificate #{idx + 1}
+                          </Text>
+                          <TouchableOpacity onPress={() => removeCertificateSlot(cert.id)} hitSlop={8} style={styles.removeCertRow}>
+                            <Trash2 size={14} color={colors.error} />
+                            <Text style={[styles.removeCertLabel, { color: colors.error }]}>Remove</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 6 }]}>
+                          {t('registerDetails.certificateTitle', 'CERTIFICATE / DEGREE TITLE')}
+                        </Text>
+                        <TextInput
+                          style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                          placeholder={t('registerDetails.certificateTitlePlaceholder', 'e.g., DAE Electrical, HVAC Diploma')}
+                          placeholderTextColor={theme.colors.input.placeholder}
+                          value={cert.title}
+                          onChangeText={(val) => updateCertificateField(cert.id, 'title', val)}
+                        />
+
+                        <Text style={[styles.formLabel, { color: theme.colors.text.muted, marginTop: 10 }]}>
+                          {t('registerDetails.issuingOrg', 'INSTITUTE / ISSUING BOARD')}
+                        </Text>
+                        <TextInput
+                          style={[styles.input, { color: theme.colors.input.text, borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.input.background }]}
+                          placeholder={t('registerDetails.issuingOrgPlaceholder', 'e.g., TEVTA, Technical Board')}
+                          placeholderTextColor={theme.colors.input.placeholder}
+                          value={cert.issuingOrg}
+                          onChangeText={(val) => updateCertificateField(cert.id, 'issuingOrg', val)}
+                        />
+
+                        <TouchableOpacity
+                          style={[
+                            styles.certImagePicker,
+                            {
+                              borderColor: cert.imageUri ? theme.colors.brand.primary : theme.colors.border.subtle,
+                              backgroundColor: theme.colors.input.background,
+                            },
+                          ]}
+                          onPress={() => pickCertificateImage(cert.id)}
+                          activeOpacity={0.8}
+                        >
+                          {cert.imageUri ? (
+                            <Image source={{ uri: cert.imageUri }} style={styles.certImagePreview} />
+                          ) : (
+                            <View style={styles.certImagePlaceholder}>
+                              <Camera size={18} color={theme.colors.brand.primary} />
+                              <Text style={[styles.certImagePlaceholderText, { color: theme.colors.brand.primary }]}>
+                                {t('registerDetails.uploadCertImage', 'TAP TO UPLOAD CERTIFICATE')}
+                              </Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    <TouchableOpacity
+                      style={[styles.addCertBtn, { borderColor: alpha(theme.colors.brand.primary, 0.45), backgroundColor: alpha(theme.colors.brand.primary, 0.06) }]}
+                      onPress={addCertificateSlot}
+                      activeOpacity={0.75}
+                    >
+                      <Plus size={15} color={theme.colors.brand.primary} />
+                      <Text style={[styles.addCertBtnText, { color: theme.colors.brand.primary }]}>
+                        {t('registerDetails.addCertificate', '+ ADD CERTIFICATE / DIPLOMA')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {!isCustomMode && (
+                    <View style={[styles.feeBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                      <Wallet size={14} color={colors.worker} />
+                      <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
+                        {t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })}
+                      </Text>
+                    </View>
+                  )}
 
                   <TouchableOpacity
+                    disabled={!!workingKey}
+                    style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]}
+                    onPress={requestCategory}
+                  >
+                    {workingKey ? (
+                      <ActivityIndicator size="small" color={theme.colors.button.primaryText} />
+                    ) : (
+                      <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
+                    )}
+                    <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>
+                      {isCustomMode
+                        ? t('specialties.sendReviewBtn', 'Send for admin review')
+                        : t('specialties.sendReviewBtn')}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
+
+              {specialties.map((specialty, index) => {
+                const color = statusColor(specialty, colors);
+                const isPaid = specialty.priority > data.freeSpecialtyLimit;
+                const specialtyFee = isPaid ? additionalCategoryMonthlyFee : 0;
+                const canActivate = specialty.approvalStatus === 'approved'
+                  && isPaid
+                  && ['pending_activation', 'expired'].includes(specialty.subscriptionStatus);
+                const showRenew = isPaid && ['active', 'payment_due'].includes(specialty.subscriptionStatus);
+                const catNameLower = String(specialty.categoryId?.name || '').trim().toLowerCase();
+                const matchedWorkerCerts = workerCertificates.filter((wc) => {
+                  const wcCat = String(wc.categoryName || '').trim().toLowerCase();
+                  if (wcCat && catNameLower) return wcCat === catNameLower;
+                  if (!wcCat && specialty.priority === 1) return true;
+                  return false;
+                });
+                const mergedCertMap = new Map<string, SpecialtyCertificate>();
+                for (const certItem of [...(specialty.certificates || []), ...matchedWorkerCerts]) {
+                  if (certItem?.certificateUrl) {
+                    const prev = mergedCertMap.get(certItem.certificateUrl);
+                    mergedCertMap.set(certItem.certificateUrl, {
+                      title: certItem.title || prev?.title || 'Certificate',
+                      issuingOrg: certItem.issuingOrg || prev?.issuingOrg || '',
+                      certificateUrl: certItem.certificateUrl,
+                      verificationStatus: certItem.verificationStatus || prev?.verificationStatus,
+                    });
+                  }
+                }
+                const specialtyCertificates = Array.from(mergedCertMap.values());
+
+                const isPrimary = specialty.tier === 'primary' || specialty.priority === 1;
+                const startDate = specialty.currentPeriodStart || specialty.approvedAt || specialty.requestedAt;
+                const expireDate = specialty.currentPeriodEnd || specialty.nextBillingAt;
+
+                let startLabel = t('specialties.startDateLabel', { defaultValue: 'STARTED' });
+                let expireLabel = t('specialties.renewsOnLabel', { defaultValue: 'EXPIRES / RENEWS' });
+                let startDateText = formatDate(startDate) || '—';
+                let expireDateText = '';
+                let expireColor = theme.colors.text.primary;
+
+                if (isPrimary) {
+                  startLabel = t('specialties.activeSinceLabel', { defaultValue: 'ACTIVE SINCE' });
+                  expireLabel = t('specialties.expirationLabel', { defaultValue: 'EXPIRATION' });
+                  expireDateText = t('specialties.includedFree', { defaultValue: 'Free forever' });
+                  expireColor = colors.success;
+                } else if (specialty.subscriptionStatus === 'pending_activation') {
+                  startLabel = t('specialties.approvedLabel', { defaultValue: 'APPROVED' });
+                  expireLabel = t('specialties.expirationLabel', { defaultValue: 'EXPIRATION' });
+                  expireDateText = isRTL ? 'آن کرنے پر 30 دن' : '30 days upon activation';
+                  expireColor = colors.yellow;
+                } else if (specialty.subscriptionStatus === 'expired') {
+                  startLabel = t('specialties.startDateLabel', { defaultValue: 'STARTED' });
+                  expireLabel = t('specialties.expiresOnLabel', { defaultValue: 'EXPIRED ON' });
+                  expireDateText = formatDate(expireDate) || (isRTL ? 'ختم شدہ' : 'Expired');
+                  expireColor = colors.error;
+                } else if (specialty.subscriptionStatus === 'payment_due') {
+                  startLabel = t('specialties.startDateLabel', { defaultValue: 'STARTED' });
+                  expireLabel = t('specialties.graceEndsLabel', { defaultValue: 'GRACE ENDS' });
+                  expireDateText = formatDate(specialty.graceEndsAt || expireDate) || (isRTL ? 'فیس واجب الادا' : 'Payment due');
+                  expireColor = colors.error;
+                } else {
+                  startLabel = t('specialties.startDateLabel', { defaultValue: 'STARTED' });
+                  expireLabel = specialty.autoRenew
+                    ? t('specialties.renewsOnLabel', { defaultValue: 'RENEWS ON' })
+                    : t('specialties.expiresOnLabel', { defaultValue: 'EXPIRES ON' });
+                  expireDateText = formatDate(expireDate) || '—';
+                  expireColor = specialty.autoRenew ? colors.success : colors.yellow;
+                }
+
+                return (
+                  <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(color, 0.28) }]}>
+                    <View style={styles.cardTop}>
+                      <View style={[styles.priorityBadge, { backgroundColor: `${color}20`, borderColor: `${color}55` }]}>
+                        <Text style={[styles.priorityText, { color }]}>#{specialty.priority}</Text>
+                      </View>
+                      <View style={styles.cardMain}>
+                        <Text style={[styles.cardTitle, { color: theme.colors.text.primary }]}>{specialty.categoryId.name}</Text>
+                        <Text style={[styles.tierText, { color: theme.colors.text.muted }]}>
+                          {specialty.tier === 'primary' ? t('specialties.primaryTier') : t('specialties.additionalTier')}
+                        </Text>
+                      </View>
+                      <View style={styles.orderButtons}>
+                        <TouchableOpacity disabled={index === 0 || !!workingKey} style={styles.orderButton} onPress={() => move(index, -1)}><ArrowUp size={14} color={index === 0 ? colors.textDim : colors.textMuted} /></TouchableOpacity>
+                        <TouchableOpacity disabled={index === specialties.length - 1 || !!workingKey} style={styles.orderButton} onPress={() => move(index, 1)}><ArrowDown size={14} color={index === specialties.length - 1 ? colors.textDim : colors.textMuted} /></TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={styles.statusRow}>
+                      <View style={[styles.statusDot, { backgroundColor: color }]} />
+                      <Text style={[styles.statusText, { color }]}>
+                        {specialty.approvalStatus === 'pending'
+                          ? t('specialties.waitingApproval')
+                          : specialty.approvalStatus === 'rejected'
+                            ? t('specialties.requestRejected')
+                            : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
+                      </Text>
+                    </View>
+
+                    <View style={styles.metaRow}>
+                      {isPaid ? <Wallet size={13} color={colors.worker} /> : <ShieldCheck size={13} color={colors.success} />}
+                      <Text style={[styles.metaText, { color: theme.colors.text.muted }]}>
+                        {isPaid
+                          ? t('specialties.feePerMonth', { fee: formatPKR(specialtyFee) })
+                          : t('specialties.includedFree')}
+                      </Text>
+                    </View>
+
+                    {/* Start & Expire Date Strip */}
+                    <View style={[styles.dateStrip, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                      <View style={styles.dateCol}>
+                        <Text style={[styles.dateLabel, { color: theme.colors.text.muted }]}>{startLabel}</Text>
+                        <Text style={[styles.dateValue, { color: theme.colors.text.primary }]}>{startDateText}</Text>
+                      </View>
+                      <View style={[styles.dateDivider, { backgroundColor: theme.colors.border.subtle }]} />
+                      <View style={styles.dateCol}>
+                        <Text style={[styles.dateLabel, { color: theme.colors.text.muted }]}>{expireLabel}</Text>
+                        <Text style={[styles.dateValue, { color: expireColor }]}>{expireDateText}</Text>
+                      </View>
+                    </View>
+
+                    <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                      <View style={styles.profileStats}>
+                        <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                          {t('specialties.ratePerHr', { rate: Number(specialty.hourlyRate || 0).toLocaleString('en-PK') })}
+                        </Text>
+                        <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                          {t('specialties.yearsExp', { count: Number(specialty.experience || 0) })}
+                        </Text>
+                      </View>
+                      {(specialty.skills || []).length > 0 && (
+                        <View style={styles.skillsWrap}>
+                          {specialty.skills.slice(0, 5).map(skill => (
+                            <Text key={skill} style={[styles.skillPill, { color: theme.colors.brand.primary, borderColor: alpha(theme.colors.brand.primary, 0.14), backgroundColor: alpha(theme.colors.brand.primary, 0.05) }]}>#{skill}</Text>
+                          ))}
+                        </View>
+                      )}
+                      {!!specialty.bio && <Text style={[styles.bioText, { color: theme.colors.text.muted }]} numberOfLines={2}>{specialty.bio}</Text>}
+                      {specialtyCertificates.length > 0 && (
+                        <View style={[styles.cardCertContainer, { borderTopColor: theme.colors.border.subtle }]}>
+                          <View style={styles.cardCertHeader}>
+                            <Award size={13} color={theme.colors.brand.primary} />
+                            <Text style={[styles.cardCertHeaderLabel, { color: theme.colors.text.muted }]}>
+                              {t('specialties.certificatesAttached', { count: specialtyCertificates.length, defaultValue: `${specialtyCertificates.length} certificate(s) attached` }).toUpperCase()}
+                            </Text>
+                          </View>
+                          <View style={styles.cardCertList}>
+                            {specialtyCertificates.map((cert, certIdx) => (
+                              <TouchableOpacity
+                                key={`${cert.certificateUrl}-${certIdx}`}
+                                style={[
+                                  styles.cardCertItem,
+                                  {
+                                    backgroundColor: theme.colors.surface.card,
+                                    borderColor: alpha(theme.colors.brand.primary, 0.22),
+                                  },
+                                ]}
+                                activeOpacity={0.8}
+                                onPress={() => setPreviewCert(cert)}
+                              >
+                                <Image
+                                  source={{ uri: cert.certificateUrl }}
+                                  style={[styles.cardCertThumb, { backgroundColor: theme.colors.input.background }]}
+                                  resizeMode="cover"
+                                />
+                                <View style={styles.cardCertInfo}>
+                                  <Text style={[styles.cardCertTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                                    {cert.title}
+                                  </Text>
+                                  {!!cert.issuingOrg && (
+                                    <Text style={[styles.cardCertSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                                      {cert.issuingOrg}
+                                    </Text>
+                                  )}
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.cardActions}>
+                      {canActivate && (
+                        <TouchableOpacity disabled={!!workingKey} style={[styles.activateButton, { backgroundColor: theme.colors.brand.primary }]} onPress={() => activate(specialty)}>
+                          {workingKey === `activate-${specialty._id}` ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Wallet size={15} color={theme.colors.button.primaryText} />}
+                          <Text style={[styles.activateText, { color: theme.colors.button.primaryText }]}>
+                            {specialty.subscriptionStatus === 'expired'
+                              ? t('specialties.reactivatePay')
+                              : t('specialties.activatePay')}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      {showRenew && (
+                        <View style={styles.renewWrap}>
+                          <Text style={[styles.renewLabel, { color: theme.colors.text.muted }]}>{t('specialties.autoRenew')}</Text>
+                          <Switch
+                            value={specialty.autoRenew}
+                            disabled={!!workingKey}
+                            onValueChange={(autoRenew) => {
+                              void runAction(
+                                `renew-${specialty._id}`,
+                                () => api.patch(`/workers/specialties/${specialty.categoryId._id}/auto-renew`, { autoRenew }),
+                                autoRenew
+                                  ? t('specialties.renewalEnabledDesc', { defaultValue: 'Automatic renewal is enabled.' })
+                                  : t('specialties.renewalDisabledDesc', { defaultValue: 'Automatic renewal is disabled.' })
+                              );
+                            }}
+                            trackColor={{ false: theme.colors.surface.subtle, true: alpha(theme.colors.status.success, 0.6) }}
+                            thumbColor={specialty.autoRenew ? colors.success : theme.colors.text.muted}
+                          />
+                        </View>
+                      )}
+                      {specialty.priority > 1 && (
+                        <TouchableOpacity style={[styles.removeButton, { backgroundColor: alpha(theme.colors.status.error, 0.12) }]} disabled={!!workingKey} onPress={() => remove(specialty)}>
+                          <Trash2 size={15} color={colors.error} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </Animated.View>
+                );
+              })}
+
+              {(data.pendingCustomRequests || []).map((req, reqIdx) => {
+                const isPending = req.status === 'pending';
+                const badgeBg = isPending ? `${colors.yellow}20` : `${colors.error}20`;
+                const badgeBorder = isPending ? `${colors.yellow}55` : `${colors.error}55`;
+                const badgeColor = isPending ? colors.yellow : colors.error;
+                return (
+                  <Animated.View
+                    key={req._id || `custom-req-${reqIdx}`}
+                    entering={FadeInDown.delay(reqIdx * 60)}
                     style={[
-                      styles.certImagePicker,
+                      styles.card,
+                      shadows.card,
                       {
-                        borderColor: cert.imageUri ? theme.colors.brand.primary : theme.colors.border.subtle,
-                        backgroundColor: theme.colors.input.background,
+                        backgroundColor: theme.colors.surface.card,
+                        borderColor: isPending ? alpha(colors.yellow, 0.45) : alpha(colors.error, 0.45),
+                        borderStyle: 'dashed',
                       },
                     ]}
-                    onPress={() => pickCertificateImage(cert.id)}
-                    activeOpacity={0.8}
                   >
-                    {cert.imageUri ? (
-                      <Image source={{ uri: cert.imageUri }} style={styles.certImagePreview} />
-                    ) : (
-                      <View style={styles.certImagePlaceholder}>
-                        <Camera size={18} color={theme.colors.brand.primary} />
-                        <Text style={[styles.certImagePlaceholderText, { color: theme.colors.brand.primary }]}>
-                          {t('registerDetails.uploadCertImage', 'TAP TO UPLOAD CERTIFICATE')}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 8, backgroundColor: badgeBg, borderWidth: 1, borderColor: badgeBorder }}>
+                        <Sparkles size={12} color={badgeColor} />
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: badgeColor, letterSpacing: 0.5 }}>
+                          {isPending ? 'SUGGESTED TRADE' : 'TRADE NOT ADDED'}
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: badgeBg }}>
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: badgeColor }} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: badgeColor }}>
+                            {isPending ? 'Under Review' : 'Rejected'}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.removeButton, { backgroundColor: alpha(theme.colors.status.error, 0.12) }]}
+                          disabled={!!workingKey}
+                          onPress={() => removeCustomRequest(req)}
+                        >
+                          <Trash2 size={14} color={colors.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 17, fontWeight: '800', color: theme.colors.text.primary, marginBottom: 2 }}>
+                        {req.professionName}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: theme.colors.text.muted }}>
+                        {isPending ? 'Submitted for platform addition' : 'Admin review completed'}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                      <View style={styles.profileStats}>
+                        <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                          Rs. {Number(req.hourlyRate || 0).toLocaleString('en-PK')}/hr
+                        </Text>
+                        <Text style={[styles.profileStat, { color: theme.colors.text.muted }]}> • </Text>
+                        <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                          {req.experience} yrs exp
+                        </Text>
+                      </View>
+                      {(req.certificates || []).length > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                          <Award size={12} color={theme.colors.brand.primary} />
+                          <Text style={{ fontSize: 11, color: theme.colors.text.muted }}>
+                            {(req.certificates || []).length} certificate(s) submitted
+                          </Text>
+                        </View>
+                      )}
+                      {!!req.description && (
+                        <Text style={[styles.bioText, { color: theme.colors.text.muted, marginTop: 6 }]} numberOfLines={2}>
+                          {req.description}
+                        </Text>
+                      )}
+                    </View>
+
+                    {req.status === 'rejected' && !!req.rejectionReason && (
+                      <View style={{ marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: alpha(colors.error, 0.1) }}>
+                        <Text style={{ fontSize: 12, color: colors.error }}>
+                          Reason: {req.rejectionReason}
                         </Text>
                       </View>
                     )}
-                  </TouchableOpacity>
-                </View>
-              ))}
 
-              <TouchableOpacity
-                style={[styles.addCertBtn, { borderColor: alpha(theme.colors.brand.primary, 0.45), backgroundColor: alpha(theme.colors.brand.primary, 0.06) }]}
-                onPress={addCertificateSlot}
-                activeOpacity={0.75}
-              >
-                <Plus size={15} color={theme.colors.brand.primary} />
-                <Text style={[styles.addCertBtnText, { color: theme.colors.brand.primary }]}>
-                  {t('registerDetails.addCertificate', '+ ADD CERTIFICATE / DIPLOMA')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {!isCustomMode && (
-              <View style={[styles.feeBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <Wallet size={14} color={colors.worker} />
-                <Text style={[styles.feeText, { color: theme.colors.text.muted }]}>
-                  {t('specialties.monthlyFeeInfo', { fee: formatPKR(additionalCategoryMonthlyFee), balance: formatPKR(walletAvailableBalance) })}
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              disabled={!!workingKey}
-              style={[styles.submitButton, { backgroundColor: theme.colors.brand.primary }]}
-              onPress={requestCategory}
-            >
-              {workingKey ? (
-                <ActivityIndicator size="small" color={theme.colors.button.primaryText} />
-              ) : (
-                <Plus size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
-              )}
-              <Text style={[styles.submitButtonText, { color: theme.colors.button.primaryText }]}>
-                {isCustomMode
-                  ? t('specialties.sendReviewBtn', 'Send for admin review')
-                  : t('specialties.sendReviewBtn')}
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {specialties.map((specialty, index) => {
-          const color = statusColor(specialty, colors);
-          const isPaid = specialty.priority > data.freeSpecialtyLimit;
-          const specialtyFee = isPaid ? additionalCategoryMonthlyFee : 0;
-          const canActivate = specialty.approvalStatus === 'approved'
-            && isPaid
-            && ['pending_activation', 'expired'].includes(specialty.subscriptionStatus);
-          const showRenew = isPaid && ['active', 'payment_due'].includes(specialty.subscriptionStatus);
-          const catNameLower = String(specialty.categoryId?.name || '').trim().toLowerCase();
-          const matchedWorkerCerts = workerCertificates.filter((wc) => {
-            const wcCat = String(wc.categoryName || '').trim().toLowerCase();
-            if (wcCat && catNameLower) return wcCat === catNameLower;
-            if (!wcCat && specialty.priority === 1) return true;
-            return false;
-          });
-          const mergedCertMap = new Map<string, SpecialtyCertificate>();
-          for (const certItem of [...(specialty.certificates || []), ...matchedWorkerCerts]) {
-            if (certItem?.certificateUrl) {
-              const prev = mergedCertMap.get(certItem.certificateUrl);
-              mergedCertMap.set(certItem.certificateUrl, {
-                title: certItem.title || prev?.title || 'Certificate',
-                issuingOrg: certItem.issuingOrg || prev?.issuingOrg || '',
-                certificateUrl: certItem.certificateUrl,
-                verificationStatus: certItem.verificationStatus || prev?.verificationStatus,
-              });
-            }
-          }
-          const specialtyCertificates = Array.from(mergedCertMap.values());
-
-          const isPrimary = specialty.tier === 'primary' || specialty.priority === 1;
-          const startDate = specialty.currentPeriodStart || specialty.approvedAt || specialty.requestedAt;
-          const expireDate = specialty.currentPeriodEnd || specialty.nextBillingAt;
-
-          let startLabel = 'STARTED';
-          let expireLabel = 'EXPIRES / RENEWS';
-          let startDateText = formatDate(startDate) || '—';
-          let expireDateText = '';
-          let expireColor = theme.colors.text.primary;
-
-          if (isPrimary) {
-            startLabel = 'ACTIVE SINCE';
-            expireLabel = 'EXPIRATION';
-            expireDateText = 'Free forever';
-            expireColor = colors.success;
-          } else if (specialty.subscriptionStatus === 'pending_activation') {
-            startLabel = 'APPROVED';
-            expireLabel = 'EXPIRATION';
-            expireDateText = '30 days upon activation';
-            expireColor = colors.yellow;
-          } else if (specialty.subscriptionStatus === 'expired') {
-            startLabel = 'STARTED';
-            expireLabel = 'EXPIRED ON';
-            expireDateText = formatDate(expireDate) || 'Expired';
-            expireColor = colors.error;
-          } else if (specialty.subscriptionStatus === 'payment_due') {
-            startLabel = 'STARTED';
-            expireLabel = 'GRACE ENDS';
-            expireDateText = formatDate(specialty.graceEndsAt || expireDate) || 'Payment due';
-            expireColor = colors.error;
-          } else {
-            startLabel = 'STARTED';
-            expireLabel = specialty.autoRenew ? 'RENEWS ON' : 'EXPIRES ON';
-            expireDateText = formatDate(expireDate) || '—';
-            expireColor = specialty.autoRenew ? colors.success : colors.yellow;
-          }
-
-          return (
-            <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(color, 0.28) }]}>
-              <View style={styles.cardTop}>
-                <View style={[styles.priorityBadge, { backgroundColor: `${color}20`, borderColor: `${color}55` }]}>
-                  <Text style={[styles.priorityText, { color }]}>#{specialty.priority}</Text>
-                </View>
-                <View style={styles.cardMain}>
-                  <Text style={[styles.cardTitle, { color: theme.colors.text.primary }]}>{specialty.categoryId.name}</Text>
-                  <Text style={[styles.tierText, { color: theme.colors.text.muted }]}>
-                    {specialty.tier === 'primary' ? t('specialties.primaryTier') : t('specialties.additionalTier')}
-                  </Text>
-                </View>
-                <View style={styles.orderButtons}>
-                  <TouchableOpacity disabled={index === 0 || !!workingKey} style={styles.orderButton} onPress={() => move(index, -1)}><ArrowUp size={14} color={index === 0 ? colors.textDim : colors.textMuted} /></TouchableOpacity>
-                  <TouchableOpacity disabled={index === specialties.length - 1 || !!workingKey} style={styles.orderButton} onPress={() => move(index, 1)}><ArrowDown size={14} color={index === specialties.length - 1 ? colors.textDim : colors.textMuted} /></TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.statusRow}>
-                <View style={[styles.statusDot, { backgroundColor: color }]} />
-                <Text style={[styles.statusText, { color }]}>
-                  {specialty.approvalStatus === 'pending'
-                    ? t('specialties.waitingApproval')
-                    : specialty.approvalStatus === 'rejected'
-                      ? t('specialties.requestRejected')
-                      : t(`specialties.${specialty.subscriptionStatus}`, { defaultValue: specialty.subscriptionStatus.replace(/_/g, ' ') })}
-                </Text>
-              </View>
-
-              <View style={styles.metaRow}>
-                {isPaid ? <Wallet size={13} color={colors.worker} /> : <ShieldCheck size={13} color={colors.success} />}
-                <Text style={[styles.metaText, { color: theme.colors.text.muted }]}>
-                  {isPaid
-                    ? t('specialties.feePerMonth', { fee: formatPKR(specialtyFee) })
-                    : t('specialties.includedFree')}
-                </Text>
-              </View>
-
-              {/* Start & Expire Date Strip */}
-              <View style={[styles.dateStrip, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <View style={styles.dateCol}>
-                  <Text style={[styles.dateLabel, { color: theme.colors.text.muted }]}>{startLabel}</Text>
-                  <Text style={[styles.dateValue, { color: theme.colors.text.primary }]}>{startDateText}</Text>
-                </View>
-                <View style={[styles.dateDivider, { backgroundColor: theme.colors.border.subtle }]} />
-                <View style={styles.dateCol}>
-                  <Text style={[styles.dateLabel, { color: theme.colors.text.muted }]}>{expireLabel}</Text>
-                  <Text style={[styles.dateValue, { color: expireColor }]}>{expireDateText}</Text>
-                </View>
-              </View>
-
-              <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <View style={styles.profileStats}>
-                    <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
-                    {t('specialties.ratePerHr', { rate: Number(specialty.hourlyRate || 0).toLocaleString('en-PK') })}
-                  </Text>
-                    <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
-                    {t('specialties.yearsExp', { count: Number(specialty.experience || 0) })}
-                  </Text>
-                </View>
-                {(specialty.skills || []).length > 0 && (
-                  <View style={styles.skillsWrap}>
-                    {specialty.skills.slice(0, 5).map(skill => (
-                      <Text key={skill} style={[styles.skillPill, { color: theme.colors.brand.primary, borderColor: alpha(theme.colors.brand.primary, 0.14), backgroundColor: alpha(theme.colors.brand.primary, 0.05) }]}>#{skill}</Text>
-                    ))}
-                  </View>
-                )}
-                {!!specialty.bio && <Text style={[styles.bioText, { color: theme.colors.text.muted }]} numberOfLines={2}>{specialty.bio}</Text>}
-                {specialtyCertificates.length > 0 && (
-                  <View style={[styles.cardCertContainer, { borderTopColor: theme.colors.border.subtle }]}>
-                    <View style={styles.cardCertHeader}>
-                      <Award size={13} color={theme.colors.brand.primary} />
-                      <Text style={[styles.cardCertHeaderLabel, { color: theme.colors.text.muted }]}>
-                        {t('specialties.certificatesAttached', { count: specialtyCertificates.length, defaultValue: `${specialtyCertificates.length} certificate(s) attached` }).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={styles.cardCertList}>
-                      {specialtyCertificates.map((cert, certIdx) => (
-                        <TouchableOpacity
-                          key={`${cert.certificateUrl}-${certIdx}`}
-                          style={[
-                            styles.cardCertItem,
-                            {
-                              backgroundColor: theme.colors.surface.card,
-                              borderColor: alpha(theme.colors.brand.primary, 0.22),
-                            },
-                          ]}
-                          activeOpacity={0.8}
-                          onPress={() => setPreviewCert(cert)}
-                        >
-                          <Image
-                            source={{ uri: cert.certificateUrl }}
-                            style={[styles.cardCertThumb, { backgroundColor: theme.colors.input.background }]}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.cardCertInfo}>
-                            <Text style={[styles.cardCertTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                              {cert.title}
-                            </Text>
-                            {!!cert.issuingOrg && (
-                              <Text style={[styles.cardCertSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                                {cert.issuingOrg}
-                              </Text>
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.cardActions}>
-                {canActivate && (
-                    <TouchableOpacity disabled={!!workingKey} style={[styles.activateButton, { backgroundColor: theme.colors.brand.primary }]} onPress={() => activate(specialty)}>
-                    {workingKey === `activate-${specialty._id}` ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Wallet size={15} color={theme.colors.button.primaryText} />}
-                    <Text style={[styles.activateText, { color: theme.colors.button.primaryText }]}>
-                      {specialty.subscriptionStatus === 'expired'
-                        ? t('specialties.reactivatePay')
-                        : t('specialties.activatePay')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {showRenew && (
-                  <View style={styles.renewWrap}>
-                    <Text style={[styles.renewLabel, { color: theme.colors.text.muted }]}>{t('specialties.autoRenew')}</Text>
-                    <Switch
-                      value={specialty.autoRenew}
-                      disabled={!!workingKey}
-                      onValueChange={(autoRenew) => {
-                        void runAction(
-                          `renew-${specialty._id}`,
-                          () => api.patch(`/workers/specialties/${specialty.categoryId._id}/auto-renew`, { autoRenew }),
-                          autoRenew
-                            ? t('specialties.renewalEnabledDesc', { defaultValue: 'Automatic renewal is enabled.' })
-                            : t('specialties.renewalDisabledDesc', { defaultValue: 'Automatic renewal is disabled.' })
-                        );
-                      }}
-                      trackColor={{ false: theme.colors.surface.subtle, true: alpha(theme.colors.status.success, 0.6) }}
-                      thumbColor={specialty.autoRenew ? colors.success : theme.colors.text.muted}
-                    />
-                  </View>
-                )}
-                {specialty.priority > 1 && (
-                  <TouchableOpacity style={[styles.removeButton, { backgroundColor: alpha(theme.colors.status.error, 0.12) }]} disabled={!!workingKey} onPress={() => remove(specialty)}>
-                    <Trash2 size={15} color={colors.error} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </Animated.View>
-          );
-        })}
-
-        {(data.pendingCustomRequests || []).map((req, reqIdx) => {
-          const isPending = req.status === 'pending';
-          const badgeBg = isPending ? `${colors.yellow}20` : `${colors.error}20`;
-          const badgeBorder = isPending ? `${colors.yellow}55` : `${colors.error}55`;
-          const badgeColor = isPending ? colors.yellow : colors.error;
-          return (
-            <Animated.View
-              key={req._id || `custom-req-${reqIdx}`}
-              entering={FadeInDown.delay(reqIdx * 60)}
-              style={[
-                styles.card,
-                shadows.card,
-                {
-                  backgroundColor: theme.colors.surface.card,
-                  borderColor: isPending ? alpha(colors.yellow, 0.45) : alpha(colors.error, 0.45),
-                  borderStyle: 'dashed',
-                },
-              ]}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 8, backgroundColor: badgeBg, borderWidth: 1, borderColor: badgeBorder }}>
-                  <Sparkles size={12} color={badgeColor} />
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: badgeColor, letterSpacing: 0.5 }}>
-                    {isPending ? 'SUGGESTED TRADE' : 'TRADE NOT ADDED'}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: badgeBg }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: badgeColor }} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: badgeColor }}>
-                      {isPending ? 'Under Review' : 'Rejected'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.removeButton, { backgroundColor: alpha(theme.colors.status.error, 0.12) }]}
-                    disabled={!!workingKey}
-                    onPress={() => removeCustomRequest(req)}
-                  >
-                    <Trash2 size={14} color={colors.error} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontSize: 17, fontWeight: '800', color: theme.colors.text.primary, marginBottom: 2 }}>
-                  {req.professionName}
-                </Text>
-                <Text style={{ fontSize: 12, color: theme.colors.text.muted }}>
-                  {isPending ? 'Submitted for platform addition' : 'Admin review completed'}
-                </Text>
-              </View>
-
-              <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <View style={styles.profileStats}>
-                  <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
-                    Rs. {Number(req.hourlyRate || 0).toLocaleString('en-PK')}/hr
-                  </Text>
-                  <Text style={[styles.profileStat, { color: theme.colors.text.muted }]}> • </Text>
-                  <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
-                    {req.experience} yrs exp
-                  </Text>
-                </View>
-                {(req.certificates || []).length > 0 && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                    <Award size={12} color={theme.colors.brand.primary} />
-                    <Text style={{ fontSize: 11, color: theme.colors.text.muted }}>
-                      {(req.certificates || []).length} certificate(s) submitted
-                    </Text>
-                  </View>
-                )}
-                {!!req.description && (
-                  <Text style={[styles.bioText, { color: theme.colors.text.muted, marginTop: 6 }]} numberOfLines={2}>
-                    {req.description}
-                  </Text>
-                )}
-              </View>
-
-              {req.status === 'rejected' && !!req.rejectionReason && (
-                <View style={{ marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: alpha(colors.error, 0.1) }}>
-                  <Text style={{ fontSize: 12, color: colors.error }}>
-                    Reason: {req.rejectionReason}
-                  </Text>
-                </View>
-              )}
-
-              {isPending && (
-                <View style={{ marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: alpha(colors.yellow, 0.08) }}>
-                  <Text style={{ fontSize: 11, color: theme.colors.text.muted }}>
-                    ℹ️ Our team is reviewing your requested trade. Once approved, it will be added to the platform services.
-                  </Text>
-                </View>
-              )}
-            </Animated.View>
-          );
-        })}
-      </>
-    )}
+                    {isPending && (
+                      <View style={{ marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: alpha(colors.yellow, 0.08) }}>
+                        <Text style={{ fontSize: 11, color: theme.colors.text.muted }}>
+                          ℹ️ Our team is reviewing your requested trade. Once approved, it will be added to the platform services.
+                        </Text>
+                      </View>
+                    )}
+                  </Animated.View>
+                );
+              })}
+            </>
+          )}
         </ScrollView>
       </SafeAreaView>
 
-  <BeautifulModal
-    visible={rechargePromptVisible}
-    onClose={() => setRechargePromptVisible(false)}
-    title={t('specialties.rechargeNeeded')}
-    height={470}
-    glowColor={colors.worker}
-    icon={<Wallet size={32} color={colors.worker} strokeWidth={2.4} />}
-  >
-    <View style={styles.rechargeModalBody}>
-        <View style={[styles.rechargeIconRing, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.35) }]}>
-        <AlertTriangle size={22} color={colors.worker} strokeWidth={2.4} />
-      </View>
-        <Text style={[styles.rechargeTitle, { color: theme.colors.text.primary }]}>{t('specialties.addBalancePrompt')}</Text>
-      <Text style={[styles.rechargeMessage, { color: theme.colors.text.muted }]}>
-        {t('specialties.rechargeMessage', { action: rechargeActionLabel, fee: formatPKR(additionalCategoryMonthlyFee) })}
-      </Text>
-
-        <View style={[styles.walletSummaryCard, { backgroundColor: alpha(colors.worker, 0.08), borderColor: alpha(colors.worker, 0.24) }]}>
-        <View style={styles.walletSummaryRow}>
-          <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.requiredBalance')}</Text>
-          <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
-        </View>
-        <View style={[styles.walletSummaryDivider, { backgroundColor: alpha(colors.worker, 0.2) }]} />
-        <View style={styles.walletSummaryRow}>
-          <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.availableBalance')}</Text>
-          <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(walletAvailableBalance)}</Text>
-        </View>
-        <View style={[styles.walletSummaryDivider, { backgroundColor: alpha(colors.worker, 0.2) }]} />
-        <View style={styles.walletSummaryRow}>
-          <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.needRecharge')}</Text>
-          <Text style={[styles.walletSummaryValue, styles.shortfallText, { color: colors.worker }]}>{formatPKR(walletShortfall)}</Text>
-        </View>
-      </View>
-
-      <View style={styles.rechargeActions}>
-        <TouchableOpacity style={[styles.rechargeSecondaryButton, { backgroundColor: theme.colors.surface.subtle, borderWidth: 1, borderColor: theme.colors.border.subtle }]} onPress={() => setRechargePromptVisible(false)}>
-          <Text style={[styles.rechargeSecondaryText, { color: theme.colors.text.muted }]}>{t('specialties.maybeLater')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.rechargePrimaryButton}
-          onPress={() => {
-            setRechargePromptVisible(false);
-            router.push('/(tabs)/wallet' as any);
-          }}
-        >
-            <LinearGradient colors={theme.colors.button.workerBackground} style={styles.rechargePrimaryGradient}>
-            <Wallet size={16} color={theme.colors.button.primaryText} strokeWidth={2.6} />
-            <Text style={[styles.rechargePrimaryText, { color: theme.colors.button.primaryText }]}>{t('specialties.rechargeWallet')}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </BeautifulModal>
-
-  {/* Category Dropdown Modal */}
-  <Modal
-    visible={isDropdownOpen}
-    transparent
-    animationType="slide"
-    onRequestClose={() => setIsDropdownOpen(false)}
-  >
-    <View style={styles.modalOverlay}>
-      <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface.card }]}>
-        <View style={styles.modalHeader}>
-          <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
-            {t('specialties.selectCategoryModalTitle', 'Select Category')}
-          </Text>
-          <TouchableOpacity onPress={() => setIsDropdownOpen(false)} hitSlop={12}>
-            <X size={22} color={theme.colors.text.muted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar */}
-        <View style={[styles.modalSearchWrapper, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.border.subtle }]}>
-          <Search size={18} color={theme.colors.text.muted} style={{ marginRight: 8 }} />
-          <TextInput
-            style={[styles.modalSearchInput, { color: theme.colors.input.text }]}
-            placeholder={t('specialties.searchCategoryPlaceholder', 'Search category...')}
-            placeholderTextColor={theme.colors.input.placeholder}
-            value={searchCategoryText}
-            onChangeText={setSearchCategoryText}
-            autoCapitalize="none"
-          />
-          {searchCategoryText.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchCategoryText('')} hitSlop={8}>
-              <X size={16} color={theme.colors.text.muted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Categories List */}
-        <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-          {filteredAvailableCategories.length > 0 ? (
-            filteredAvailableCategories.map((item) => {
-              const isSelected = draftCategoryId === item._id;
-              const itemColor = item.color || colors.cyan;
-              return (
-                <TouchableOpacity
-                  key={item._id}
-                  style={[
-                    styles.categoryItem,
-                    isSelected && { backgroundColor: alpha(theme.colors.brand.primary, 0.12) },
-                  ]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setDraftCategoryId(item._id);
-                    setIsDropdownOpen(false);
-                  }}
-                >
-                  <View style={styles.categoryItemLeft}>
-                    <View style={[styles.categoryIconCircle, { backgroundColor: alpha(itemColor, 0.15) }]}>
-                      <Briefcase size={17} color={itemColor} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.categoryItemName, { color: theme.colors.text.primary }, isSelected && { color: theme.colors.brand.primary, fontWeight: '800' }]}>
-                        {item.name}
-                      </Text>
-                      {item.description ? (
-                        <Text style={[styles.categoryItemDesc, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                          {item.description}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  {isSelected && <CheckCircle size={18} color={theme.colors.brand.primary} />}
-                </TouchableOpacity>
-              );
-            })
-          ) : (
-            <View style={styles.emptyList}>
-              <Text style={[styles.emptyListText, { color: theme.colors.text.muted }]}>
-                {t('specialties.noMatchingCategory', 'No matching category found')}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Request Other Category button in Modal Footer */}
-        <View style={[styles.modalFooter, { borderTopColor: theme.colors.border.subtle }]}>
-          <TouchableOpacity
-            style={[styles.modalRequestBtn, { borderColor: theme.colors.brand.primary, backgroundColor: alpha(theme.colors.brand.primary, 0.08) }]}
-            onPress={() => {
-              setIsDropdownOpen(false);
-              setIsCustomMode(true);
-              setDraftCategoryId('');
-            }}
-          >
-            <Sparkles size={16} color={theme.colors.brand.primary} />
-            <Text style={[styles.modalRequestBtnText, { color: theme.colors.brand.primary }]}>
-              {t('specialties.cantFindCategory', "Can't find your category? Request other here")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  </Modal>
-
-  {/* Certificate Preview Modal */}
-  <Modal
-    visible={!!previewCert}
-    transparent
-    animationType="fade"
-    onRequestClose={() => setPreviewCert(null)}
-  >
-    <View style={styles.certModalOverlay}>
-      <View style={[styles.certModalCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-        <View style={styles.certModalHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.certModalTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
-              {previewCert?.title || 'Certificate'}
-            </Text>
-            {!!previewCert?.issuingOrg && (
-              <Text style={[styles.certModalSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                {previewCert.issuingOrg}
-              </Text>
-            )}
+      <BeautifulModal
+        visible={rechargePromptVisible}
+        onClose={() => setRechargePromptVisible(false)}
+        title={t('specialties.rechargeNeeded')}
+        height={470}
+        glowColor={colors.worker}
+        icon={<Wallet size={32} color={colors.worker} strokeWidth={2.4} />}
+      >
+        <View style={styles.rechargeModalBody}>
+          <View style={[styles.rechargeIconRing, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.35) }]}>
+            <AlertTriangle size={22} color={colors.worker} strokeWidth={2.4} />
           </View>
-          <TouchableOpacity onPress={() => setPreviewCert(null)} hitSlop={10} style={styles.pickerCloseBtn}>
-            <X size={20} color={theme.colors.text.muted} />
-          </TouchableOpacity>
+          <Text style={[styles.rechargeTitle, { color: theme.colors.text.primary }]}>{t('specialties.addBalancePrompt')}</Text>
+          <Text style={[styles.rechargeMessage, { color: theme.colors.text.muted }]}>
+            {t('specialties.rechargeMessage', { action: rechargeActionLabel, fee: formatPKR(additionalCategoryMonthlyFee) })}
+          </Text>
+
+          <View style={[styles.walletSummaryCard, { backgroundColor: alpha(colors.worker, 0.08), borderColor: alpha(colors.worker, 0.24) }]}>
+            <View style={styles.walletSummaryRow}>
+              <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.requiredBalance')}</Text>
+              <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(additionalCategoryMonthlyFee)}</Text>
+            </View>
+            <View style={[styles.walletSummaryDivider, { backgroundColor: alpha(colors.worker, 0.2) }]} />
+            <View style={styles.walletSummaryRow}>
+              <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.availableBalance')}</Text>
+              <Text style={[styles.walletSummaryValue, { color: theme.colors.text.primary }]}>{formatPKR(walletAvailableBalance)}</Text>
+            </View>
+            <View style={[styles.walletSummaryDivider, { backgroundColor: alpha(colors.worker, 0.2) }]} />
+            <View style={styles.walletSummaryRow}>
+              <Text style={[styles.walletSummaryLabel, { color: theme.colors.text.muted }]}>{t('specialties.needRecharge')}</Text>
+              <Text style={[styles.walletSummaryValue, styles.shortfallText, { color: colors.worker }]}>{formatPKR(walletShortfall)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.rechargeActions}>
+            <TouchableOpacity style={[styles.rechargeSecondaryButton, { backgroundColor: theme.colors.surface.subtle, borderWidth: 1, borderColor: theme.colors.border.subtle }]} onPress={() => setRechargePromptVisible(false)}>
+              <Text style={[styles.rechargeSecondaryText, { color: theme.colors.text.muted }]}>{t('specialties.maybeLater')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.rechargePrimaryButton}
+              onPress={() => {
+                setRechargePromptVisible(false);
+                router.push('/(tabs)/wallet' as any);
+              }}
+            >
+              <LinearGradient colors={theme.colors.button.workerBackground} style={styles.rechargePrimaryGradient}>
+                <Wallet size={16} color={theme.colors.button.primaryText} strokeWidth={2.6} />
+                <Text style={[styles.rechargePrimaryText, { color: theme.colors.button.primaryText }]}>{t('specialties.rechargeWallet')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
-        {previewCert?.certificateUrl ? (
-          <Image
-            source={{ uri: previewCert.certificateUrl }}
-            style={[styles.certModalImage, { backgroundColor: theme.colors.input.background }]}
-            resizeMode="contain"
-          />
-        ) : null}
-      </View>
-    </View>
-  </Modal>
+      </BeautifulModal>
 
-  <ConfirmModal
-    visible={confirmModal.visible}
-    onConfirm={confirmModal.onConfirm}
-    onCancel={confirmModal.onCancel}
-    title={confirmModal.title}
-    message={confirmModal.message}
-    confirmText={confirmModal.confirmText}
-    cancelText={confirmModal.cancelText}
-    confirmColor={confirmModal.confirmColor}
-    isLoading={confirmModal.isLoading}
-  />
+      {/* Category Dropdown Modal */}
+      <Modal
+        visible={isDropdownOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsDropdownOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
+                {t('specialties.selectCategoryModalTitle', 'Select Category')}
+              </Text>
+              <TouchableOpacity onPress={() => setIsDropdownOpen(false)} hitSlop={12}>
+                <X size={22} color={theme.colors.text.muted} />
+              </TouchableOpacity>
+            </View>
 
-  <AlertModal
-    visible={alertModal.visible}
-    onDismiss={alertModal.onDismiss}
-    title={alertModal.title}
-    message={alertModal.message}
-    type={alertModal.type}
-    buttonText={alertModal.buttonText}
-  />
-  </BackgroundWrapper>
-);
+            {/* Search Bar */}
+            <View style={[styles.modalSearchWrapper, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.border.subtle }]}>
+              <Search size={18} color={theme.colors.text.muted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={[styles.modalSearchInput, { color: theme.colors.input.text }]}
+                placeholder={t('specialties.searchCategoryPlaceholder', 'Search category...')}
+                placeholderTextColor={theme.colors.input.placeholder}
+                value={searchCategoryText}
+                onChangeText={setSearchCategoryText}
+                autoCapitalize="none"
+              />
+              {searchCategoryText.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchCategoryText('')} hitSlop={8}>
+                  <X size={16} color={theme.colors.text.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Categories List */}
+            <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+              {filteredAvailableCategories.length > 0 ? (
+                filteredAvailableCategories.map((item) => {
+                  const isSelected = draftCategoryId === item._id;
+                  const itemColor = item.color || colors.cyan;
+                  return (
+                    <TouchableOpacity
+                      key={item._id}
+                      style={[
+                        styles.categoryItem,
+                        isSelected && { backgroundColor: alpha(theme.colors.brand.primary, 0.12) },
+                      ]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setDraftCategoryId(item._id);
+                        setIsDropdownOpen(false);
+                      }}
+                    >
+                      <View style={styles.categoryItemLeft}>
+                        <View style={[styles.categoryIconCircle, { backgroundColor: alpha(itemColor, 0.15) }]}>
+                          <Briefcase size={17} color={itemColor} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.categoryItemName, { color: theme.colors.text.primary }, isSelected && { color: theme.colors.brand.primary, fontWeight: '800' }]}>
+                            {item.name}
+                          </Text>
+                          {item.description ? (
+                            <Text style={[styles.categoryItemDesc, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                              {item.description}
+                            </Text>
+                          ) : null}
+                        </View>
+                      </View>
+                      {isSelected && <CheckCircle size={18} color={theme.colors.brand.primary} />}
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                <View style={styles.emptyList}>
+                  <Text style={[styles.emptyListText, { color: theme.colors.text.muted }]}>
+                    {t('specialties.noMatchingCategory', 'No matching category found')}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Request Other Category button in Modal Footer */}
+            <View style={[styles.modalFooter, { borderTopColor: theme.colors.border.subtle }]}>
+              <TouchableOpacity
+                style={[styles.modalRequestBtn, { borderColor: theme.colors.brand.primary, backgroundColor: alpha(theme.colors.brand.primary, 0.08) }]}
+                onPress={() => {
+                  setIsDropdownOpen(false);
+                  setIsCustomMode(true);
+                  setDraftCategoryId('');
+                }}
+              >
+                <Sparkles size={16} color={theme.colors.brand.primary} />
+                <Text style={[styles.modalRequestBtnText, { color: theme.colors.brand.primary }]}>
+                  {t('specialties.cantFindCategory', "Can't find your category? Request other here")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Certificate Preview Modal */}
+      <Modal
+        visible={!!previewCert}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewCert(null)}
+      >
+        <View style={styles.certModalOverlay}>
+          <View style={[styles.certModalCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+            <View style={styles.certModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.certModalTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                  {previewCert?.title || 'Certificate'}
+                </Text>
+                {!!previewCert?.issuingOrg && (
+                  <Text style={[styles.certModalSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                    {previewCert.issuingOrg}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setPreviewCert(null)} hitSlop={10} style={styles.pickerCloseBtn}>
+                <X size={20} color={theme.colors.text.muted} />
+              </TouchableOpacity>
+            </View>
+            {previewCert?.certificateUrl ? (
+              <Image
+                source={{ uri: previewCert.certificateUrl }}
+                style={[styles.certModalImage, { backgroundColor: theme.colors.input.background }]}
+                resizeMode="contain"
+              />
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.onCancel}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmColor={confirmModal.confirmColor}
+        isLoading={confirmModal.isLoading}
+      />
+
+      <AlertModal
+        visible={alertModal.visible}
+        onDismiss={alertModal.onDismiss}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+        buttonText={alertModal.buttonText}
+      />
+    </BackgroundWrapper>
+  );
 }
 
 const styles = StyleSheet.create({

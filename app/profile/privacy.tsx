@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   activeTabBtn: {},
   tabIcon: {
-    marginRight: 6,
+    marginEnd: 6,
   },
   tabText: {
     fontSize: 13,

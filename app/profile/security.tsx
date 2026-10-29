@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Shield, Lock, HelpCircle, ChevronRight, Eye } from 'lucide-react-native';
+import { Shield, Lock, ChevronRight, ChevronLeft, Eye } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useThemeTypography, useThemeColors, Spacing } from '../../constants/Theme';
@@ -9,6 +9,7 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { useRouter } from 'expo-router';
+import { useIsRTL } from '../../context/LanguageContext';
 
 export default function SecurityScreen() {
   const router = useRouter();
@@ -71,6 +72,7 @@ interface SecurityItemProps {
 
 function SecurityItem({ icon: Icon, label, onPress, delay, primaryColor }: SecurityItemProps & { primaryColor?: string }) {
   const theme = useTheme();
+  const isRTL = useIsRTL();
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
       <TouchableOpacity onPress={onPress}>
@@ -80,7 +82,11 @@ function SecurityItem({ icon: Icon, label, onPress, delay, primaryColor }: Secur
               <Icon size={20} color={primaryColor || theme.colors.text.primary} />
             </View>
             <Text style={[styles.itemLabel, { color: theme.colors.text.primary }]}>{label}</Text>
-            <ChevronRight size={18} color={theme.colors.text.dim} />
+            {isRTL ? (
+              <ChevronLeft size={18} color={theme.colors.text.dim} />
+            ) : (
+              <ChevronRight size={18} color={theme.colors.text.dim} />
+            )}
           </View>
         </GlassCard>
       </TouchableOpacity>
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginEnd: 16,
   },
   itemContent: {
     flexDirection: 'row',

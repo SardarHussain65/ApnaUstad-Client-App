@@ -31,6 +31,7 @@ import { socketService } from '../../services/socketService';
 import { WorkerPendingBidCard } from './WorkerPendingBidCard';
 import { useConfirmModal, useToast, useWorkerBids, useWithdrawBidMutation, Bid } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
+import { useIsRTL } from '../../context/LanguageContext';
 
 type WorkerCoordinates = {
   latitude: number;
@@ -40,6 +41,7 @@ type WorkerCoordinates = {
 export function WorkerHome() {
   const router = useRouter();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { token, user } = useAuth();
   const theme = useTheme();
   const colors = useThemeColors();
@@ -328,14 +330,14 @@ export function WorkerHome() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
-refreshControl={
-           <RefreshControl
-             refreshing={isRefreshing}
-             onRefresh={handleRefresh}
-             tintColor={colors.cyan}
-             colors={[colors.cyan]}
-           />
-         }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.cyan}
+            colors={[colors.cyan]}
+          />
+        }
       >
         <HomeHeader />
 
@@ -472,7 +474,9 @@ refreshControl={
               ))
             ) : (
               <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: theme.colors.text.primary }]}>No bookings yet.{'\n'}Accepted bookings will appear here.</Text>
+                <Text style={[styles.emptyText, { color: theme.colors.text.primary, textAlign: 'center' }]}>
+                  {t('home.worker.noBookings', { defaultValue: "No bookings yet.\nAccepted bookings will appear here." })}
+                </Text>
               </View>
             )}
           </View>

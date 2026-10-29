@@ -24,9 +24,11 @@ import {
   UserRound,
   Star,
   ChevronRight,
+  ChevronLeft,
 } from 'lucide-react-native';
 import { alpha, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useIsRTL } from '../../context/LanguageContext';
 
 interface WorkerAlertJobCardProps {
   job: any;
@@ -40,6 +42,7 @@ export const WorkerAlertJobCard = React.memo(
   function WorkerAlertJobCard({ job, index, onAccept, onDismiss, isAccepting }: WorkerAlertJobCardProps) {
     const { user } = useAuth();
     const { t } = useTranslation();
+    const isRTL = useIsRTL();
     const theme = useTheme();
     const colors = useThemeColors();
     const typography = useThemeTypography();

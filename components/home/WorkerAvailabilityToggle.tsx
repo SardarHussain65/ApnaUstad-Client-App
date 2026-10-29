@@ -4,6 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, wit
 import { GlassCard } from './GlassCard';
 import { alpha, useTheme, useThemeColors, useThemeTypography, Spacing } from '../../constants/Theme';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../../context/LanguageContext';
 
 interface WorkerAvailabilityToggleProps {
   isOnline: boolean;
@@ -17,6 +18,7 @@ export const WorkerAvailabilityToggle = React.memo(({
   isLoading = false
 }: WorkerAvailabilityToggleProps) => {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
   },
   leftSection: {
     flex: 1,
-    paddingRight: Spacing.m,
+    paddingEnd: Spacing.m,
   },
   rightSection: {
     justifyContent: 'center',

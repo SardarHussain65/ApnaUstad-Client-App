@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { socketService } from '../../services/socketService';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../../context/LanguageContext';
 
 export function HomeHeader() {
   const theme = useTheme();
@@ -16,6 +17,7 @@ export function HomeHeader() {
   const typography = useThemeTypography();
   const router = useRouter();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { role, user } = useAuth();
   const { location } = useUserLocation();
   const { data: notificationsData, refetch: refetchNotifications } = useNotifications({ enabled: !!user?._id });

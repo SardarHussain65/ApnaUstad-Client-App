@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   XCircle,
   ChevronRight,
+  ChevronLeft,
   MessageSquare,
   Banknote,
   AlertCircle,
@@ -35,6 +36,7 @@ import { GlassCard } from '../../components/home/GlassCard';
 import { CustomButton } from '../../components/CustomButton';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useMyDisputes, type DisputeRecord, type DisputeScope } from '../../hooks/queries/useDisputes';
+import { useIsRTL } from '../../context/LanguageContext';
 
 const formatPKR = (amount: number) => `Rs. ${Math.round(amount).toLocaleString('en-PK')}`;
 
@@ -57,6 +59,7 @@ export default function MyDisputesScreen() {
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const router = useRouter();
+  const isRTL = useIsRTL();
 
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
@@ -314,7 +317,11 @@ export default function MyDisputesScreen() {
                 </View>
               )}
             </View>
-            <ChevronRight size={15} color={theme.colors.brand.primary} />
+            {isRTL ? (
+              <ChevronLeft size={15} color={theme.colors.brand.primary} />
+            ) : (
+              <ChevronRight size={15} color={theme.colors.brand.primary} />
+            )}
           </TouchableOpacity>
         </GlassCard>
       </Animated.View>

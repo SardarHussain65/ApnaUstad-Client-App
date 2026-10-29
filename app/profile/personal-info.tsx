@@ -19,12 +19,12 @@ import {
   Camera,
   Check,
   Building2,
-  ChevronLeft,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeShadows, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
+import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -151,13 +151,7 @@ export default function PersonalInfoScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header */}
-          <Animated.View entering={FadeInDown.delay(0)} style={[styles.header, { paddingTop: insets.top + 8 }]}>
-            <TouchableOpacity style={[styles.backBtn, { backgroundColor: theme.colors.border.subtle, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
-              <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('personalInfo.title')}</Text>
-            <View style={{ width: 40 }} />
-          </Animated.View>
+          <ProfileHeader title={t('personalInfo.title')} />
 
           {/* Avatar */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.avatarSection}>

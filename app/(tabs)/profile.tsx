@@ -16,6 +16,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  ChevronLeft,
   Star,
   Camera,
   Settings,
@@ -43,6 +44,7 @@ import { BlurView } from 'expo-blur';
 import api from '../../services/api';
 import { getOptimizedImageUrl } from '../../constants/Config';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../../context/LanguageContext';
 
 
 const HEADER_HEIGHT = 240;
@@ -122,13 +124,17 @@ function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing:
 // ─── Menu Item ─────────────────────────────────────────────────────────────────
 function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { icon: any; label: string; sublabel?: string; delay: number; accent: string; onPress?: () => void }) {
   const theme = useTheme();
+  const isRTL = useIsRTL();
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View entering={FadeInRight.delay(delay).springify()} style={anim}>
-      <Pressable style={styles.menuItem} onPress={onPress}
+      <Pressable
+        style={styles.menuItem}
+        onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}>
+        onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
+      >
         {Platform.OS === 'ios'
           ? <BlurView intensity={theme.id === 'current' ? 16 : 8} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
           : <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface.card }]} />}
@@ -142,7 +148,11 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
             {sublabel ? <Text style={[styles.menuSub, { color: theme.colors.text.muted }]}>{sublabel}</Text> : null}
           </View>
         </View>
-        <ChevronRight size={15} color={theme.colors.text.dim} />
+        {isRTL ? (
+          <ChevronLeft size={15} color={theme.colors.text.dim} />
+        ) : (
+          <ChevronRight size={15} color={theme.colors.text.dim} />
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -152,6 +162,7 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
 export default function ProfileTab() {
   const { logout, role, user } = useAuth();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const themedTypography = useThemeTypography();
   const router = useRouter();
@@ -261,7 +272,7 @@ export default function ProfileTab() {
                 {workerProfile?.fullName || user?.fullName || 'User'}
               </Text>
               {isWorker && (workerProfile?.isVerified || (workerProfile?.rating ?? 0) >= 4.5) && (
-                <BadgeCheck size={20} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginLeft: 5, flexShrink: 0 }} />
+                <BadgeCheck size={20} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginHorizontal: 5, flexShrink: 0 }} />
               )}
             </View>
             <Text style={[styles.userSub, { color: theme.colors.text.muted }]}>{workerProfile?.email || user?.email || user?.phone || ''}</Text>
@@ -338,7 +349,16 @@ export default function ProfileTab() {
 
           {/* Logout */}
           <Animated.View entering={FadeInDown.delay(820)}>
-            <Pressable style={[styles.logoutBtn, { backgroundColor: alpha(theme.colors.status.error, 0.08), borderColor: alpha(theme.colors.status.error, 0.18) }]} onPress={handleLogout}>
+            <Pressable
+              style={[
+                styles.logoutBtn,
+                {
+                  backgroundColor: alpha(theme.colors.status.error, 0.08),
+                  borderColor: alpha(theme.colors.status.error, 0.18),
+                },
+              ]}
+              onPress={handleLogout}
+            >
               <LogOut size={16} color="#FF3B30" strokeWidth={2.3} />
               <Text style={[styles.logoutText, { color: theme.colors.status.error }]}>{t('profile.signOut')}</Text>
             </Pressable>
@@ -412,8 +432,8 @@ const styles = StyleSheet.create({
     borderRadius: 14, marginBottom: 8, overflow: 'hidden', borderWidth: 1,
     paddingHorizontal: 12, paddingVertical: 12, position: 'relative',
   },
-  menuAccentBar: { position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
-  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingLeft: 8 },
+  menuAccentBar: { position: 'absolute', start: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingStart: 8 },
   menuIconBox: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   menuLabel: { fontSize: 14, fontWeight: '700' },
   menuSub: { fontSize: 11, fontWeight: '500', marginTop: 1 },

@@ -1,41 +1,37 @@
 import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
+import { initReactI18next, useTranslation } from 'react-i18next';
 import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { I18nManager } from 'react-native';
-import * as Updates from 'expo-updates';
-import { DevSettings } from 'react-native';
 
 import en from './locales/en.json';
 import ur from './locales/ur.json';
 
 const LANGUAGE_KEY = 'user-language';
 
-// Custom language change helper that handles RTL switching & reloads app
+// Helper to reliably check if a language code or tag is Urdu
+export const isUrduLanguage = (lang?: string | null): boolean => {
+  if (!lang) return false;
+  const normalized = lang.toLowerCase().trim();
+  return normalized === 'ur' || normalized.startsWith('ur-') || normalized.startsWith('ur_');
+};
+
+// Hook to check if current language is Right-to-Left (Urdu)
+export const useIsRTL = (): boolean => {
+  const { i18n: instance } = useTranslation();
+  return isUrduLanguage(instance.language);
+};
+
+// Helper to switch language smoothly without jarring app reloads
 export const changeAppLanguage = async (lang: 'en' | 'ur') => {
   try {
-    await AsyncStorage.setItem(LANGUAGE_KEY, lang);
-    await i18n.changeLanguage(lang);
+    const targetLang = isUrduLanguage(lang) ? 'ur' : 'en';
+    await AsyncStorage.setItem(LANGUAGE_KEY, targetLang);
+    await i18n.changeLanguage(targetLang);
 
-    const isRTL = lang === 'ur';
-
-    // Check if direction needs to change
-    if (I18nManager.isRTL !== isRTL) {
-      I18nManager.allowRTL(isRTL);
-      I18nManager.forceRTL(isRTL);
-
-      // Reload app to apply RTL layout mirroring
-      setTimeout(() => {
-        if (__DEV__) {
-          DevSettings.reload();
-        } else {
-          Updates.reloadAsync().catch(err => {
-            console.warn('Updates.reloadAsync failed, falling back to DevSettings', err);
-            DevSettings.reload();
-          });
-        }
-      }, 150);
-    }
+    const isRtl = targetLang === 'ur';
+    I18nManager.allowRTL(isRtl);
+    I18nManager.forceRTL(isRtl);
   } catch (error) {
     console.error('Failed to change language:', error);
   }
@@ -49,36 +45,21 @@ const languageDetector = {
     try {
       const savedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
       if (savedLanguage) {
-        // Apply saved language RTL settings on launch if not matching
-        const isRTL = savedLanguage === 'ur';
-        if (I18nManager.isRTL !== isRTL) {
-          I18nManager.allowRTL(isRTL);
-          I18nManager.forceRTL(isRTL);
-          // Wait briefly, then reload to apply mirroring
-          if (__DEV__) {
-            DevSettings.reload();
-          } else {
-            Updates.reloadAsync().catch(() => DevSettings.reload());
-          }
-        }
-        return callback(savedLanguage);
+        const targetLang = isUrduLanguage(savedLanguage) ? 'ur' : 'en';
+        const isRtl = targetLang === 'ur';
+        I18nManager.allowRTL(isRtl);
+        I18nManager.forceRTL(isRtl);
+        return callback(targetLang);
       }
 
-      // If no saved language, use system language
+      // If no saved language, detect from system language
       const locales = Localization.getLocales();
-      const locale = locales[0]?.languageCode || 'en';
-      const initialLang = locale === 'ur' ? 'ur' : 'en';
+      const code = locales[0]?.languageCode || locales[0]?.languageTag || 'en';
+      const initialLang = isUrduLanguage(code) ? 'ur' : 'en';
 
-      const isSystemRTL = initialLang === 'ur';
-      if (I18nManager.isRTL !== isSystemRTL) {
-        I18nManager.allowRTL(isSystemRTL);
-        I18nManager.forceRTL(isSystemRTL);
-        if (__DEV__) {
-          DevSettings.reload();
-        } else {
-          Updates.reloadAsync().catch(() => DevSettings.reload());
-        }
-      }
+      const isSystemRtl = initialLang === 'ur';
+      I18nManager.allowRTL(isSystemRtl);
+      I18nManager.forceRTL(isSystemRtl);
 
       callback(initialLang);
     } catch (error) {

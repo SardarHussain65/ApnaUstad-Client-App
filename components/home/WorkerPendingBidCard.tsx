@@ -15,6 +15,7 @@ import {
 } from 'lucide-react-native';
 import { Bid, Job } from '../../hooks/queries/useMessagesAndJobs';
 import { alpha, BorderRadius, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
+import { useIsRTL } from '../../context/LanguageContext';
 
 interface WorkerPendingBidCardProps {
   bid: Bid;
@@ -55,6 +56,7 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   isWithdrawing = false,
 }: WorkerPendingBidCardProps) {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
@@ -212,7 +214,7 @@ const styles = StyleSheet.create({
   },
   accentLine: {
     position: 'absolute',
-    left: 0,
+    start: 0,
     top: 18,
     bottom: 18,
     width: 3,

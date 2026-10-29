@@ -4,10 +4,11 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { ShieldAlert, ShieldCheck, Hourglass, AlertCircle, ChevronRight, Sparkles } from 'lucide-react-native';
+import { ShieldAlert, ShieldCheck, Hourglass, AlertCircle, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { useIsRTL } from '../../context/LanguageContext';
 import api from '../../services/api';
 
 type VerificationStatus = 'loading' | 'verified' | 'pending' | 'rejected' | 'not_submitted';
@@ -21,6 +22,7 @@ interface VerificationDetails {
 export function WorkerVerificationBanner() {
   const router = useRouter();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { user } = useAuth();
   const theme = useTheme();
   const colors = useThemeColors();
