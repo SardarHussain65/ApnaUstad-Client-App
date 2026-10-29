@@ -323,10 +323,6 @@ export default function RegisterDetailsScreen() {
       );
       return false;
     }
-    if (isWorker && (!cnicFront || !cnicBack)) {
-      showError(t('registerDetails.missingFields'), t('registerDetails.missingCnicPhotos'));
-      return false;
-    }
     if (!city.trim() || city.trim().length < 2 || !password) {
       showError(t('registerDetails.missingFields'), t('registerDetails.fillRequired'));
       return false;
@@ -634,93 +630,27 @@ export default function RegisterDetailsScreen() {
 
                 {/* Single Unified Form Card */}
                 <GlassCard intensity={25} style={styles.unifiedCard}>
-                  {/* Worker CNIC Photos (Dual Image Selection) */}
+                  {/* Worker CNIC Notice (Verification is done after signup) */}
                   {isWorker && (
-                    <View style={styles.cnicBlock}>
-                      <View style={styles.cnicHeaderRow}>
-                        <View style={styles.cnicHeaderLeft}>
-                          <CreditCard size={18} color={accentColor} />
-                          <Text style={[styles.sectionTitle, { color: accentColor }]}>
-                            {t('registerDetails.cnicImagesSection', 'CNIC Photos (Front & Back)')}
-                          </Text>
-                        </View>
-                        {Boolean(cnicFront && cnicBack) && (
-                          <View style={[styles.cnicReadyBadge, { backgroundColor: alpha(colors.success, 0.15) }]}>
-                            <CheckCircle size={12} color={colors.success} />
-                            <Text style={[styles.cnicReadyText, { color: colors.success }]}>2/2</Text>
-                          </View>
-                        )}
+                    <View
+                      style={[
+                        styles.verificationNoteCard,
+                        {
+                          backgroundColor: alpha(accentColor, 0.08),
+                          borderColor: alpha(accentColor, 0.25),
+                        },
+                      ]}
+                    >
+                      <View style={[styles.verificationNoteIconWrap, { backgroundColor: alpha(accentColor, 0.15) }]}>
+                        <ShieldCheck size={20} color={accentColor} />
                       </View>
-
-                      {/* Select Both at Once Button */}
-                      <TouchableOpacity
-                        style={[
-                          styles.pickBothCnicBtn,
-                          {
-                            borderColor: alpha(accentColor, 0.45),
-                            backgroundColor: alpha(accentColor, 0.08),
-                          },
-                        ]}
-                        onPress={pickBothCnicImages}
-                        activeOpacity={0.75}
-                      >
-                        <Camera size={18} color={accentColor} />
-                        <Text style={[styles.pickBothCnicBtnText, { color: accentColor }]}>
-                          {t('registerDetails.selectBothCnic', 'SELECT BOTH PHOTOS AT ONCE')}
+                      <View style={styles.verificationNoteTextWrap}>
+                        <Text style={[styles.verificationNoteTitle, { color: accentColor }]}>
+                          {t('registerDetails.fastRegistration', 'Fast & Easy Sign Up')}
                         </Text>
-                      </TouchableOpacity>
-
-                      {/* Side-by-Side Front and Back Cards */}
-                      <View style={styles.cnicDualGrid}>
-                        {/* Front Side */}
-                        <TouchableOpacity
-                          style={[
-                            styles.cnicSideCard,
-                            cnicFront && { borderColor: accentColor, backgroundColor: alpha(accentColor, 0.06) },
-                          ]}
-                          onPress={() => pickImage('cnicFront')}
-                          activeOpacity={0.8}
-                        >
-                          {cnicFront ? (
-                            <View style={styles.cnicPreviewWrap}>
-                              <Image source={{ uri: cnicFront }} style={styles.cnicPreviewImg} />
-                              <View style={styles.cnicSideBadge}>
-                                <Text style={styles.cnicSideBadgeText}>{t('registerDetails.cnicFront')}</Text>
-                              </View>
-                            </View>
-                          ) : (
-                            <View style={styles.cnicEmptyContent}>
-                              <Camera size={22} color={accentColor} />
-                              <Text style={styles.cnicSideTitle}>{t('registerDetails.cnicFront')}</Text>
-                              <Text style={styles.cnicSideSub}>{t('common.tapToSelect', 'Tap to upload')}</Text>
-                            </View>
-                          )}
-                        </TouchableOpacity>
-
-                        {/* Back Side */}
-                        <TouchableOpacity
-                          style={[
-                            styles.cnicSideCard,
-                            cnicBack && { borderColor: accentColor, backgroundColor: alpha(accentColor, 0.06) },
-                          ]}
-                          onPress={() => pickImage('cnicBack')}
-                          activeOpacity={0.8}
-                        >
-                          {cnicBack ? (
-                            <View style={styles.cnicPreviewWrap}>
-                              <Image source={{ uri: cnicBack }} style={styles.cnicPreviewImg} />
-                              <View style={styles.cnicSideBadge}>
-                                <Text style={styles.cnicSideBadgeText}>{t('registerDetails.cnicBack')}</Text>
-                              </View>
-                            </View>
-                          ) : (
-                            <View style={styles.cnicEmptyContent}>
-                              <Camera size={22} color={accentColor} />
-                              <Text style={styles.cnicSideTitle}>{t('registerDetails.cnicBack')}</Text>
-                              <Text style={styles.cnicSideSub}>{t('common.tapToSelect', 'Tap to upload')}</Text>
-                            </View>
-                          )}
-                        </TouchableOpacity>
+                        <Text style={styles.verificationNoteSub}>
+                          {t('registerDetails.cnicOptionalNotice', 'CNIC verification is optional right now. You can verify your account anytime from your dashboard to unlock live customer jobs.')}
+                        </Text>
                       </View>
                     </View>
                   )}
@@ -1180,6 +1110,36 @@ const createStyles = (theme: AppTheme, colors: any) =>
       borderWidth: 1,
       borderColor: theme.colors.border.subtle,
       backgroundColor: theme.colors.surface.card,
+    },
+    verificationNoteCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: Spacing.m,
+      borderRadius: BorderRadius.lg,
+      borderWidth: 1,
+      marginBottom: 12,
+    },
+    verificationNoteIconWrap: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    verificationNoteTextWrap: {
+      flex: 1,
+      marginLeft: 10,
+    },
+    verificationNoteTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      marginBottom: 2,
+    },
+    verificationNoteSub: {
+      fontSize: 11.5,
+      lineHeight: 16,
+      color: theme.colors.text.muted,
+      fontWeight: '500',
     },
     cnicBlock: {
       marginBottom: 4,

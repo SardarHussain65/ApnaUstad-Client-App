@@ -467,13 +467,15 @@ export default function TransactionDetailsScreen() {
           {showDisputeStatusCorner ? (
             <TouchableOpacity 
               onPress={() => {
-                alertModal.showAlert(
-                  disputeMeta?.statusLabel || t('disputes.statusUnderReview', 'Under review'),
-                  disputeMeta?.nextStep || t('disputes.activeNotice', 'Cash payment is on hold until ApnaUstad completes review.'),
-                  undefined,
-                  'warning',
-                  t('common.ok', 'OK')
-                );
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (disputeMeta?.disputeId) {
+                  router.push({
+                    pathname: '/dispute-room' as any,
+                    params: { id: disputeMeta.disputeId },
+                  });
+                } else {
+                  router.push('/profile/my-disputes' as any);
+                }
               }} 
               style={[
                 styles.headerButton,

@@ -19,7 +19,7 @@ export default function SecurityScreen() {
 
   return (
     <BackgroundWrapper>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -42,25 +42,18 @@ export default function SecurityScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>{t('security.sectionTitle')}</Text>
-          <SecurityItem 
-            icon={Lock} 
-            label={t('changePassword.title')} 
-            onPress={() => router.push('/profile/change-password')} 
-            delay={300} 
+          <SecurityItem
+            icon={Lock}
+            label={t('changePassword.title')}
+            onPress={() => router.push('/profile/change-password')}
+            delay={300}
             primaryColor={colors.primary}
           />
-          <SecurityItem 
-            icon={Eye} 
-            label={t('security.policiesTerms')} 
-            onPress={() => router.push('/profile/privacy')} 
-            delay={350} 
-            primaryColor={colors.primary}
-          />
-          <SecurityItem 
-            icon={HelpCircle} 
-            label={t('security.reportIssue')} 
-            onPress={() => router.push('/profile/help-center')} 
-            delay={400} 
+          <SecurityItem
+            icon={Eye}
+            label={t('security.policiesTerms')}
+            onPress={() => router.push('/profile/privacy')}
+            delay={350}
             primaryColor={colors.primary}
           />
         </View>
@@ -83,7 +76,7 @@ function SecurityItem({ icon: Icon, label, onPress, delay, primaryColor }: Secur
       <TouchableOpacity onPress={onPress}>
         <GlassCard style={styles.itemCard} intensity={25} padding={Spacing.m}>
           <View style={styles.itemContent}>
-              <View style={[styles.itemIconBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+            <View style={[styles.itemIconBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
               <Icon size={20} color={primaryColor || theme.colors.text.primary} />
             </View>
             <Text style={[styles.itemLabel, { color: theme.colors.text.primary }]}>{label}</Text>

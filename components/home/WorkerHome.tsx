@@ -17,6 +17,7 @@ import { WorkerEarningsChart } from './WorkerEarningsChart';
 import { WorkerQuickInsights } from './WorkerQuickInsights';
 import { IncomingJobModal } from './IncomingJobModal';
 import { WorkerAvailabilityToggle } from './WorkerAvailabilityToggle';
+import { WorkerVerificationBanner } from './WorkerVerificationBanner';
 import {
   SkeletonBox,
   useShimmerTranslateX,
@@ -337,6 +338,8 @@ refreshControl={
          }
       >
         <HomeHeader />
+
+        <WorkerVerificationBanner />
 
         <View style={styles.toggleSection}>
           <WorkerAvailabilityToggle isOnline={isOnline} onToggle={toggleOnline} />

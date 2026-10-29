@@ -99,8 +99,16 @@ export default function NotificationsScreen() {
     }
 
     const bookingId = notification.booking ? String(notification.booking) : null;
-    if (notification.type === 'dispute' && !bookingId) {
-      router.push('/profile/my-disputes' as any);
+    const disputeId = (notification as any).disputeId || (notification as any).data?.disputeId;
+    if (notification.type === 'dispute') {
+      if (disputeId) {
+        router.push({
+          pathname: '/dispute-room' as any,
+          params: { id: disputeId },
+        });
+      } else {
+        router.push('/profile/my-disputes' as any);
+      }
       return;
     }
     if (bookingId) {

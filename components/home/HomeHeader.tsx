@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
-import { Bell, MapPin } from 'lucide-react-native';
-import { Spacing, Shadows, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { Bell, MapPin, BadgeCheck } from 'lucide-react-native';
+import { alpha, Spacing, Shadows, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications, useUserLocation } from '../../hooks';
 import { BlurView } from 'expo-blur';
@@ -54,7 +54,14 @@ export function HomeHeader() {
           </TouchableOpacity>
           <View style={styles.welcomeText}>
             <Text style={[styles.greetingLabel, typography.caption, { color: accentColor }]} numberOfLines={1}>{role === 'worker' ? t('home.worker.workerName', 'Worker Name') : t('home.client.clientName', 'Client Name')}</Text>
-            <Text style={[styles.greetingHeader, typography.h3, { color: theme.colors.text.primary }]} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.6}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
+            <View style={styles.nameRow}>
+              <Text style={[styles.greetingHeader, typography.h3, { color: theme.colors.text.primary }]} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.6}>{user?.fullName || t('home.client.welcomeBack', 'Welcome Back')}</Text>
+              {Boolean(user?.isVerified) && (
+                <View style={styles.verifiedIconWrap}>
+                  <BadgeCheck size={18} color="#34C759" fill={alpha('#34C759', 0.2)} />
+                </View>
+              )}
+            </View>
           </View>
         </View>
 
@@ -156,6 +163,16 @@ const styles = StyleSheet.create({
   greetingHeader: {
     fontSize: 22,
     fontWeight: '900',
+    flexShrink: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  verifiedIconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   locationContainer: {
     flexDirection: 'row',
