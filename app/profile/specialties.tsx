@@ -87,12 +87,31 @@ type Specialty = {
   subscriptionStatus: 'free' | 'pending_activation' | 'active' | 'payment_due' | 'expired';
   monthlyFeeSnapshot: number;
   autoRenew: boolean;
+  requestedAt?: string;
+  approvedAt?: string | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
   nextBillingAt?: string | null;
   graceEndsAt?: string | null;
+  lastChargedAt?: string | null;
+};
+
+type CustomProfessionRequest = {
+  _id: string;
+  professionName: string;
+  categoryDomain?: string;
+  description: string;
+  hourlyRate: number;
+  experience: number;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  certificates?: SpecialtyCertificate[];
+  createdAt: string;
 };
 
 type SpecialtyResponse = {
   specialties: Specialty[];
+  pendingCustomRequests?: CustomProfessionRequest[];
   maxSpecialties: number;
   freeSpecialtyLimit: number;
   additionalCategoryMonthlyFee: number;
@@ -114,7 +133,9 @@ const statusColor = (specialty: Specialty, colors: any) => {
 const formatDate = (value?: string | null) => {
   if (!value) return '';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-PK', { day: 'numeric', month: 'short' });
+  return Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const getErrorMessage = (error: any) => error?.response?.data?.message || error?.message || 'Please try again.';
@@ -169,6 +190,7 @@ export default function SpecialtiesScreen() {
       setWorkerCertificates(Array.isArray(workerData?.certificates) ? workerData.certificates : []);
       setData({
         specialties: specialtyData.specialties || [],
+        pendingCustomRequests: specialtyData.pendingCustomRequests || [],
         maxSpecialties: specialtyData.maxSpecialties || 5,
         freeSpecialtyLimit: specialtyData.freeSpecialtyLimit || 1,
         additionalCategoryMonthlyFee: Number(specialtyData.additionalCategoryMonthlyFee ?? walletData.additionalCategoryMonthlyFee ?? 500),
@@ -483,6 +505,7 @@ export default function SpecialtiesScreen() {
       showRechargePrompt(t('specialties.activatePay').toLowerCase());
       return;
     }
+    const targetCategoryId = typeof specialty.categoryId === 'object' ? (specialty.categoryId as any)?._id : specialty.categoryId;
     confirmModal.showConfirm(
       t('specialties.activateConfirmTitle'),
       t('specialties.activateConfirmDesc', { fee: formatPKR(fee) }),
@@ -490,7 +513,7 @@ export default function SpecialtiesScreen() {
         confirmModal.closeConfirm();
         void runAction(
           `activate-${specialty._id}`,
-          () => api.patch(`/workers/specialties/${specialty.categoryId._id}/activate`),
+          () => api.patch(`/workers/specialties/${targetCategoryId}/activate`),
           t('specialties.activatedDesc', { defaultValue: 'Your specialty is active and can receive matching jobs.' })
         );
       },
@@ -508,21 +531,42 @@ export default function SpecialtiesScreen() {
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
     runAction(
       'reorder',
-      () => api.patch('/workers/specialties/priorities', { categoryIds: next.map(item => item.categoryId._id) }),
+      () => api.patch('/workers/specialties/priorities', { categoryIds: next.map(item => typeof item.categoryId === 'object' ? (item.categoryId as any)._id : item.categoryId) }),
       t('specialties.priorityUpdatedDesc')
     );
   };
 
   const remove = (specialty: Specialty) => {
+    const targetCategoryId = typeof specialty.categoryId === 'object' ? (specialty.categoryId as any)?._id : specialty.categoryId;
+    const catName = typeof specialty.categoryId === 'object' ? (specialty.categoryId as any)?.name : 'this category';
     confirmModal.showConfirm(
       t('specialties.removeConfirmTitle'),
-      t('specialties.removeConfirmDesc', { category: specialty.categoryId.name }),
+      t('specialties.removeConfirmDesc', { category: catName }),
       () => {
         confirmModal.closeConfirm();
         void runAction(
           `remove-${specialty._id}`,
-          () => api.delete(`/workers/specialties/${specialty.categoryId._id}`),
+          () => api.delete(`/workers/specialties/${targetCategoryId}`),
           t('specialties.removedDesc')
+        );
+      },
+      undefined,
+      t('common.remove', { defaultValue: 'Remove' }),
+      t('common.cancel'),
+      colors.error
+    );
+  };
+
+  const removeCustomRequest = (req: CustomProfessionRequest) => {
+    confirmModal.showConfirm(
+      t('specialties.removeConfirmTitle', { defaultValue: 'Remove Request' }),
+      `Are you sure you want to cancel your request for "${req.professionName}"?`,
+      () => {
+        confirmModal.closeConfirm();
+        void runAction(
+          `remove-req-${req._id}`,
+          () => api.delete(`/workers/profession-request/${req._id}`),
+          'Profession request removed.'
         );
       },
       undefined,
@@ -853,6 +897,44 @@ export default function SpecialtiesScreen() {
             }
           }
           const specialtyCertificates = Array.from(mergedCertMap.values());
+
+          const isPrimary = specialty.tier === 'primary' || specialty.priority === 1;
+          const startDate = specialty.currentPeriodStart || specialty.approvedAt || specialty.requestedAt;
+          const expireDate = specialty.currentPeriodEnd || specialty.nextBillingAt;
+
+          let startLabel = 'STARTED';
+          let expireLabel = 'EXPIRES / RENEWS';
+          let startDateText = formatDate(startDate) || '—';
+          let expireDateText = '';
+          let expireColor = theme.colors.text.primary;
+
+          if (isPrimary) {
+            startLabel = 'ACTIVE SINCE';
+            expireLabel = 'EXPIRATION';
+            expireDateText = 'Free forever';
+            expireColor = colors.success;
+          } else if (specialty.subscriptionStatus === 'pending_activation') {
+            startLabel = 'APPROVED';
+            expireLabel = 'EXPIRATION';
+            expireDateText = '30 days upon activation';
+            expireColor = colors.yellow;
+          } else if (specialty.subscriptionStatus === 'expired') {
+            startLabel = 'STARTED';
+            expireLabel = 'EXPIRED ON';
+            expireDateText = formatDate(expireDate) || 'Expired';
+            expireColor = colors.error;
+          } else if (specialty.subscriptionStatus === 'payment_due') {
+            startLabel = 'STARTED';
+            expireLabel = 'GRACE ENDS';
+            expireDateText = formatDate(specialty.graceEndsAt || expireDate) || 'Payment due';
+            expireColor = colors.error;
+          } else {
+            startLabel = 'STARTED';
+            expireLabel = specialty.autoRenew ? 'RENEWS ON' : 'EXPIRES ON';
+            expireDateText = formatDate(expireDate) || '—';
+            expireColor = specialty.autoRenew ? colors.success : colors.yellow;
+          }
+
           return (
             <Animated.View key={specialty._id} entering={FadeInDown.delay(index * 60)} style={[styles.card, shadows.card, { backgroundColor: theme.colors.surface.card, borderColor: alpha(color, 0.28) }]}>
               <View style={styles.cardTop}>
@@ -889,14 +971,19 @@ export default function SpecialtiesScreen() {
                     ? t('specialties.feePerMonth', { fee: formatPKR(specialtyFee) })
                     : t('specialties.includedFree')}
                 </Text>
-                {specialty.nextBillingAt ? (
-                  <>
-                    <Clock3 size={13} color={theme.colors.text.muted} />
-                    <Text style={[styles.metaText, { color: theme.colors.text.muted }]}>
-                      {t('specialties.renewsOn', { date: formatDate(specialty.nextBillingAt) })}
-                    </Text>
-                  </>
-                ) : null}
+              </View>
+
+              {/* Start & Expire Date Strip */}
+              <View style={[styles.dateStrip, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <View style={styles.dateCol}>
+                  <Text style={[styles.dateLabel, { color: theme.colors.text.muted }]}>{startLabel}</Text>
+                  <Text style={[styles.dateValue, { color: theme.colors.text.primary }]}>{startDateText}</Text>
+                </View>
+                <View style={[styles.dateDivider, { backgroundColor: theme.colors.border.subtle }]} />
+                <View style={styles.dateCol}>
+                  <Text style={[styles.dateLabel, { color: theme.colors.text.muted }]}>{expireLabel}</Text>
+                  <Text style={[styles.dateValue, { color: expireColor }]}>{expireDateText}</Text>
+                </View>
               </View>
 
               <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
@@ -921,7 +1008,7 @@ export default function SpecialtiesScreen() {
                     <View style={styles.cardCertHeader}>
                       <Award size={13} color={theme.colors.brand.primary} />
                       <Text style={[styles.cardCertHeaderLabel, { color: theme.colors.text.muted }]}>
-                        {t('specialties.certificatesAttached', 'CERTIFICATES & DEGREES')} ({specialtyCertificates.length})
+                        {t('specialties.certificatesAttached', { count: specialtyCertificates.length, defaultValue: `${specialtyCertificates.length} certificate(s) attached` }).toUpperCase()}
                       </Text>
                     </View>
                     <View style={styles.cardCertList}>
@@ -997,6 +1084,102 @@ export default function SpecialtiesScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+            </Animated.View>
+          );
+        })}
+
+        {(data.pendingCustomRequests || []).map((req, reqIdx) => {
+          const isPending = req.status === 'pending';
+          const badgeBg = isPending ? `${colors.yellow}20` : `${colors.error}20`;
+          const badgeBorder = isPending ? `${colors.yellow}55` : `${colors.error}55`;
+          const badgeColor = isPending ? colors.yellow : colors.error;
+          return (
+            <Animated.View
+              key={req._id || `custom-req-${reqIdx}`}
+              entering={FadeInDown.delay(reqIdx * 60)}
+              style={[
+                styles.card,
+                shadows.card,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: isPending ? alpha(colors.yellow, 0.45) : alpha(colors.error, 0.45),
+                  borderStyle: 'dashed',
+                },
+              ]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 8, backgroundColor: badgeBg, borderWidth: 1, borderColor: badgeBorder }}>
+                  <Sparkles size={12} color={badgeColor} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: badgeColor, letterSpacing: 0.5 }}>
+                    {isPending ? 'SUGGESTED TRADE' : 'TRADE NOT ADDED'}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, backgroundColor: badgeBg }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: badgeColor }} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: badgeColor }}>
+                      {isPending ? 'Under Review' : 'Rejected'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.removeButton, { backgroundColor: alpha(theme.colors.status.error, 0.12) }]}
+                    disabled={!!workingKey}
+                    onPress={() => removeCustomRequest(req)}
+                  >
+                    <Trash2 size={14} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: theme.colors.text.primary, marginBottom: 2 }}>
+                  {req.professionName}
+                </Text>
+                <Text style={{ fontSize: 12, color: theme.colors.text.muted }}>
+                  {isPending ? 'Submitted for platform addition' : 'Admin review completed'}
+                </Text>
+              </View>
+
+              <View style={[styles.profileBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <View style={styles.profileStats}>
+                  <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                    Rs. {Number(req.hourlyRate || 0).toLocaleString('en-PK')}/hr
+                  </Text>
+                  <Text style={[styles.profileStat, { color: theme.colors.text.muted }]}> • </Text>
+                  <Text style={[styles.profileStat, { color: theme.colors.text.primary }]}>
+                    {req.experience} yrs exp
+                  </Text>
+                </View>
+                {(req.certificates || []).length > 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                    <Award size={12} color={theme.colors.brand.primary} />
+                    <Text style={{ fontSize: 11, color: theme.colors.text.muted }}>
+                      {(req.certificates || []).length} certificate(s) submitted
+                    </Text>
+                  </View>
+                )}
+                {!!req.description && (
+                  <Text style={[styles.bioText, { color: theme.colors.text.muted, marginTop: 6 }]} numberOfLines={2}>
+                    {req.description}
+                  </Text>
+                )}
+              </View>
+
+              {req.status === 'rejected' && !!req.rejectionReason && (
+                <View style={{ marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: alpha(colors.error, 0.1) }}>
+                  <Text style={{ fontSize: 12, color: colors.error }}>
+                    Reason: {req.rejectionReason}
+                  </Text>
+                </View>
+              )}
+
+              {isPending && (
+                <View style={{ marginTop: 10, padding: 10, borderRadius: 8, backgroundColor: alpha(colors.yellow, 0.08) }}>
+                  <Text style={{ fontSize: 11, color: theme.colors.text.muted }}>
+                    ℹ️ Our team is reviewing your requested trade. Once approved, it will be added to the platform services.
+                  </Text>
+                </View>
+              )}
             </Animated.View>
           );
         })}
@@ -1196,6 +1379,27 @@ export default function SpecialtiesScreen() {
       </View>
     </View>
   </Modal>
+
+  <ConfirmModal
+    visible={confirmModal.visible}
+    onConfirm={confirmModal.onConfirm}
+    onCancel={confirmModal.onCancel}
+    title={confirmModal.title}
+    message={confirmModal.message}
+    confirmText={confirmModal.confirmText}
+    cancelText={confirmModal.cancelText}
+    confirmColor={confirmModal.confirmColor}
+    isLoading={confirmModal.isLoading}
+  />
+
+  <AlertModal
+    visible={alertModal.visible}
+    onDismiss={alertModal.onDismiss}
+    title={alertModal.title}
+    message={alertModal.message}
+    type={alertModal.type}
+    buttonText={alertModal.buttonText}
+  />
   </BackgroundWrapper>
 );
 }
@@ -1551,6 +1755,35 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   metaText: { fontSize: 11, fontWeight: '700', marginRight: 4 },
+  dateStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+  },
+  dateCol: {
+    flex: 1,
+  },
+  dateDivider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 10,
+  },
+  dateLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  dateValue: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   profileBox: { borderRadius: 14, borderWidth: 1, padding: 12, marginTop: 12 },
   profileStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   profileStat: { fontSize: 12, fontWeight: '900' },
