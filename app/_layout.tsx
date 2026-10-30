@@ -9,6 +9,7 @@ import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { ThemeProvider, useTheme } from "../constants/Theme";
+import { LanguageProvider } from "../context/LanguageContext";
 
 
 const shouldRetryRequest = (failureCount: number, error: unknown) => {
@@ -94,13 +95,15 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <ThemeSystemChrome />
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <RootLayoutNav />
-        </QueryClientProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <ThemeSystemChrome />
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <RootLayoutNav />
+          </QueryClientProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

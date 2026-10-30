@@ -82,6 +82,7 @@ const handleNotificationTap = async (
     const data = notification.request.content.data;
     const notificationType = data?.type;
     const bookingId = data?.bookingId;
+    const disputeId = data?.disputeId;
     const jobId = data?.jobId;
     const categoryId = data?.categoryId;
     const notificationId = data?.notificationId;
@@ -148,7 +149,12 @@ const handleNotificationTap = async (
           break;
 
         case 'dispute':
-          if (bookingId) {
+          if (disputeId) {
+            router.push({
+              pathname: '/dispute-room' as any,
+              params: { id: disputeId },
+            });
+          } else if (bookingId) {
             router.push({
               pathname: '/transaction-details',
               params: { id: bookingId },
@@ -205,7 +211,12 @@ const handleNotificationTap = async (
           break;
 
         case 'dispute':
-          if (bookingId) {
+          if (disputeId) {
+            router.push({
+              pathname: '/dispute-room' as any,
+              params: { id: disputeId },
+            });
+          } else if (bookingId) {
             router.push({
               pathname: '/worker-details',
               params: { bookingId },

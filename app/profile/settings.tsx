@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Globe, Moon, Palette, Sparkles, Sun } from 'lucide-react-native';
+import { CheckCircle2, Globe, Moon, Palette, Sparkles, Sun, Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
@@ -18,32 +18,25 @@ import {
   useThemeShadows,
   useThemeTypography,
 } from '../../constants/Theme';
-import { changeAppLanguage } from '../../i18n';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function SettingsScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const theme = useTheme();
   const themedTypography = useThemeTypography();
   const themedShadows = useThemeShadows();
   const { themeId, setThemeId } = useThemeMode();
-  const currentLanguage = i18n.language;
+  const { language: currentLanguage, isRTL, setLanguage } = useLanguage();
 
-  const [selectedLang, setSelectedLang] = React.useState<'en' | 'ur'>(
-    (currentLanguage === 'ur' ? 'ur' : 'en')
-  );
-
-  React.useEffect(() => {
-    setSelectedLang(currentLanguage === 'ur' ? 'ur' : 'en');
-  }, [currentLanguage]);
-
-  const handleApply = async () => {
+  const handleLanguageSelect = async (lang: 'en' | 'ur') => {
+    if (currentLanguage === lang) return;
     try {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await changeAppLanguage(selectedLang);
+      Haptics.selectionAsync();
+      await setLanguage(lang);
       Toast.show({
         type: 'success',
-        text1: t('settings.title'),
-        text2: t('settings.languageUpdated'),
+        text1: lang === 'ur' ? 'زبان تبدیل ہو گئی' : 'Language Changed',
+        text2: lang === 'ur' ? 'اردو منتخب کی گئی ہے' : 'English is now active',
       });
     } catch (error) {
       console.error('Failed to change language:', error);
@@ -51,6 +44,7 @@ export default function SettingsScreen() {
   };
 
   const handleThemeSelect = async (nextThemeId: ThemeId) => {
+    if (themeId === nextThemeId) return;
     try {
       Haptics.selectionAsync();
       await setThemeId(nextThemeId);
@@ -69,30 +63,33 @@ export default function SettingsScreen() {
     }
   };
 
-  const isRTL = i18n.language === 'ur';
   const themeOptions: {
     id: ThemeId;
     label: string;
     description: string;
     Icon: typeof Palette;
+    previewColors: [string, string];
   }[] = [
       {
         id: 'current',
         label: t('settings.themeCurrent'),
         description: t('settings.themeCurrentDesc'),
         Icon: Sparkles,
+        previewColors: ['#00F5FF', '#090E24'],
       },
       {
         id: 'light',
         label: t('settings.themeLight'),
         description: t('settings.themeLightDesc'),
         Icon: Sun,
+        previewColors: ['#FFFFFF', '#0284C7'],
       },
       {
         id: 'dark',
         label: t('settings.themeDark'),
         description: t('settings.themeDarkDesc'),
         Icon: Moon,
+        previewColors: ['#121620', '#00F5FF'],
       },
     ];
 
@@ -100,57 +97,54 @@ export default function SettingsScreen() {
     <BackgroundWrapper>
       <View style={styles.container}>
         <ProfileHeader title={t('settings.title')} />
-        <ScrollView style={{ marginTop: Spacing.m }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ marginTop: Spacing.s }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-          <View style={styles.headerSection}>
-            <View style={styles.iconWrap}>
-              <LinearGradient colors={theme.colors.gradients.primary} style={styles.iconGlow} />
-              <View
-                style={[
-                  styles.iconCircle,
-                  {
-                    backgroundColor: theme.colors.surface.subtle,
-                    borderColor: theme.colors.border.strong,
-                  },
-                ]}
-              >
-                <Globe size={28} color={theme.colors.text.primary} />
-              </View>
+          {/* Section 1: App Language */}
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionIconRing, { backgroundColor: alpha(theme.colors.brand.primary, 0.12), borderColor: alpha(theme.colors.brand.primary, 0.3) }]}>
+              <Globe size={18} color={theme.colors.brand.primary} />
             </View>
-            <Text style={[styles.title, themedTypography.threeD, { color: theme.colors.text.primary }]}>{t('settings.language')}</Text>
-            <Text style={[styles.subtitle, { color: theme.colors.text.muted }]}>{t('settings.selectLanguage')}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('settings.language')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.colors.text.muted }]}>{t('settings.selectLanguage')}</Text>
+            </View>
+            <View style={[styles.currentPill, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.25) }]}>
+              <Text style={[styles.currentPillText, { color: theme.colors.brand.primary }]}>
+                {currentLanguage === 'ur' ? 'اردو' : 'English'}
+              </Text>
+            </View>
           </View>
 
-          <GlassCard style={[styles.languagesCard, { borderColor: theme.colors.border.subtle }]} intensity={25} padding={0}>
+          <GlassCard style={[styles.cardContainer, { borderColor: theme.colors.border.subtle }]} intensity={25} padding={0}>
             {/* English Item */}
             <Pressable
-              style={[
-                styles.languageItem,
-                selectedLang === 'en' && { backgroundColor: alpha(theme.colors.brand.primary, 0.06) },
+              style={({ pressed }) => [
+                styles.itemRow,
+                currentLanguage === 'en' && { backgroundColor: alpha(theme.colors.brand.primary, 0.08) },
+                pressed && { opacity: 0.8 },
               ]}
-              onPress={() => {
-                Haptics.selectionAsync();
-                setSelectedLang('en');
-              }}
+              onPress={() => handleLanguageSelect('en')}
             >
-              <View style={[styles.rowContent, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={styles.rowContent}>
                 <View
                   style={[
-                    styles.langIconCircle,
+                    styles.itemIconCircle,
                     {
-                      backgroundColor: selectedLang === 'en' ? alpha(theme.colors.brand.primary, 0.1) : theme.colors.surface.subtle,
-                      borderColor: selectedLang === 'en' ? alpha(theme.colors.brand.primary, 0.25) : theme.colors.border.subtle,
+                      backgroundColor: currentLanguage === 'en' ? alpha(theme.colors.brand.primary, 0.18) : theme.colors.surface.subtle,
+                      borderColor: currentLanguage === 'en' ? theme.colors.brand.primary : theme.colors.border.subtle,
                     },
                   ]}
                 >
-                  <Globe size={20} color={selectedLang === 'en' ? theme.colors.brand.primary : theme.colors.text.dim} />
+                  <Globe size={19} color={currentLanguage === 'en' ? theme.colors.brand.primary : theme.colors.text.dim} />
                 </View>
-                <View style={[styles.languageTextContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                  <Text style={[styles.languageName, { color: theme.colors.text.primary }]}>English</Text>
-                  <Text style={[styles.languageDetail, { color: theme.colors.text.dim }]}>انگریزی</Text>
+
+                <View style={styles.itemTextContainer}>
+                  <Text style={[styles.itemName, { color: theme.colors.text.primary }]}>English</Text>
+                  <Text style={[styles.itemDetail, { color: theme.colors.text.muted }]}>انگریزی • Default</Text>
                 </View>
-                <View style={[styles.radioButton, { borderColor: selectedLang === 'en' ? theme.colors.brand.primary : theme.colors.border.strong }]}>
-                  {selectedLang === 'en' && <View style={[styles.radioButtonInner, { backgroundColor: theme.colors.brand.primary, shadowColor: theme.colors.brand.primary }]} />}
+
+                <View style={[styles.checkCircle, { borderColor: currentLanguage === 'en' ? theme.colors.brand.primary : theme.colors.border.strong, backgroundColor: currentLanguage === 'en' ? theme.colors.brand.primary : 'transparent' }]}>
+                  {currentLanguage === 'en' && <Check size={13} color={theme.colors.button.primaryText} strokeWidth={3} />}
                 </View>
               </View>
             </Pressable>
@@ -159,110 +153,111 @@ export default function SettingsScreen() {
 
             {/* Urdu Item */}
             <Pressable
-              style={[
-                styles.languageItem,
-                selectedLang === 'ur' && { backgroundColor: alpha(theme.colors.brand.primary, 0.06) },
+              style={({ pressed }) => [
+                styles.itemRow,
+                currentLanguage === 'ur' && { backgroundColor: alpha(theme.colors.brand.primary, 0.08) },
+                pressed && { opacity: 0.8 },
               ]}
-              onPress={() => {
-                Haptics.selectionAsync();
-                setSelectedLang('ur');
-              }}
+              onPress={() => handleLanguageSelect('ur')}
             >
-              <View style={[styles.rowContent, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={styles.rowContent}>
                 <View
                   style={[
-                    styles.langIconCircle,
+                    styles.itemIconCircle,
                     {
-                      backgroundColor: selectedLang === 'ur' ? alpha(theme.colors.brand.primary, 0.1) : theme.colors.surface.subtle,
-                      borderColor: selectedLang === 'ur' ? alpha(theme.colors.brand.primary, 0.25) : theme.colors.border.subtle,
+                      backgroundColor: currentLanguage === 'ur' ? alpha(theme.colors.brand.primary, 0.18) : theme.colors.surface.subtle,
+                      borderColor: currentLanguage === 'ur' ? theme.colors.brand.primary : theme.colors.border.subtle,
                     },
                   ]}
                 >
-                  <Text style={[styles.urduSymbolText, { color: selectedLang === 'ur' ? theme.colors.brand.primary : theme.colors.text.dim }]}>ع</Text>
+                  <Text style={[styles.urduSymbolText, { color: currentLanguage === 'ur' ? theme.colors.brand.primary : theme.colors.text.dim }]}>ع</Text>
                 </View>
-                <View style={[styles.languageTextContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                  <Text style={[styles.languageName, styles.urduFont, { color: theme.colors.text.primary }]}>اردو</Text>
-                  <Text style={[styles.languageDetail, { color: theme.colors.text.dim }]}>Urdu</Text>
+
+                <View style={styles.itemTextContainer}>
+                  <Text style={[styles.itemName, styles.urduFont, { color: theme.colors.text.primary }]}>اردو</Text>
+                  <Text style={[styles.itemDetail, { color: theme.colors.text.muted }]}>Urdu • قومی زبان</Text>
                 </View>
-                <View style={[styles.radioButton, { borderColor: selectedLang === 'ur' ? theme.colors.brand.primary : theme.colors.border.strong }]}>
-                  {selectedLang === 'ur' && <View style={[styles.radioButtonInner, { backgroundColor: theme.colors.brand.primary, shadowColor: theme.colors.brand.primary }]} />}
+
+                <View style={[styles.checkCircle, { borderColor: currentLanguage === 'ur' ? theme.colors.brand.primary : theme.colors.border.strong, backgroundColor: currentLanguage === 'ur' ? theme.colors.brand.primary : 'transparent' }]}>
+                  {currentLanguage === 'ur' && <Check size={13} color={theme.colors.button.primaryText} strokeWidth={3} />}
                 </View>
               </View>
             </Pressable>
           </GlassCard>
 
-          <View style={styles.themeSection}>
-            <View style={styles.themeHeader}>
-              <Palette size={18} color={theme.colors.brand.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('settings.theme')}</Text>
-                <Text style={[styles.sectionSubtitle, { color: theme.colors.text.muted }]}>{t('settings.selectTheme')}</Text>
-              </View>
+          {/* Section 2: Screen Style / Theme */}
+          <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+            <View style={[styles.sectionIconRing, { backgroundColor: alpha(theme.colors.brand.secondary, 0.12), borderColor: alpha(theme.colors.brand.secondary, 0.3) }]}>
+              <Palette size={18} color={theme.colors.brand.secondary} />
             </View>
-
-            <GlassCard style={[styles.themeCard, { borderColor: theme.colors.border.subtle }]} intensity={18} padding={0}>
-              {themeOptions.map((option, index) => {
-                const selected = themeId === option.id;
-                const Icon = option.Icon;
-                return (
-                  <React.Fragment key={option.id}>
-                    <Pressable
-                      style={[
-                        styles.themeItem,
-                        selected && { backgroundColor: alpha(theme.colors.brand.primary, 0.07) },
-                      ]}
-                      onPress={() => handleThemeSelect(option.id)}
-                    >
-                      <View style={[styles.rowContent, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                        <View
-                          style={[
-                            styles.langIconCircle,
-                            {
-                              backgroundColor: selected ? alpha(theme.colors.brand.primary, 0.1) : theme.colors.surface.subtle,
-                              borderColor: selected ? alpha(theme.colors.brand.primary, 0.25) : theme.colors.border.subtle,
-                            },
-                          ]}
-                        >
-                          <Icon size={20} color={selected ? theme.colors.brand.primary : theme.colors.text.dim} />
-                        </View>
-                        <View style={[styles.languageTextContainer, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                          <Text style={[styles.languageName, { color: theme.colors.text.primary }]}>{option.label}</Text>
-                          <Text style={[styles.languageDetail, { color: theme.colors.text.muted }]}>{option.description}</Text>
-                        </View>
-                        <View style={[styles.radioButton, { borderColor: selected ? theme.colors.brand.primary : theme.colors.border.strong }]}>
-                          {selected && <View style={[styles.radioButtonInner, { backgroundColor: theme.colors.brand.primary, shadowColor: theme.colors.brand.primary }]} />}
-                        </View>
-                      </View>
-                    </Pressable>
-                    {index < themeOptions.length - 1 && <View style={[styles.divider, { backgroundColor: theme.colors.border.subtle }]} />}
-                  </React.Fragment>
-                );
-              })}
-            </GlassCard>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('settings.theme')}</Text>
+              <Text style={[styles.sectionSubtitle, { color: theme.colors.text.muted }]}>{t('settings.selectTheme')}</Text>
+            </View>
+            <View style={[styles.currentPill, { backgroundColor: alpha(theme.colors.brand.secondary, 0.1), borderColor: alpha(theme.colors.brand.secondary, 0.25) }]}>
+              <Text style={[styles.currentPillText, { color: theme.colors.brand.secondary }]}>
+                {themeOptions.find(o => o.id === themeId)?.label || 'Theme'}
+              </Text>
+            </View>
           </View>
 
-          {/* Action Button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.applyButton,
-              {
-                shadowColor: theme.colors.brand.primary,
-                shadowOpacity: themedShadows.glow.shadowOpacity,
-              },
-              pressed && styles.applyButtonPressed,
-            ]}
-            onPress={handleApply}
-          >
-            <LinearGradient
-              colors={theme.colors.gradients.primary}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <Text style={[styles.applyButtonText, { color: theme.colors.button.primaryText }]}>{t('settings.confirmButton')}</Text>
-          </Pressable>
+          <GlassCard style={[styles.cardContainer, { borderColor: theme.colors.border.subtle }]} intensity={20} padding={0}>
+            {themeOptions.map((option, index) => {
+              const selected = themeId === option.id;
+              const Icon = option.Icon;
+              return (
+                <React.Fragment key={option.id}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.itemRow,
+                      selected && { backgroundColor: alpha(theme.colors.brand.primary, 0.08) },
+                      pressed && { opacity: 0.8 },
+                    ]}
+                    onPress={() => handleThemeSelect(option.id)}
+                  >
+                    <View style={styles.rowContent}>
+                      <View
+                        style={[
+                          styles.itemIconCircle,
+                          {
+                            backgroundColor: selected ? alpha(theme.colors.brand.primary, 0.18) : theme.colors.surface.subtle,
+                            borderColor: selected ? theme.colors.brand.primary : theme.colors.border.subtle,
+                          },
+                        ]}
+                      >
+                        <Icon size={19} color={selected ? theme.colors.brand.primary : theme.colors.text.dim} />
+                      </View>
 
-          <Text style={[styles.infoText, { color: theme.colors.text.dim }]}>{t('settings.appliedInstantly')}</Text>
+                      <View style={styles.itemTextContainer}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={[styles.itemName, { color: theme.colors.text.primary }]}>{option.label}</Text>
+                          {/* Mini swatch preview dots */}
+                          <View style={styles.swatchWrap}>
+                            <View style={[styles.swatchDot, { backgroundColor: option.previewColors[0] }]} />
+                            <View style={[styles.swatchDot, { backgroundColor: option.previewColors[1], marginStart: -4 }]} />
+                          </View>
+                        </View>
+                        <Text style={[styles.itemDetail, { color: theme.colors.text.muted }]}>{option.description}</Text>
+                      </View>
+
+                      <View style={[styles.checkCircle, { borderColor: selected ? theme.colors.brand.primary : theme.colors.border.strong, backgroundColor: selected ? theme.colors.brand.primary : 'transparent' }]}>
+                        {selected && <Check size={13} color={theme.colors.button.primaryText} strokeWidth={3} />}
+                      </View>
+                    </View>
+                  </Pressable>
+                  {index < themeOptions.length - 1 && <View style={[styles.divider, { backgroundColor: theme.colors.border.subtle }]} />}
+                </React.Fragment>
+              );
+            })}
+          </GlassCard>
+
+          {/* Instant Apply Notice Pill */}
+          <View style={[styles.instantNotice, { backgroundColor: alpha(theme.colors.surface.card, 0.6), borderColor: theme.colors.border.subtle }]}>
+            <Sparkles size={14} color={theme.colors.brand.primary} />
+            <Text style={[styles.instantNoticeText, { color: theme.colors.text.muted }]}>
+              {t('settings.appliedInstantly', { defaultValue: 'Changes apply immediately across all screens.' })}
+            </Text>
+          </View>
         </ScrollView>
       </View>
     </BackgroundWrapper>
@@ -274,152 +269,127 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.l,
   },
-  headerSection: {
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
+    gap: 12,
+    marginBottom: 12,
     marginTop: 10,
   },
-  iconWrap: {
-    width: 88,
-    height: 88,
-    marginBottom: 16,
-  },
-  iconGlow: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 44,
-    opacity: 0.35,
-  },
-  iconCircle: {
-    flex: 1,
-    borderRadius: 44,
+  sectionIconRing: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    marginBottom: 6,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.2,
   },
-  subtitle: {
-    textAlign: 'center',
-    fontSize: 14,
+  sectionSubtitle: {
+    fontSize: 12,
     fontWeight: '600',
+    marginTop: 1,
   },
-  languagesCard: {
+  currentPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  currentPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  cardContainer: {
     borderRadius: BorderRadius.l,
     overflow: 'hidden',
     borderWidth: 1.2,
   },
-  languageItem: {
-    paddingVertical: 18,
+  itemRow: {
+    paddingVertical: 14,
     paddingHorizontal: Spacing.m,
   },
   rowContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
   },
-  langIconCircle: {
+  itemIconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 13,
+    borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   urduSymbolText: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
   },
-  languageTextContainer: {
+  itemTextContainer: {
     flex: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 14,
   },
-  languageName: {
-    fontSize: 16,
+  itemName: {
+    fontSize: 15,
     fontWeight: '800',
     marginBottom: 2,
   },
-  languageDetail: {
-    fontSize: 11,
-    fontWeight: '600',
+  itemDetail: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
   },
   urduFont: {
     fontSize: 17,
+    fontWeight: '700',
   },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
+  swatchWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  radioButtonInner: {
+  swatchDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   divider: {
     height: 1,
     marginHorizontal: Spacing.m,
   },
-  themeSection: {
-    marginTop: 22,
-  },
-  themeHeader: {
+  instantNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  themeCard: {
-    borderRadius: BorderRadius.l,
-    overflow: 'hidden',
-    borderWidth: 1.2,
-  },
-  themeItem: {
-    paddingVertical: 16,
-    paddingHorizontal: Spacing.m,
-  },
-  applyButton: {
-    height: 54,
-    borderRadius: BorderRadius.m,
-    overflow: 'hidden',
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    borderRadius: BorderRadius.m,
+    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginTop: 24,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 20,
-    elevation: 15,
   },
-  applyButtonPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.985 }],
-  },
-  applyButtonText: {
-    fontSize: 15,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  infoText: {
-    textAlign: 'center',
+  instantNoticeText: {
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 20,
   },
 });

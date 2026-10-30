@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Shield, Lock, HelpCircle, ChevronRight, Eye } from 'lucide-react-native';
+import { Shield, Lock, ChevronRight, ChevronLeft, Eye } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useThemeTypography, useThemeColors, Spacing } from '../../constants/Theme';
@@ -9,6 +9,7 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
 import { useRouter } from 'expo-router';
+import { useIsRTL } from '../../context/LanguageContext';
 
 export default function SecurityScreen() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function SecurityScreen() {
 
   return (
     <BackgroundWrapper>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -42,25 +43,18 @@ export default function SecurityScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>{t('security.sectionTitle')}</Text>
-          <SecurityItem 
-            icon={Lock} 
-            label={t('changePassword.title')} 
-            onPress={() => router.push('/profile/change-password')} 
-            delay={300} 
+          <SecurityItem
+            icon={Lock}
+            label={t('changePassword.title')}
+            onPress={() => router.push('/profile/change-password')}
+            delay={300}
             primaryColor={colors.primary}
           />
-          <SecurityItem 
-            icon={Eye} 
-            label={t('security.policiesTerms')} 
-            onPress={() => router.push('/profile/privacy')} 
-            delay={350} 
-            primaryColor={colors.primary}
-          />
-          <SecurityItem 
-            icon={HelpCircle} 
-            label={t('security.reportIssue')} 
-            onPress={() => router.push('/profile/help-center')} 
-            delay={400} 
+          <SecurityItem
+            icon={Eye}
+            label={t('security.policiesTerms')}
+            onPress={() => router.push('/profile/privacy')}
+            delay={350}
             primaryColor={colors.primary}
           />
         </View>
@@ -78,16 +72,21 @@ interface SecurityItemProps {
 
 function SecurityItem({ icon: Icon, label, onPress, delay, primaryColor }: SecurityItemProps & { primaryColor?: string }) {
   const theme = useTheme();
+  const isRTL = useIsRTL();
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
       <TouchableOpacity onPress={onPress}>
         <GlassCard style={styles.itemCard} intensity={25} padding={Spacing.m}>
           <View style={styles.itemContent}>
-              <View style={[styles.itemIconBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+            <View style={[styles.itemIconBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
               <Icon size={20} color={primaryColor || theme.colors.text.primary} />
             </View>
             <Text style={[styles.itemLabel, { color: theme.colors.text.primary }]}>{label}</Text>
-            <ChevronRight size={18} color={theme.colors.text.dim} />
+            {isRTL ? (
+              <ChevronLeft size={18} color={theme.colors.text.dim} />
+            ) : (
+              <ChevronRight size={18} color={theme.colors.text.dim} />
+            )}
           </View>
         </GlassCard>
       </TouchableOpacity>
@@ -132,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginEnd: 16,
   },
   itemContent: {
     flexDirection: 'row',

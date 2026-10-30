@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassCard } from './GlassCard';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { EarningsSummary } from '../../hooks/useWorkerAnalytics';
+import { useIsRTL } from '../../context/LanguageContext';
 
 interface WorkerQuickInsightsProps {
   summary: EarningsSummary;
@@ -15,6 +16,7 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
   summary,
 }: WorkerQuickInsightsProps) {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
@@ -35,7 +37,7 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
       color: colors.cyan,
       tint: alpha(colors.cyan, 0.12),
       value: String(summary.thisWeekJobs || 0),
-      label: t('home.worker.jobsThisWeek', 'Jobs this week'),
+      label: t('home.worker.jobsThisWeek', { count: summary.thisWeekJobs || 0, defaultValue: 'Jobs this week' }),
       meta: `Rs. ${(summary.thisWeekEarnings || 0).toLocaleString()}`,
     },
     {

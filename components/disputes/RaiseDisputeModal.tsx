@@ -6,7 +6,7 @@ import { ImagePlus, Info, Scale } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { BeautifulModal } from '../ui/BeautifulModal';
 import { alpha, useTheme } from '../../constants/Theme';
-import { raiseDisputeRequest, type DisputeReason } from '../../hooks/queries/useDisputes';
+import { raiseDisputeRequest, uploadDisputeEvidence, type DisputeReason } from '../../hooks/queries/useDisputes';
 import { queryKeys } from '../../lib/queryKeyFactory';
 import api from '../../services/api';
 
@@ -64,19 +64,7 @@ export function RaiseDisputeModal({ visible, onClose, bookingId, jobAmount = 0, 
     setSubmitting(true);
     setError('');
     try {
-      const formData = new FormData();
-      result.assets.forEach((asset, index) => {
-        formData.append('images', {
-          uri: asset.uri,
-          name: asset.fileName || `dispute-proof-${Date.now()}-${index}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
-        } as any);
-      });
-
-      const response = await api.post('/jobs/upload-images', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const uploaded = response.data?.data?.imageUrls || response.data?.imageUrls || [];
+      const uploaded = await uploadDisputeEvidence(result.assets);
       setProofImages((current) => [...current, ...uploaded].slice(0, 3));
     } catch {
       setError(t('disputes.uploadFailed', 'Could not upload proof photos. You can still submit without them.'));

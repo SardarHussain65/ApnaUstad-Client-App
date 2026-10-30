@@ -25,6 +25,7 @@ import {
   Bell,
   Briefcase,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -38,9 +39,15 @@ import {
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Spacing, Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
+import { Spacing, useTheme, useThemeColors, useThemeTypography, alpha } from '../constants/Theme';
+import { useLanguage } from '../context/LanguageContext';
 import { useMarkNotificationReadMutation, useNotifications, type AppNotification } from '../hooks';
 import { socketService } from '../services/socketService';
+import {
+  localizeNotificationTitle,
+  localizeNotificationMessage,
+  formatLocalizedTime,
+} from '../utils/notificationLocalization';
 
 type FilterKey = 'all' | 'unread' | 'missions' | 'payments';
 
@@ -55,8 +62,10 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { language, isRTL } = useLanguage();
   const theme = useTheme();
   const colors = useThemeColors();
+  const typography = useThemeTypography();
   const legacyColors = theme.legacy;
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data, isLoading, isRefetching, refetch } = useNotifications();
@@ -99,8 +108,16 @@ export default function NotificationsScreen() {
     }
 
     const bookingId = notification.booking ? String(notification.booking) : null;
-    if (notification.type === 'dispute' && !bookingId) {
-      router.push('/profile/my-disputes' as any);
+    const disputeId = (notification as any).disputeId || (notification as any).data?.disputeId;
+    if (notification.type === 'dispute') {
+      if (disputeId) {
+        router.push({
+          pathname: '/dispute-room' as any,
+          params: { id: disputeId },
+        });
+      } else {
+        router.push('/profile/my-disputes' as any);
+      }
       return;
     }
     if (bookingId) {
@@ -126,12 +143,16 @@ export default function NotificationsScreen() {
             onPress={() => router.back()} 
             activeOpacity={0.8}
           >
-            <ChevronLeft color={theme.colors.text.primary} size={24} />
+            {isRTL ? (
+              <ChevronRight color={theme.colors.text.primary} size={24} />
+            ) : (
+              <ChevronLeft color={theme.colors.text.primary} size={24} />
+            )}
           </TouchableOpacity>
 
           <View style={styles.headerText}>
             <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('notifications.eyebrow')}</Text>
-            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('notifications.title')}</Text>
+            <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('notifications.title')}</Text>
           </View>
 
           <View style={[
@@ -241,7 +262,14 @@ export default function NotificationsScreen() {
                 entering={FadeInDown.delay(index * 55).springify().damping(16)}
                 layout={Layout.springify().damping(18)}
               >
-                <NotificationCard notification={notification} onPress={() => openNotification(notification)} theme={theme} />
+                <NotificationCard
+                  notification={notification}
+                  onPress={() => openNotification(notification)}
+                  onMarkRead={() => markRead({ notificationId: notification._id })}
+                  theme={theme}
+                  isUrdu={language === 'ur'}
+                  isRTL={isRTL}
+                />
               </Animated.View>
             ))}
 
@@ -263,14 +291,53 @@ export default function NotificationsScreen() {
   );
 }
 
-function NotificationCard({ notification, onPress, theme }: { notification: AppNotification; onPress: () => void; theme: ReturnType<typeof useTheme> }) {
+function NotificationCard({
+  notification,
+  onPress,
+  onMarkRead,
+  theme,
+  isUrdu,
+  isRTL,
+}: {
+  notification: AppNotification;
+  onPress: () => void;
+  onMarkRead: () => void;
+  theme: ReturnType<typeof useTheme>;
+  isUrdu: boolean;
+  isRTL: boolean;
+}) {
   const Icon = getNotificationIcon(notification.type);
   const accent = notification.color || getNotificationColor(notification.type, theme);
   const unread = !notification.isRead;
   const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const title = localizeNotificationTitle(notification.title, isUrdu);
+  const message = localizeNotificationMessage(notification.message, isUrdu);
+  const time = formatLocalizedTime(notification.createdAt, t, isUrdu);
+  const isLongMessage = (message?.length || 0) > 55;
+  const hasAction = Boolean(notification.booking || (notification as any).disputeId || (notification as any).data?.disputeId);
+
+  const handleCardPress = () => {
+    if (unread) {
+      onMarkRead();
+    }
+    if (isLongMessage) {
+      setIsExpanded((prev) => !prev);
+    } else if (hasAction) {
+      onPress();
+    }
+  };
+
+  const handleActionPress = () => {
+    if (unread) {
+      onMarkRead();
+    }
+    onPress();
+  };
 
   return (
-    <TouchableOpacity activeOpacity={0.88} onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.88} onPress={handleCardPress}>
       <GlassCard
         padding={0}
         intensity={unread ? 34 : 18}
@@ -286,32 +353,71 @@ function NotificationCard({ notification, onPress, theme }: { notification: AppN
         />
 
         <View style={[styles.iconBox, { backgroundColor: accent + '18', borderColor: accent + '45' }]}>
-          <Icon size={22} color={accent} strokeWidth={2.25} />
+          <Icon size={20} color={accent} strokeWidth={2.25} />
           {unread && <PulseDot color={accent} />}
         </View>
 
         <View style={styles.notificationBody}>
           <View style={styles.notificationTop}>
             <Text style={[styles.typeLabel, { color: theme.colors.brand.primary }]}>{getTypeLabel(notification.type, t)}</Text>
-            <Text style={[styles.notificationTime, { color: theme.colors.text.muted }]}>{formatNotificationTime(notification.createdAt, t)}</Text>
+            <Text style={[styles.notificationTime, { color: theme.colors.text.muted }]}>{time}</Text>
           </View>
 
           <View style={styles.titleRow}>
-            <Text style={[styles.notificationTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>{notification.title}</Text>
+            <Text
+              style={[styles.notificationTitle, { color: theme.colors.text.primary }]}
+              numberOfLines={isExpanded ? undefined : 1}
+            >
+              {title}
+            </Text>
             {unread && <View style={[styles.unreadDot, { backgroundColor: accent }]} />}
           </View>
 
-          <Text style={[styles.notificationMessage, { color: theme.colors.text.secondary }]} numberOfLines={2}>{notification.message}</Text>
+          <Text
+            style={[styles.notificationMessage, { color: theme.colors.text.secondary }]}
+            numberOfLines={isExpanded ? undefined : 2}
+          >
+            {message}
+          </Text>
+
+          {isLongMessage && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setIsExpanded((prev) => !prev)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.expandToggle}
+            >
+              <Text style={[styles.expandToggleText, { color: theme.colors.brand.primary }]}>
+                {isExpanded ? t('notifications.showLess', 'Show less') : t('notifications.showMore', 'Read more')}
+              </Text>
+              <ChevronDown
+                size={12}
+                color={theme.colors.brand.primary}
+                style={{ transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }}
+              />
+            </TouchableOpacity>
+          )}
 
           <View style={styles.footerRow}>
             <Text style={[styles.statusText, unread ? { color: accent } : { color: theme.colors.text.muted }]}>
               {unread ? t('notifications.statusNew') : t('notifications.statusRead')}
             </Text>
-            {notification.booking && (
-              <View style={styles.openHint}>
-                <Text style={[styles.openHintText, { color: theme.colors.brand.primary }]}>{t('notifications.hintOpen')}</Text>
-                <ChevronRight size={13} color={theme.colors.brand.primary} />
-              </View>
+            {hasAction && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleActionPress}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                style={styles.openHint}
+              >
+                <Text style={[styles.openHintText, { color: theme.colors.brand.primary }]}>
+                  {t('notifications.hintOpen')}
+                </Text>
+                {isRTL ? (
+                  <ChevronLeft size={13} color={theme.colors.brand.primary} />
+                ) : (
+                  <ChevronRight size={13} color={theme.colors.brand.primary} />
+                )}
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -379,21 +485,6 @@ function getNotificationColor(type: AppNotification['type'], theme: ReturnType<t
 
 function getTypeLabel(type: AppNotification['type'], t: any) {
   return t(`notifications.types.${type}`) || t('notifications.types.general');
-}
-
-function formatNotificationTime(value: string, t: any) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return t('notifications.recently');
-
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return t('notifications.now');
-  if (minutes < 60) return `${minutes}m`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 const styles = StyleSheet.create({
@@ -548,15 +639,17 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   notificationShell: {
-    borderRadius: 24,
-    minHeight: 124,
+    borderRadius: 20,
+    minHeight: 82,
     overflow: 'hidden',
   },
   notificationContent: {
-    minHeight: 124,
-    padding: 14,
+    minHeight: 82,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   cardWash: {
     position: 'absolute',
@@ -567,13 +660,13 @@ const styles = StyleSheet.create({
     opacity: 0.78,
   },
   iconBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginTop: 2,
   },
   pulseWrap: {
     position: 'absolute',
@@ -621,14 +714,14 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 4,
     gap: 8,
   },
   notificationTitle: {
     flex: 1,
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '800',
   },
   unreadDot: {
     width: 8,
@@ -640,13 +733,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     lineHeight: 18,
+    marginTop: 4,
+  },
+  expandToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  expandToggleText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 8,
   },
   statusText: {
     color: 'rgba(255,255,255,0.34)',

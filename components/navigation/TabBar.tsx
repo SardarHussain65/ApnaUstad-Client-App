@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
   withSpring,
   interpolateColor,
   withTiming
@@ -16,7 +16,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-const TAB_BAR_WIDTH = width - 40; 
+const TAB_BAR_WIDTH = width - 40;
 const TAB_WIDTH = TAB_BAR_WIDTH / 4;
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -26,9 +26,9 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
   useEffect(() => {
     translateX.value = withSpring(state.index * TAB_WIDTH, {
-       damping: 20,
-       stiffness: 150,
-       mass: 0.8
+      damping: 20,
+      stiffness: 150,
+      mass: 0.8
     });
   }, [state.index]);
 
@@ -65,7 +65,11 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         },
       ]}
     >
-      <BlurView intensity={theme.id === 'current' ? 60 : 18} tint={theme.blurTint} style={styles.blurContainer}>
+      <BlurView
+        intensity={theme.id === 'current' ? 60 : 18}
+        tint={theme.blurTint}
+        style={styles.blurContainer}
+      >
         {/* Active Indicator (Glowing Pill) */}
         <Animated.View
           style={[
@@ -78,20 +82,22 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           ]}
         />
 
-        {state.routes.map((route, index) => {
-          const isFocused = state.index === index;
-          
-          return (
-            <TabItem 
-              key={route.key}
-              isFocused={isFocused}
-              onPress={() => handlePress(route, isFocused)}
-              routeName={route.name}
-              activeColor={theme.colors.tabBar.activeIcon}
-              inactiveColor={theme.colors.tabBar.inactiveIcon}
-            />
-          );
-        })}
+        <View style={styles.tabsRow}>
+          {state.routes.map((route, index) => {
+            const isFocused = state.index === index;
+
+            return (
+              <TabItem
+                key={route.key}
+                isFocused={isFocused}
+                onPress={() => handlePress(route, isFocused)}
+                routeName={route.name}
+                activeColor={theme.colors.tabBar.activeIcon}
+                inactiveColor={theme.colors.tabBar.inactiveIcon}
+              />
+            );
+          })}
+        </View>
       </BlurView>
     </View>
   );
@@ -145,13 +151,13 @@ function TabItem({
   };
 
   const getLabel = () => {
-     switch (routeName) {
-       case 'index': return t('tabs.home');
-       case 'bookings': return t('tabs.bookings');
-       case 'wallet': return t('tabs.wallet');
-       case 'profile': return t('tabs.profile');
-       default: return '';
-     }
+    switch (routeName) {
+      case 'index': return t('tabs.home');
+      case 'bookings': return t('tabs.bookings');
+      case 'wallet': return t('tabs.wallet');
+      case 'profile': return t('tabs.profile');
+      default: return '';
+    }
   }
 
   // We manually handle color transition for the icon component since it's not a native property reanimated interpolates on non-SVG components directly
@@ -191,6 +197,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  tabsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
   },
   activeIndicator: {
     position: 'absolute',

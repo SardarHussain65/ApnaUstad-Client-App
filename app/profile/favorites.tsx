@@ -15,6 +15,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
+  ChevronRight,
   Star,
   Briefcase,
   MapPin,
@@ -25,6 +26,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../../context/LanguageContext';
 
 import { alpha, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
@@ -204,6 +206,7 @@ export default function FavoritesScreen() {
   const { user } = useAuth();
   const theme = useTheme();
   const colors = useThemeColors();
+  const isRTL = useIsRTL();
 
   const { data: workers = [], isLoading, refetch } = useFavoriteWorkers(user?._id);
 
@@ -237,7 +240,11 @@ export default function FavoritesScreen() {
           style={[styles.header, { paddingTop: insets.top + 16 }]}
         >
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
-            <ChevronLeft color={theme.colors.text.primary} size={22} />
+            {isRTL ? (
+              <ChevronRight color={theme.colors.text.primary} size={22} />
+            ) : (
+              <ChevronLeft color={theme.colors.text.primary} size={22} />
+            )}
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>

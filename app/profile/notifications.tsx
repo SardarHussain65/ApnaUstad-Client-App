@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginBottom: 12,
-    marginLeft: 4,
+    marginHorizontal: 4,
   },
   itemCard: {
     marginBottom: 12,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginEnd: 16,
   },
   itemLabel: {
     flex: 1,

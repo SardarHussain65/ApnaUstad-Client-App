@@ -29,7 +29,7 @@ import {
 } from 'lucide-react-native';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Spacing, Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
+import { Spacing, useTheme, useThemeColors, useThemeTypography, alpha } from '../constants/Theme';
 import { useBookingDetails, useCreateReviewMutation, useToast } from '../hooks';
 
 const RATING_LABELS: Record<number, string> = {
@@ -94,6 +94,7 @@ export default function ReviewScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const theme = useTheme();
   const colors = useThemeColors();
+  const typography = useThemeTypography();
   const P = useMemo(() => getReviewPalette(theme, colors), [theme, colors]);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -218,7 +219,7 @@ export default function ReviewScreen() {
           </TouchableOpacity>
           <View style={styles.headerCopy}>
             <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('review.jobFeedback', 'JOB FEEDBACK')}</Text>
-            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('review.rateYourUstad', 'Rate Your Ustad')}</Text>
+            <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('review.rateYourUstad', 'Rate Your Ustad')}</Text>
           </View>
           <View style={{ width: 44 }} />
         </View>
@@ -277,14 +278,14 @@ export default function ReviewScreen() {
                     <View style={styles.roleRow}>
                       <Text style={styles.workerLabel}>{t('review.assignedUstad', 'ASSIGNED USTAD')}</Text>
                       {isVerified && (
-                        <View style={styles.verifiedLabel}>
+                        <View style={[styles.verifiedLabel, { borderColor: alpha(P.cyan, 0.25), backgroundColor: alpha(P.cyan, 0.08) }]}>
                           <Sparkles size={8} color={P.cyan} />
-                          <Text style={styles.verifiedLabelText}>{t('review.verifiedSpecialist', 'Verified Specialist')}</Text>
+                          <Text style={[styles.verifiedLabelText, { color: P.cyan }]}>{t('review.verifiedSpecialist', 'Verified Specialist')}</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.workerName, Typography.threeD, { color: P.text }]} numberOfLines={1}>{workerName}</Text>
-                    <Text style={styles.workerSub} numberOfLines={1}>{workerCategory}</Text>
+                    <Text style={[styles.workerName, typography.threeD, { color: P.text }]} numberOfLines={1}>{workerName}</Text>
+                    <Text style={[styles.workerSub, { color: P.cyan }]} numberOfLines={1}>{workerCategory}</Text>
                   </View>
                 </View>
               </Animated.View>

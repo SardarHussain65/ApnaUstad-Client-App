@@ -101,7 +101,7 @@ export function GlassCard({
           <View style={[styles.highlight, { backgroundColor: highlightColor }]} />
         </BlurView>
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: fallbackBackground }]}>
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: fallbackBackground }]}>
            {gradient && (
             <LinearGradient
               colors={gradient as [string, string, ...string[]]}
@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   content: {
+    position: 'relative',
     zIndex: 1,
     flexShrink: 1, // Ensure it doesn't push out
   },

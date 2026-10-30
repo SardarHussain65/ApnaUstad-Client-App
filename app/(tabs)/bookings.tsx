@@ -5,12 +5,13 @@ import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MapPin, Calendar, Clock, ChevronRight, CheckCircle2, XCircle, Zap, Star, BriefcaseBusiness, Banknote, Radio, Inbox, Scale } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, CheckCircle2, XCircle, Zap, Star, Inbox, Scale } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
+import { useIsRTL } from '../../context/LanguageContext';
 import { SkeletonList } from '../../components/ui';
 import { useTranslation } from 'react-i18next';
 
@@ -61,6 +62,7 @@ export default function BookingsTab() {
   const router = useRouter();
   const { role } = useAuth();
   const isWorker = role === 'worker';
+  const isRTL = useIsRTL();
   const [activeTab, setActiveTab] = useState<TabType>('Active');
 
   const getMissionCardGradient = (status: string, isInstant: boolean, statusColor: string, isDisputed?: boolean): [string, string, string] => {
@@ -291,47 +293,32 @@ export default function BookingsTab() {
               const scheduledDate = isBooking ? booking.scheduledDate : job.scheduledDate;
               const scheduledTime = isBooking ? booking.scheduledTime : job.scheduledTime;
               const address = isBooking ? booking.address : job.address;
-              const workerLoc = isBooking
-                ? (booking.worker?.address || booking.worker?.city)
-                : (job?.acceptedBid?.worker?.address || job?.acceptedBid?.worker?.city);
               const status = item.status;
               const canReview = !isWorker && isBooking && status === 'completed' && !booking?.isReviewed;
               const isAwaitingProposals = !isBooking && ['open', 'reviewing'].includes(status);
-              const description = meta?.description || (isBooking ? booking.description : job.description);
               const missionKind = meta?.missionKind || (isBooking ? booking.bookingType : job.urgency);
               const isInstant = missionKind === 'instant';
               const amountValue = Number(meta?.financial?.amount ?? (isBooking
                 ? Number(isWorker ? booking.workerEarning : booking.totalAmount || 0)
                 : Number(job.amount || 0)));
-              const getLocalizedAmountLabel = (label: string) => {
-                if (label === 'Total') return t('bookings.totalLabel', 'Total Price');
-                if (label === 'Earning') return t('bookings.earningLabel', 'You Earn');
-                if (label === 'Budget' || label === 'Client budget' || label === 'Customer budget') return t('bookings.budgetLabel', 'Budget');
-                if (label === 'Accepted Bid' || label === 'Agreed Rate') return t('bookings.acceptedBidLabel', 'Agreed Rate');
-                return label;
-              };
-              const amountLabel = getLocalizedAmountLabel(meta?.financial?.label || (isBooking ? (isWorker ? 'Earning' : 'Total') : 'Budget'));
               
-              const getLocalizedActionLabel = (label: string) => {
-                if (label === 'View details' || label === 'View Details') return t('bookings.actionViewDetails', 'View Details');
-                if (label === 'View Receipt' || label === 'View receipt') return t('bookings.actionViewReceipt', 'View Details');
-                if (label === 'Track Live Job' || label === 'Open live job' || label === 'Track live') return t('bookings.actionTrackLiveJob', 'Track Live');
-                if (label === 'Track Job' || label === 'Track booking' || label === 'Track request' || label === 'Open job') return t('bookings.actionTrackJob', 'Open Job');
-                if (label === 'Review Proposals') return t('bookings.actionReviewProposals', 'View Offers');
-                if (label === 'Resume Search') return t('bookings.actionResumeSearch', 'Check Status');
-                return label;
-              };
-              const actionLabel = getLocalizedActionLabel(isAwaitingProposals
-                ? Number(job.bidCount || 0) > 0 ? 'Review Proposals' : 'Resume Search'
-                : status === 'completed' || status === 'closed'
-                ? 'View Receipt'
-                : status === 'cancelled'
-                  ? 'View Details'
-                  : status === 'ongoing'
-                    ? 'Track Live Job'
-                    : status === 'assigned' || status === 'accepted'
-                      ? 'Track Job'
-                      : 'View Details');
+              const rawAddress = address || meta?.location?.address || '';
+              const cleanLocation = (() => {
+                if (!rawAddress) return t('bookings.openDetailsToViewLocation', 'View in details');
+                const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+                const parts = cleaned.split(',').map((p: string) => p.trim()).filter(Boolean);
+                if (parts.length > 2) {
+                  return `${parts[0]}, ${parts[parts.length - 1]}`;
+                }
+                return cleaned || rawAddress;
+              })();
+
+              const rawDateLabel = meta?.schedule?.dateLabel || formatMissionDate(scheduledDate);
+              const dateLabel = rawDateLabel === 'Today' ? t('common.today', 'Today') : rawDateLabel;
+              const rawTimeLabel = meta?.schedule?.timeLabel || scheduledTime || 'ASAP';
+              const timeLabel = (!rawTimeLabel || rawTimeLabel === 'ASAP') ? t('common.asap', 'Right Away') : rawTimeLabel;
+
+              const amountDisplay = amountValue ? `Rs. ${amountValue.toLocaleString()}` : '';
 
               const getLocalizedRole = (role: string) => {
                 if (role === 'Ustad' || role === 'Accepted Ustad') return t('common.ustad', 'Ustad');
@@ -364,6 +351,7 @@ export default function BookingsTab() {
                 counterPartyImage = job.imageUrl || job.imageUrls?.[0] || '';
                 counterPartyRole = getLocalizedRole(job.bidCount > 0 ? 'Offers' : 'Request');
               }
+
               const openDetails = () => {
                 if (isBooking) {
                   router.push({
@@ -398,135 +386,114 @@ export default function BookingsTab() {
                     padding={0}
                     onPress={openDetails}
                   >
-<LinearGradient
-                       colors={[statusColor, colors.cyan, alpha(statusColor, 0.4)]}
-                       start={{ x: 0, y: 0 }}
-                       end={{ x: 1, y: 0 }}
-                       style={styles.cardAccentLine}
-                     />
-<LinearGradient
-                       pointerEvents="none"
-                       colors={[alpha(statusColor, 0.3), 'rgba(0,0,0,0)', alpha(colors.cyan, 0.08)]}
-                       start={{ x: 0, y: 0 }}
-                       end={{ x: 1, y: 1 }}
-                       style={styles.cardAtmosphere}
-                     />
+                    <LinearGradient
+                      colors={[statusColor, colors.cyan, alpha(statusColor, 0.4)]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.cardAccentLine}
+                    />
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={[alpha(statusColor, 0.22), 'rgba(0,0,0,0)', alpha(colors.cyan, 0.06)]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.cardAtmosphere}
+                    />
                     <View style={[styles.cardSideAccent, { backgroundColor: statusColor }]} />
+
                     <View style={styles.cardBody}>
-                      <View style={styles.cardTopStrip}>
+                      {/* Top Header: Service Title + Urgent Badge + Status Badge */}
+                      <View style={styles.topRow}>
+                        <View style={styles.titleArea}>
+                          <Text style={[styles.categoryTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                            {title}
+                          </Text>
+                          {isInstant && (
+                            <View style={[styles.instantBadge, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.25) }]}>
+                              <Zap size={10} color={colors.worker} strokeWidth={2.5} />
+                              <Text style={[styles.instantBadgeText, { color: colors.worker }]}>
+                                {t('home.worker.instant', 'Urgent')}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
                         <View
                           style={[
-                            styles.missionTypePill,
+                            styles.statusBadge,
                             {
-                              backgroundColor: alpha(colors.cyan, theme.id === 'current' ? 0.08 : 0.1),
-                              borderColor: alpha(colors.cyan, 0.18),
+                              backgroundColor: alpha(statusColor, theme.isDark ? 0.12 : 0.08),
+                              borderColor: alpha(statusColor, theme.isDark ? 0.32 : 0.24),
                             },
                           ]}
                         >
-                          {isInstant ? <Zap size={12} color={colors.cyan} /> : <Calendar size={12} color={colors.cyan} />}
-                          <Text style={[styles.missionTypeText, { color: colors.cyan }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
-                        </View>
-                        <View style={[styles.statusBadge, { borderColor: statusColor + '45', backgroundColor: statusColor + '13' }]}>
-                           {isDisputed ? <Scale size={12} color={statusColor} /> : getStatusIcon(status, statusColor)}
-                           <Text style={[styles.statusText, { color: statusColor }]}>
-                             {isDisputed ? t('bookings.disputed', 'DISPUTED') : t(`bookingStatus.${status}.label`, statusLabel(status))}
-                           </Text>
+                          {isDisputed ? <Scale size={11} color={statusColor} /> : getStatusIcon(status, statusColor)}
+                          <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
+                            {isDisputed ? t('bookings.disputed', 'DISPUTED') : t(`bookingStatus.${status}.label`, statusLabel(status))}
+                          </Text>
                         </View>
                       </View>
 
-                      <View style={styles.identityRow}>
-                        <View style={[styles.avatarRing, { borderColor: statusColor + '55' }]}>
-                          {counterPartyImage ? (
-                            <Image source={{ uri: counterPartyImage }} style={styles.avatarImage} />
-                          ) : (
-                            <LinearGradient
-                              colors={[statusColor + '55', 'rgba(0,245,255,0.25)']}
-                              style={styles.avatarFallback}
-                            >
-                              <Text style={styles.avatarInitials}>{initialsFor(counterPartyName)}</Text>
-                            </LinearGradient>
-                          )}
+                      {/* Middle Row: Counterparty info + Date & Time */}
+                      <View style={styles.middleRow}>
+                        <View style={styles.personContainer}>
+                          <View style={[styles.avatarShell, { borderColor: alpha(statusColor, 0.35) }]}>
+                            {counterPartyImage ? (
+                              <Image source={{ uri: counterPartyImage }} style={styles.avatarImage} />
+                            ) : (
+                              <LinearGradient
+                                colors={[alpha(statusColor, 0.35), alpha(colors.cyan, 0.2)]}
+                                style={styles.avatarFallback}
+                              >
+                                <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>
+                                  {initialsFor(counterPartyName)}
+                                </Text>
+                              </LinearGradient>
+                            )}
+                          </View>
+                          <View style={styles.personTextGroup}>
+                            <Text style={[styles.personName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                              {counterPartyName}
+                            </Text>
+                            <Text style={[styles.personRole, { color: theme.colors.text.dim }]} numberOfLines={1}>
+                              {counterPartyRole}
+                            </Text>
+                          </View>
                         </View>
 
-                        <View style={styles.identityTextGroup}>
-                          <Text style={[styles.personRole, { color: theme.colors.text.dim }]}>{counterPartyRole}</Text>
-                          <Text style={[styles.personName, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                            {counterPartyName}
+                        <View style={styles.scheduleRow}>
+                          <Calendar size={12} color={theme.colors.text.muted} />
+                          <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{dateLabel}</Text>
+                          <View style={styles.scheduleDot} />
+                          <Clock size={12} color={theme.colors.text.muted} />
+                          <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{timeLabel}</Text>
+                        </View>
+                      </View>
+
+                      {/* Footer Row: Clean Location on Left, Price & Action Button on Right */}
+                      <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, 0.08) }]}>
+                        <View style={styles.locationGroup}>
+                          <MapPin size={12} color={theme.colors.text.muted} />
+                          <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                            {cleanLocation}
                           </Text>
                         </View>
 
-                        {!!amountValue && (
-                          <View style={[styles.amountPill, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.22) }]}>
-                            <Banknote size={13} color={colors.success} />
-                            <View>
-                              <Text style={[styles.amountLabel, { color: theme.colors.text.muted }]}>{amountLabel}</Text>
-                              <Text style={[styles.amountValue, { color: colors.success }]}>Rs. {amountValue.toLocaleString()}</Text>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-
-<LinearGradient
-                       colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(colors.cyan, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
-                       start={{ x: 0, y: 0 }}
-                       end={{ x: 1, y: 1 }}
-                       style={styles.serviceBlock}
-                     >
-                        <View style={styles.serviceIconBox}>
-                          <BriefcaseBusiness size={19} color={colors.cyan} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.itemTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
-                          {!!description && (
-                            <Text style={[styles.descriptionText, { color: theme.colors.text.muted }]} numberOfLines={2}>
-                              {description}
+                        <View style={styles.footerRight}>
+                          {!!amountDisplay && (
+                            <Text style={[styles.amountValue, { color: colors.success }]}>
+                              {amountDisplay}
                             </Text>
                           )}
-                        </View>
-                      </LinearGradient>
-
-                      <View style={styles.detailGrid}>
-                        <View style={styles.detailChip}>
-                          <Calendar size={14} color={colors.cyan} />
-                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>{formatMissionDate(scheduledDate)}</Text>
-                        </View>
-                        <View style={styles.detailChip}>
-                          <Clock size={14} color={colors.orange} />
-                          <Text style={[styles.detailText, { color: theme.colors.text.primary }]}>
-                            {!scheduledTime || scheduledTime === 'ASAP' ? t('common.asap', 'Right Away') : scheduledTime}
-                          </Text>
+                          <View style={[styles.openIconBtn, { backgroundColor: alpha(statusColor, 0.14), borderColor: alpha(statusColor, 0.28) }]}>
+                            {isRTL ? (
+                              <ChevronLeft size={13} color={statusColor} strokeWidth={2.8} />
+                            ) : (
+                              <ChevronRight size={13} color={statusColor} strokeWidth={2.8} />
+                            )}
+                          </View>
                         </View>
                       </View>
-
-                      <View style={[styles.locationBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                        <MapPin size={15} color={theme.colors.text.muted} />
-                        <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={2}>
-                          {address || t('bookings.openDetailsToViewLocation', 'Open details to view the service location')}
-                        </Text>
-                      </View>
-
-                      <View style={styles.actionDivider} />
-
-<LinearGradient
-                         colors={theme.id === 'current' ? [alpha(colors.cyan, 0.15), alpha(statusColor, 0.1)] : [theme.colors.surface.subtle, alpha(statusColor, 0.06)]}
-                         start={{ x: 0, y: 0 }}
-                         end={{ x: 1, y: 0 }}
-                         style={styles.actionPanel}
-                       >
-                        <TouchableOpacity
-                          style={styles.actionBtn}
-                          activeOpacity={0.85}
-                          onPress={openDetails}
-                        >
-                          <View style={styles.actionLabelGroup}>
-                            <Radio size={14} color={colors.cyan} />
-                            <Text style={[styles.actionBtnText, { color: theme.colors.text.primary }]}>{actionLabel}</Text>
-                          </View>
-                          <View style={[styles.actionCircle, { backgroundColor: colors.cyan }]}>
-                            <ChevronRight size={16} color={theme.colors.button.primaryText} />
-                          </View>
-                        </TouchableOpacity>
-                      </LinearGradient>
 
                       {canReview && (
                         <TouchableOpacity
@@ -545,7 +512,7 @@ export default function BookingsTab() {
                             end={{ x: 1, y: 0 }}
                             style={styles.reviewGradient}
                           >
-                            <Star size={15} color="#000" fill="#000" />
+                            <Star size={13} color="#000" fill="#000" />
                             <Text style={styles.reviewBtnText}>{t('bookings.rateUstad', 'RATE USTAD')}</Text>
                           </LinearGradient>
                         </TouchableOpacity>
@@ -553,7 +520,7 @@ export default function BookingsTab() {
                     </View>
                   </GlassCard>
                 </Animated.View>
-              )
+              );
             })}
             {filteredData.length === 0 && (() => {
               const tabColor = activeTab === 'Active' ? colors.cyan : activeTab === 'Completed' ? colors.success : colors.error;
@@ -634,8 +601,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   bookingCard: {
-    borderRadius: 28,
+    borderRadius: 20,
     borderWidth: 1,
+    overflow: 'hidden',
   },
   cardAccentLine: {
     height: 3,
@@ -645,225 +613,175 @@ const styles = StyleSheet.create({
   },
   cardSideAccent: {
     position: 'absolute',
-    top: 22,
-    bottom: 22,
+    top: 16,
+    bottom: 16,
     left: 0,
     width: 3,
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
   },
   cardBody: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  cardTopStrip: {
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    justifyContent: 'space-between',
     gap: 10,
   },
-  missionTypePill: {
+  titleArea: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    gap: 8,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    flexShrink: 1,
+  },
+  instantBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
   },
-  missionTypeText: {
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+  instantBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+    gap: 4,
     borderRadius: 999,
     borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  identityRow: {
+  middleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 8,
   },
-  avatarRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 21,
-    borderWidth: 1.5,
-    padding: 3,
+  personContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  avatarShell: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 17,
   },
   avatarFallback: {
     flex: 1,
-    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitials: {
-    fontSize: 16,
-    fontWeight: '900',
+  avatarText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
-  identityTextGroup: {
+  personTextGroup: {
     flex: 1,
     minWidth: 0,
   },
-  personRole: {
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
   personName: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  amountPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-  },
-  amountLabel: {
-    fontSize: 8,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  amountValue: {
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  serviceBlock: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    padding: 13,
-    borderRadius: 18,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  serviceIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  itemTitle: {
-    fontSize: 19,
-    fontWeight: '900',
-  },
-  descriptionText: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    marginTop: 5,
-  },
-  detailGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  detailChip: {
-    flex: 1,
-    minHeight: 42,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 10,
-  },
-  detailText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  locationBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  locationText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
     fontWeight: '700',
+    flexShrink: 1,
   },
-  actionDivider: {
-    height: 1,
-    marginTop: 14,
-    marginBottom: 10,
+  personRole: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 1,
   },
-  actionPanel: {
-    borderRadius: 15,
-    borderWidth: 1,
-    overflow: 'hidden',
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
-  actionBtn: {
+  scheduleText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  scheduleDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 48,
-    paddingHorizontal: 12,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
   },
-  actionLabelGroup: {
+  locationGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+    marginRight: 10,
+  },
+  locationText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  footerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  actionBtnText: {
+  amountValue: {
+    fontSize: 15,
     fontWeight: '900',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
-  actionCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 12,
+  openIconBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   reviewBtn: {
-    marginTop: 12,
-    borderRadius: 14,
+    marginTop: 10,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   reviewGradient: {
-    height: 46,
+    height: 38,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   reviewBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   emptyContainer: {
     flex: 1,

@@ -16,6 +16,7 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  ChevronLeft,
   Star,
   Camera,
   Settings,
@@ -33,7 +34,7 @@ import Animated, {
   withSpring,
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography, getAccessibleColor } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,6 +44,8 @@ import { BlurView } from 'expo-blur';
 import api from '../../services/api';
 import { getOptimizedImageUrl } from '../../constants/Config';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../../context/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 const HEADER_HEIGHT = 240;
@@ -122,27 +125,35 @@ function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing:
 // ─── Menu Item ─────────────────────────────────────────────────────────────────
 function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { icon: any; label: string; sublabel?: string; delay: number; accent: string; onPress?: () => void }) {
   const theme = useTheme();
+  const isRTL = useIsRTL();
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View entering={FadeInRight.delay(delay).springify()} style={anim}>
-      <Pressable style={styles.menuItem} onPress={onPress}
+      <Pressable
+        style={styles.menuItem}
+        onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}>
+        onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
+      >
         {Platform.OS === 'ios'
           ? <BlurView intensity={theme.id === 'current' ? 16 : 8} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
           : <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface.card }]} />}
-        <View style={[styles.menuAccentBar, { backgroundColor: accent }]} />
+        <View style={[styles.menuAccentBar, { backgroundColor: getAccessibleColor(accent, theme.isDark) }]} />
         <View style={styles.menuLeft}>
-          <View style={[styles.menuIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}30` }]}>
-            <Icon size={17} color={accent} strokeWidth={2.2} />
+          <View style={[styles.menuIconBox, { backgroundColor: `${getAccessibleColor(accent, theme.isDark)}18`, borderColor: `${getAccessibleColor(accent, theme.isDark)}30` }]}>
+            <Icon size={17} color={getAccessibleColor(accent, theme.isDark)} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: theme.colors.text.primary }]}>{label}</Text>
             {sublabel ? <Text style={[styles.menuSub, { color: theme.colors.text.muted }]}>{sublabel}</Text> : null}
           </View>
         </View>
-        <ChevronRight size={15} color={theme.colors.text.dim} />
+        {isRTL ? (
+          <ChevronLeft size={15} color={theme.colors.text.dim} />
+        ) : (
+          <ChevronRight size={15} color={theme.colors.text.dim} />
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -152,9 +163,11 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
 export default function ProfileTab() {
   const { logout, role, user } = useAuth();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const themedTypography = useThemeTypography();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
 
   const isWorker = role === 'worker';
@@ -233,7 +246,15 @@ export default function ProfileTab() {
       {/* Hero gradient */}
 
 
-      <Animated.ScrollView showsVerticalScrollIndicator={false} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={styles.scroll}>
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(insets.bottom, 16) + 110 },
+        ]}
+      >
 
         {/* ── Avatar Block ── */}
         <Animated.View style={[styles.avatarSection, avatarParallax]}>
@@ -261,7 +282,7 @@ export default function ProfileTab() {
                 {workerProfile?.fullName || user?.fullName || 'User'}
               </Text>
               {isWorker && (workerProfile?.isVerified || (workerProfile?.rating ?? 0) >= 4.5) && (
-                <BadgeCheck size={20} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginLeft: 5, flexShrink: 0 }} />
+                <BadgeCheck size={20} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginHorizontal: 5, flexShrink: 0 }} />
               )}
             </View>
             <Text style={[styles.userSub, { color: theme.colors.text.muted }]}>{workerProfile?.email || user?.email || user?.phone || ''}</Text>
@@ -338,7 +359,16 @@ export default function ProfileTab() {
 
           {/* Logout */}
           <Animated.View entering={FadeInDown.delay(820)}>
-            <Pressable style={[styles.logoutBtn, { backgroundColor: alpha(theme.colors.status.error, 0.08), borderColor: alpha(theme.colors.status.error, 0.18) }]} onPress={handleLogout}>
+            <Pressable
+              style={[
+                styles.logoutBtn,
+                {
+                  backgroundColor: alpha(theme.colors.status.error, 0.08),
+                  borderColor: alpha(theme.colors.status.error, 0.18),
+                },
+              ]}
+              onPress={handleLogout}
+            >
               <LogOut size={16} color="#FF3B30" strokeWidth={2.3} />
               <Text style={[styles.logoutText, { color: theme.colors.status.error }]}>{t('profile.signOut')}</Text>
             </Pressable>
@@ -353,7 +383,7 @@ export default function ProfileTab() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 48 },
+  scroll: { paddingBottom: 120 },
 
   // Hero
   heroBg: { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT, overflow: 'hidden' },
@@ -412,8 +442,8 @@ const styles = StyleSheet.create({
     borderRadius: 14, marginBottom: 8, overflow: 'hidden', borderWidth: 1,
     paddingHorizontal: 12, paddingVertical: 12, position: 'relative',
   },
-  menuAccentBar: { position: 'absolute', left: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
-  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingLeft: 8 },
+  menuAccentBar: { position: 'absolute', start: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingStart: 8 },
   menuIconBox: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   menuLabel: { fontSize: 14, fontWeight: '700' },
   menuSub: { fontSize: 11, fontWeight: '500', marginTop: 1 },
@@ -427,5 +457,5 @@ const styles = StyleSheet.create({
   logoutText: { fontSize: 14, fontWeight: '800' },
 
   // Version
-  version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 10 },
+  version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 14 },
 });

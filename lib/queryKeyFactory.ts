@@ -103,5 +103,7 @@ export const queryKeys = {
     all: ['disputes'] as const,
     my: () => [...queryKeys.disputes.all, 'my'] as const,
     byBooking: (bookingId: string) => [...queryKeys.disputes.all, 'booking', bookingId] as const,
+    detail: (id: string) => [...queryKeys.disputes.all, 'detail', id] as const,
+    messages: (id: string) => [...queryKeys.disputes.all, 'messages', id] as const,
   },
 } as const;

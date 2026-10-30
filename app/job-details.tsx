@@ -213,6 +213,7 @@ export default function JobDetailsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const colors = theme.legacy;
+  const typography = useThemeTypography();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; bookingId?: string; mode?: string; pendingBidId?: string }>();
@@ -498,7 +499,7 @@ export default function JobDetailsScreen() {
                 </View>
                 <View style={styles.heroTitleCopy}>
                   <Text style={[styles.heroLabel, { color: colors.primary }]}>{missionKindLabel}</Text>
-                  <Text style={[styles.heroTitle, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
+                  <Text style={[styles.heroTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
                   <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={3}>{description}</Text>
                 </View>
               </View>
@@ -585,7 +586,7 @@ export default function JobDetailsScreen() {
                     </View>
                     <View style={styles.clientCopy}>
                       <Text style={[styles.clientRole, { color: colors.worker }]}>{t('jobDetails.serviceClientLabel')}</Text>
-                      <Text style={[styles.clientName, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
+                      <Text style={[styles.clientName, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
                       <Text style={[styles.clientHistory, { color: theme.colors.text.muted }]}>
                         {clientJobs > 0 ? t('jobDetails.clientJobsCount', { count: clientJobs }) : t('jobDetails.newClient')}
                       </Text>

@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
-import { Spacing, Typography, useTheme } from '../constants/Theme';
+import { Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useNearbyJobs, useUserLocation } from '../hooks';
@@ -35,6 +35,7 @@ export default function JobsNearbyScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
+  const typography = useThemeTypography();
   const colors = theme.legacy;
   const { location } = useUserLocation();
   const { data: jobs = [], isLoading, refetch } = useNearbyJobs(location?.longitude, location?.latitude);
@@ -52,7 +53,7 @@ export default function JobsNearbyScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('jobsNearby.title').toUpperCase()}</Text>
+            <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('jobsNearby.title').toUpperCase()}</Text>
             <Text style={[styles.headerSub, { color: theme.colors.text.dim }]}>
               {isLoading ? t('jobsNearby.scanning') : t('jobsNearby.activeOpportunities', { count: jobs.length })}
             </Text>
@@ -103,7 +104,7 @@ export default function JobsNearbyScreen() {
                       </View>
 
                       <View style={styles.jobMain}>
-                        <Text style={[styles.jobTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{job.category}</Text>
+                        <Text style={[styles.jobTitle, typography.threeD, { color: theme.colors.text.primary }]}>{job.category}</Text>
                         <Text style={[styles.jobDesc, { color: theme.colors.text.secondary }]} numberOfLines={2}>{job.description}</Text>
                         <View style={styles.jobMeta}>
                           <MapPin size={12} color={theme.colors.text.dim} />

@@ -22,6 +22,7 @@ export interface UserProfile {
   deactivationReason?: string;
   deactivatedAt?: string | null;
   favorites?: string[];
+  isVerified?: boolean;
 }
 
 export interface WorkerProfile extends UserProfile {
@@ -32,6 +33,7 @@ export interface WorkerProfile extends UserProfile {
   isInstantAvailable?: boolean;
   isScheduledAvailable?: boolean;
   totalBookings: number;
+  isVerified?: boolean;
 }
 
 export interface AccountStatus {

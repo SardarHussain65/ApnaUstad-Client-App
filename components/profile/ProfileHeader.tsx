@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../constants/Theme';
+import { useIsRTL } from '../../context/LanguageContext';
 
 interface ProfileHeaderProps {
   title: string;
@@ -13,14 +14,26 @@ export const ProfileHeader = ({ title }: ProfileHeaderProps) => {
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isRTL = useIsRTL();
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
       <TouchableOpacity
         onPress={() => router.back()}
-        style={[styles.backBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}
+        style={[
+          styles.backBtn,
+          {
+            backgroundColor: theme.colors.surface.subtle,
+            borderColor: theme.colors.border.subtle,
+            alignItems: 'center',
+          },
+        ]}
       >
-        <ChevronLeft color={theme.colors.text.primary} size={28} />
+        {isRTL ? (
+          <ChevronRight color={theme.colors.text.primary} size={28} />
+        ) : (
+          <ChevronLeft color={theme.colors.text.primary} size={28} />
+        )}
       </TouchableOpacity>
       <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{title}</Text>
       <View style={{ width: 44 }} />
@@ -40,7 +53,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 16,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
