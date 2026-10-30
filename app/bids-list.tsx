@@ -26,7 +26,7 @@ import {
 } from 'lucide-react-native';
 import AnimatedRN, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Spacing } from '../constants/Theme';
+import { Spacing, alpha, useTheme, useThemeColors, getAccessibleColor } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -131,6 +131,9 @@ export default function BidsListScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const cyanColor = theme.isDark ? '#00F5FF' : colors.cyan;
 
   const [bids, setBids] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -168,11 +171,11 @@ export default function BidsListScreen() {
         <View style={styles.centerFill}>
           <View style={styles.loadingRing}>
             <View style={styles.loadingCore}>
-              <Target size={24} color={NEON_CYAN} />
+              <Target size={24} color={cyanColor} />
             </View>
           </View>
-          <Text style={styles.loadingTitle}>{t('bidsList.findingUstads')}</Text>
-          <Text style={styles.loadingSub}>{t('bidsList.fetchingBids')}</Text>
+          <Text style={[styles.loadingTitle, { color: theme.colors.text.primary }]}>{t('bidsList.findingUstads')}</Text>
+          <Text style={[styles.loadingSub, { color: theme.colors.text.muted }]}>{t('bidsList.fetchingBids')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -182,7 +185,7 @@ export default function BidsListScreen() {
     <BackgroundWrapper>
       {/* Ambient tint */}
       <LinearGradient
-        colors={[`${NEON_CYAN}07`, 'transparent', `${NEON_PINK}04`]}
+        colors={[theme.isDark ? `${cyanColor}07` : 'transparent', 'transparent', theme.isDark ? `${NEON_PINK}04` : 'transparent']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
         pointerEvents="none"
@@ -193,20 +196,20 @@ export default function BidsListScreen() {
         {/* ── Top Bar ──────────────────────────────────────────────────────── */}
         <AnimatedRN.View
           entering={FadeInUp.duration(500)}
-          style={[styles.topBar, { paddingTop: insets.top + 8 }]}
+          style={[styles.topBar, { paddingTop: insets.top + 8, borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.border.subtle }]}
         >
-          <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <BlurView intensity={60} tint={theme.isDark ? "dark" : "light"} style={StyleSheet.absoluteFillObject} />
           <View style={styles.topBarLine} />
 
           <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ArrowLeft color={NEON_CYAN} size={20} />
+            <ArrowLeft color={theme.colors.text.primary} size={20} />
           </TouchableOpacity>
 
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarTitle}>{t('bidsList.headerTitle')}</Text>
-            <View style={[styles.countPill, { borderColor: `${NEON_CYAN}35`, backgroundColor: `${NEON_CYAN}10` }]}>
-              <Users size={10} color={NEON_CYAN} />
-              <Text style={[styles.countPillText, { color: NEON_CYAN }]}>
+            <Text style={[styles.topBarTitle, { color: theme.colors.text.primary }]}>{t('bidsList.headerTitle')}</Text>
+            <View style={[styles.countPill, { borderColor: alpha(cyanColor, 0.35), backgroundColor: alpha(cyanColor, 0.08) }]}>
+              <Users size={10} color={cyanColor} />
+              <Text style={[styles.countPillText, { color: cyanColor }]}>
                 {t('bidsList.countLabel', { count: bids.length })}
               </Text>
             </View>
@@ -231,8 +234,8 @@ export default function BidsListScreen() {
               <View style={styles.emptyIconRing}>
                 <TrendingUp size={28} color="rgba(255,255,255,0.2)" />
               </View>
-              <Text style={styles.emptyTitle}>{t('bidsList.noBidsYet')}</Text>
-              <Text style={styles.emptySub}>{t('bidsList.noBidsSub')}</Text>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('bidsList.noBidsYet')}</Text>
+              <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('bidsList.noBidsSub')}</Text>
             </AnimatedRN.View>
           )}
 
@@ -240,7 +243,8 @@ export default function BidsListScreen() {
           {bids.map((bid, index) => {
             const isDeploying = accepting === bid._id;
             const rating = bid.worker?.averageRating ?? 5;
-            const accentColor = index === 0 ? GOLD : index === 1 ? NEON_CYAN : index === 2 ? NEON_PINK : NEON_BLUE;
+            const rawAccent = index === 0 ? GOLD : index === 1 ? cyanColor : index === 2 ? NEON_PINK : NEON_BLUE;
+            const accentColor = getAccessibleColor(rawAccent, theme.isDark);
 
             return (
               <AnimatedRN.View
@@ -293,10 +297,10 @@ export default function BidsListScreen() {
 
                   {/* ── Chips ────────────────────────────────────────── */}
                   <View style={styles.chipsRow}>
-                    <StatChip icon={ShieldCheck} label={t('findingWorker.verified', { defaultValue: 'VERIFIED' })} color={NEON_GREEN} />
-                    <StatChip icon={Clock} label={t('findingWorker.available', { defaultValue: 'AVAILABLE' })} color={NEON_AMBER} />
+                    <StatChip icon={ShieldCheck} label={t('findingWorker.verified', { defaultValue: 'VERIFIED' })} color={theme.isDark ? NEON_GREEN : colors.success} />
+                    <StatChip icon={Clock} label={t('findingWorker.available', { defaultValue: 'AVAILABLE' })} color={theme.isDark ? NEON_AMBER : colors.yellow} />
                     {bid.estimatedDays && (
-                      <StatChip icon={Banknote} label={t('bidsList.estDaysLabel', { count: bid.estimatedDays })} color={NEON_CYAN} />
+                      <StatChip icon={Banknote} label={t('bidsList.estDaysLabel', { count: bid.estimatedDays })} color={cyanColor} />
                     )}
                   </View>
 

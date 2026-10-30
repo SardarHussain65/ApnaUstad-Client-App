@@ -35,7 +35,7 @@ import api from '../services/api';
 import { alpha, useTheme, useThemeColors } from '../constants/Theme';
 
 const C = {
-  cyan: '#00F5FF',
+  cyan: '#0369A1',
   blue: '#087BFF',
   green: '#00E887',
   amber: '#FFB000',

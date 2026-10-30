@@ -2582,7 +2582,7 @@ const styles = StyleSheet.create({
   successPriceValue: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#00F5FF',
+    color: '#0284C7',
   },
   redirectProgressContainer: {
     flexDirection: 'row',

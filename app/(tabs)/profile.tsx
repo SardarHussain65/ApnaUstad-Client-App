@@ -34,7 +34,7 @@ import Animated, {
   withSpring,
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography, getAccessibleColor } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,6 +45,7 @@ import api from '../../services/api';
 import { getOptimizedImageUrl } from '../../constants/Config';
 import { useTranslation } from 'react-i18next';
 import { useIsRTL } from '../../context/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 const HEADER_HEIGHT = 240;
@@ -138,10 +139,10 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
         {Platform.OS === 'ios'
           ? <BlurView intensity={theme.id === 'current' ? 16 : 8} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
           : <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface.card }]} />}
-        <View style={[styles.menuAccentBar, { backgroundColor: accent }]} />
+        <View style={[styles.menuAccentBar, { backgroundColor: getAccessibleColor(accent, theme.isDark) }]} />
         <View style={styles.menuLeft}>
-          <View style={[styles.menuIconBox, { backgroundColor: `${accent}18`, borderColor: `${accent}30` }]}>
-            <Icon size={17} color={accent} strokeWidth={2.2} />
+          <View style={[styles.menuIconBox, { backgroundColor: `${getAccessibleColor(accent, theme.isDark)}18`, borderColor: `${getAccessibleColor(accent, theme.isDark)}30` }]}>
+            <Icon size={17} color={getAccessibleColor(accent, theme.isDark)} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: theme.colors.text.primary }]}>{label}</Text>
@@ -166,6 +167,7 @@ export default function ProfileTab() {
   const theme = useTheme();
   const themedTypography = useThemeTypography();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
 
   const isWorker = role === 'worker';
@@ -244,7 +246,15 @@ export default function ProfileTab() {
       {/* Hero gradient */}
 
 
-      <Animated.ScrollView showsVerticalScrollIndicator={false} onScroll={scrollHandler} scrollEventThrottle={16} contentContainerStyle={styles.scroll}>
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: Math.max(insets.bottom, 16) + 110 },
+        ]}
+      >
 
         {/* ── Avatar Block ── */}
         <Animated.View style={[styles.avatarSection, avatarParallax]}>
@@ -373,7 +383,7 @@ export default function ProfileTab() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 48 },
+  scroll: { paddingBottom: 120 },
 
   // Hero
   heroBg: { position: 'absolute', top: 0, left: 0, right: 0, height: HEADER_HEIGHT, overflow: 'hidden' },
@@ -447,5 +457,5 @@ const styles = StyleSheet.create({
   logoutText: { fontSize: 14, fontWeight: '800' },
 
   // Version
-  version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 10 },
+  version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 14 },
 });

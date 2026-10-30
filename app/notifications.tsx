@@ -38,7 +38,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { Spacing, Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
+import { Spacing, useTheme, useThemeColors, useThemeTypography, alpha } from '../constants/Theme';
 import { useMarkNotificationReadMutation, useNotifications, type AppNotification } from '../hooks';
 import { socketService } from '../services/socketService';
 
@@ -57,6 +57,7 @@ export default function NotificationsScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const colors = useThemeColors();
+  const typography = useThemeTypography();
   const legacyColors = theme.legacy;
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data, isLoading, isRefetching, refetch } = useNotifications();
@@ -139,7 +140,7 @@ export default function NotificationsScreen() {
 
           <View style={styles.headerText}>
             <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('notifications.eyebrow')}</Text>
-            <Text style={[styles.headerTitle, Typography.threeD, { color: theme.colors.text.primary }]}>{t('notifications.title')}</Text>
+            <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('notifications.title')}</Text>
           </View>
 
           <View style={[

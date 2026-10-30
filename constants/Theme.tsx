@@ -209,6 +209,57 @@ export function alpha(color: string, opacity: number | string): string {
   return color;
 }
 
+/**
+ * Ensures any color (e.g. backend accent colors or neon legacy colors)
+ * is fully legible on the active theme's background.
+ * In Light mode, bright aqua/cyan, neon green, and bright yellow
+ * are automatically mapped to crisp, high-contrast dark tones.
+ */
+export function getAccessibleColor(color: string, isDark: boolean = true): string {
+  if (isDark || !color || typeof color !== 'string') return color;
+  const normalized = color.trim().toLowerCase();
+
+  // Bright aqua / neon cyan variants -> deep cerulean / ocean blue
+  if (
+    normalized === '#00f5ff' ||
+    normalized === '#00ffff' ||
+    normalized === '#00e5ff' ||
+    normalized === '#22d3ee' ||
+    normalized === '#06b6d4' ||
+    normalized === '#38bdf8' ||
+    normalized === '#67e8f9' ||
+    normalized === '#a5f3fc' ||
+    normalized === '#cffafe' ||
+    normalized === 'cyan' ||
+    normalized === 'aqua'
+  ) {
+    return '#0369A1';
+  }
+
+  // Neon green variants -> deep forest green
+  if (
+    normalized === '#00ff7f' ||
+    normalized === '#39ff14' ||
+    normalized === '#00e887' ||
+    normalized === '#4ade80' ||
+    normalized === '#86efac'
+  ) {
+    return '#15803D';
+  }
+
+  // Bright yellow / gold variants -> dark amber
+  if (
+    normalized === '#ffd700' ||
+    normalized === '#ffe600' ||
+    normalized === '#facc15' ||
+    normalized === '#fde047'
+  ) {
+    return '#B45309';
+  }
+
+  return color;
+}
+
 export const Spacing = {
   xs: 4,
   s: 8,
@@ -278,27 +329,27 @@ const lightLegacy: LegacyColors = {
   textDim: '#64748B',
   primary: '#2563EB',
   secondary: '#0F766E',
-  worker: '#F97316',
+  worker: '#EA580C',
   success: '#16A34A',
   error: '#DC2626',
-  cyan: '#2563EB',
-  orange: '#F97316',
+  cyan: '#0369A1',
+  orange: '#EA580C',
   green: '#16A34A',
   pink: '#DB2777',
   purple: '#7C3AED',
   deepBlue: '#EAF2FF',
-  yellow: '#D97706',
+  yellow: '#B45309',
   border: '#CBD5E1',
   inputBackground: '#FFFFFF',
   surface: '#F1F5F9',
   surfaceLight: '#FFFFFF',
   surfaceHighlight: '#EAF2FF',
-  cyanGradient: ['#2563EB', '#0F766E'],
+  cyanGradient: ['#0284C7', '#0369A1'],
   orangeGradient: ['#F97316', '#EA580C'],
   purpleGradient: ['#7C3AED', '#2563EB'],
   successGradient: ['#16A34A', '#0F766E'],
   cosmicGradient: ['#F7F8FA', '#EEF2F7', '#F7F8FA'],
-  glowingGradient: ['rgba(37, 99, 235, 0.08)', 'rgba(15, 118, 110, 0.08)'],
+  glowingGradient: ['rgba(3, 105, 161, 0.08)', 'rgba(15, 118, 110, 0.08)'],
 };
 
 const darkLegacy: LegacyColors = {
@@ -561,7 +612,7 @@ export function createTypography(theme: AppTheme) {
       color: theme.colors.text.muted,
       fontWeight: '500' as const,
     },
-    threeD: theme.id === 'current'
+    threeD: (theme.isDark && theme.id === 'current')
       ? {
           textShadowColor: 'rgba(0, 0, 0, 0.75)',
           textShadowOffset: { width: 0, height: 2 },
@@ -572,7 +623,7 @@ export function createTypography(theme: AppTheme) {
           textShadowOffset: { width: 0, height: 0 },
           textShadowRadius: 0,
         },
-    threeDLight: theme.id === 'current'
+    threeDLight: (theme.isDark && theme.id === 'current')
       ? {
           textShadowColor: 'rgba(255, 255, 255, 0.3)',
           textShadowOffset: { width: 0, height: -1 },
@@ -646,5 +697,17 @@ export function useThemeColors() {
 // Backward-compatible static exports. New or migrated components should prefer
 // useTheme(), useThemeColors(), useThemeTypography(), and useThemeShadows().
 export const Colors = themes.current.legacy;
-export const Typography = createTypography(themes.current);
+export const Typography = {
+  ...createTypography(themes.current),
+  threeD: {
+    textShadowColor: 'transparent',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
+  },
+  threeDLight: {
+    textShadowColor: 'transparent',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
+  },
+};
 export const Shadows = createShadows(themes.current);

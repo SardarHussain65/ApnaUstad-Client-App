@@ -15,7 +15,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography, getAccessibleColor } from '../../constants/Theme';
 import { Booking } from '../../hooks';
 import { useIsRTL } from '../../context/LanguageContext';
 
@@ -68,7 +68,8 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
 const typography = useThemeTypography();
   const meta = booking.cardMeta;
   const baseStatus = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const statusColor = (meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string;
+  const rawStatusColor = (meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string;
+  const statusColor = getAccessibleColor(rawStatusColor, theme.isDark);
   const statusLabel = meta?.statusInfo?.label || baseStatus.label;
   const StatusIcon = baseStatus.Icon;
   const isInstant = (meta?.missionKind || booking.bookingType) === 'instant';
@@ -123,9 +124,9 @@ const typography = useThemeTypography();
   const actionLabel = getLocalizedActionLabel(meta?.actionLabel || meta?.statusInfo?.actionLabel || 'View details');
 
   const gradientColors: [string, string, string] = [
-    alpha(statusColor, 0.18),
-    alpha(theme.colors.background.screen, 0.9),
-    alpha(theme.colors.brand.primary, 0.1),
+    alpha(statusColor, theme.isDark ? 0.18 : 0.05),
+    alpha(theme.colors.background.screen, theme.isDark ? 0.9 : 0.98),
+    alpha(theme.colors.brand.primary, theme.isDark ? 0.1 : 0.03),
   ];
 
   return (
@@ -133,9 +134,9 @@ const typography = useThemeTypography();
       style={[
         styles.card,
         {
-          borderColor: alpha(statusColor, 0.2),
-          shadowColor: statusColor,
-          backgroundColor: alpha(theme.colors.background.screen, 0.8),
+          borderColor: theme.isDark ? alpha(statusColor, 0.2) : theme.colors.border.subtle,
+          shadowColor: theme.isDark ? statusColor : theme.colors.shadow.color,
+          backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.8) : theme.colors.surface.card,
         },
       ]}
       onPress={onPress}
@@ -147,10 +148,10 @@ const typography = useThemeTypography();
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={[styles.accentGlow, { backgroundColor: alpha(statusColor, 0.08) }]} />
+      <View style={[styles.accentGlow, { backgroundColor: alpha(statusColor, theme.isDark ? 0.08 : 0.02) }]} />
 
       <View style={styles.topRow}>
-        <View style={[styles.avatarShell, { borderColor: alpha(statusColor, 0.3) }]}>
+        <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(statusColor, 0.3) : theme.colors.border.subtle }]}>
           {avatarUrl ? (
             <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
           ) : (
@@ -174,8 +175,8 @@ const typography = useThemeTypography();
           style={[
             styles.statusBadge,
             {
-              backgroundColor: alpha(statusColor, 0.08),
-              borderColor: alpha(statusColor, 0.25),
+              backgroundColor: alpha(statusColor, theme.isDark ? 0.08 : 0.1),
+              borderColor: alpha(statusColor, theme.isDark ? 0.25 : 0.3),
             },
           ]}
         >
@@ -198,17 +199,17 @@ const typography = useThemeTypography();
       </View>
 
       <View style={styles.metaGrid}>
-        <View style={styles.metaPill}>
+        <View style={[styles.metaPill, { backgroundColor: theme.isDark ? alpha('#fff', 0.03) : theme.colors.surface.subtle, borderColor: theme.isDark ? alpha('#fff', 0.05) : theme.colors.border.subtle }]}>
           <MissionIcon size={12} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.4} />
-          <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={1}>{missionKindLabel}</Text>
+          <Text style={[styles.metaText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{missionKindLabel}</Text>
         </View>
-        <View style={styles.metaPill}>
+        <View style={[styles.metaPill, { backgroundColor: theme.isDark ? alpha('#fff', 0.03) : theme.colors.surface.subtle, borderColor: theme.isDark ? alpha('#fff', 0.05) : theme.colors.border.subtle }]}>
           <CalendarDays size={12} color={colors.cyan} strokeWidth={2.4} />
-          <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={1}>{dateLabel}</Text>
+          <Text style={[styles.metaText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{dateLabel}</Text>
         </View>
-        <View style={styles.metaPill}>
+        <View style={[styles.metaPill, { backgroundColor: theme.isDark ? alpha('#fff', 0.03) : theme.colors.surface.subtle, borderColor: theme.isDark ? alpha('#fff', 0.05) : theme.colors.border.subtle }]}>
           <Clock3 size={12} color={colors.worker} strokeWidth={2.4} />
-          <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.8) }]} numberOfLines={1}>{timeLabel}</Text>
+          <Text style={[styles.metaText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{timeLabel}</Text>
         </View>
       </View>
 
@@ -225,10 +226,10 @@ const typography = useThemeTypography();
           <Text style={[styles.amountValue, { color: colors.success }]}>{amountText}</Text>
         </View>
 
-        <View style={[styles.actionBtn, { backgroundColor: alpha(theme.colors.brand.primary, 0.05), borderColor: alpha(theme.colors.brand.primary, 0.1) }]}>
+        <View style={[styles.actionBtn, { backgroundColor: alpha(theme.colors.brand.primary, theme.isDark ? 0.05 : 0.08), borderColor: alpha(theme.colors.brand.primary, theme.isDark ? 0.1 : 0.18) }]}>
           <Text style={[styles.actionBtnText, { color: theme.colors.brand.primary }]}>{actionLabel}</Text>
           <View style={[styles.actionIconCircle, { backgroundColor: statusColor }]}>
-            <ChevronRight size={13} color={theme.colors.text.primary} strokeWidth={3} />
+            <ChevronRight size={13} color="#FFFFFF" strokeWidth={3} />
           </View>
         </View>
       </View>

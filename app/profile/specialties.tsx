@@ -590,7 +590,14 @@ export default function SpecialtiesScreen() {
               <ChevronLeft size={22} color={theme.colors.text.primary} />
             )}
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('specialties.title')}</Text>
+          <Text
+            style={[styles.headerTitle, { color: theme.colors.text.primary }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {t('specialties.title')}
+          </Text>
           <View style={[styles.headerCounter, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.25) }]}>
             <Text style={[styles.headerCounterText, { color: theme.colors.brand.primary }]}>{specialties.length}/{data.maxSpecialties}</Text>
           </View>
@@ -1417,7 +1424,13 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.l, paddingBottom: 60 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
   iconButton: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  headerTitle: { fontSize: 18, fontWeight: '900' },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+    flex: 1,
+    marginHorizontal: 8,
+  },
   headerCounter: { minWidth: 40, height: 30, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   headerCounterText: { fontSize: 12, fontWeight: '900' },
   hero: { overflow: 'hidden', borderRadius: BorderRadius.xl, borderWidth: 1, padding: 18, marginBottom: 24 },

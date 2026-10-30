@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { Bid, Job } from '../../hooks/queries/useMessagesAndJobs';
-import { alpha, BorderRadius, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
+import { alpha, BorderRadius, useTheme, useThemeColors, useThemeTypography, useThemeShadows, getAccessibleColor } from '../../constants/Theme';
 import { useIsRTL } from '../../context/LanguageContext';
 
 interface WorkerPendingBidCardProps {
@@ -65,7 +65,8 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const meta = bid.cardMeta;
   const workerPerson = bid.worker && typeof bid.worker === 'object' ? bid.worker : null;
   const customer = job?.customer && typeof job.customer === 'object' ? job.customer : null;
-  const accentColor = meta?.statusInfo?.accentColor || colors.worker;
+  const rawAccent = meta?.statusInfo?.accentColor || colors.worker;
+  const accentColor = getAccessibleColor(rawAccent, theme.isDark);
   const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
   const MissionIcon = isInstant ? Zap : CalendarDays;
   const clientName = meta?.counterParty?.fullName || customer?.fullName || t('common.client', 'Customer');
@@ -88,9 +89,9 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
     : meta.statusInfo.label;
 
   const gradientColors: [string, string, string] = [
-    alpha(accentColor, 0.2),
-    alpha(theme.colors.background.screen, 0.9),
-    alpha(theme.colors.brand.primary, 0.09),
+    alpha(accentColor, theme.isDark ? 0.2 : 0.05),
+    alpha(theme.colors.background.screen, theme.isDark ? 0.9 : 0.98),
+    alpha(theme.colors.brand.primary, theme.isDark ? 0.09 : 0.03),
   ];
 
   return (
@@ -101,11 +102,11 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
         style={[
           styles.card,
           {
-            borderColor: alpha(accentColor, 0.35),
-            borderTopColor: alpha(accentColor, 0.4),
-            borderLeftColor: alpha(accentColor, 0.3),
-            shadowColor: accentColor,
-            backgroundColor: alpha(theme.colors.background.screen, 0.9),
+            borderColor: theme.isDark ? alpha(accentColor, 0.35) : theme.colors.border.subtle,
+            borderTopColor: theme.isDark ? alpha(accentColor, 0.4) : theme.colors.border.subtle,
+            borderLeftColor: theme.isDark ? alpha(accentColor, 0.3) : theme.colors.border.subtle,
+            shadowColor: theme.isDark ? accentColor : theme.colors.shadow.color,
+            backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.9) : theme.colors.surface.card,
           },
           shadows.bevel,
         ]}
@@ -116,11 +117,11 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.accentGlow, { backgroundColor: alpha(accentColor, 0.15) }]} />
+        <View style={[styles.accentGlow, { backgroundColor: alpha(accentColor, theme.isDark ? 0.15 : 0.04) }]} />
         <View style={[styles.accentLine, { backgroundColor: accentColor }]} />
 
         <View style={styles.topRow}>
-          <View style={[styles.avatarShell, { borderColor: alpha(accentColor, 0.45) }]}>
+          <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(accentColor, 0.45) : theme.colors.border.subtle }]}>
             {clientAvatar ? (
               <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
             ) : (

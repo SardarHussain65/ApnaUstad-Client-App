@@ -733,6 +733,7 @@ export default function PendingBidDetailsScreen() {
   const colors = theme.legacy;
   const themeColors = useThemeColors();
   const shadows = useThemeShadows();
+  const typography = useThemeTypography();
   const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams<{ id?: string; pendingBidId?: string }>();
   const { data: bids, isLoading: isLoadingBids, refetch: refetchBids } = useWorkerBids();
@@ -938,7 +939,7 @@ export default function PendingBidDetailsScreen() {
                 </View>
                 <View style={styles.heroTitleCopy}>
                   <Text style={styles.heroLabel}>{t('pendingBidDetails.proposalSent')}</Text>
-                  <Text style={[styles.heroTitle, Typography.threeD]} numberOfLines={1}>{title}</Text>
+                  <Text style={[styles.heroTitle, typography.threeD]} numberOfLines={1}>{title}</Text>
                   <Text style={styles.heroDescription} numberOfLines={3}>{description}</Text>
                 </View>
               </View>
@@ -1007,7 +1008,7 @@ export default function PendingBidDetailsScreen() {
                   </View>
                   <View style={styles.clientCopy}>
                     <Text style={styles.clientRole}>{t('pendingBidDetails.serviceClient')}</Text>
-                    <Text style={[styles.clientName, Typography.threeD]} numberOfLines={1}>{clientName}</Text>
+                    <Text style={[styles.clientName, typography.threeD]} numberOfLines={1}>{clientName}</Text>
                     <Text style={styles.clientHistory}>
                       {clientJobs > 0 
                         ? (clientJobs === 1 ? t('pendingBidDetails.completedServiceRequests_one') : t('pendingBidDetails.completedServiceRequests_other', { count: clientJobs }))

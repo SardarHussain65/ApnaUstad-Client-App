@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -47,7 +47,7 @@ import {
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
-import { Typography, useTheme, useThemeColors, alpha } from '../constants/Theme';
+import { AppTheme, LegacyColors, useTheme, useThemeColors, useThemeTypography, alpha, getAccessibleColor } from '../constants/Theme';
 import { useAlertModal, useBookingDetails, useUpdateBookingStatusMutation, usePayBookingMutation, useCreateReviewMutation } from '../hooks';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
@@ -55,31 +55,54 @@ import { socketService } from '../services/socketService';
 import { AlertModal } from '../components/ui/BeautifulModal';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
 
-const P = {
-  surface: 'rgba(9, 12, 32, 0.82)',
-  surfaceStrong: 'rgba(12, 16, 42, 0.94)',
-  border: 'rgba(255,255,255,0.1)',
-  borderStrong: 'rgba(0,245,255,0.24)',
-  cyan: '#00F5FF',
-  cyanMuted: 'rgba(0,245,255,0.1)',
-  green: '#00FF7F',
-  greenMuted: 'rgba(0,255,127,0.1)',
-  orange: '#FF8C00',
-  orangeMuted: 'rgba(255,140,0,0.12)',
-  red: '#FF3B30',
-  redMuted: 'rgba(255,59,48,0.12)',
-  gold: '#FFD700',
-  text: '#FFFFFF',
-  textMuted: '#9BA3B4',
-  textDim: '#646B7E',
+const getTransactionPalette = (theme: AppTheme, colors: LegacyColors) => {
+  const isDark = theme.isDark;
+  return {
+    surface: isDark ? 'rgba(9, 12, 32, 0.82)' : theme.colors.surface.card,
+    surfaceStrong: isDark ? 'rgba(12, 16, 42, 0.94)' : theme.colors.surface.raised,
+    border: isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+    borderStrong: isDark ? 'rgba(0,245,255,0.24)' : theme.colors.border.strong,
+    cyan: isDark ? '#00F5FF' : colors.cyan,
+    cyanMuted: isDark ? 'rgba(0,245,255,0.1)' : alpha(colors.cyan, 0.08),
+    green: isDark ? '#00FF7F' : colors.success,
+    greenMuted: isDark ? 'rgba(0,255,127,0.1)' : alpha(colors.success, 0.08),
+    orange: isDark ? '#FF8C00' : colors.worker,
+    orangeMuted: isDark ? 'rgba(255,140,0,0.12)' : alpha(colors.worker, 0.08),
+    red: isDark ? '#FF3B30' : colors.error,
+    redMuted: isDark ? 'rgba(255,59,48,0.12)' : alpha(colors.error, 0.08),
+    gold: isDark ? '#FFD700' : colors.yellow,
+    text: theme.colors.text.primary,
+    textMuted: theme.colors.text.muted,
+    textDim: theme.colors.text.dim,
+  };
 };
 
-const STATUS_MAP: Record<string, { color: string; muted: string; label: string; title: string; Icon: React.ComponentType<any> }> = {
+const getStatusMap = (P: ReturnType<typeof getTransactionPalette>) => ({
   pending: { color: P.orange, muted: P.orangeMuted, label: 'Pending', title: 'Request sent', Icon: Clock3 },
   accepted: { color: P.cyan, muted: P.cyanMuted, label: 'Assigned', title: 'Ustad assigned', Icon: ShieldCheck },
   ongoing: { color: P.cyan, muted: P.cyanMuted, label: 'Ongoing', title: 'Work in progress', Icon: Navigation },
   completed: { color: P.green, muted: P.greenMuted, label: 'Completed', title: 'Job completed', Icon: CheckCircle2 },
   cancelled: { color: P.red, muted: P.redMuted, label: 'Cancelled', title: 'Job cancelled', Icon: XCircle },
+});
+
+// Fallback palette for stylesheet definitions
+const P = {
+  surface: 'rgba(9, 12, 32, 0.82)',
+  surfaceStrong: 'rgba(12, 16, 42, 0.94)',
+  border: 'rgba(255,255,255,0.1)',
+  borderStrong: 'rgba(0,245,255,0.24)',
+  cyan: '#0369A1',
+  cyanMuted: 'rgba(3,105,161,0.08)',
+  green: '#16A34A',
+  greenMuted: 'rgba(22,163,74,0.08)',
+  orange: '#EA580C',
+  orangeMuted: 'rgba(234,88,12,0.08)',
+  red: '#DC2626',
+  redMuted: 'rgba(220,38,38,0.08)',
+  gold: '#D97706',
+  text: '#111827',
+  textMuted: '#64748B',
+  textDim: '#64748B',
 };
 
 const STEPS = [
@@ -137,24 +160,29 @@ function PulseDot({ color }: { color: string }) {
   );
 }
 
-function SectionHeader({ icon: Icon, title, color = P.cyan }: { icon: React.ComponentType<any>; title: string; color?: string }) {
+function SectionHeader({ icon: Icon, title, color }: { icon: React.ComponentType<any>; title: string; color?: string }) {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const resolvedColor = color ? getAccessibleColor(color, theme.isDark) : (theme.isDark ? '#00F5FF' : colors.cyan);
   return (
     <View style={styles.sectionHeader}>
-      <View style={[styles.sectionIcon, { backgroundColor: `${color}18`, borderColor: `${color}30` }]}>
-        <Icon size={14} color={color} strokeWidth={2.4} />
+      <View style={[styles.sectionIcon, { backgroundColor: `${resolvedColor}18`, borderColor: `${resolvedColor}30` }]}>
+        <Icon size={14} color={resolvedColor} strokeWidth={2.4} />
       </View>
-      <Text style={[styles.sectionTitle, { color }]}>{title}</Text>
-      <View style={[styles.sectionLine, { backgroundColor: `${color}24` }]} />
+      <Text style={[styles.sectionTitle, { color: resolvedColor }]}>{title}</Text>
+      <View style={[styles.sectionLine, { backgroundColor: `${resolvedColor}24` }]} />
     </View>
   );
 }
 
-function InfoTile({ icon: Icon, label, value, color = P.cyan }: { icon: React.ComponentType<any>; label: string; value: string; color?: string }) {
+function InfoTile({ icon: Icon, label, value, color }: { icon: React.ComponentType<any>; label: string; value: string; color?: string }) {
   const theme = useTheme();
+  const colors = useThemeColors();
+  const resolvedColor = color ? getAccessibleColor(color, theme.isDark) : (theme.isDark ? '#00F5FF' : colors.cyan);
   return (
     <View style={[styles.infoTile, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-      <View style={[styles.infoIcon, { backgroundColor: `${color}14` }]}>
-        <Icon size={15} color={color} strokeWidth={2.4} />
+      <View style={[styles.infoIcon, { backgroundColor: alpha(resolvedColor, theme.isDark ? 0.14 : 0.08) }]}>
+        <Icon size={15} color={resolvedColor} strokeWidth={2.4} />
       </View>
       <Text style={[styles.infoLabel, { color: theme.colors.text.muted }]}>{label}</Text>
       <Text style={[styles.infoValue, { color: theme.colors.text.primary }]} numberOfLines={2}>{value}</Text>
@@ -162,11 +190,13 @@ function InfoTile({ icon: Icon, label, value, color = P.cyan }: { icon: React.Co
   );
 }
 
-function PartnerInsight({ icon: Icon, label, value, color = P.cyan }: { icon: React.ComponentType<any>; label: string; value: string; color?: string }) {
+function PartnerInsight({ icon: Icon, label, value, color }: { icon: React.ComponentType<any>; label: string; value: string; color?: string }) {
   const theme = useTheme();
+  const colors = useThemeColors();
+  const resolvedColor = color ? getAccessibleColor(color, theme.isDark) : (theme.isDark ? '#00F5FF' : colors.cyan);
   return (
     <View style={[styles.partnerInsight, { borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : theme.colors.border.subtle, backgroundColor: theme.isDark ? 'rgba(255,255,255,0.045)' : theme.colors.surface.card }]}>
-      <Icon size={14} color={color} strokeWidth={2.4} />
+      <Icon size={14} color={resolvedColor} strokeWidth={2.4} />
       <Text style={[styles.partnerInsightValue, { color: theme.colors.text.primary }]} numberOfLines={1}>{value}</Text>
       <Text style={[styles.partnerInsightLabel, { color: theme.colors.text.muted }]} numberOfLines={1}>{label}</Text>
     </View>
@@ -177,7 +207,7 @@ function FloatingAction({
   icon: Icon,
   label,
   onPress,
-  color = P.cyan,
+  color,
   primary,
   disabled,
 }: {
@@ -188,19 +218,24 @@ function FloatingAction({
   primary?: boolean;
   disabled?: boolean;
 }) {
-  // Determine gradient colors based on button role
-  let gradientColors: readonly [string, string] = ['#00F5FF', '#0066FF']; // default cyan for CHAT
-  let shadowColor = '#00F5FF';
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const isDark = theme.isDark;
+
+  let gradientColors: readonly [string, string] = isDark
+    ? ['#00F5FF', '#0066FF']
+    : ['#0284C7', '#1D4ED8'];
+  let shadowColor = isDark ? '#00F5FF' : '#0284C7';
 
   if (primary) {
-    gradientColors = ['#FF2A6D', '#FF5E62']; // high attention sunset coral gradient for CALL
+    gradientColors = ['#FF2A6D', '#FF5E62'];
     shadowColor = '#FF2A6D';
-  } else if (color === P.green) {
-    gradientColors = ['#00FF7F', '#00A85A']; // neon green for TRACK
-    shadowColor = '#00FF7F';
+  } else if (color === '#00FF7F' || color === colors.green || color === colors.success) {
+    gradientColors = isDark ? ['#00FF7F', '#00A85A'] : ['#16A34A', '#15803D'];
+    shadowColor = isDark ? '#00FF7F' : '#16A34A';
   }
 
-  const activeIconColor = '#001014'; // high contrast dark navy icon on vibrant solid backgrounds
+  const activeIconColor = '#FFFFFF';
 
   return (
     <TouchableOpacity
@@ -211,7 +246,7 @@ function FloatingAction({
         styles.floatingAction,
         !disabled && {
           shadowColor,
-          shadowOpacity: 0.35,
+          shadowOpacity: isDark ? 0.35 : 0.2,
           shadowRadius: 10,
           shadowOffset: { width: 0, height: 5 },
           elevation: 6,
@@ -227,9 +262,9 @@ function FloatingAction({
           style={StyleSheet.absoluteFill}
         />
       ) : (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.04)' }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' }]} />
       )}
-      <Icon size={22} color={disabled ? P.textDim : activeIconColor} strokeWidth={2.4} />
+      <Icon size={22} color={disabled ? theme.colors.text.dim : activeIconColor} strokeWidth={2.4} />
     </TouchableOpacity>
   );
 }
@@ -237,6 +272,9 @@ function FloatingAction({
 export default function TransactionDetailsScreen() {
   const theme = useTheme();
   const colors = useThemeColors();
+  const typography = useThemeTypography();
+  const P = useMemo(() => getTransactionPalette(theme, colors), [theme, colors]);
+  const STATUS_MAP = useMemo(() => getStatusMap(P), [P]);
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -291,7 +329,7 @@ export default function TransactionDetailsScreen() {
       <BackgroundWrapper>
         <View style={styles.loading}>
           <ActivityIndicator color={P.cyan} size="large" />
-          <Text style={styles.loadingText}>{t('transactionDetails.loadingDetails', 'Loading booking details')}</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('transactionDetails.loadingDetails', 'Loading booking details')}</Text>
         </View>
       </BackgroundWrapper>
     );
@@ -301,8 +339,8 @@ export default function TransactionDetailsScreen() {
     return (
       <BackgroundWrapper>
         <View style={styles.loading}>
-          <Text style={styles.emptyTitle}>{t('transactionDetails.bookingNotFound', 'Booking not found')}</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.emptyButton}>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('transactionDetails.bookingNotFound', 'Booking not found')}</Text>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.emptyButton, { backgroundColor: P.cyan }]}>
             <Text style={styles.emptyButtonText}>{t('transactionDetails.goBack', 'Go back')}</Text>
           </TouchableOpacity>
         </View>
@@ -323,10 +361,17 @@ export default function TransactionDetailsScreen() {
   const showDisputeReportCorner = canRaiseDispute && !isJobEnded;
   const showDisputeStatusCorner = hasActiveDispute;
   const isCommunicationLocked = status === 'completed' || status === 'cancelled';
-  const statusInfo = STATUS_MAP[status] || STATUS_MAP.accepted;
+  const baseStatusInfo = STATUS_MAP[status] || STATUS_MAP.accepted;
+  const rawStatusColor = meta?.statusInfo?.accentColor || baseStatusInfo.color;
+  const resolvedStatusColor = getAccessibleColor(rawStatusColor, theme.isDark);
+  const statusInfo = {
+    ...baseStatusInfo,
+    color: resolvedStatusColor,
+    muted: alpha(resolvedStatusColor, theme.isDark ? 0.12 : 0.09),
+  };
   const StatusIcon = statusInfo.Icon;
-  const statusLabel = t(`bookingStatus.${status}.label`, statusInfo.label);
-  const statusTitle = t(`bookingStatus.${status}.title`, statusInfo.title);
+  const statusLabel = String(t(`bookingStatus.${status}.label`, statusInfo.label));
+  const statusTitle = String(t(`bookingStatus.${status}.title`, statusInfo.title));
   const partner = isWorker ? booking.customer : booking.worker;
   const customerId = typeof booking.customer === 'object' ? booking.customer._id : booking.customer;
   const workerId = typeof booking.worker === 'object' ? booking.worker._id : booking.worker;
@@ -550,7 +595,7 @@ export default function TransactionDetailsScreen() {
               </View>
               <View style={styles.heroTitleCopy}>
                 <Text style={[styles.heroStage, { color: theme.colors.text.muted }]}>{statusTitle}</Text>
-                <Text style={[styles.heroTitle, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{serviceTitle}</Text>
+                <Text style={[styles.heroTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{serviceTitle}</Text>
                 <Text style={[styles.heroDescription, { color: theme.colors.text.secondary }]} numberOfLines={2}>{serviceDescription}</Text>
               </View>
             </View>
@@ -640,7 +685,7 @@ export default function TransactionDetailsScreen() {
                 </View>
                 <View style={styles.partnerCopy}>
                   <Text style={[styles.partnerRoleText, { color: theme.colors.text.muted }]}>{partnerRole}</Text>
-                  <Text style={[styles.partnerName, Typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{partnerName}</Text>
+                  <Text style={[styles.partnerName, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{partnerName}</Text>
                   <Text style={[styles.partnerSubText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{partnerSubtitle}</Text>
                 </View>
                 <View style={[styles.partnerCue, { backgroundColor: theme.isDark ? P.cyanMuted : alpha(theme.colors.brand.primary, 0.08), borderColor: theme.isDark ? P.borderStrong : theme.colors.border.subtle }]}>
@@ -890,9 +935,9 @@ export default function TransactionDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(560).duration(450)} style={styles.section}>
               <SectionHeader icon={Star} title={t('transactionDetails.serviceReview', 'Service Review')} color={booking.isReviewed ? P.green : P.gold} />
               {booking.isReviewed ? (
-                <View style={styles.noticeCard}>
+                <View style={[styles.noticeCard, { backgroundColor: P.greenMuted, borderColor: alpha(P.green, 0.25) }]}>
                   <CheckCircle2 size={18} color={P.green} />
-                  <Text style={styles.noticeText}>{t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}</Text>
+                  <Text style={[styles.noticeText, { color: P.green }]}>{t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}</Text>
                 </View>
               ) : (
                 <View style={styles.inlineReviewCard}>
@@ -984,9 +1029,9 @@ export default function TransactionDetailsScreen() {
           )}
 
           {status === 'completed' && booking.paymentStatus === 'paid' && (
-            <View style={styles.noticeCard}>
+            <View style={[styles.noticeCard, { backgroundColor: P.greenMuted, borderColor: alpha(P.green, 0.25) }]}>
               <CheckCircle2 size={18} color={P.green} />
-              <Text style={styles.noticeText}>{t('transactionDetails.paymentConfirmed', 'Cash payment has been confirmed for this job.')}</Text>
+              <Text style={[styles.noticeText, { color: P.green }]}>{t('transactionDetails.paymentConfirmed', 'Cash payment has been confirmed for this job.')}</Text>
             </View>
           )}
         </ScrollView>
