@@ -31,8 +31,6 @@ import {
   ArrowRight,
   Radio,
   Zap,
-  Sparkles,
-  Plus,
   ShieldCheck,
   CheckCircle2,
   Clock,
@@ -505,45 +503,7 @@ export function ClientHome() {
           )}
         </View>
 
-        {/* ── 3. Post a Custom Job Action Banner ── */}
-        <Animated.View entering={FadeInDown.delay(120).duration(500)} style={styles.customJobSection}>
-          <GlassCard
-            intensity={28}
-            padding={16}
-            hasGlow
-            glowColor={colors.purple}
-            style={[styles.customJobCard, { borderColor: alpha(colors.purple, 0.3) }]}
-            onPress={() => router.push('/job-creation' as any)}
-          >
-            <View style={styles.customJobRow}>
-              <View style={[styles.customJobIconWrap, { backgroundColor: alpha(colors.purple, 0.16) }]}>
-                <Sparkles size={22} color={colors.purple} strokeWidth={2.2} />
-              </View>
-              <View style={styles.customJobTextWrap}>
-                <Text style={[styles.customJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                  {t('home.client.customJobTitle', 'Need a Custom Repair or Task?')}
-                </Text>
-                <Text style={[styles.customJobDesc, { color: theme.colors.text.muted }]}>
-                  {t('home.client.customJobDesc', 'Post details with photos & set your budget. Qualified Ustads will bid on it.')}
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.customJobBtn, { backgroundColor: colors.purple }]}
-              onPress={() => router.push('/job-creation' as any)}
-              activeOpacity={0.84}
-            >
-              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} style={{ marginRight: 6 }} />
-              <Text style={styles.customJobBtnText}>
-                {t('home.client.postJobBtn', 'Post Custom Job')}
-              </Text>
-              <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </GlassCard>
-        </Animated.View>
-
-        {/* ── 4. Recent Bookings or Trust & Quality Guarantee ── */}
+        {/* ── 3. Recent Bookings or Trust & Quality Guarantee ── */}
         {homeSummaryLoading && !isRefreshing ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -795,55 +755,6 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 13,
     fontWeight: '500',
-  },
-
-  // ── Custom Job Card
-  customJobSection: {
-    paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.l,
-  },
-  customJobCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-  },
-  customJobRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  customJobIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customJobTextWrap: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  customJobTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-  customJobDesc: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  customJobBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: BorderRadius.m,
-  },
-  customJobBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-    color: '#FFFFFF',
   },
 
   // ── Trust & Quality Guarantee
