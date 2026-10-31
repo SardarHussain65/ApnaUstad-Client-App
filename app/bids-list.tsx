@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
+  RefreshControl,
   Image,
-  Animated,
-  Dimensions,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,142 +16,153 @@ import {
   ArrowLeft,
   Star,
   Clock,
-  Banknote,
   ShieldCheck,
   Users,
   ChevronRight,
   Zap,
-  Target,
-  TrendingUp,
+  RefreshCw,
 } from 'lucide-react-native';
 import AnimatedRN, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import { Spacing, alpha, useTheme, useThemeColors, getAccessibleColor } from '../constants/Theme';
-import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Toast from 'react-native-toast-message';
+
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../constants/Theme';
+import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { Skeleton, useShimmerTranslateX } from '../components/ui/Skeleton';
+import { useIsRTL } from '../context/LanguageContext';
+import { socketService } from '../services/socketService';
 import api from '../services/api';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getInitials(name?: string) {
+  if (!name?.trim()) return 'U';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(p => p[0]?.toUpperCase())
+    .join('');
+}
 
-// ─── Design Tokens ──────────────────────────────────────────────────────────────
-const NEON_CYAN = '#00F5FF';
-const NEON_AMBER = '#FFB800';
-const NEON_GREEN = '#39FF14';
-const NEON_PINK = '#FF2D78';
-const NEON_BLUE = '#1E90FF';
-const GOLD = '#FFD700';
-const CARD_BG = 'rgba(255,255,255,0.03)';
-const BORDER_S = 'rgba(255,255,255,0.07)';
+// ─── Star Rating Component ────────────────────────────────────────────────────
+function StarRating({ value, reviewCount }: { value: number; reviewCount?: number }) {
+  const theme = useTheme();
+  return (
+    <View style={styles.starRow}>
+      <Star size={12} color="#FFB800" fill="#FFB800" />
+      <Text style={[styles.ratingScore, { color: theme.colors.text.primary }]}>
+        {(value || 5.0).toFixed(1)}
+      </Text>
+      {reviewCount !== undefined && reviewCount > 0 && (
+        <Text style={[styles.reviewCountText, { color: theme.colors.text.muted }]}>
+          ({reviewCount})
+        </Text>
+      )}
+    </View>
+  );
+}
 
-// ─── Animated NeonCard with corner brackets ─────────────────────────────────────
-function NeonCard({
-  children,
-  accentColor = NEON_CYAN,
-  style,
-}: {
-  children: React.ReactNode;
-  accentColor?: string;
-  style?: object;
-}) {
-  const pulse = useRef(new Animated.Value(0.3)).current;
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 0.9, duration: 2600, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0.3, duration: 2600, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
+// ─── Proposal Card Skeleton ───────────────────────────────────────────────────
+function ProposalCardSkeleton({ translateX }: { translateX?: any }) {
+  const theme = useTheme();
+  const cardBg = theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)';
+  const borderColor = theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.border.subtle;
 
   return (
-    <View style={[styles.neonWrapper, style]}>
-      <View style={[styles.cTL, { borderColor: accentColor }]} />
-      <View style={[styles.cTR, { borderColor: accentColor }]} />
-      <View style={[styles.cBL, { borderColor: accentColor }]} />
-      <View style={[styles.cBR, { borderColor: accentColor }]} />
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFillObject,
-          { borderRadius: 22, borderWidth: 1, borderColor: accentColor, opacity: pulse },
-        ]}
-      />
-      <View style={[styles.neonInner, { backgroundColor: `${accentColor}06` }]}>
-        {children}
+    <View style={[styles.skeletonCard, { backgroundColor: cardBg, borderColor }]}>
+      <View style={styles.skeletonTopRow}>
+        <Skeleton width={52} height={52} borderRadius={16} translateX={translateX} />
+        <View style={{ flex: 1, gap: 6, marginHorizontal: 12 }}>
+          <Skeleton width="65%" height={16} borderRadius={6} translateX={translateX} />
+          <Skeleton width="45%" height={12} borderRadius={4} translateX={translateX} />
+        </View>
+        <Skeleton width={88} height={36} borderRadius={12} translateX={translateX} />
+      </View>
+
+      <Skeleton width="100%" height={46} borderRadius={12} style={{ marginBottom: 12 }} translateX={translateX} />
+
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+        <Skeleton width={80} height={24} borderRadius={12} translateX={translateX} />
+        <Skeleton width={96} height={24} borderRadius={12} translateX={translateX} />
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Skeleton width="38%" height={44} borderRadius={14} translateX={translateX} />
+        <Skeleton width="58%" height={44} borderRadius={14} translateX={translateX} />
       </View>
     </View>
   );
 }
 
-// ─── Rank Badge (1st, 2nd, 3rd) ────────────────────────────────────────────────
-function RankBadge({ rank }: { rank: number }) {
-  const configs: Record<number, { color: string; label: string }> = {
-    1: { color: GOLD, label: '#1' },
-    2: { color: '#C0C0C0', label: '#2' },
-    3: { color: '#CD7F32', label: '#3' },
-  };
-  const cfg = configs[rank] || { color: 'rgba(255,255,255,0.2)', label: `#${rank}` };
-  return (
-    <View style={[styles.rankBadge, { backgroundColor: `${cfg.color}18`, borderColor: `${cfg.color}50` }]}>
-      <Text style={[styles.rankBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
-    </View>
-  );
-}
-
-// ─── Star Rating ────────────────────────────────────────────────────────────────
-function StarRating({ value }: { value: number }) {
-  return (
-    <View style={styles.starRow}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <Star
-          key={i}
-          size={11}
-          color={GOLD}
-          fill={i <= Math.round(value) ? GOLD : 'transparent'}
-        />
-      ))}
-      <Text style={styles.ratingNum}>{value?.toFixed(1) || '5.0'}</Text>
-    </View>
-  );
-}
-
-// ─── Stat Chip ──────────────────────────────────────────────────────────────────
-function StatChip({ icon: Icon, label, color }: { icon: any; label: string; color: string }) {
-  return (
-    <View style={[styles.statChip, { borderColor: `${color}25`, backgroundColor: `${color}0D` }]}>
-      <Icon size={11} color={color} />
-      <Text style={[styles.statChipText, { color }]}>{label}</Text>
-    </View>
-  );
-}
-
-// ─── Main Screen ────────────────────────────────────────────────────────────────
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function BidsListScreen() {
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const theme = useTheme();
   const colors = useThemeColors();
-  const cyanColor = theme.isDark ? '#00F5FF' : colors.cyan;
+  const primaryColor = theme.colors.brand?.primary || colors.primary;
+  const secondaryColor = theme.colors.brand?.secondary || colors.secondary;
+  const shimmerTranslateX = useShimmerTranslateX();
 
   const [bids, setBids] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
 
-  useEffect(() => { fetchBids(); }, [jobId]);
-
-  const fetchBids = async () => {
+  const fetchBids = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const res = await api.get(`/jobs/${jobId}/bids`);
-      setBids(res.data.data);
-    } catch (e) {
-      console.error(e);
+      setBids(res.data.data || []);
+    } catch (e: any) {
+      console.error('Fetch bids error:', e?.message);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, [jobId]);
+
+  useEffect(() => {
+    fetchBids();
+  }, [fetchBids]);
+
+  // Real-time socket updates for incoming and withdrawn bids
+  useEffect(() => {
+    if (!jobId) return;
+
+    const unsubNewBid = socketService.on('bid:new', (newBid: any) => {
+      const incomingJobId = typeof newBid.jobPost === 'object' ? newBid.jobPost?._id : newBid.jobPost;
+      if (String(incomingJobId) === String(jobId)) {
+        setBids(prev => {
+          if (prev.some(b => String(b._id) === String(newBid._id))) {
+            return prev.map(b => (String(b._id) === String(newBid._id) ? newBid : b));
+          }
+          return [newBid, ...prev];
+        });
+      }
+    });
+
+    const unsubWithdrawn = socketService.on('bid:withdrawn', (payload: any) => {
+      const withdrawnBidId = payload?.bidId || payload?._id;
+      if (withdrawnBidId) {
+        setBids(prev => prev.filter(b => String(b._id) !== String(withdrawnBidId)));
+      }
+    });
+
+    return () => {
+      if (typeof unsubNewBid === 'function') unsubNewBid();
+      if (typeof unsubWithdrawn === 'function') unsubWithdrawn();
+    };
+  }, [jobId]);
 
   const handleAccept = async (bidId: string) => {
     setAccepting(bidId);
@@ -170,351 +181,705 @@ export default function BidsListScreen() {
     }
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <BackgroundWrapper>
-        <View style={styles.centerFill}>
-          <View style={styles.loadingRing}>
-            <View style={styles.loadingCore}>
-              <Target size={24} color={cyanColor} />
-            </View>
-          </View>
-          <Text style={[styles.loadingTitle, { color: theme.colors.text.primary }]}>{t('bidsList.findingUstads')}</Text>
-          <Text style={[styles.loadingSub, { color: theme.colors.text.muted }]}>{t('bidsList.fetchingBids')}</Text>
-        </View>
-      </BackgroundWrapper>
-    );
-  }
+  const handleRefresh = () => {
+    fetchBids(true);
+  };
 
   return (
     <BackgroundWrapper>
-      {/* Ambient tint */}
-      <LinearGradient
-        colors={[theme.isDark ? `${cyanColor}07` : 'transparent', 'transparent', theme.isDark ? `${NEON_PINK}04` : 'transparent']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
-
       <View style={{ flex: 1 }}>
 
         {/* ── Top Bar ──────────────────────────────────────────────────────── */}
         <AnimatedRN.View
-          entering={FadeInUp.duration(500)}
-          style={[styles.topBar, { paddingTop: insets.top + 8, borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.border.subtle }]}
+          entering={FadeInUp.duration(400)}
+          style={[
+            styles.topBar,
+            {
+              paddingTop: insets.top + (Platform.OS === 'ios' ? 8 : 12),
+              borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.border.subtle,
+            },
+          ]}
         >
-          <BlurView intensity={60} tint={theme.isDark ? "dark" : "light"} style={StyleSheet.absoluteFillObject} />
-          <View style={styles.topBarLine} />
+          <BlurView intensity={70} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
 
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-            <ArrowLeft color={theme.colors.text.primary} size={20} />
+          <TouchableOpacity
+            style={[
+              styles.backBtn,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+              },
+            ]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft
+              color={theme.colors.text.primary}
+              size={20}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </TouchableOpacity>
 
           <View style={styles.topBarCenter}>
-            <Text style={[styles.topBarTitle, { color: theme.colors.text.primary }]}>{t('bidsList.headerTitle')}</Text>
-            <View style={[styles.countPill, { borderColor: alpha(cyanColor, 0.35), backgroundColor: alpha(cyanColor, 0.08) }]}>
-              <Users size={10} color={cyanColor} />
-              <Text style={[styles.countPillText, { color: cyanColor }]}>
-                {t('bidsList.countLabel', { count: bids.length })}
+            <Text style={[styles.topBarTitle, { color: theme.colors.text.primary }]}>
+              {t('bidsList.headerTitle', 'USTAD OFFERS')}
+            </Text>
+            <View
+              style={[
+                styles.countBadge,
+                {
+                  backgroundColor: alpha(primaryColor, 0.1),
+                  borderColor: alpha(primaryColor, 0.25),
+                },
+              ]}
+            >
+              <Users size={11} color={primaryColor} />
+              <Text style={[styles.countBadgeText, { color: primaryColor }]}>
+                {t('bidsList.countLabel', { count: bids.length, defaultValue: `${bids.length} Offers` })}
               </Text>
             </View>
           </View>
 
-          <View style={{ width: 44 }} />
+          <TouchableOpacity
+            style={[
+              styles.refreshHeaderBtn,
+              {
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+              },
+            ]}
+            onPress={handleRefresh}
+            activeOpacity={0.7}
+          >
+            <RefreshCw
+              size={18}
+              color={isRefreshing ? primaryColor : theme.colors.text.secondary}
+            />
+          </TouchableOpacity>
         </AnimatedRN.View>
 
-        {/* ── List ─────────────────────────────────────────────────────────── */}
+        {/* ── Main List ─────────────────────────────────────────────────────── */}
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingTop: insets.top + 90,
-            paddingBottom: 40,
+            paddingTop: insets.top + (Platform.OS === 'ios' ? 76 : 84),
+            paddingBottom: insets.bottom + 32,
             paddingHorizontal: 16,
           }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={primaryColor}
+              colors={[primaryColor]}
+            />
+          }
         >
+          {/* ── Loading Skeleton ─────────────────────────────────────────── */}
+          {isLoading && bids.length === 0 && (
+            <View style={{ gap: 14 }}>
+              <ProposalCardSkeleton translateX={shimmerTranslateX} />
+              <ProposalCardSkeleton translateX={shimmerTranslateX} />
+              <ProposalCardSkeleton translateX={shimmerTranslateX} />
+            </View>
+          )}
 
           {/* ── Empty State ──────────────────────────────────────────────── */}
-          {bids.length === 0 && (
-            <AnimatedRN.View entering={FadeInDown.delay(200).duration(700)} style={styles.emptyBox}>
-              <View style={styles.emptyIconRing}>
-                <TrendingUp size={28} color="rgba(255,255,255,0.2)" />
+          {!isLoading && bids.length === 0 && (
+            <AnimatedRN.View
+              entering={FadeInDown.delay(100).duration(500)}
+              style={styles.emptyContainer}
+            >
+              <View
+                style={[
+                  styles.emptyIconCircle,
+                  {
+                    backgroundColor: alpha(primaryColor, 0.08),
+                    borderColor: alpha(primaryColor, 0.2),
+                  },
+                ]}
+              >
+                <Users size={32} color={primaryColor} />
               </View>
-              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('bidsList.noBidsYet')}</Text>
-              <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('bidsList.noBidsSub')}</Text>
+
+              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
+                {t('bidsList.noBidsYet', 'WAITING FOR OFFERS')}
+              </Text>
+
+              <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>
+                {t('bidsList.noBidsSub', 'Nearby Ustads are checking your job and will send their rates soon.')}
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.emptyRefreshBtn,
+                  {
+                    backgroundColor: alpha(primaryColor, 0.1),
+                    borderColor: alpha(primaryColor, 0.25),
+                  },
+                ]}
+                onPress={handleRefresh}
+                activeOpacity={0.8}
+              >
+                <RefreshCw size={15} color={primaryColor} />
+                <Text style={[styles.emptyRefreshBtnText, { color: primaryColor }]}>
+                  {t('common.refresh', 'Refresh Offers')}
+                </Text>
+              </TouchableOpacity>
             </AnimatedRN.View>
           )}
 
-          {/* ── Bid Cards ────────────────────────────────────────────────── */}
-          {bids.map((bid, index) => {
-            const isDeploying = accepting === bid._id;
-            const rating = bid.worker?.averageRating ?? 5;
-            const rawAccent = index === 0 ? GOLD : index === 1 ? cyanColor : index === 2 ? NEON_PINK : NEON_BLUE;
-            const accentColor = getAccessibleColor(rawAccent, theme.isDark);
+          {/* ── Bid Proposals ────────────────────────────────────────────── */}
+          {!isLoading &&
+            bids.map((bid, index) => {
+              const isDeploying = accepting === bid._id;
+              const rating = bid.worker?.rating ?? bid.worker?.averageRating ?? 5.0;
+              const reviewCount = bid.worker?.totalReviews ?? bid.worker?.totalJobs ?? 0;
+              const categoryOrExp =
+                bid.worker?.category ||
+                (bid.worker?.experience
+                  ? `${bid.worker.experience} yrs exp`
+                  : t('common.verifiedUstad', 'Verified Professional'));
 
-            return (
-              <AnimatedRN.View
-                key={bid._id}
-                entering={FadeInDown.delay(index * 120).duration(700)}
-                style={{ marginBottom: 16 }}
-              >
-                <NeonCard accentColor={accentColor}>
+              return (
+                <AnimatedRN.View
+                  key={bid._id}
+                  entering={FadeInDown.delay(index * 80).duration(400)}
+                  style={styles.cardContainer}
+                >
+                  <View
+                    style={[
+                      styles.proposalCard,
+                      {
+                        backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
+                        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                      },
+                    ]}
+                  >
+                    {/* Top sheen overlay */}
+                    <LinearGradient
+                      colors={[
+                        theme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.7)',
+                        'transparent',
+                      ]}
+                      style={StyleSheet.absoluteFillObject}
+                      pointerEvents="none"
+                    />
 
-                  {/* ── Card Header ────────────────────────────────────── */}
-                  <View style={styles.cardTop}>
-                    {/* Avatar + Info */}
-                    <View style={styles.workerRow}>
-                      <View style={styles.avatarWrap}>
-                        <Image
-                          source={{ uri: bid.worker?.profileImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100' }}
-                          style={styles.avatar}
-                        />
-                        <View style={[styles.avatarOnline, { backgroundColor: NEON_GREEN }]} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={styles.workerNameRow}>
-                          <Text style={styles.workerName} numberOfLines={1}>
-                            {bid.worker?.fullName || t('common.anonymous', { defaultValue: 'Anonymous' })}
-                          </Text>
-                          <RankBadge rank={index + 1} />
-                        </View>
-                        <StarRating value={rating} />
-                      </View>
-                    </View>
-
-                    {/* Price */}
-                    <View style={styles.priceBlock}>
-                      <Text style={styles.priceLabel}>{t('bidsList.quotedPrice')}</Text>
-                      <Text style={[styles.priceValue, { color: accentColor }]}>
-                        Rs. {bid.proposedPrice}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* ── Divider ──────────────────────────────────────── */}
-                  <View style={styles.cardDivider} />
-
-                  {/* ── Message ──────────────────────────────────────── */}
-                  <View style={styles.msgBox}>
-                    <Text style={styles.msgText} numberOfLines={3}>
-                      {bid.message || t('bidsList.noMessage')}
-                    </Text>
-                  </View>
-
-                  {/* ── Chips ────────────────────────────────────────── */}
-                  <View style={styles.chipsRow}>
-                    <StatChip icon={ShieldCheck} label={t('findingWorker.verified', { defaultValue: 'VERIFIED' })} color={theme.isDark ? NEON_GREEN : colors.success} />
-                    <StatChip icon={Clock} label={t('findingWorker.available', { defaultValue: 'AVAILABLE' })} color={theme.isDark ? NEON_AMBER : colors.yellow} />
-                    {bid.estimatedDays && (
-                      <StatChip icon={Banknote} label={t('bidsList.estDaysLabel', { count: bid.estimatedDays })} color={cyanColor} />
-                    )}
-                  </View>
-
-                  {/* ── Action Row ───────────────────────────────────── */}
-                  <View style={styles.actionRow}>
-                    {/* Review Button */}
+                    {/* ── Top Row: Ustad Identity & Quoted Price ── */}
                     <TouchableOpacity
-                      style={styles.reviewBtn}
-                      onPress={() => router.push({
-                        pathname: '/worker-details',
-                        params: { id: bid.worker?._id, jobId, bidId: bid._id },
-                      })}
                       activeOpacity={0.8}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/worker-details',
+                          params: {
+                            id: bid.worker?._id,
+                            jobId,
+                            bidId: bid._id,
+                            proposedPrice: String(bid.proposedPrice || ''),
+                          },
+                        })
+                      }
+                      style={styles.cardHeader}
                     >
-                      <Text style={styles.reviewBtnText}>{t('bidsList.profileBtn')}</Text>
-                      <ChevronRight size={13} color="rgba(255,255,255,0.5)" />
+                      {/* Avatar */}
+                      <View style={styles.avatarWrap}>
+                        {bid.worker?.profileImage ? (
+                          <Image source={{ uri: bid.worker.profileImage }} style={styles.avatar} />
+                        ) : (
+                          <View
+                            style={[
+                              styles.avatarFallback,
+                              { backgroundColor: alpha(primaryColor, 0.12) },
+                            ]}
+                          >
+                            <Text style={[styles.avatarInitials, { color: primaryColor }]}>
+                              {getInitials(bid.worker?.fullName)}
+                            </Text>
+                          </View>
+                        )}
+                        {bid.worker?.isAvailable !== false && (
+                          <View style={[styles.onlineDot, { backgroundColor: colors.success }]} />
+                        )}
+                      </View>
+
+                      {/* Info & Rating */}
+                      <View style={styles.workerInfo}>
+                        <View style={styles.nameRow}>
+                          <Text
+                            style={[styles.workerName, { color: theme.colors.text.primary }]}
+                            numberOfLines={1}
+                          >
+                            {bid.worker?.fullName || t('common.anonymous', 'Ustad')}
+                          </Text>
+                          {bid.worker?.isVerified && (
+                            <ShieldCheck size={14} color={colors.success} strokeWidth={2.4} />
+                          )}
+                        </View>
+
+                        <Text style={[styles.workerSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                          {categoryOrExp}
+                        </Text>
+
+                        <StarRating value={rating} reviewCount={reviewCount} />
+                      </View>
+
+                      {/* Quoted Price Badge */}
+                      <View
+                        style={[
+                          styles.priceBox,
+                          {
+                            backgroundColor: alpha(colors.success, 0.08),
+                            borderColor: alpha(colors.success, 0.22),
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.priceTag, { color: alpha(colors.success, 0.85) }]}>
+                          {t('bidsList.quotedPrice', 'RATE')}
+                        </Text>
+                        <Text style={[styles.priceAmount, { color: colors.success }]}>
+                          Rs. {Number(bid.proposedPrice || 0).toLocaleString()}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
 
-                    {/* Deploy Button */}
-                    <TouchableOpacity
-                      style={[styles.deployBtn, isDeploying && { opacity: 0.6 }]}
-                      onPress={() => handleAccept(bid._id)}
-                      disabled={isDeploying || !!accepting}
-                      activeOpacity={0.85}
-                    >
-                      <LinearGradient
-                        colors={
-                          index === 0
-                            ? [GOLD, '#FF8C00']
-                            : index === 1
-                              ? [NEON_CYAN, NEON_BLUE]
-                              : [NEON_PINK, '#FF6B35']
-                        }
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        style={StyleSheet.absoluteFillObject}
-                      />
-                      {/* Shine */}
-                      <View style={styles.deployShine} />
-                      {isDeploying ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <>
-                          <Zap size={15} color="#fff" fill="#fff" />
-                          <Text style={styles.deployText}>{t('bidsList.hireUstad')}</Text>
-                        </>
+                    {/* ── Proposal Message Note ── */}
+                    {Boolean(bid.message) && (
+                      <View
+                        style={[
+                          styles.messageContainer,
+                          {
+                            backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                            borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : theme.colors.border.subtle,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.messageText, { color: theme.colors.text.secondary }]}
+                          numberOfLines={3}
+                        >
+                          "{bid.message}"
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* ── Highlights Badges ── */}
+                    <View style={styles.chipsRow}>
+                      {bid.worker?.isVerified && (
+                        <View
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: alpha(colors.success, 0.08),
+                              borderColor: alpha(colors.success, 0.2),
+                            },
+                          ]}
+                        >
+                          <ShieldCheck size={11} color={colors.success} strokeWidth={2.2} />
+                          <Text style={[styles.chipText, { color: colors.success }]}>
+                            {t('findingWorker.verified', 'VERIFIED')}
+                          </Text>
+                        </View>
                       )}
-                    </TouchableOpacity>
+
+                      {bid.estimatedDays ? (
+                        <View
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: alpha(colors.cyan, 0.08),
+                              borderColor: alpha(colors.cyan, 0.2),
+                            },
+                          ]}
+                        >
+                          <Clock size={11} color={colors.cyan} strokeWidth={2.2} />
+                          <Text style={[styles.chipText, { color: colors.cyan }]}>
+                            {t('bidsList.estDaysLabel', {
+                              count: bid.estimatedDays,
+                              defaultValue: `${bid.estimatedDays} Days`,
+                            })}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: alpha(primaryColor, 0.08),
+                              borderColor: alpha(primaryColor, 0.2),
+                            },
+                          ]}
+                        >
+                          <Clock size={11} color={primaryColor} strokeWidth={2.2} />
+                          <Text style={[styles.chipText, { color: primaryColor }]}>
+                            {t('findingWorker.available', 'AVAILABLE NOW')}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* ── Action Buttons ── */}
+                    <View style={styles.actionRow}>
+                      {/* Profile Button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.profileBtn,
+                          {
+                            borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : theme.colors.border.default,
+                            backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                          },
+                        ]}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/worker-details',
+                            params: {
+                              id: bid.worker?._id,
+                              jobId,
+                              bidId: bid._id,
+                              proposedPrice: String(bid.proposedPrice || ''),
+                            },
+                          })
+                        }
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.profileBtnText, { color: theme.colors.text.primary }]}>
+                          {t('bidsList.profileBtn', 'Profile')}
+                        </Text>
+                        <ChevronRight
+                          size={13}
+                          color={theme.colors.text.muted}
+                          style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+                        />
+                      </TouchableOpacity>
+
+                      {/* Hire Button */}
+                      <TouchableOpacity
+                        style={[styles.hireBtn, (isDeploying || !!accepting) && { opacity: 0.65 }]}
+                        onPress={() => handleAccept(bid._id)}
+                        disabled={isDeploying || !!accepting}
+                        activeOpacity={0.85}
+                      >
+                        <LinearGradient
+                          colors={[primaryColor, secondaryColor || '#16a34a']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={StyleSheet.absoluteFillObject}
+                        />
+                        {isDeploying ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <View style={styles.hireInner}>
+                            <Zap size={14} color="#FFFFFF" fill="#FFFFFF" />
+                            <Text style={styles.hireBtnText}>
+                              {t('bidsList.hireUstad', 'Hire Ustad')}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </View>
                   </View>
-
-                </NeonCard>
-              </AnimatedRN.View>
-            );
-          })}
-
+                </AnimatedRN.View>
+              );
+            })}
         </ScrollView>
       </View>
     </BackgroundWrapper>
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-
-  centerFill: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-  // Loading
-  loadingRing: {
-    width: 76, height: 76, borderRadius: 38,
-    borderWidth: 1, borderColor: `${NEON_CYAN}38`,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
-  },
-  loadingCore: {
-    width: 50, height: 50, borderRadius: 25,
-    backgroundColor: `${NEON_CYAN}13`,
-    borderWidth: 1, borderColor: `${NEON_CYAN}55`,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  loadingTitle: { color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 3, marginBottom: 6 },
-  loadingSub: { color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: 1 },
-
-  // Top Bar
   topBar: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingBottom: 14, overflow: 'hidden',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    overflow: 'hidden',
   },
-  topBarLine: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: 1, backgroundColor: BORDER_S,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  iconBtn: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: `${NEON_CYAN}0D`,
-    borderWidth: 1, borderColor: `${NEON_CYAN}30`,
-    alignItems: 'center', justifyContent: 'center',
+  refreshHeaderBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  topBarCenter: { alignItems: 'center', gap: 6 },
+  topBarCenter: {
+    alignItems: 'center',
+    gap: 4,
+  },
   topBarTitle: {
-    color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 3,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
-  countPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderRadius: 20,
-    paddingVertical: 3, paddingHorizontal: 10,
+  countBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
   },
-  countPillText: { fontSize: 9, fontWeight: '900', letterSpacing: 1.5 },
-
-  // NeonCard
-  neonWrapper: { position: 'relative', borderRadius: 22 },
-  cTL: { position: 'absolute', top: 0, left: 0, width: 16, height: 16, borderTopWidth: 2, borderLeftWidth: 2, borderTopLeftRadius: 6, zIndex: 2 },
-  cTR: { position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderTopWidth: 2, borderRightWidth: 2, borderTopRightRadius: 6, zIndex: 2 },
-  cBL: { position: 'absolute', bottom: 0, left: 0, width: 16, height: 16, borderBottomWidth: 2, borderLeftWidth: 2, borderBottomLeftRadius: 6, zIndex: 2 },
-  cBR: { position: 'absolute', bottom: 0, right: 0, width: 16, height: 16, borderBottomWidth: 2, borderRightWidth: 2, borderBottomRightRadius: 6, zIndex: 2 },
-  neonInner: { borderRadius: 22, padding: 18, overflow: 'hidden' },
-
-  // Card Top
-  cardTop: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', marginBottom: 14,
+  countBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
-  workerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  avatarWrap: { position: 'relative' },
-  avatar: {
-    width: 50, height: 50, borderRadius: 16,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)',
+
+  // Skeleton Card
+  skeletonCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
   },
-  avatarOnline: {
-    position: 'absolute', bottom: 1, right: 1,
-    width: 10, height: 10, borderRadius: 5,
-    borderWidth: 1.5, borderColor: '#030712',
-  },
-  workerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5 },
-  workerName: { color: '#fff', fontSize: 15, fontWeight: '800', flex: 1 },
-
-  // Rank Badge
-  rankBadge: {
-    borderWidth: 1, borderRadius: 8,
-    paddingVertical: 2, paddingHorizontal: 7,
-  },
-  rankBadgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
-
-  // Star Row
-  starRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  ratingNum: { color: GOLD, fontSize: 11, fontWeight: '900', marginLeft: 4 },
-
-  // Price
-  priceBlock: { alignItems: 'flex-end' },
-  priceLabel: { color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 4 },
-  priceValue: { fontSize: 20, fontWeight: '900' },
-
-  // Divider
-  cardDivider: { height: 1, backgroundColor: BORDER_S, marginBottom: 14 },
-
-  // Message
-  msgBox: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 12, padding: 12,
-    borderLeftWidth: 2, borderLeftColor: 'rgba(255,255,255,0.15)',
+  skeletonTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 14,
   },
-  msgText: { color: 'rgba(255,255,255,0.65)', fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
+
+  // Proposal Card
+  cardContainer: {
+    marginBottom: 14,
+  },
+  proposalCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  avatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#0B0F17',
+  },
+  workerInfo: {
+    flex: 1,
+    minWidth: 0,
+    gap: 3,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  workerName: {
+    fontSize: 15,
+    fontWeight: '800',
+    flexShrink: 1,
+  },
+  workerSub: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  starRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 1,
+  },
+  ratingScore: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  reviewCountText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+
+  // Quoted Price
+  priceBox: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  priceTag: {
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  priceAmount: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  // Message Container
+  messageContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  messageText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
 
   // Chips
-  chipsRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
-  statChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderWidth: 1, borderRadius: 20,
-    paddingVertical: 4, paddingHorizontal: 10,
+  chipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 14,
   },
-  statChipText: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
 
   // Action Row
-  actionRow: { flexDirection: 'row', gap: 10 },
-
-  // Review Button
-  reviewBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 13, paddingHorizontal: 16,
-    borderRadius: 14, borderWidth: 1,
-    borderColor: BORDER_S,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
   },
-  reviewBtnText: { color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-
-  // Deploy Button
-  deployBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 13, borderRadius: 14, overflow: 'hidden',
+  profileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
   },
-  deployShine: {
-    position: 'absolute', top: 0, left: 0, right: '65%', bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+  profileBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  deployText: { color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 2 },
+  hireBtn: {
+    flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  hireInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  hireBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
 
-  // Empty
-  emptyBox: { alignItems: 'center', marginTop: 80, paddingHorizontal: 32 },
-  emptyIconRing: {
-    width: 72, height: 72, borderRadius: 36,
-    borderWidth: 1, borderColor: BORDER_S,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+  // Empty State
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 80,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
   },
   emptyTitle: {
-    color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '900',
-    letterSpacing: 3, marginBottom: 10,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginBottom: 8,
   },
   emptySub: {
-    color: 'rgba(255,255,255,0.2)', fontSize: 13,
-    textAlign: 'center', lineHeight: 20,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyRefreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  emptyRefreshBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

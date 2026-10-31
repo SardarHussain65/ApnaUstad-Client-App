@@ -13,6 +13,7 @@ import Animated, {
   SlideInDown,
 } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../context/LanguageContext';
 import { useTheme, useThemeColors, useThemeTypography, Colors, alpha } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { ConfirmModal } from '../components/ui';
@@ -46,6 +47,7 @@ export default function FindingWorkerScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
   const theme = useTheme();
   const colors = theme.colors;
@@ -371,10 +373,30 @@ export default function FindingWorkerScreen() {
   }));
 
   const handleWorkerPress = (worker: any) => {
+    const targetWorkerId = worker?.worker?._id || worker?.worker;
+    if (targetWorkerId) {
+      router.push({
+        pathname: '/worker-details' as any,
+        params: {
+          id: targetWorkerId,
+          bidId: worker._id,
+          jobId: jobId as string,
+          proposedPrice: String(worker.proposedPrice || ''),
+        },
+      });
+      return;
+    }
     setSelectedWorker(worker);
     setPromoCodeInput('');
     setAppliedPromo(null);
     setShowModal(true);
+  };
+
+  const handleViewAllBids = () => {
+    router.push({
+      pathname: '/bids-list' as any,
+      params: { jobId: jobId as string },
+    });
   };
 
   const handleDirectSelectFirst = () => {
@@ -517,7 +539,12 @@ export default function FindingWorkerScreen() {
             onPress={handleBackHome} 
             activeOpacity={0.75}
           >
-            <ArrowLeft size={19} color={colors.text.primary} strokeWidth={2.2} />
+            <ArrowLeft
+              size={19}
+              color={colors.text.primary}
+              strokeWidth={2.2}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
             <Text style={[styles.headerEyebrow, { color: colors.text.muted }]}>{t('findingWorker.requestSent')}</Text>
@@ -906,26 +933,62 @@ export default function FindingWorkerScreen() {
                         </Text>
                         <Text style={[styles.responseProfilePrice, { color: colors.status.success }]}>{formatMoney(applicant.proposedPrice)}</Text>
                       </View>
-                      <ChevronRight size={15} color={colors.brand.primary} />
+                      <ChevronRight
+                        size={15}
+                        color={colors.brand.primary}
+                        style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+                      />
                     </TouchableOpacity>
                   ))}
                 </View>
+
+                {/* Primary Action: Compare All Offers */}
                 <TouchableOpacity 
                   style={[
                     styles.reviewButton, 
                     { backgroundColor: colors.brand.primary },
-                    isAccepting && { opacity: 0.8 }
+                  ]} 
+                  onPress={handleViewAllBids} 
+                  activeOpacity={0.82}
+                >
+                  <Users size={16} color={theme.isDark ? "#001014" : "#FFFFFF"} />
+                  <Text style={[styles.reviewButtonText, { color: theme.isDark ? "#001014" : "#FFFFFF" }]}>
+                    {t('findingWorker.compareOffersBtn', { count: applicants.length, defaultValue: `Compare All Offers (${applicants.length})` })}
+                  </Text>
+                  <ChevronRight
+                    size={17}
+                    color={theme.isDark ? "#001014" : "#FFFFFF"}
+                    strokeWidth={2.8}
+                    style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+                  />
+                </TouchableOpacity>
+
+                {/* Secondary Fast Action: Quick Hire */}
+                <TouchableOpacity 
+                  style={[
+                    styles.quickHireBtn, 
+                    { 
+                      backgroundColor: theme.isDark ? 'rgba(0,255,127,0.08)' : alpha(colors.status.success, 0.08),
+                      borderColor: theme.isDark ? 'rgba(0,255,127,0.25)' : alpha(colors.status.success, 0.25),
+                    },
+                    isAccepting && { opacity: 0.65 }
                   ]} 
                   onPress={handleDirectSelectFirst} 
                   disabled={isAccepting}
-                  activeOpacity={0.78}
+                  activeOpacity={0.8}
                 >
                   {isAccepting ? (
-                    <ActivityIndicator color={theme.isDark ? "#001014" : "#FFFFFF"} size="small" />
+                    <ActivityIndicator color={colors.status.success} size="small" />
                   ) : (
                     <>
-                      <Text style={[styles.reviewButtonText, { color: theme.isDark ? "#001014" : "#FFFFFF" }]}>{t('findingWorker.selectUstadDirectly', 'Select Ustad Directly')}</Text>
-                      <ChevronRight size={17} color={theme.isDark ? "#001014" : "#FFFFFF"} strokeWidth={2.8} />
+                      <Zap size={14} color={colors.status.success} fill={colors.status.success} />
+                      <Text style={[styles.quickHireBtnText, { color: colors.status.success }]}>
+                        {t('findingWorker.quickHireFirst', {
+                          name: applicants[0].worker?.fullName || 'Top Ustad',
+                          price: formatMoney(applicants[0].proposedPrice),
+                          defaultValue: `Quick Hire ${applicants[0].worker?.fullName || 'Top Ustad'} (${formatMoney(applicants[0].proposedPrice)})`
+                        })}
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -997,267 +1060,6 @@ export default function FindingWorkerScreen() {
             <Text style={[styles.cancelText, { color: colors.status.error }]}>{isCancelling ? t('findingWorker.cancelling') : t('findingWorker.cancelRequest')}</Text>
           </TouchableOpacity>
         </ScrollView>
-
-        {/* Worker Details Modal */}
-        <Modal
-          visible={showModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowModal(false)}
-        >
-          <View style={styles.modalBackdrop}>
-            <BlurView intensity={30} style={StyleSheet.absoluteFill} tint="dark" />
-            <TouchableOpacity 
-              style={StyleSheet.absoluteFill} 
-              onPress={() => setShowModal(false)} 
-            />
-            
-            <Animated.View 
-              entering={SlideInDown.springify().damping(15)}
-              style={styles.modalContent}
-            >
-              <LinearGradient
-                colors={['#0C0E24', '#080916']}
-                style={styles.modalGradient}
-              >
-                <View style={styles.modalHandle} />
-                <View style={styles.modalHeader}>
-                  <View style={styles.modalHeaderCopy}>
-                    <Text style={styles.modalTitle}>{t('findingWorker.ustadOffer', 'USTAD OFFER')}</Text>
-                    <Text style={styles.modalSubtitle}>{t('findingWorker.reviewOfferSubtitle', 'Review the offer and Ustad profile')}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
-                    <X size={19} color={legacyColors.textMuted} />
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView
-                  style={styles.modalBody}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.modalScroll}
-                >
-                  <LinearGradient
-                    colors={['rgba(0,245,255,0.10)', 'rgba(255,255,255,0.025)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.identityCard}
-                  >
-                    <View style={styles.identityImageWrapper}>
-                      <Image
-                        source={{ uri: selectedProfile.profileImage || 'https://via.placeholder.com/150' }}
-                        style={styles.identityImage}
-                      />
-                      <View style={[styles.statusGlow, !selectedProfile.isAvailable && styles.statusOffline]} />
-                    </View>
-
-                    <View style={styles.identityCopy}>
-                      <Text style={styles.workerName} numberOfLines={1}>{selectedProfile.fullName || t('findingWorker.specialist', 'Specialist')}</Text>
-                      <Text style={styles.workerCategory} numberOfLines={1}>{selectedProfile.category || t('findingWorker.ustadSpecialist', 'Ustad Specialist')}</Text>
-                      <View style={styles.identityMetaRow}>
-                        <View style={styles.ratingRow}>
-                          <Star size={13} color={legacyColors.yellow} fill={legacyColors.yellow} />
-                          <Text style={styles.ratingText}>
-                            {selectedRating > 0 ? selectedRating.toFixed(1) : t('common.new', 'New')} · {selectedReviews} {selectedReviews === 1 ? t('workerDetails.reviewsOne', 'review') : t('workerDetails.reviews', 'reviews')}
-                          </Text>
-                        </View>
-                        <View style={styles.identityMetaDivider} />
-                        <View style={styles.availabilityRow}>
-                          <View style={[styles.availabilityDot, !selectedProfile.isAvailable && styles.statusOffline]} />
-                          <Text style={[styles.availabilityText, selectedProfile.isAvailable === false && styles.availabilityTextBusy]}>
-                            {selectedAvailabilityLabel}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View style={[styles.verificationBadge, !selectedProfile.isVerified && styles.verificationBadgePending]}>
-                      <Shield size={12} color={selectedProfile.isVerified ? legacyColors.green : legacyColors.orange} />
-                      <Text style={[styles.verificationBadgeText, !selectedProfile.isVerified && styles.verificationBadgeTextPending]}>
-                        {selectedProfile.isVerified ? t('findingWorker.verified', 'VERIFIED') : t('findingWorker.pending', 'REVIEWING')}
-                      </Text>
-                    </View>
-                  </LinearGradient>
-
-                  <View style={styles.proposalCard}>
-                    <View style={styles.proposalHeader}>
-                      <MessageSquare size={14} color={legacyColors.cyan} />
-                      <Text style={styles.proposalTitle}>{t('findingWorker.offerNote', 'OFFER NOTE')}</Text>
-                    </View>
-                    <Text style={styles.proposalText}>
-                      {selectedWorker?.message || t('findingWorker.noNote', 'I am ready to help you with this job.')}
-                    </Text>
-                    <View style={styles.proposalDivider} />
-                    <View style={styles.proposalFooter}>
-                      <View>
-                        <Text style={styles.proposalLabel}>{t('bidSubmission.offer', 'OFFERED PRICE')}</Text>
-                        {appliedPromo?.isValid ? (
-                          <View style={styles.priceContainer}>
-                            <Text style={styles.strikethroughAmount}>{formatMoney(selectedPrice)}</Text>
-                            <Text style={[styles.proposalAmount, { color: Colors.green }]}>
-                              {formatMoney(appliedPromo.finalAmount)}
-                            </Text>
-                          </View>
-                        ) : (
-                          <Text style={styles.proposalAmount}>{formatMoney(selectedPrice)}</Text>
-                        )}
-                      </View>
-                      <View style={styles.proposalTimeline}>
-                        <Clock size={14} color={legacyColors.orange} />
-                        <View>
-                          <Text style={styles.proposalTimelineLabel}>{t('findingWorker.estTime', 'ESTIMATED TIME')}</Text>
-                          <Text style={styles.proposalTimelineValue}>
-                            {selectedEstimatedDays > 0
-                              ? (selectedEstimatedDays === 1 
-                                  ? t('findingWorker.days', { count: 1 }) 
-                                  : t('findingWorker.daysPlural', { count: selectedEstimatedDays }))
-                              : t('findingWorker.flexible', 'Flexible')}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Promo Code Input Panel */}
-                  <View style={styles.promoContainer}>
-                    <View style={styles.promoHeader}>
-                      <Tag size={14} color={legacyColors.cyan} strokeWidth={2.4} />
-                      <Text style={styles.promoHeaderTitle}>{t('findingWorker.promoTitle', 'PROMO & COUPONS')}</Text>
-                    </View>
-                    <View style={styles.promoInputWrapper}>
-                      <TextInput
-                        style={styles.promoInput}
-                        placeholder={t('findingWorker.promoPlaceholder', 'Enter Promo Code (e.g. SPECIAL30)')}
-                        placeholderTextColor="#646B7E"
-                        value={promoCodeInput}
-                        onChangeText={setPromoCodeInput}
-                        autoCapitalize="characters"
-                        editable={!isApplyingPromo && !appliedPromo?.isValid}
-                      />
-                      {appliedPromo?.isValid ? (
-                        <TouchableOpacity
-                          style={styles.promoCancelBtn}
-                          onPress={() => {
-                            setPromoCodeInput('');
-                            setAppliedPromo(null);
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.promoCancelText}>{t('findingWorker.remove', 'REMOVE')}</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.promoApplyBtn, !promoCodeInput.trim() && styles.promoApplyBtnDisabled]}
-                          onPress={handleApplyPromo}
-                          disabled={!promoCodeInput.trim() || isApplyingPromo}
-                          activeOpacity={0.8}
-                        >
-                          {isApplyingPromo ? (
-                            <ActivityIndicator size="small" color="#001014" />
-                          ) : (
-                            <Text style={styles.promoApplyText}>{t('findingWorker.apply', 'APPLY')}</Text>
-                          )}
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    {appliedPromo && (
-                      <View style={[
-                        styles.promoFeedbackCard, 
-                        appliedPromo.isValid ? styles.promoFeedbackSuccess : styles.promoFeedbackError
-                      ]}>
-                        {appliedPromo.isValid ? (
-                          <View style={styles.promoFeedbackSuccessRow}>
-                            <View style={styles.promoFeedbackDot} />
-                            <Text style={styles.promoFeedbackSuccessText}>
-                              {t('findingWorker.codeApplied', { code: appliedPromo.code, discount: appliedPromo.discountAmount.toLocaleString() })}
-                            </Text>
-                          </View>
-                        ) : (
-                          <Text style={styles.promoFeedbackErrorText}>
-                            {appliedPromo.message}
-                          </Text>
-                        )}
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.trustStrip}>
-                    <View style={styles.trustMetric}>
-                      <Award size={16} color={legacyColors.cyan} />
-                      <Text style={styles.trustValue}>{selectedExperience > 0 ? `${selectedExperience} yrs` : t('common.new', 'New')}</Text>
-                      <Text style={styles.trustLabel}>{t('registerDetails.experience', 'EXPERIENCE')}</Text>
-                    </View>
-                    <View style={styles.trustDivider} />
-                    <View style={styles.trustMetric}>
-                      <Briefcase size={16} color={legacyColors.green} />
-                      <Text style={styles.trustValue}>{selectedJobs}</Text>
-                      <Text style={styles.trustLabel}>{t('profile.jobs', 'JOBS')}</Text>
-                    </View>
-                    <View style={styles.trustDivider} />
-                    <View style={styles.trustMetric}>
-                      <MapPin size={16} color={legacyColors.pink} />
-                      <Text style={styles.trustValue} numberOfLines={1} adjustsFontSizeToFit>{selectedProfile.city || t('common.nearby', 'Nearby')}</Text>
-                      <Text style={styles.trustLabel}>{t('auth.city', 'CITY')}</Text>
-                    </View>
-                  </View>
-
-                  {!!selectedProfile.bio && (
-                    <View style={styles.bioCard}>
-                      <Text style={styles.bioLabel}>{t('findingWorker.aboutSpecialist', 'ABOUT SPECIALIST')}</Text>
-                      <Text style={styles.bioText} numberOfLines={3}>{selectedProfile.bio}</Text>
-                    </View>
-                  )}
-
-                  {selectedSkills.length > 0 && (
-                    <View style={styles.skillsSection}>
-                      <Text style={styles.skillsLabel}>{t('findingWorker.specialistSkills', 'SPECIALIST SKILLS')}</Text>
-                      <View style={styles.skillsWrap}>
-                        {selectedSkills.map((skill: string) => (
-                          <View key={skill} style={styles.skillPill}>
-                            <Text style={styles.skillText}>{skill}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                </ScrollView>
-
-                <View style={styles.modalActions}>
-                  <TouchableOpacity
-                    style={styles.profileBtn}
-                    onPress={handleViewWorkerProfile}
-                    activeOpacity={0.8}
-                  >
-                    <Eye size={17} color={legacyColors.cyan} />
-                    <Text style={styles.profileBtnText}>{t('profile.title', 'PROFILE')}</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.hireBtn}
-                    onPress={handleHire}
-                    disabled={isAccepting}
-                  >
-                    <LinearGradient
-                      colors={['#00F0FF', '#0066FF']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.hireGradient}
-                    >
-                      {isAccepting ? (
-                        <ActivityIndicator color="#000" />
-                      ) : (
-                        <>
-                          <Check size={19} color="#000" strokeWidth={3} />
-                          <Text style={styles.hireText}>{t('findingWorker.selectUstad', 'SELECT USTAD')}</Text>
-                          <ChevronRight size={18} color="#000" strokeWidth={3} />
-                        </>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </Animated.View>
-          </View>
-        </Modal>
 
         <ConfirmModal
           visible={confirmModal.visible}
@@ -1834,6 +1636,22 @@ const styles = StyleSheet.create({
     color: '#001014',
     fontSize: 13,
     fontWeight: '900',
+  },
+  quickHireBtn: {
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+    paddingHorizontal: 14,
+  },
+  quickHireBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   waitingNote: {
     flexDirection: 'row',
