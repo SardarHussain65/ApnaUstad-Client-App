@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import * as Location from 'expo-location';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
@@ -52,6 +52,21 @@ type WorkerCoordinates = {
   longitude: number;
 };
 
+const cleanAddressFor = (raw?: string) => {
+  if (!raw) return 'Nearby service area';
+  const cleaned = raw.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+  const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length > 2) {
+    return `${parts[0]}, ${parts[parts.length - 1]}`;
+  }
+  return cleaned || raw;
+};
+
+const initialsFor = (name?: string) => {
+  if (!name?.trim()) return 'CL';
+  return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase()).join('');
+};
+
 export function WorkerHome() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -100,9 +115,26 @@ export function WorkerHome() {
     return workerBids?.filter((bid) => bid.status === 'pending') || [];
   }, [workerBids]);
 
-  const activeBooking = useMemo(() => {
-    return homeSummary?.activeBooking || null;
-  }, [homeSummary?.activeBooking]);
+  const activeBookings = useMemo(() => {
+    const list: Booking[] = [];
+    if (homeSummary?.activeBooking) {
+      list.push(homeSummary.activeBooking);
+    }
+    if (homeSummary?.recentBookings) {
+      homeSummary.recentBookings.forEach((b) => {
+        if (
+          (b.status === 'accepted' || b.status === 'ongoing') &&
+          !list.some((item) => item._id === b._id)
+        ) {
+          list.push(b);
+        }
+      });
+    }
+    return list;
+  }, [homeSummary?.activeBooking, homeSummary?.recentBookings]);
+
+  const hasActiveJobs = activeBookings.length > 0;
+  const activeBooking = activeBookings[0] || null;
 
   // ─── Location & Background Sync (Non-blocking) ───────────────────────────────
   const getSavedCoordinates = useCallback((): WorkerCoordinates | null => {
@@ -279,58 +311,253 @@ export function WorkerHome() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Dynamic Operational Cockpit (Hero Action Card) ── */}
-        {activeBooking ? (
-          <View style={styles.heroSection}>
-            <GlassCard
-              intensity={35}
-              padding={18}
-              hasGlow
-              glowColor={colors.cyan}
-              style={[styles.heroCard, { borderColor: alpha(colors.cyan, 0.4) }]}
-            >
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroStatusPill}>
-                  <View style={[styles.pulseDot, { backgroundColor: colors.cyan }]} />
-                  <Text style={[styles.heroStatusText, { color: colors.cyan }]}>
-                    {t('home.worker.activeJobTitle', 'ACTIVE JOB IN PROGRESS')}
-                  </Text>
-                </View>
-                <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
-                  {activeBooking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+        {/* ── Dynamic Operational Cockpit: Ongoing Work (when active) OR Ready For Jobs (when idle) ── */}
+        {hasActiveJobs ? (
+          <Animated.View entering={FadeInDown.duration(350)} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Zap color={colors.cyan} size={20} />
+                <Text style={[styles.sectionTitle, typography.threeD, { color: colors.cyan }]}>
+                  {t('home.worker.ongoingWorkTitle', 'Ongoing Work')}
                 </Text>
               </View>
-
-              <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                {activeBooking.category || (activeBooking as any).serviceName || 'Service Request'}
+              <Text style={[styles.sectionMeta, { color: colors.cyan }]}>
+                {activeBookings.length} {t('common.active', 'ACTIVE').toUpperCase()}
               </Text>
+            </View>
 
-              <View style={styles.heroCustomerRow}>
-                <Text style={[styles.heroCustomerName, { color: theme.colors.text.secondary }]}>
-                  {t('common.client', 'Customer')}: {activeBooking.customer?.fullName || activeBooking.cardMeta?.counterParty?.fullName || 'Client'}
-                </Text>
-                {activeBooking.address ? (
-                  <View style={styles.heroLocationRow}>
-                    <MapPin size={12} color={theme.colors.text.muted} />
-                    <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                      {activeBooking.address}
+            <View style={styles.agendaList}>
+              {activeBookings.map((booking) => {
+                const isOngoing = booking.status === 'ongoing';
+                const customerName =
+                  booking.customer?.fullName ||
+                  booking.cardMeta?.counterParty?.fullName ||
+                  t('common.client', 'Customer');
+                const customerAvatar =
+                  booking.cardMeta?.primaryImageUrl ||
+                  booking.customer?.profileImage ||
+                  '';
+                const bookingCategory =
+                  booking.category ||
+                  (booking as any).serviceName ||
+                  t('transactionDetails.jobDetails', 'Service Request');
+                const bookingAddress = cleanAddressFor(
+                  booking.address || booking.cardMeta?.location?.address
+                );
+                const earningAmount = Number(
+                  booking.workerEarning ||
+                    booking.cardMeta?.financial?.amount ||
+                    booking.totalAmount ||
+                    0
+                );
+
+                return (
+                  <GlassCard
+                    key={booking._id}
+                    intensity={35}
+                    padding={16}
+                    hasGlow
+                    glowColor={isOngoing ? colors.success : colors.cyan}
+                    style={[
+                      styles.heroCard,
+                      {
+                        borderColor: alpha(isOngoing ? colors.success : colors.cyan, 0.35),
+                        borderLeftWidth: 3.5,
+                        borderLeftColor: isOngoing ? colors.success : colors.cyan,
+                        marginBottom: 12,
+                      },
+                    ]}
+                  >
+                    {/* Top Status & Timing Row */}
+                    <View style={styles.heroTopRow}>
+                      <View
+                        style={[
+                          styles.heroStatusPill,
+                          {
+                            backgroundColor: alpha(
+                              isOngoing ? colors.success : colors.cyan,
+                              0.12
+                            ),
+                            borderColor: alpha(
+                              isOngoing ? colors.success : colors.cyan,
+                              0.3
+                            ),
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.pulseDot,
+                            { backgroundColor: isOngoing ? colors.success : colors.cyan },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.heroStatusText,
+                            { color: isOngoing ? colors.success : colors.cyan },
+                          ]}
+                        >
+                          {isOngoing
+                            ? t('bookingStatus.ongoing.title', 'WORK IN PROGRESS')
+                            : t('bookingStatus.accepted.title', 'BOOKED / ASSIGNED')}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.urgencyPill,
+                          {
+                            backgroundColor:
+                              booking.bookingType === 'instant'
+                                ? alpha(colors.worker, 0.12)
+                                : alpha(theme.colors.text.primary, 0.06),
+                            borderColor:
+                              booking.bookingType === 'instant'
+                                ? alpha(colors.worker, 0.28)
+                                : alpha(theme.colors.text.primary, 0.1),
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.urgencyPillText,
+                            {
+                              color:
+                                booking.bookingType === 'instant'
+                                  ? colors.worker
+                                  : theme.colors.text.secondary,
+                            },
+                          ]}
+                        >
+                          {booking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Job Title & Optional Description */}
+                    <Text
+                      style={[
+                        styles.heroJobTitle,
+                        typography.threeD,
+                        { color: theme.colors.text.primary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {bookingCategory}
                     </Text>
-                  </View>
-                ) : null}
-              </View>
 
-              <TouchableOpacity
-                style={[styles.heroCtaBtn, { backgroundColor: colors.cyan }]}
-                onPress={() => router.push({ pathname: '/job-tracking' as any, params: { id: activeBooking._id } })}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.heroCtaBtnText}>
-                  {t('home.worker.continueJob', 'Track & Continue Job')}
-                </Text>
-                <ArrowRight size={16} color="#000" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </GlassCard>
-          </View>
+                    {Boolean(booking.description) && (
+                      <Text
+                        style={[styles.heroDescription, { color: theme.colors.text.muted }]}
+                        numberOfLines={1}
+                      >
+                        {booking.description}
+                      </Text>
+                    )}
+
+                    {/* Customer & Location Row */}
+                    <View style={styles.heroCustomerBlock}>
+                      <View style={styles.heroCustomerLeft}>
+                        <View
+                          style={[
+                            styles.customerMiniAvatar,
+                            {
+                              borderColor: alpha(
+                                isOngoing ? colors.success : colors.cyan,
+                                0.3
+                              ),
+                            },
+                          ]}
+                        >
+                          {customerAvatar ? (
+                            <Image
+                              source={{ uri: customerAvatar }}
+                              style={styles.customerMiniImg}
+                            />
+                          ) : (
+                            <Text
+                              style={[
+                                styles.customerMiniText,
+                                { color: theme.colors.text.primary },
+                              ]}
+                            >
+                              {initialsFor(customerName)}
+                            </Text>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.heroCustomerName,
+                            { color: theme.colors.text.primary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {customerName}
+                        </Text>
+                      </View>
+
+                      <View style={styles.heroLocationRow}>
+                        <MapPin
+                          size={12}
+                          color={theme.colors.text.muted}
+                          strokeWidth={2.2}
+                        />
+                        <Text
+                          style={[
+                            styles.heroAddressText,
+                            { color: theme.colors.text.muted },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {bookingAddress}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Bottom Row: Earning & Track CTA */}
+                    <View style={styles.heroFooterRow}>
+                      <View style={styles.heroEarningBox}>
+                        <Text
+                          style={[
+                            styles.heroEarningLabel,
+                            { color: theme.colors.text.muted },
+                          ]}
+                        >
+                          {t('transactionDetails.yourEarning', 'Your Earning')}
+                        </Text>
+                        <Text
+                          style={[styles.heroEarningValue, { color: colors.success }]}
+                        >
+                          Rs. {earningAmount.toLocaleString()}
+                        </Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.heroCtaBtn,
+                          {
+                            backgroundColor: isOngoing ? colors.success : colors.cyan,
+                          },
+                        ]}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/transaction-details' as any,
+                            params: { id: booking._id },
+                          })
+                        }
+                        activeOpacity={0.82}
+                      >
+                        <Text style={styles.heroCtaBtnText}>
+                          {t('home.worker.continueJob', 'Track & Continue Job')}
+                        </Text>
+                        <ArrowRight size={15} color="#001014" strokeWidth={2.5} />
+                      </TouchableOpacity>
+                    </View>
+                  </GlassCard>
+                );
+              })}
+            </View>
+          </Animated.View>
         ) : isOnline ? (
           <View style={styles.heroSection}>
             <GlassCard
@@ -608,10 +835,58 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  urgencyPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  urgencyPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
   heroJobTitle: {
     fontSize: 19,
     fontWeight: '900',
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  heroDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  heroCustomerBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 10,
+  },
+  heroCustomerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flex: 1,
+    minWidth: 0,
+  },
+  customerMiniAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  customerMiniImg: {
+    width: '100%',
+    height: '100%',
+  },
+  customerMiniText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
   heroCustomerRow: {
     marginBottom: 14,
@@ -625,10 +900,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 1,
   },
   heroAddressText: {
-    fontSize: 12,
-    flex: 1,
+    fontSize: 11,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  heroFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.07)',
+    gap: 10,
+  },
+  heroEarningBox: {
+    justifyContent: 'center',
+  },
+  heroEarningLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  heroEarningValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 1,
   },
   heroCtaBtn: {
     flexDirection: 'row',
