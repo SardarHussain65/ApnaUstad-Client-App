@@ -1,16 +1,33 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
-import { Wallet, CheckCircle2, Clock, AlertCircle, XCircle } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  Image,
+} from 'react-native';
+import {
+  CheckCircle2,
+  Clock,
+  ChevronRight,
+  CreditCard,
+  Receipt,
+  CalendarDays,
+  Banknote,
+  Sparkles,
+} from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
-import { GlassCard } from '../home/GlassCard';
-import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { UserWalletTransaction } from '../../hooks';
+import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 
-// ─── Constants & Types ────────────────────────────────────────────────────────
-const FILTERS = ['All', 'Paid', 'Payable', 'Pending', 'Refund'] as const;
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { GlassCard } from '../home/GlassCard';
+
+// ─── Filter Constants ──────────────────────────────────────────────────────────
+const FILTERS = ['All', 'Paid', 'Pending'] as const;
 type FilterType = typeof FILTERS[number];
 
 interface PaymentEntry {
@@ -18,9 +35,16 @@ interface PaymentEntry {
   status: string;
   amount: number;
   updatedAt: string;
+  paymentMethod?: string;
   booking?: {
     _id: string;
     category?: string;
+    description?: string;
+  };
+  worker?: {
+    _id?: string;
+    fullName?: string;
+    profileImage?: string;
   };
 }
 
@@ -33,35 +57,23 @@ interface ClientWalletViewProps {
     pending: number;
     cancelled: number;
   };
-  activeFilter: FilterType;
-  onFilterChange: (filter: FilterType) => void;
+  activeFilter: string;
+  onFilterChange: (filter: any) => void;
   refreshing: boolean;
   onRefresh: () => void;
   walletBalance?: number;
-  walletTransactions?: UserWalletTransaction[];
+  walletTransactions?: any[];
 }
 
-const formatMoney = (value = 0) => `Rs. ${Number(value || 0).toLocaleString(undefined, {
-  maximumFractionDigits: 2,
-})}`;
-
-function SummaryChip({ label, value, color, theme }: { label: string; value: number; color: string; theme: ReturnType<typeof useTheme> }) {
-  return (
-    <GlassCard
-      intensity={24}
-      padding={12}
-      style={[styles.chipCard, { borderColor: color + '48' }]}
-      glowColor={color}
-      gradient={[color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]}
-    >
-      <View style={[styles.chipDot, { backgroundColor: color }]} />
-      <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-        {formatMoney(value)}
-      </Text>
-      <Text style={[styles.chipLabel, { color: theme.colors.text.muted }]}>{label}</Text>
-    </GlassCard>
-  );
-}
+const initialsFor = (name?: string) => {
+  if (!name?.trim()) return 'AU';
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(p => p[0]?.toUpperCase())
+    .join('');
+};
 
 export function ClientWalletView({
   payments,
@@ -70,8 +82,6 @@ export function ClientWalletView({
   onFilterChange,
   refreshing,
   onRefresh,
-  walletBalance = 0,
-  walletTransactions = [],
 }: ClientWalletViewProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -80,53 +90,26 @@ export function ClientWalletView({
   const typography = useThemeTypography();
   const insets = useSafeAreaInsets();
 
-  const STATUS_CONFIG: Record<string, { color: string; icon: any; labelKey: string }> = {
-    paid: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },
-    payable: { color: '#00B8FF', icon: Clock, labelKey: 'wallet.payable' },
-    pending: { color: colors.worker, icon: AlertCircle, labelKey: 'wallet.pending' },
-    cancelled: { color: colors.error, icon: XCircle, labelKey: 'wallet.cancelled' },
-    refund: { color: colors.cyan, icon: CheckCircle2, labelKey: 'wallet.refunded' },
-  };
+  // Normalize and sort payments chronologically descending
+  const paymentList = useMemo(() => {
+    return [...payments].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }, [payments]);
 
-  // Create a unified chronological list of transactions (payments + dispute refunds)
-  const unifiedHistory = React.useMemo(() => {
-    const list = [
-      ...payments.map((p) => ({
-        _id: p._id,
-        type: 'payment',
-        status: p.status,
-        amount: p.amount,
-        title: p.booking?.category || t('wallet.serviceBooking'),
-        date: new Date(p.updatedAt),
-        rawDate: p.updatedAt,
-        bookingId: p.booking?._id,
-        description: t('wallet.paymentRecorded'),
-      })),
-      ...walletTransactions.map((tx) => ({
-        _id: tx._id,
-        type: 'refund',
-        status: 'refund',
-        amount: tx.amount,
-        title: t('wallet.refundCredited'),
-        date: new Date(tx.createdAt),
-        rawDate: tx.createdAt,
-        bookingId: tx.reference?.booking,
-        description: tx.description.replace(/\s*\(Dispute[^)]*\):?\s*/i, ' — ').trim() || t('wallet.refundCredited'),
-      })),
-    ];
-
-    // Sort by date descending
-    return list.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [payments, walletTransactions, t]);
-
-  // Apply visual filters based on user selection
-  const filteredItems = React.useMemo(() => {
-    if (activeFilter === 'All') return unifiedHistory;
-    if (activeFilter === 'Refund') {
-      return unifiedHistory.filter((item) => item.type === 'refund');
+  // Filter based on user selection
+  const filteredPayments = useMemo(() => {
+    if (activeFilter === 'All') return paymentList;
+    if (activeFilter === 'Paid') {
+      return paymentList.filter(p => p.status?.toLowerCase() === 'paid');
     }
-    return unifiedHistory.filter((item) => item.status.toLowerCase() === activeFilter.toLowerCase());
-  }, [unifiedHistory, activeFilter]);
+    if (activeFilter === 'Pending' || activeFilter === 'Payable') {
+      return paymentList.filter(p => p.status?.toLowerCase() !== 'paid');
+    }
+    return paymentList;
+  }, [paymentList, activeFilter]);
+
+  const totalSpent = summary?.paid || summary?.total || 0;
+  const pendingAmount = summary?.payable || summary?.pending || 0;
+  const paidCount = paymentList.filter(p => p.status?.toLowerCase() === 'paid').length;
 
   return (
     <ScrollView
@@ -140,225 +123,494 @@ export function ClientWalletView({
           colors={[colors.cyan]}
         />
       }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('wallet.title')}</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.text.muted }]}>{t('wallet.clientSub')}</Text>
-        </View>
+    >
+      {/* ── 1. Clean Header ── */}
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+          {t('wallet.clientPaymentsTitle', 'Payments & Spending')}
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: theme.colors.text.muted }]}>
+          {t('wallet.clientPaymentsDesc', 'Receipts and spending history for your home services')}
+        </Text>
+      </View>
 
-        {/* Available Credit / Refund Balance Hero Card */}
-        <Animated.View entering={FadeInDown.duration(800)} style={styles.balanceSection}>
-          <GlassCard
-            style={styles.balanceCard}
-            intensity={42}
-            glowColor={colors.cyan}
-            gradient={[alpha(colors.cyan, 0.58), alpha(colors.cyan, 0.34), alpha(theme.colors.surface.card, 0.16)]}
-          >
-            <View style={styles.balanceContent}>
-              <View style={styles.balanceTextGroup}>
-                <Text style={[styles.balanceLabel, { color: colors.cyan }]}>{t('wallet.availableRefunds')}</Text>
-                <Text style={[styles.balanceAmount, typography.threeD, { color: theme.colors.text.primary }]}>
-                  Rs. {walletBalance.toLocaleString()}
-                </Text>
-                <Text style={[styles.balanceSubtext, { color: theme.colors.text.muted }]}>
-                  {t('home.client.totalSpent')}: Rs. {summary.total.toLocaleString()}
+      {/* ── 2. Total Spending Overview Hero Card ── */}
+      <Animated.View entering={FadeInDown.duration(450)} style={styles.heroSection}>
+        <GlassCard
+          style={styles.heroCard}
+          intensity={36}
+          glowColor={colors.success}
+          hasGlow
+          gradient={[alpha(colors.success, 0.22), alpha(theme.colors.surface.card, 0.9), alpha(colors.cyan, 0.08)]}
+        >
+          <View style={styles.heroContent}>
+            <View style={styles.heroLeft}>
+              <View style={styles.heroLabelRow}>
+                <Receipt size={14} color={colors.success} strokeWidth={2.4} />
+                <Text style={[styles.heroLabel, { color: colors.success }]}>
+                  {t('wallet.totalPaidLabel', 'TOTAL SPENT ON SERVICES')}
                 </Text>
               </View>
-              <View style={styles.walletIconWrap}>
-                <Wallet size={28} color={colors.cyan} strokeWidth={1.8} />
+
+              <Text style={[styles.heroAmount, typography.threeD, { color: theme.colors.text.primary }]}>
+                Rs. {totalSpent.toLocaleString()}
+              </Text>
+
+              {/* Sub-metrics pill row */}
+              <View style={styles.heroMetricsRow}>
+                <View style={[styles.metricPill, { backgroundColor: alpha(colors.success, 0.12) }]}>
+                  <CheckCircle2 size={11} color={colors.success} strokeWidth={2.5} />
+                  <Text style={[styles.metricText, { color: colors.success }]}>
+                    {paidCount} {t('wallet.paidServices', 'Jobs Paid')}
+                  </Text>
+                </View>
+
+                {pendingAmount > 0 ? (
+                  <View style={[styles.metricPill, { backgroundColor: alpha(colors.worker, 0.14) }]}>
+                    <Clock size={11} color={colors.worker} strokeWidth={2.5} />
+                    <Text style={[styles.metricText, { color: colors.worker }]}>
+                      Rs. {pendingAmount.toLocaleString()} {t('wallet.due', 'Due')}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={[styles.metricPill, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]}>
+                    <Sparkles size={11} color={theme.colors.text.muted} strokeWidth={2.2} />
+                    <Text style={[styles.metricText, { color: theme.colors.text.muted }]}>
+                      {t('wallet.allSettled', 'All settled')}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
-          </GlassCard>
-        </Animated.View>
 
-        {/* Summary Chips */}
-        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.summaryRow}>
-          <SummaryChip label={t('wallet.paid')} value={summary.paid} color={colors.success} theme={theme} />
-          <SummaryChip label={t('wallet.payable')} value={summary.payable} color="#00B8FF" theme={theme} />
-          <SummaryChip label={t('wallet.pending')} value={summary.pending} color={colors.worker} theme={theme} />
-        </Animated.View>
+            <View style={[styles.walletIconWrap, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.25) }]}>
+              <Banknote size={26} color={colors.success} strokeWidth={2} />
+            </View>
+          </View>
+        </GlassCard>
+      </Animated.View>
 
-      {/* Unified Transactions Ledger */}
-      <View style={styles.transactionsSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('wallet.transactionsLedger')}</Text>
-        </View>
-
-        {/* Filter Pills */}
+      {/* ── 3. Simple Filter Pills ── */}
+      <View style={styles.filterSection}>
         <View style={styles.filterRow}>
           {FILTERS.map((filter) => {
-            const isActive = activeFilter === filter;
+            const isActive = activeFilter === filter || (filter === 'Pending' && activeFilter === 'Payable');
             return (
               <TouchableOpacity
                 key={filter}
                 onPress={() => onFilterChange(filter)}
-                style={[styles.filterPill, isActive && styles.activeFilterPill, {
-                  backgroundColor: isActive ? alpha(colors.cyan, 0.12) : theme.colors.surface.subtle,
-                  borderColor: isActive ? alpha(colors.cyan, 0.35) : theme.colors.border.subtle,
-                }]}
+                style={[
+                  styles.filterPill,
+                  {
+                    backgroundColor: isActive ? alpha(colors.cyan, 0.14) : alpha(theme.colors.text.primary, 0.04),
+                    borderColor: isActive ? alpha(colors.cyan, 0.38) : theme.colors.border.subtle,
+                  },
+                ]}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.filterText, isActive && styles.activeFilterText, { color: isActive ? colors.cyan : theme.colors.text.muted }]}>
-                  {t('wallet.' + filter.toLowerCase())}
+                <Text
+                  style={[
+                    styles.filterText,
+                    { color: isActive ? colors.cyan : theme.colors.text.muted },
+                  ]}
+                >
+                  {filter === 'All'
+                    ? t('wallet.all', 'All Receipts')
+                    : filter === 'Paid'
+                    ? t('wallet.paid', 'Paid')
+                    : t('wallet.payable', 'Pending Payment')}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
-
-        {/* Payments & Refunds List */}
-        <View style={styles.transactionList}>
-          {filteredItems.map((item, index) => {
-            const statusConf = STATUS_CONFIG[item.status.toLowerCase()] || STATUS_CONFIG.pending;
-            const IconComponent = statusConf.icon;
-            const dateStr = item.date.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            });
-
-            return (
-              <Animated.View
-                key={item._id}
-                entering={FadeInRight.delay(index * 60).duration(500)}
-                layout={Layout.springify()}
-              >
-                <GlassCard
-                  intensity={20}
-                  style={[styles.transactionCard, { borderColor: statusConf.color + '48' }]}
-                  padding={14}
-                  gradient={[statusConf.color + '5C', '#00B8FF' + '26', alpha(theme.colors.surface.card, 0.18)]}
-                  onPress={() => {
-                    if (item.bookingId) {
-                      router.push({
-                        pathname: '/transaction-details',
-                        params: { id: item.bookingId },
-                      });
-                    }
-                  }}
-                >
-                  <View style={styles.txRow}>
-                    <View style={[
-                      styles.txIconBox,
-                      { backgroundColor: statusConf.color + '18', borderColor: statusConf.color + '30' },
-                    ]}>
-                      <IconComponent size={18} color={statusConf.color} strokeWidth={2} />
-                    </View>
-
-                    <View style={styles.txInfo}>
-                      <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                        {item.title}
-                      </Text>
-                      <View style={styles.txMeta}>
-                        <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
-                        <View style={[styles.txStatusBadge, { backgroundColor: statusConf.color + '15' }]}>
-                          <Text style={[styles.txStatusText, { color: statusConf.color }]}>
-                            {t(statusConf.labelKey)}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={[styles.txDescription, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                        {item.description}
-                      </Text>
-                    </View>
-
-                    <View style={styles.txAmountGroup}>
-                      <Text style={[styles.txAmount, { color: item.type === 'refund' ? colors.cyan : theme.colors.text.primary }]}>
-                        {item.type === 'refund' ? '+' : ''}Rs. {item.amount.toLocaleString()}
-                      </Text>
-                      <Text style={[styles.txCurrency, { color: theme.colors.text.muted }]}>PKR</Text>
-                    </View>
-                  </View>
-                </GlassCard>
-              </Animated.View>
-            );
-          })}
-
-          {filteredItems.length === 0 && (
-            <Animated.View entering={FadeInDown} style={styles.emptyContainer}>
-              <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
-              <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.noTransactions')}</Text>
-              <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>
-                {activeFilter === 'All'
-                  ? t('wallet.emptyAll')
-                  : t('wallet.emptyFilter', { filter: t('wallet.' + activeFilter.toLowerCase()) })}
-              </Text>
-            </Animated.View>
-          )}
-        </View>
       </View>
 
-      <View style={{ height: 100 }} />
+      {/* ── 4. Receipts & Payment History List ── */}
+      <View style={styles.listSection}>
+        {filteredPayments.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={[styles.emptyIconWrap, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]}>
+              <Receipt size={32} color={theme.colors.text.muted} strokeWidth={1.8} />
+            </View>
+            <Text style={[styles.emptyTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+              {t('wallet.noPaymentsTitle', 'No Payment Receipts Yet')}
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: theme.colors.text.muted }]}>
+              {t('wallet.noPaymentsDesc', 'When an Ustad completes your job and you settle payment, your receipts will be tracked here.')}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.emptyBtn, { backgroundColor: colors.cyan }]}
+              onPress={() => router.push('/(tabs)')}
+              activeOpacity={0.82}
+            >
+              <Text style={styles.emptyBtnText}>{t('home.client.bookServiceBtn', 'Browse Services')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.cardsContainer}>
+            {filteredPayments.map((payment, index) => {
+              const isPaid = payment.status?.toLowerCase() === 'paid';
+              const serviceTitle = payment.booking?.category || t('wallet.serviceBooking', 'Home Service');
+              const workerName = payment.worker?.fullName || t('common.ustad', 'Ustad');
+              const workerAvatar = payment.worker?.profileImage || '';
+              const paymentDate = new Date(payment.updatedAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              });
+
+              return (
+                <Animated.View
+                  key={payment._id}
+                  entering={FadeInRight.delay(index * 50).duration(400)}
+                  layout={Layout.springify()}
+                >
+                  <TouchableOpacity
+                    activeOpacity={0.84}
+                    onPress={() => {
+                      if (payment.booking?._id) {
+                        router.push({
+                          pathname: '/transaction-details',
+                          params: { id: payment.booking._id },
+                        });
+                      }
+                    }}
+                    style={[
+                      styles.receiptCard,
+                      {
+                        backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.9) : theme.colors.surface.card,
+                        borderColor: isPaid ? alpha(colors.success, 0.25) : alpha(colors.worker, 0.3),
+                        borderLeftWidth: 3.5,
+                        borderLeftColor: isPaid ? colors.success : colors.worker,
+                      },
+                    ]}
+                  >
+                    {/* Top Row: Service Category & Status Pill */}
+                    <View style={styles.cardTopRow}>
+                      <Text
+                        style={[styles.serviceTitle, typography.threeD, { color: theme.colors.text.primary }]}
+                        numberOfLines={1}
+                      >
+                        {serviceTitle}
+                      </Text>
+
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: isPaid ? alpha(colors.success, 0.12) : alpha(colors.worker, 0.12),
+                            borderColor: isPaid ? alpha(colors.success, 0.3) : alpha(colors.worker, 0.3),
+                          },
+                        ]}
+                      >
+                        {isPaid ? (
+                          <CheckCircle2 size={11} color={colors.success} strokeWidth={2.5} />
+                        ) : (
+                          <Clock size={11} color={colors.worker} strokeWidth={2.5} />
+                        )}
+                        <Text
+                          style={[
+                            styles.statusBadgeText,
+                            { color: isPaid ? colors.success : colors.worker },
+                          ]}
+                        >
+                          {isPaid ? t('wallet.paid', 'Paid') : t('wallet.payable', 'Cash to Pay')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Middle Row: Ustad Info & Date */}
+                    <View style={styles.cardMiddleRow}>
+                      <View style={styles.workerInfo}>
+                        <View style={[styles.workerAvatarWrap, { borderColor: alpha(theme.colors.text.primary, 0.12) }]}>
+                          {workerAvatar ? (
+                            <Image source={{ uri: workerAvatar }} style={styles.workerAvatarImg} />
+                          ) : (
+                            <Text style={[styles.workerInitials, { color: colors.cyan }]}>
+                              {initialsFor(workerName)}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={[styles.workerName, { color: theme.colors.text.secondary }]} numberOfLines={1}>
+                          {t('wallet.paidTo', 'Paid to')} {workerName}
+                        </Text>
+                      </View>
+
+                      <View style={styles.dateInfo}>
+                        <CalendarDays size={11} color={theme.colors.text.muted} strokeWidth={2} />
+                        <Text style={[styles.dateText, { color: theme.colors.text.muted }]}>
+                          {paymentDate}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Bottom Row: Cash Payment Method & Amount */}
+                    <View style={[styles.cardFooterRow, { borderTopColor: alpha(theme.colors.text.primary, 0.06) }]}>
+                      <View style={styles.paymentMethodGroup}>
+                        <CreditCard size={13} color={theme.colors.text.muted} strokeWidth={2.2} />
+                        <Text style={[styles.paymentMethodText, { color: theme.colors.text.muted }]}>
+                          {payment.paymentMethod === 'online' ? t('wallet.onlinePayment', 'Online') : t('wallet.cashPayment', 'Cash Settlement')}
+                        </Text>
+                      </View>
+
+                      <View style={styles.amountRightGroup}>
+                        <Text style={[styles.amountValue, { color: isPaid ? colors.success : colors.worker }]}>
+                          Rs. {Number(payment.amount || 0).toLocaleString()}
+                        </Text>
+                        <ChevronRight size={15} color={alpha(theme.colors.text.primary, 0.35)} strokeWidth={2.4} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: Spacing.m,
-    gap: 16,
+    paddingHorizontal: Spacing.l,
     paddingBottom: 40,
-    flexGrow: 1,
   },
-  header: { marginBottom: Spacing.m },
-  headerTitle: { fontSize: 28, fontWeight: '900', letterSpacing: 0.5 },
-  headerSubtitle: { fontSize: 14, fontWeight: '600', marginTop: 4 },
-  balanceSection: { marginBottom: 4 },
-  balanceCard: { borderRadius: 24 },
-  balanceContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  balanceTextGroup: { gap: 4 },
-  balanceLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 2 },
-  balanceAmount: { fontSize: 32, fontWeight: '900' },
-  balanceSubtext: { fontSize: 11, fontWeight: '600' },
+  header: {
+    marginBottom: Spacing.m,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 3,
+  },
+  heroSection: {
+    marginBottom: Spacing.m,
+  },
+  heroCard: {
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  heroContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    gap: 12,
+  },
+  heroLeft: {
+    flex: 1,
+  },
+  heroLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  heroLabel: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  heroAmount: {
+    fontSize: 26,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  heroMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  metricPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+  },
+  metricText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
   walletIconWrap: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  summaryRow: { flexDirection: 'row', gap: 8, justifyContent: 'space-between' },
-  chipCard: { flex: 1, borderRadius: 14, minHeight: 74 },
-  chipDot: { width: 6, height: 6, borderRadius: 3, marginBottom: 8 },
-  chipValue: { fontSize: 14, fontWeight: '900', marginBottom: 2 },
-  chipLabel: { fontSize: 9, lineHeight: 12, fontWeight: '700', textTransform: 'uppercase' },
-  transactionsSection: { marginTop: 8 },
-  sectionHeader: { marginBottom: 12 },
-  sectionTitle: { fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
-  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  filterSection: {
+    marginBottom: 14,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 99,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
     borderWidth: 1,
   },
-  activeFilterPill: {},
-  filterText: { fontSize: 12, fontWeight: '700' },
-  activeFilterText: {},
-  transactionList: { gap: 12 },
-  transactionCard: { borderRadius: 18, borderWidth: 1 },
-  txRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  txIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+  filterText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  listSection: {
+    marginTop: 4,
+  },
+  cardsContainer: {
+    gap: 10,
+  },
+  receiptCard: {
+    borderRadius: BorderRadius.lg,
     borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  serviceTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    flex: 1,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  cardMiddleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  workerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flex: 1,
+    minWidth: 0,
+  },
+  workerAvatarWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  txInfo: { flex: 1, minWidth: 0, gap: 2 },
-  txTitle: { fontSize: 15, fontWeight: '900' },
-  txMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  txDate: { fontSize: 11, fontWeight: '600' },
-  txStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  txStatusText: { fontSize: 8, fontWeight: '900', textTransform: 'uppercase' },
-  txDescription: { fontSize: 11, marginTop: 2 },
-  txAmountGroup: { alignItems: 'flex-end', gap: 2 },
-  txAmount: { fontSize: 15, fontWeight: '900' },
-  txCurrency: { fontSize: 9, fontWeight: '700' },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, gap: 12 },
-  emptyTitle: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
-  emptySub: { fontSize: 13, fontWeight: '600', textAlign: 'center', lineHeight: 20, maxWidth: 260 },
+  workerAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  workerInitials: {
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  workerName: {
+    fontSize: 12,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  dateInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  dateText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    gap: 8,
+  },
+  paymentMethodGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  paymentMethodText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  amountRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  amountValue: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  emptyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.full,
+    marginTop: 10,
+  },
+  emptyBtnText: {
+    color: '#001014',
+    fontSize: 13,
+    fontWeight: '800',
+  },
 });

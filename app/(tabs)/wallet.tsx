@@ -46,12 +46,12 @@ function WalletSkeleton({ isWorker, insets }: WalletSkeletonProps) {
       {/* Static Header shown immediately while content shimmers load */}
       <View style={{ marginBottom: 8 }}>
         <Text style={[{ fontSize: 28, fontWeight: '900', color: theme.colors.text.primary, letterSpacing: 0.5 }, typography.threeD]}>
-          {t('wallet.title')}
+          {isWorker ? t('wallet.title') : t('wallet.clientPaymentsTitle', 'Payments & Spending')}
         </Text>
         <Text style={{ fontSize: 13, color: theme.colors.text.muted, fontWeight: '600', marginTop: 4 }}>
           {isWorker
             ? t('wallet.workerSub')
-            : t('wallet.clientSub')}
+            : t('wallet.clientPaymentsDesc', 'Receipts and spending history for your home services')}
         </Text>
       </View>
 
