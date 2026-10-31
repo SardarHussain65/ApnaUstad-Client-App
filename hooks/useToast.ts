@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import Toast from 'react-native-toast-message';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -8,7 +9,7 @@ interface ToastOptions {
 }
 
 export function useToast() {
-  const showToast = (
+  const showToast = useCallback((
     type: ToastType,
     title: string,
     message?: string,
@@ -23,16 +24,24 @@ export function useToast() {
       topOffset: 60,
       bottomOffset: 40,
     });
-  };
+  }, []);
 
-  return {
-    success: (title: string, message?: string, options?: ToastOptions) =>
-      showToast('success', title, message, options),
-    error: (title: string, message?: string, options?: ToastOptions) =>
-      showToast('error', title, message, options),
-    info: (title: string, message?: string, options?: ToastOptions) =>
-      showToast('info', title, message, options),
-    warning: (title: string, message?: string, options?: ToastOptions) =>
-      showToast('warning', title, message, options),
-  };
+  const success = useCallback((title: string, message?: string, options?: ToastOptions) =>
+    showToast('success', title, message, options), [showToast]);
+
+  const error = useCallback((title: string, message?: string, options?: ToastOptions) =>
+    showToast('error', title, message, options), [showToast]);
+
+  const info = useCallback((title: string, message?: string, options?: ToastOptions) =>
+    showToast('info', title, message, options), [showToast]);
+
+  const warning = useCallback((title: string, message?: string, options?: ToastOptions) =>
+    showToast('warning', title, message, options), [showToast]);
+
+  return useMemo(() => ({
+    success,
+    error,
+    info,
+    warning,
+  }), [success, error, info, warning]);
 }

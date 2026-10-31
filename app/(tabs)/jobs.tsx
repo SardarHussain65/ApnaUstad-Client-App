@@ -28,7 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
-import { useNearbyJobs, useUserLocation } from '../../hooks';
+import { useNearbyJobs, useUserLocation, useWorkerBids } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useIsRTL } from '../../context/LanguageContext';
 
@@ -52,6 +52,16 @@ export default function WorkerJobsTab() {
     location?.longitude,
     location?.latitude
   );
+  const { data: workerBids = [], refetch: refetchBids } = useWorkerBids();
+
+  // Set of job IDs where this worker has already sent an offer
+  const bidJobIds = useMemo(() => {
+    return new Set(
+      workerBids
+        .map((b) => (typeof b.jobPost === 'string' ? b.jobPost : b.jobPost?._id))
+        .filter(Boolean)
+    );
+  }, [workerBids]);
 
   useEffect(() => {
     const unsub = socketService.on('job:new', () => {
@@ -65,7 +75,7 @@ export default function WorkerJobsTab() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refetch();
+      await Promise.all([refetch(), refetchBids()]);
     } finally {
       setIsRefreshing(false);
     }
@@ -73,6 +83,9 @@ export default function WorkerJobsTab() {
 
   const filteredJobs = useMemo(() => {
     return rawJobs.filter((job) => {
+      // Exclude jobs where worker has already sent an offer
+      if (bidJobIds.has(job._id)) return false;
+
       // Urgency filter
       if (urgencyFilter !== 'all') {
         const isUrgent = job.urgency === 'instant';
@@ -89,7 +102,7 @@ export default function WorkerJobsTab() {
       }
       return true;
     });
-  }, [rawJobs, urgencyFilter, searchQuery]);
+  }, [rawJobs, bidJobIds, urgencyFilter, searchQuery]);
 
   return (
     <BackgroundWrapper>

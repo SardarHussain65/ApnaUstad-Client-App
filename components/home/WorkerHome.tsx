@@ -26,9 +26,7 @@ import { BackgroundWrapper } from '../common/BackgroundWrapper';
 import { ConfirmModal } from '../ui';
 import { GlassCard } from './GlassCard';
 import api from '../../services/api';
-import { WorkerAlertJobCard } from './WorkerAlertJobCard';
 import { WorkerQuickInsights } from './WorkerQuickInsights';
-import { IncomingJobModal } from './IncomingJobModal';
 import { WorkerAvailabilityToggle } from './WorkerAvailabilityToggle';
 import { WorkerVerificationBanner } from './WorkerVerificationBanner';
 import {
@@ -44,7 +42,6 @@ import {
   useWorkerBids,
   useWithdrawBidMutation,
   useWorkerHomeSummary,
-  useMissedJobs,
   Bid,
 } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
@@ -67,9 +64,6 @@ export function WorkerHome() {
   const toast = useToast();
   const confirmModal = useConfirmModal();
   const {
-    dismissedJobs,
-    clearDismissedJob,
-    acceptDismissedJob,
     isOnline,
     toggleOnline,
   } = useIncomingJob();
@@ -80,12 +74,6 @@ export function WorkerHome() {
     isLoading: summaryLoading,
     refetch: refetchSummary,
   } = useWorkerHomeSummary({ enabled: Boolean(token) });
-
-  const {
-    data: missedJobs = [],
-    isLoading: missedJobsLoading,
-    refetch: refetchMissed,
-  } = useMissedJobs({ enabled: Boolean(token) });
 
   const {
     data: workerBids,
@@ -100,10 +88,6 @@ export function WorkerHome() {
   } = useWorkerAnalytics();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [acceptingAlertJobId, setAcceptingAlertJobId] = useState<string | null>(null);
-  const [showAllSignals, setShowAllSignals] = useState(false);
-  const [selectedSignalJob, setSelectedSignalJob] = useState<any | null>(null);
-  const [locallyDismissedJobIds, setLocallyDismissedJobIds] = useState<Set<string>>(new Set());
   const [showAllBids, setShowAllBids] = useState(false);
   const [withdrawingBidId, setWithdrawingBidId] = useState<string | null>(null);
 
@@ -119,25 +103,6 @@ export function WorkerHome() {
   const activeBooking = useMemo(() => {
     return homeSummary?.activeBooking || null;
   }, [homeSummary?.activeBooking]);
-
-  // ─── Merged Recent Signals (deduped) ─────────────────────────────────────────
-  const recentSignals = useMemo(() => {
-    const seen = new Set<string>();
-    const merged: any[] = [];
-    for (const job of dismissedJobs) {
-      if (!seen.has(job._id) && !locallyDismissedJobIds.has(job._id)) {
-        seen.add(job._id);
-        merged.push({ ...job, _signalSource: 'dismissed' });
-      }
-    }
-    for (const job of missedJobs) {
-      if (!seen.has(job._id) && !locallyDismissedJobIds.has(job._id)) {
-        seen.add(job._id);
-        merged.push({ ...job, _signalSource: 'missed' });
-      }
-    }
-    return merged;
-  }, [dismissedJobs, missedJobs, locallyDismissedJobIds]);
 
   // ─── Location & Background Sync (Non-blocking) ───────────────────────────────
   const getSavedCoordinates = useCallback((): WorkerCoordinates | null => {
@@ -199,12 +164,11 @@ export function WorkerHome() {
     }).catch(() => {});
     await Promise.allSettled([
       refetchSummary(),
-      refetchMissed(),
       refetchBids(),
       refetchAnalytics(),
     ]);
     setIsRefreshing(false);
-  }, [refetchSummary, refetchMissed, refetchBids, refetchAnalytics, resolveWorkerLocation, syncWorkerLocation]);
+  }, [refetchSummary, refetchBids, refetchAnalytics, resolveWorkerLocation, syncWorkerLocation]);
 
   const refreshWorkerActivity = useCallback(() => {
     refetchSummary();
@@ -226,44 +190,6 @@ export function WorkerHome() {
   const handleBookingDetails = useCallback((booking: Booking) => {
     router.push({ pathname: '/transaction-details' as any, params: { id: booking._id } });
   }, [router]);
-
-  // ─── Signal Handlers ──────────────────────────────────────────────────────────
-  const handleOpenSignalDetails = useCallback((job: any) => {
-    setSelectedSignalJob(job);
-  }, []);
-
-  const handleAcceptSignalJob = useCallback(async (job: any) => {
-    setAcceptingAlertJobId(job._id);
-    try {
-      await acceptDismissedJob(job);
-      setLocallyDismissedJobIds(prev => new Set([...prev, job._id]));
-      setSelectedSignalJob(null);
-      refetchMissed();
-    } finally {
-      setAcceptingAlertJobId(null);
-    }
-  }, [acceptDismissedJob, refetchMissed]);
-
-  const handleDismissSignalJob = useCallback((jobId: string) => {
-    clearDismissedJob(jobId);
-    setLocallyDismissedJobIds(prev => new Set([...prev, jobId]));
-    setSelectedSignalJob((prev: any | null) => prev?._id === jobId ? null : prev);
-  }, [clearDismissedJob]);
-
-  const handleCounterOfferSignalJob = useCallback((job: any) => {
-    clearDismissedJob(job._id);
-    setLocallyDismissedJobIds(prev => new Set([...prev, job._id]));
-    setSelectedSignalJob(null);
-    router.push({
-      pathname: '/bid-submission' as any,
-      params: {
-        jobId: job._id,
-        title: job.category,
-        urgency: job.urgency,
-        responseMode: 'counter',
-      },
-    });
-  }, [clearDismissedJob, router]);
 
   // ─── Bid Handlers ────────────────────────────────────────────────────────────
   const handleBidDetails = useCallback((bid: Bid) => {
@@ -481,41 +407,7 @@ export function WorkerHome() {
           </View>
         )}
 
-        {/* ── Section 1: Recent Signals (dismissed + missed-while-offline) ── */}
-        {recentSignals.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Radio color={colors.worker} size={22} />
-                <Text style={[styles.sectionTitle, typography.threeD, { color: colors.worker }]}>{t('home.worker.missedJobs')}</Text>
-              </View>
-              {recentSignals.length > 2 ? (
-                <TouchableOpacity onPress={() => setShowAllSignals(!showAllSignals)}>
-                  <Text style={[styles.seeAll, { color: colors.worker }]}>
-                    {showAllSignals ? t('home.client.showLess') : `${t('home.client.viewAll')} (${recentSignals.length})`}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={[styles.sectionMeta, { color: colors.worker }]}>{recentSignals.length} {t('home.worker.missedJobs').toUpperCase()}</Text>
-              )}
-            </View>
-
-            <View style={styles.agendaList}>
-              {recentSignals.slice(0, showAllSignals ? undefined : 2).map((job, index) => (
-                <WorkerAlertJobCard
-                  key={job._id}
-                  job={job}
-                  index={index}
-                  onAccept={handleOpenSignalDetails}
-                  onDismiss={handleDismissSignalJob}
-                  isAccepting={acceptingAlertJobId === job._id}
-                />
-              ))}
-            </View>
-          </Animated.View>
-        )}
-
-        {/* ── Section 2: Your Active Bids ── */}
+        {/* ── Section: Your Active Bids (Sent Offers) ── */}
         {pendingBids.length > 0 && (
           <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -580,15 +472,6 @@ export function WorkerHome() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
-      <IncomingJobModal
-        visible={Boolean(selectedSignalJob)}
-        jobs={selectedSignalJob ? [selectedSignalJob] : []}
-        onAccept={handleAcceptSignalJob}
-        onCounterOffer={handleCounterOfferSignalJob}
-        onReject={handleDismissSignalJob}
-        onClose={() => setSelectedSignalJob(null)}
-        acceptingJobId={acceptingAlertJobId}
-      />
       <ConfirmModal
         visible={confirmModal.visible}
         onConfirm={confirmModal.onConfirm}

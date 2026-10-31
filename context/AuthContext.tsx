@@ -96,9 +96,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updateAccountStatus = useCallback(async (status: AccountStatus) => {
-    setAccountStatusState(status);
+    setAccountStatusState((prev) => {
+      if (
+        prev &&
+        prev.isActive === status.isActive &&
+        prev.deactivationReason === status.deactivationReason &&
+        prev.deactivatedAt === status.deactivatedAt
+      ) {
+        return prev;
+      }
+      return status;
+    });
+
     setUserState((current) => {
       if (!current) return current;
+      if (
+        current.isActive === status.isActive &&
+        (current.deactivationReason || '') === (status.deactivationReason || '') &&
+        (current.deactivatedAt || null) === (status.deactivatedAt || null)
+      ) {
+        return current;
+      }
       const next = {
         ...current,
         isActive: status.isActive,
@@ -201,14 +219,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshAccountStatus();
   }, [token, role]);
 
+  const appStateRef = useRef(AppState.currentState);
+
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (state) => {
-      console.log('[AuthContext Debug] AppState change detected:', state);
-      if (state === 'active') {
-        refreshAccountStatus();
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextState;
+
+      // Ignore if state hasn't changed
+      if (prevState === nextState) return;
+
+      // Only act on a genuine transition from inactive/background into active
+      if (prevState.match(/inactive|background/) && nextState === 'active') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          if (AppState.currentState === 'active') {
+            refreshAccountStatus();
+          }
+        }, 500);
       }
     });
-    return () => subscription.remove();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      subscription.remove();
+    };
   }, [refreshAccountStatus]);
 
   const setAuth = async (token: string, refreshToken: string, role: UserRole, user: any) => {
