@@ -27,6 +27,7 @@ import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimat
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WorkerWallet } from '../../hooks';
+import { WorkerEarningsChart } from '../home/WorkerEarningsChart';
 
 // ─── Constants & Types ────────────────────────────────────────────────────────
 interface WalletTransaction {
@@ -69,6 +70,7 @@ interface WorkerWalletViewProps {
     pending: number;
     cancelled: number;
   };
+  analyticsData?: any;
   workerTab: 'wallet' | 'topups' | 'earnings';
   onTabChange: (tab: 'wallet' | 'topups' | 'earnings') => void;
   refreshing: boolean;
@@ -104,6 +106,7 @@ export function WorkerWalletView({
   topUps,
   payments,
   summary,
+  analyticsData,
   workerTab,
   onTabChange,
   refreshing,
@@ -293,6 +296,26 @@ export function WorkerWalletView({
             </View>
           </View>
         </GlassCard>
+      </Animated.View>
+
+      {/* Visual Interactive Earnings Breakdown Chart */}
+      <Animated.View entering={FadeInDown.delay(90).duration(700)} style={{ marginBottom: 14 }}>
+        <WorkerEarningsChart
+          daily={analyticsData?.daily || []}
+          weekly={analyticsData?.weekly || []}
+          monthly={analyticsData?.monthly || []}
+          summary={analyticsData?.summary || {
+            todayEarnings: 0,
+            thisWeekEarnings: 0,
+            thisMonthEarnings: 0,
+            todayJobs: 0,
+            thisWeekJobs: 0,
+            thisMonthJobs: 0,
+            bestDay: { label: '-', earnings: 0 },
+            streak: 0,
+            trendPercent: 0,
+          }}
+        />
       </Animated.View>
 
       {/* Wallet Statistics Grid */}

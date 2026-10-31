@@ -17,6 +17,7 @@ import {
   useToast,
   useUserWallet,
 } from '../../hooks';
+import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
 
 // Subcomponents & Shimmer Skeletons
 import { ClientWalletView } from '../../components/wallet/ClientWalletView';
@@ -129,6 +130,7 @@ export default function WalletTab() {
   const { data: topUpsData, isLoading: areTopUpsLoading, refetch: refetchTopUps } = useWalletTopUps(1, 50, {
     enabled: isWorker,
   });
+  const { data: analyticsData, refetch: refetchAnalytics } = useWorkerAnalytics();
 
   const transactions = transactionsData?.transactions ?? [];
   const topUps = useMemo(() => topUpsData?.requests ?? [], [topUpsData?.requests]);
@@ -151,11 +153,12 @@ export default function WalletTab() {
         refetchPayments(),
         refetchPaymentMethods(),
         refetchTopUps(),
+        refetchAnalytics(),
       ]);
     } finally {
       setIsWorkerRefreshing(false);
     }
-  }, [refetchWallet, refetchTransactions, refetchPayments, refetchPaymentMethods, refetchTopUps]);
+  }, [refetchWallet, refetchTransactions, refetchPayments, refetchPaymentMethods, refetchTopUps, refetchAnalytics]);
 
   const handleCopy = async (label: string, value?: string) => {
     if (!value) return;
@@ -270,6 +273,7 @@ export default function WalletTab() {
             topUps={topUps}
             payments={payments}
             summary={summary}
+            analyticsData={analyticsData}
             workerTab={workerTab}
             onTabChange={setWorkerTab}
             refreshing={isWorkerRefreshing}
