@@ -539,177 +539,156 @@ export default function FindingWorkerScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {isInstant ? (
-            <Animated.View 
-              entering={FadeIn.duration(500)} 
-              style={[
-                styles.searchHero,
-                {
-                  backgroundColor: theme.isDark ? 'rgba(2,8,26,0.82)' : colors.surface.card,
-                  borderColor: theme.isDark ? 'rgba(0,245,255,0.28)' : colors.border.subtle,
-                }
-              ]}
+          {/* Modern Radar Searching Hero for all jobs */}
+          <Animated.View 
+            entering={FadeIn.duration(500)} 
+            style={[
+              styles.searchHero,
+              {
+                backgroundColor: theme.isDark ? 'rgba(2,8,26,0.82)' : colors.surface.card,
+                borderColor: theme.isDark ? 'rgba(0,245,255,0.28)' : colors.border.subtle,
+              }
+            ]}
+          >
+            <LinearGradient
+              colors={theme.isDark 
+                ? ['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(191,90,242,0.10)']
+                : [alpha(colors.brand.primary, 0.05), colors.surface.card, alpha(colors.brand.secondary, 0.04)]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.searchHeroGradient}
             >
-              <LinearGradient
-                colors={theme.isDark 
-                  ? ['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(123,97,255,0.12)']
-                  : [alpha(colors.brand.primary, 0.05), colors.surface.card, alpha(colors.brand.secondary, 0.04)]
+              <View style={[
+                styles.searchStatusBadge,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(0,245,255,0.07)' : alpha(colors.brand.primary, 0.06),
+                  borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : alpha(colors.brand.primary, 0.15),
                 }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.searchHeroGradient}
-              >
-                <View style={[
-                  styles.searchStatusBadge,
-                  {
-                    backgroundColor: theme.isDark ? 'rgba(0,245,255,0.07)' : alpha(colors.brand.primary, 0.06),
-                    borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : alpha(colors.brand.primary, 0.15),
-                  }
-                ]}>
-                  <Radio size={13} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
-                  <Text style={[styles.searchStatusText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>{t('findingWorker.waitingAccept')}</Text>
-                </View>
-
-                {/* Big Visual Countdown timer */}
-                <View style={styles.countdownContainer}>
-                  <Text style={[styles.countdownValue, { color: colors.text.primary }]}>{formatCountdown(remainingSeconds)}</Text>
-                  <Text style={[styles.countdownLabel, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
-                    {(job?.urgencyPricingVersion || 1) === 1 
-                      ? t('findingWorker.untilEscalation') 
-                      : t('findingWorker.untilTimeout')}
-                  </Text>
-                </View>
-
-                <View style={[
-                  styles.fixedPriceContainer,
-                  {
-                    backgroundColor: theme.isDark ? 'rgba(0,245,255,0.06)' : alpha(colors.brand.primary, 0.06),
-                    borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : alpha(colors.brand.primary, 0.15),
-                  }
-                ]}>
-                  <Text style={[styles.fixedPriceLabel, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>{t('findingWorker.lockedPrice')}</Text>
-                  <Text style={[styles.fixedPriceAmount, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
-                    Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
-                  </Text>
-                </View>
-
-                {!!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
-                  <View style={[
-                    styles.notifiedContainer,
-                    {
-                      backgroundColor: theme.isDark ? 'rgba(0,255,127,0.05)' : alpha(colors.status.success, 0.06),
-                      borderColor: theme.isDark ? 'rgba(0,255,127,0.12)' : alpha(colors.status.success, 0.15),
-                    }
-                  ]}>
-                    <View style={[styles.pulsingGreenDot, { backgroundColor: theme.isDark ? '#34C759' : colors.status.success }]} />
-                    <Text style={[styles.notifiedText, { color: theme.isDark ? '#00FF7F' : colors.status.success }]}>
-                      {t('findingWorker.notifiedCount', 'Notified {{count}} active Ustads nearby...', { count: job.notifiedWorkersCount })}
-                    </Text>
-                  </View>
-                )}
-
-                <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>{t('findingWorker.searchingUstads')}</Text>
-                <Text style={[styles.subText, { color: colors.text.secondary }]}>
-                  {t('findingWorker.broadcastDesc')}
+              ]}>
+                <Radio size={13} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                <Text style={[styles.searchStatusText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
+                  {isSearching 
+                    ? t('findingWorker.searchingStatus') 
+                    : (applicants.length === 1 ? t('findingWorker.offersReceived', { count: applicants.length }) : t('findingWorker.offersReceivedPlural', { count: applicants.length }))}
                 </Text>
-              </LinearGradient>
-            </Animated.View>
-          ) : (
-            <Animated.View 
-              entering={FadeIn.duration(500)} 
-              style={[
-                styles.searchHero,
-                {
-                  backgroundColor: theme.isDark ? 'rgba(2,8,26,0.82)' : colors.surface.card,
-                  borderColor: theme.isDark ? 'rgba(0,245,255,0.28)' : colors.border.subtle,
-                }
-              ]}
-            >
-              <LinearGradient
-                colors={theme.isDark 
-                  ? ['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(191,90,242,0.10)']
-                  : [alpha(colors.brand.primary, 0.05), colors.surface.card, alpha(colors.brand.secondary, 0.04)]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.searchHeroGradient}
-              >
-                <View style={[
-                  styles.searchStatusBadge,
-                  {
-                    backgroundColor: theme.isDark ? 'rgba(0,245,255,0.07)' : alpha(colors.brand.primary, 0.06),
-                    borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : alpha(colors.brand.primary, 0.15),
-                  }
-                ]}>
-                  <Radio size={13} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
-                  <Text style={[styles.searchStatusText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>{isSearching ? t('findingWorker.searchingStatus') : (applicants.length === 1 ? t('findingWorker.offersReceived', { count: applicants.length }) : t('findingWorker.offersReceivedPlural', { count: applicants.length }))}</Text>
+              </View>
+
+              <View style={styles.animationContainer}>
+                <Animated.View style={[
+                  styles.pulseRing, 
+                  ringStyle,
+                  { borderColor: theme.isDark ? 'rgba(0,245,255,0.85)' : alpha(colors.brand.primary, 0.6) }
+                ]} />
+                <View style={styles.satelliteOrbit}>
+                  {applicants.slice(0, 6).map((app, index) => {
+                    const angle = (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
+                    const radius = 91;
+                    const tx = radius * Math.cos(angle);
+                    const ty = radius * Math.sin(angle);
+
+                    return (
+                      <TouchableOpacity
+                        key={app._id}
+                        onPress={() => handleWorkerPress(app)}
+                        style={[
+                          styles.satelliteContainer,
+                          { transform: [{ translateX: tx }, { translateY: ty }] }
+                        ]}
+                      >
+                        <Animated.View entering={FadeIn.delay(180 * index).duration(450)} style={styles.satelliteGlow}>
+                          <Image
+                            source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
+                            style={styles.satelliteImage}
+                          />
+                          <View style={styles.priceBadge}>
+                            <Text style={styles.priceText}>{formatMoney(app.proposedPrice)}</Text>
+                          </View>
+                        </Animated.View>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-
-                <View style={styles.animationContainer}>
-                  <Animated.View style={[
-                    styles.pulseRing, 
-                    ringStyle,
-                    { borderColor: theme.isDark ? 'rgba(0,245,255,0.85)' : alpha(colors.brand.primary, 0.6) }
-                  ]} />
-                  <View style={styles.satelliteOrbit}>
-                    {applicants.slice(0, 6).map((app, index) => {
-                      const angle = (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
-                      const radius = 91;
-                      const tx = radius * Math.cos(angle);
-                      const ty = radius * Math.sin(angle);
-
-                      return (
-                        <TouchableOpacity
-                          key={app._id}
-                          onPress={() => handleWorkerPress(app)}
-                          style={[
-                            styles.satelliteContainer,
-                            { transform: [{ translateX: tx }, { translateY: ty }] }
-                          ]}
-                        >
-                          <Animated.View entering={FadeIn.delay(180 * index).duration(450)} style={styles.satelliteGlow}>
-                            <Image
-                              source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
-                              style={styles.satelliteImage}
-                            />
-                            <View style={styles.priceBadge}>
-                              <Text style={styles.priceText}>{formatMoney(app.proposedPrice)}</Text>
-                            </View>
-                          </Animated.View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                  <Animated.View style={[styles.orbitContainer, orbitStyle]}>
-                    <View style={[
-                      styles.orbitNode,
-                      {
-                        backgroundColor: colors.brand.primary,
-                        shadowColor: colors.brand.primary,
-                      }
-                    ]} />
-                  </Animated.View>
+                <Animated.View style={[styles.orbitContainer, orbitStyle]}>
                   <View style={[
-                    styles.centerNode,
+                    styles.orbitNode,
                     {
-                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(colors.brand.primary, 0.1),
-                      borderColor: theme.isDark ? 'rgba(0,245,255,0.4)' : alpha(colors.brand.primary, 0.3),
+                      backgroundColor: colors.brand.primary,
                       shadowColor: colors.brand.primary,
                     }
-                  ]}>
-                    {isBidsLoading ? <ActivityIndicator size="small" color={colors.brand.primary} /> : <Search color={colors.brand.primary} size={28} />}
-                  </View>
+                  ]} />
+                </Animated.View>
+                <View style={[
+                  styles.centerNode,
+                  {
+                    backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(colors.brand.primary, 0.1),
+                    borderColor: theme.isDark ? 'rgba(0,245,255,0.4)' : alpha(colors.brand.primary, 0.3),
+                    shadowColor: colors.brand.primary,
+                  }
+                ]}>
+                  {isBidsLoading ? <ActivityIndicator size="small" color={colors.brand.primary} /> : <Search color={colors.brand.primary} size={28} />}
                 </View>
+              </View>
 
-                <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>{status}</Text>
-                <Text style={[styles.subText, { color: colors.text.secondary }]}>
-                  {isSearching
+              {/* Instant job indicators - sleek pills preserving essential instant details */}
+              {isInstant && (
+                <View style={styles.instantBadgesRow}>
+                  <View style={[
+                    styles.instantChip,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.08)' : alpha(colors.brand.primary, 0.08),
+                      borderColor: theme.isDark ? 'rgba(0,245,255,0.22)' : alpha(colors.brand.primary, 0.18),
+                    }
+                  ]}>
+                    <Zap size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} fill={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
+                      Fixed Rate: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
+                    </Text>
+                  </View>
+                  {remainingSeconds > 0 && (
+                    <View style={[
+                      styles.instantChip,
+                      {
+                        backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
+                        borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
+                      }
+                    ]}>
+                      <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                      <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                        {formatCountdown(remainingSeconds)} left
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {isInstant && !!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
+                <View style={[
+                  styles.notifiedContainer,
+                  {
+                    backgroundColor: theme.isDark ? 'rgba(0,255,127,0.05)' : alpha(colors.status.success, 0.06),
+                    borderColor: theme.isDark ? 'rgba(0,255,127,0.12)' : alpha(colors.status.success, 0.15),
+                    marginTop: 4,
+                    marginBottom: 10,
+                  }
+                ]}>
+                  <View style={[styles.pulsingGreenDot, { backgroundColor: theme.isDark ? '#34C759' : colors.status.success }]} />
+                  <Text style={[styles.notifiedText, { color: theme.isDark ? '#00FF7F' : colors.status.success }]}>
+                    {t('findingWorker.notifiedCount', 'Notified {{count}} active Ustads nearby...', { count: job.notifiedWorkersCount })}
+                  </Text>
+                </View>
+              )}
+
+              <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>{status}</Text>
+              <Text style={[styles.subText, { color: colors.text.secondary }]}>
+                {isInstant
+                  ? t('findingWorker.broadcastDesc')
+                  : (isSearching
                     ? t('findingWorker.searchDesc')
-                    : t('findingWorker.compareProfiles')}
-                </Text>
-              </LinearGradient>
-            </Animated.View>
-          )}
+                    : t('findingWorker.compareProfiles'))}
+              </Text>
+            </LinearGradient>
+          </Animated.View>
 
           {isEscalationSuggested && (
             <Animated.View 
@@ -1528,6 +1507,29 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '600',
     maxWidth: 300,
+  },
+  instantBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 6,
+    flexWrap: 'wrap',
+  },
+  instantChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 6,
+  },
+  instantChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   boosterCard: {
     marginTop: 14,
