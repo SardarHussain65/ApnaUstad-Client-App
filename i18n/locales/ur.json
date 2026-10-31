@@ -183,7 +183,20 @@
       "seeAll": "سب دیکھیں",
       "showLess": "کم دکھائیں",
       "viewAll": "سب دیکھیں",
-      "clientName": "کسٹمر"
+      "clientName": "کسٹمر",
+      "ustadActive": "استاد راستے میں ہے / کام جاری ہے",
+      "trackUstadBtn": "نقشے پر ٹریک کریں اور اسٹیٹس دیکھیں",
+      "offersReadyBadge": "پیشکشیں موصول ہو گئیں",
+      "radarSearchingBadge": "قریبی استاد تلاش کیے جا رہے ہیں",
+      "offersReadyDesc": "{{count}} استادوں نے ریٹس بھیجے ہیں۔ پروفائل دیکھ کر بک کریں۔",
+      "findingUstadsDesc": "آپ کے علاقے کے تصدیق شدہ استادوں کو لائیو الرٹ بھیجا جا رہا ہے...",
+      "reviewOffersBtn": "{{count}} پیشکشیں چیک کریں اور بک کریں",
+      "viewLiveRadarBtn": "لائیو سرچ دیکھیں",
+      "customJobTitle": "کوئی خاص کام یا مرمت کروانی ہے؟",
+      "customJobDesc": "کام کی تفصیل اور تصاویر ڈالیں، استاد آپ کو اپنے ریٹس بھیجیں گے۔",
+      "postJobBtn": "نیا کام پوسٹ کریں",
+      "verifiedUstads": "100٪ تصدیق شدہ استاد",
+      "transparentRates": "شفاف ریٹس"
     },
     "worker": {
       "online": "آن لائن",

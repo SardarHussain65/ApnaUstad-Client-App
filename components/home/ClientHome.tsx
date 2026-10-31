@@ -1,20 +1,17 @@
 /**
- * ClientHome.tsx — Theme-aware refactored
+ * ClientHome.tsx — Redesigned Customer Experience
  *
- * Changes from previous version:
- * - Sub-components extracted to separate files (Toast, Skeleton, RecentBookingCard)
- * - Dead code removed (handleRetryBookings, Elite Talents section, no-op Expand button)
- * - Pull-to-refresh added (RefreshControl)
- * - "Quick Actions" row added (Post a Job + My Bookings)
- * - "Recent Bookings" section added below dashboard
- * - Dashboard layout changed to row (matches WorkerHome, better use of space)
- * - Section labels renamed to user-friendly strings
- * - Toast correctly colors success green / error red
- * - Skeleton safe-area aware via topInset prop
- * - Shared shimmer (one loop, not one per SkeletonBox)
- * - MOCK_RATING removed — unrated users show 0
- * - All dead imports removed
- * - Theme hooks added for Light/Dark support
+ * Streamlined UI & Design System alignment:
+ * - Removed heavy Activity Dashboard ("Total Paid / Completion Rate" KPI card) from Home;
+ *   financial metrics belong in ClientWalletView.
+ * - Added elevated State-Aware Top Dynamic Hero Card:
+ *   1. Active Ustad Tracking (when a booking is accepted or in-progress)
+ *   2. Offers Ready (when Ustads have submitted bids on client's custom job)
+ *   3. Live Radar Searching (real-time worker search for pending job)
+ * - Streamlined Popular Services Grid with instant keyword filtering
+ * - Added prominent "Need a Custom Job?" action card
+ * - Streamlined Recent Bookings & Trust & Safety Assurance banner
+ * - Removed bottom floating banner overlap
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -27,41 +24,43 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import { ChevronRight, Search, CreditCard, Clock, CheckCircle2, Star, Briefcase } from 'lucide-react-native';
+import {
+  ChevronRight,
+  Search,
+  MapPin,
+  ArrowRight,
+  Radio,
+  Zap,
+  Sparkles,
+  Plus,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+} from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
-import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography, useThemeShadows } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
 import { GlassCard } from './GlassCard';
 import { BackgroundWrapper } from '../common/BackgroundWrapper';
-import { useShimmerTranslateX, CategoriesSkeleton, DashboardSkeleton, ListSkeleton, BookingCardSkeleton } from './HomeSkeletonLoader';
+import { useShimmerTranslateX, CategoriesSkeleton, BookingCardSkeleton } from './HomeSkeletonLoader';
 import { ClientToast, ToastState } from './ClientToast';
 import { RecentBookingCard } from './RecentBookingCard';
-import { ActiveBiddingBanner } from './ActiveBiddingBanner';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GRID_GAP = 12;
 const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
-const INITIAL_CATEGORY_LIMIT = 9;
+const INITIAL_CATEGORY_LIMIT = 6;
 const RECENT_BOOKINGS_LIMIT = 3;
-const EMPTY_HOME_STATS = {
-  total: 0,
-  active: 0,
-  completed: 0,
-  successRate: 0,
-  successRateLabel: '100%',
-  totalSpent: 0,
-};
 
 // ─── CategoryCard ─────────────────────────────────────────────────────────────
-// Extracted so React keeps a stable identity across parent re-renders.
 
 interface CategoryItem {
   _id: string;
@@ -79,7 +78,6 @@ interface CategoryCardProps {
 
 const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => {
   const theme = useTheme();
-  const colors = useThemeColors();
   const Icon = getIconForCategory(cat);
   const gradient: [string, string] = cat.color
     ? [cat.color, `${cat.color}40`]
@@ -97,7 +95,7 @@ const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => 
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 50).duration(400)}
+      entering={FadeInDown.delay(index * 40).duration(350)}
       style={styles.categoryCardWrapper}
     >
       <GlassCard
@@ -123,8 +121,6 @@ const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => 
   );
 });
 CategoryCard.displayName = 'CategoryCard';
-
-
 
 // ─── EmptyServiceState ────────────────────────────────────────────────────────
 
@@ -155,11 +151,6 @@ export function ClientHome() {
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
-  const shadows = useThemeShadows();
-
-  const innerBorderColor = theme.id === 'current'
-    ? alpha('#FFFFFF', 0.12)
-    : theme.colors.border.default;
 
   // Responsive grid dimensions
   const numColumns = windowWidth > 600 ? 4 : 3;
@@ -240,22 +231,34 @@ export function ClientHome() {
     return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
   }, [filteredCategories, showAllServices, searchQuery]);
 
-  const stats = homeSummary?.stats ?? EMPTY_HOME_STATS;
-  const recentBookings: Booking[] = homeSummary?.recentBookings ?? [];
-  const successPercent = stats.total > 0 ? Math.round(stats.successRate * 100) : 0;
-  const completedSummary = `${stats.completed}/${stats.total || 0} ${t('common.completed').toLowerCase()}`;
-  const activeSummary = stats.active > 0
-    ? `${stats.active} ${t('home.client.active').toLowerCase()}`
-    : t('home.client.noBookings');
+  // Active Booking (assigned Ustad on the way or ongoing work)
+  const activeBooking = useMemo(() => {
+    if (homeSummary?.activeBooking) return homeSummary.activeBooking;
+    const recent = homeSummary?.recentBookings ?? [];
+    return recent.find(b => ['accepted', 'ongoing'].includes(b.status)) || null;
+  }, [homeSummary]);
 
+  // Active Custom Job Post (open or reviewing)
   const activeMissions = useMemo<JobPost[]>(
     () =>
-      jobPosts.filter(job => ['open', 'reviewing'].includes(job.status))
+      jobPosts
+        .filter(job => ['open', 'reviewing'].includes(job.status))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [jobPosts]
   );
+  const activeSearchJob = activeMissions[0] || null;
+  const proposalCount = activeSearchJob?.pendingBidCount ?? activeSearchJob?.bidCount ?? 0;
 
-  const activeSearchJob = activeMissions[0];
+  // Recent completed/past bookings (excluding activeBooking to prevent duplicate cards)
+  const recentBookings: Booking[] = useMemo(() => {
+    const list = homeSummary?.recentBookings ?? [];
+    if (activeBooking) {
+      return list.filter(b => b._id !== activeBooking._id).slice(0, RECENT_BOOKINGS_LIMIT);
+    }
+    return list.slice(0, RECENT_BOOKINGS_LIMIT);
+  }, [homeSummary?.recentBookings, activeBooking]);
+
+  const totalBookingsCount = homeSummary?.stats?.total ?? (homeSummary?.recentBookings?.length ?? 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -289,13 +292,6 @@ export function ClientHome() {
     router.push('/(tabs)/bookings' as any);
   }, [router]);
 
-  const handleResumeRadar = useCallback(
-    (jobId: string) => {
-      router.push({ pathname: '/finding-worker', params: { jobId } });
-    },
-    [router]
-  );
-
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -320,15 +316,153 @@ export function ClientHome() {
       >
         <HomeHeader />
 
-        {/* ── Services Section ── */}
+        {/* ── 1. Top Dynamic Hero Card (State-Aware) ── */}
+        {activeBooking ? (
+          <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
+            <GlassCard
+              intensity={35}
+              padding={18}
+              hasGlow
+              glowColor={colors.success}
+              style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+            >
+              <View style={styles.heroTopRow}>
+                <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
+                  <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.heroStatusText, { color: colors.success }]}>
+                    {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
+                  </Text>
+                </View>
+                <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
+                  {activeBooking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+                </Text>
+              </View>
+
+              <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                {activeBooking.category || (activeBooking as any).serviceName || 'Service Request'}
+              </Text>
+
+              <View style={styles.heroCustomerRow}>
+                <Text style={[styles.heroCustomerName, { color: theme.colors.text.secondary }]}>
+                  {t('common.ustad', 'Ustad')}: {activeBooking.worker?.fullName || activeBooking.cardMeta?.counterParty?.fullName || 'Assigned Ustad'}
+                </Text>
+                {activeBooking.address ? (
+                  <View style={styles.heroLocationRow}>
+                    <MapPin size={12} color={theme.colors.text.muted} />
+                    <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                      {activeBooking.address}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
+                onPress={() => router.push({ pathname: '/job-tracking', params: { bookingId: activeBooking._id, id: activeBooking._id } })}
+                activeOpacity={0.84}
+              >
+                <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
+                  {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                </Text>
+                <ArrowRight size={16} color="#000" strokeWidth={2.5} />
+              </TouchableOpacity>
+            </GlassCard>
+          </Animated.View>
+        ) : activeSearchJob ? (
+          <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
+            {proposalCount > 0 ? (
+              <GlassCard
+                intensity={35}
+                padding={18}
+                hasGlow
+                glowColor={colors.orange}
+                style={[styles.heroCard, { borderColor: alpha(colors.orange, 0.45) }]}
+              >
+                <View style={styles.heroTopRow}>
+                  <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.orange, 0.14) }]}>
+                    <Zap size={11} color={colors.orange} strokeWidth={2.5} />
+                    <Text style={[styles.heroStatusText, { color: colors.orange }]}>
+                      {t('home.client.offersReadyBadge', 'OFFERS RECEIVED')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
+                    {activeSearchJob.urgency === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+                  </Text>
+                </View>
+
+                <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {activeSearchJob.signalMeta?.title || activeSearchJob.category || 'Custom Request'}
+                </Text>
+
+                <Text style={[styles.heroSubDesc, { color: theme.colors.text.secondary }]}>
+                  {t('home.client.offersReadyDesc', { count: proposalCount })}
+                </Text>
+
+                <TouchableOpacity
+                  style={[styles.heroCtaBtn, { backgroundColor: colors.orange }]}
+                  onPress={() => router.push({ pathname: '/bids-list', params: { jobId: activeSearchJob._id } })}
+                  activeOpacity={0.84}
+                >
+                  <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
+                    {t('home.client.reviewOffersBtn', { count: proposalCount })}
+                  </Text>
+                  <ArrowRight size={16} color="#000" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </GlassCard>
+            ) : (
+              <GlassCard
+                intensity={35}
+                padding={18}
+                hasGlow
+                glowColor={colors.cyan}
+                style={[styles.heroCard, { borderColor: alpha(colors.cyan, 0.45) }]}
+              >
+                <View style={styles.heroTopRow}>
+                  <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.cyan, 0.14) }]}>
+                    <Radio size={11} color={colors.cyan} strokeWidth={2.5} />
+                    <Text style={[styles.heroStatusText, { color: colors.cyan }]}>
+                      {t('home.client.radarSearchingBadge', 'FINDING USTADS NEARBY')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
+                    {activeSearchJob.urgency === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+                  </Text>
+                </View>
+
+                <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {activeSearchJob.signalMeta?.title || activeSearchJob.category || 'Service Request'}
+                </Text>
+
+                <Text style={[styles.heroSubDesc, { color: theme.colors.text.secondary }]}>
+                  {t('home.client.findingUstadsDesc', 'Alerting qualified Ustads near your area in real-time...')}
+                </Text>
+
+                <TouchableOpacity
+                  style={[styles.heroCtaBtn, { backgroundColor: colors.cyan }]}
+                  onPress={() => router.push({ pathname: '/finding-worker', params: { jobId: activeSearchJob._id } })}
+                  activeOpacity={0.84}
+                >
+                  <Radio size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
+                    {t('home.client.viewLiveRadarBtn', 'View Live Radar')}
+                  </Text>
+                  <ArrowRight size={16} color="#000" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </GlassCard>
+            )}
+          </Animated.View>
+        ) : null}
+
+        {/* ── 2. Popular Services Section ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
               <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                {t('home.client.services')}
+                {t('home.client.services', 'Services')}
               </Text>
               <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
-                {t('home.client.whatHelp')}
+                {t('home.client.whatHelp', 'What work do you need done?')}
               </Text>
             </View>
 
@@ -338,7 +472,7 @@ export function ClientHome() {
                 hitSlop={styles.hitSlop}
               >
                 <Text style={[styles.viewAll, { color: colors.cyan }]}>
-                  {showAllServices ? t('home.client.showLess') : t('home.client.viewAll')}
+                  {showAllServices ? t('home.client.showLess', 'SHOW LESS') : t('home.client.viewAll', 'VIEW ALL')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -347,7 +481,7 @@ export function ClientHome() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={t('home.client.searchPlaceholder')}
+            placeholder={t('home.client.searchPlaceholder', 'Search electrician, plumber...')}
             variant="section"
           />
 
@@ -371,158 +505,117 @@ export function ClientHome() {
           )}
         </View>
 
-        {/* ── Activity Dashboard ── */}
-        <Animated.View
-          entering={FadeInDown.delay(150).duration(700)}
-          style={styles.dashboardSection}
-        >
-          <Text style={[styles.sectionTitle, typography.threeD, styles.dashboardLabel, { color: theme.colors.text.primary }]}>
-            {t('home.client.yourActivity')}
-          </Text>
+        {/* ── 3. Post a Custom Job Action Banner ── */}
+        <Animated.View entering={FadeInDown.delay(120).duration(500)} style={styles.customJobSection}>
+          <GlassCard
+            intensity={28}
+            padding={16}
+            hasGlow
+            glowColor={colors.purple}
+            style={[styles.customJobCard, { borderColor: alpha(colors.purple, 0.3) }]}
+            onPress={() => router.push('/job-creation' as any)}
+          >
+            <View style={styles.customJobRow}>
+              <View style={[styles.customJobIconWrap, { backgroundColor: alpha(colors.purple, 0.16) }]}>
+                <Sparkles size={22} color={colors.purple} strokeWidth={2.2} />
+              </View>
+              <View style={styles.customJobTextWrap}>
+                <Text style={[styles.customJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {t('home.client.customJobTitle', 'Need a Custom Repair or Task?')}
+                </Text>
+                <Text style={[styles.customJobDesc, { color: theme.colors.text.muted }]}>
+                  {t('home.client.customJobDesc', 'Post details with photos & set your budget. Qualified Ustads will bid on it.')}
+                </Text>
+              </View>
+            </View>
 
-          {homeSummaryLoading && !isRefreshing ? (
-            <DashboardSkeleton translateX={translateX} />
-          ) : (
-            <GlassCard
-              intensity={42}
-              glowColor={colors.cyan}
-              gradient={[alpha(colors.cyan, 0.16), alpha(theme.colors.brand.secondary, 0.12), alpha(theme.colors.surface.card, 0.18)]}
-              padding={0}
-              style={styles.activityDashboardCard}
-              contentStyle={styles.activityDashboardContent}
+            <TouchableOpacity
+              style={[styles.customJobBtn, { backgroundColor: colors.purple }]}
+              onPress={() => router.push('/job-creation' as any)}
+              activeOpacity={0.84}
             >
-              <View style={styles.activityGlowOne} />
-              <View style={styles.activityGlowTwo} />
-
-              <View style={styles.activityTopRow}>
-                <View style={styles.spentCluster}>
-                  <View style={[styles.heroIconBox, { borderColor: innerBorderColor }]}>
-                    <CreditCard size={22} color={colors.cyan} strokeWidth={2.5} />
-                  </View>
-                  <View style={styles.heroTextContainer}>
-                    <Text style={[styles.heroLabel, { color: theme.colors.text.muted }]}>{t('home.client.totalSpent')}</Text>
-                    <Text style={[styles.heroValue, typography.threeD, { color: theme.colors.text.primary }]}>
-                      Rs. {stats.totalSpent.toLocaleString()}
-                    </Text>
-                    <Text style={[styles.heroSubText, { color: theme.colors.text.muted }]}>{activeSummary}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.successBadge}>
-                  <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
-                  <View>
-                    <Text style={styles.successPercent}>{successPercent}%</Text>
-                    <Text style={styles.successLabel}>{t('common.success')}</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={[styles.progressBlock, { borderColor: innerBorderColor }]}>
-                <View style={styles.progressHeader}>
-                  <Text style={[styles.progressTitle, { color: theme.colors.text.muted }]}>{t('home.client.completionRate')}</Text>
-                  <Text style={[styles.progressValue, { color: theme.colors.text.primary }]}>{completedSummary}</Text>
-                </View>
-                <View style={[styles.progressTrack, { backgroundColor: theme.colors.surface.subtle }]}>
-                  <View style={[styles.progressFill, { width: `${successPercent}%`, backgroundColor: colors.success }]} />
-                </View>
-              </View>
-
-              <View style={styles.activityStatsRow}>
-                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
-                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.cyan, 0.1) }]}>
-                    <Clock size={14} color={colors.cyan} />
-                  </View>
-                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.active}</Text>
-                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.active')}</Text>
-                </View>
-
-                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
-                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.success, 0.1) }]}>
-                    <CheckCircle2 size={14} color={colors.success} />
-                  </View>
-                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.completed}</Text>
-                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.completed')}</Text>
-                </View>
-
-                <View style={[styles.activityStatTile, { borderColor: innerBorderColor }]}>
-                  <View style={[styles.statIconBubble, { backgroundColor: alpha(colors.purple, 0.12) }]}>
-                    <Briefcase size={14} color={colors.purple} />
-                  </View>
-                  <Text style={[styles.subStatVal, { color: theme.colors.text.primary }]}>{stats.total}</Text>
-                  <Text style={[styles.subStatLab, { color: theme.colors.text.muted }]}>{t('home.client.totalJobs')}</Text>
-                </View>
-              </View>
-            </GlassCard>
-          )}
+              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} style={{ marginRight: 6 }} />
+              <Text style={styles.customJobBtnText}>
+                {t('home.client.postJobBtn', 'Post Custom Job')}
+              </Text>
+              <ChevronRight size={16} color="#FFFFFF" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </GlassCard>
         </Animated.View>
 
-        {/* ── Recent Bookings ── */}
+        {/* ── 4. Recent Bookings or Trust & Quality Guarantee ── */}
         {homeSummaryLoading && !isRefreshing ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                  {t('home.client.recentBookings', 'Recent Bookings')}
+                  {t('home.client.recentBookings', 'Recent Jobs')}
                 </Text>
-                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>{t('home.client.latestActivity', 'Your latest activity')}</Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
+                  {t('home.client.latestActivity', 'Your recent requests and bookings')}
+                </Text>
               </View>
             </View>
             <BookingCardSkeleton translateX={translateX} />
             <BookingCardSkeleton translateX={translateX} />
           </View>
-        ) : (
-          <Animated.View
-            entering={FadeInDown.delay(220).duration(700)}
-            style={styles.section}
-          >
+        ) : recentBookings.length > 0 ? (
+          <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                  {t('home.client.recentBookings')}
+                  {t('home.client.recentBookings', 'Recent Jobs')}
                 </Text>
-                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>{t('home.client.latestActivity')}</Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
+                  {t('home.client.latestActivity', 'Your recent requests and bookings')}
+                </Text>
               </View>
 
-              {stats.total > RECENT_BOOKINGS_LIMIT && (
+              {totalBookingsCount > RECENT_BOOKINGS_LIMIT && (
                 <TouchableOpacity
                   onPress={handleViewAllBookings}
                   hitSlop={styles.hitSlop}
                   style={styles.seeAllBtn}
                 >
-                  <Text style={[styles.viewAll, { color: colors.cyan }]}>{t('home.client.seeAll')}</Text>
+                  <Text style={[styles.viewAll, { color: colors.cyan }]}>
+                    {t('home.client.seeAll', 'SEE ALL')}
+                  </Text>
                   <ChevronRight size={12} color={colors.cyan} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
             </View>
 
-            {recentBookings.length > 0 ? (
-              recentBookings.map(booking => (
-                <RecentBookingCard
-                  key={booking._id}
-                  booking={booking}
-                  onPress={() => handleBookingPress(booking._id)}
-                />
-              ))
-            ) : (
-              <View style={[styles.emptyBookings, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-                <Text style={[styles.emptyBookingsText, { color: theme.colors.text.muted }]}>
-                  {t('home.client.noBookings')}
+            {recentBookings.map(booking => (
+              <RecentBookingCard
+                key={booking._id}
+                booking={booking}
+                onPress={() => handleBookingPress(booking._id)}
+              />
+            ))}
+          </Animated.View>
+        ) : (
+          <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.trustSection}>
+            <View style={styles.trustRow}>
+              <View style={[styles.trustPill, { backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.22) }]}>
+                <ShieldCheck size={16} color={colors.cyan} strokeWidth={2.2} />
+                <Text style={[styles.trustPillText, { color: theme.colors.text.primary }]}>
+                  {t('home.client.verifiedUstads', '100% Verified Ustads')}
                 </Text>
               </View>
-            )}
+
+              <View style={[styles.trustPill, { backgroundColor: alpha(colors.success, 0.08), borderColor: alpha(colors.success, 0.22) }]}>
+                <CheckCircle2 size={16} color={colors.success} strokeWidth={2.2} />
+                <Text style={[styles.trustPillText, { color: theme.colors.text.primary }]}>
+                  {t('home.client.transparentRates', 'Transparent Rates')}
+                </Text>
+              </View>
+            </View>
           </Animated.View>
         )}
 
-        <View style={{ height: activeSearchJob ? 190 : 120 }} />
+        {/* Clean bottom padding to scroll nicely above tab bar */}
+        <View style={{ height: 100 }} />
       </ScrollView>
-
-      {activeSearchJob && (
-        <ActiveBiddingBanner
-          job={activeSearchJob}
-          activeCount={activeMissions.length}
-          onPress={handleResumeRadar}
-        />
-      )}
     </BackgroundWrapper>
   );
 }
@@ -531,43 +624,84 @@ export function ClientHome() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 24,
   },
 
-  // ── Quick Actions
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
+  // ── Dynamic Hero Card
+  heroSection: {
     paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.xl,
-    marginTop: Spacing.s,
+    marginBottom: Spacing.l,
   },
-  quickActionPrimary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: BorderRadius.l,
-  },
-  quickActionPrimaryText: {
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  quickActionSecondary: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: BorderRadius.l,
+  heroCard: {
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
   },
-  quickActionSecondaryText: {
-    fontSize: 14,
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  heroStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  heroStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  heroTimeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  heroJobTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  heroSubDesc: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+  heroCustomerRow: {
+    marginBottom: 14,
+  },
+  heroCustomerName: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 3,
+  },
+  heroLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  heroAddressText: {
+    fontSize: 11,
+    fontWeight: '500',
+    flex: 1,
+  },
+  heroCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: BorderRadius.m,
+  },
+  heroCtaBtnText: {
+    fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
@@ -622,21 +756,20 @@ const styles = StyleSheet.create({
     width: '30.5%',
   },
   categoryItem: {
-    height: 120,
+    height: 116,
     width: '100%',
   },
   categoryItemContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 16,
+    paddingTop: 14,
     paddingHorizontal: 8,
   },
   categoryIconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    width: 48,
+    height: 48,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -664,213 +797,78 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // ── Activity dashboard
-  dashboardSection: {
+  // ── Custom Job Card
+  customJobSection: {
     paddingHorizontal: Spacing.l,
     marginBottom: Spacing.l,
   },
-  dashboardLabel: {
-    marginBottom: Spacing.m,
-  },
-  activityDashboardCard: {
-    borderRadius: 30,
+  customJobCard: {
+    borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    marginBottom: Spacing.m,
   },
-  activityDashboardContent: {
-    position: 'relative',
-    overflow: 'hidden',
-    padding: 16,
-  },
-  activityGlowOne: {
-    position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    top: -72,
-    right: -45,
-  },
-  activityGlowTwo: {
-    position: 'absolute',
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    bottom: -70,
-    left: -42,
-  },
-  activityTopRow: {
+  customJobRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  spentCluster: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  heroIconBox: {
-    width: 58,
-    height: 58,
-    borderRadius: 21,
+  customJobIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
-  heroTextContainer: {
+  customJobTextWrap: {
     flex: 1,
-    minWidth: 0,
-    justifyContent: 'center',
+    marginLeft: 12,
   },
-  heroLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-  },
-  heroValue: {
-    fontSize: 24,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-  heroSubText: {
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  successBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    backgroundColor: 'rgba(250,204,21,0.12)',
-    paddingVertical: 8,
-    paddingHorizontal: 11,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(250,204,21,0.3)',
-  },
-  successPercent: {
-    color: '#facc15',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  successLabel: {
-    color: 'rgba(250,204,21,0.76)',
-    fontSize: 8,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  progressBlock: {
-    padding: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    marginBottom: 11,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 9,
-  },
-  progressTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-  },
-  progressValue: {
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
-  activityStatsRow: {
-    flexDirection: 'row',
-    gap: 9,
-  },
-  activityStatTile: {
-    flex: 1,
-    minHeight: 82,
-    borderRadius: 18,
-    padding: 11,
-    borderWidth: 1,
-  },
-  statIconBubble: {
-    width: 28,
-    height: 28,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 7,
-  },
-  subStatVal: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  subStatLab: {
-    fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-    marginTop: 2,
-  },
-
-  // ── Recent bookings empty state
-  emptyBookings: {
-    marginHorizontal: Spacing.l,
-    borderRadius: BorderRadius.l,
-    borderWidth: 1,
-    paddingVertical: Spacing.xl,
-    alignItems: 'center',
-  },
-  emptyBookingsText: {
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-    paddingHorizontal: Spacing.l,
-    lineHeight: 20,
-  },
-  missionCard: {
-    marginHorizontal: Spacing.l,
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  missionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  missionTitle: {
-    fontSize: 16,
+  customJobTitle: {
+    fontSize: 15,
     fontWeight: '800',
-    marginBottom: 2,
+    marginBottom: 3,
   },
-  missionDesc: {
+  customJobDesc: {
     fontSize: 12,
     fontWeight: '500',
+    lineHeight: 16,
   },
-  bidCountBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+  customJobBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: BorderRadius.m,
+  },
+  customJobBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    color: '#FFFFFF',
+  },
+
+  // ── Trust & Quality Guarantee
+  trustSection: {
+    paddingHorizontal: Spacing.l,
+    marginBottom: Spacing.l,
+  },
+  trustRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  trustPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 13,
+    paddingHorizontal: 8,
+    borderRadius: BorderRadius.l,
     borderWidth: 1,
   },
-  bidCountText: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+  trustPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });

@@ -183,7 +183,20 @@
       "seeAll": "SEE ALL",
       "showLess": "SHOW LESS",
       "viewAll": "VIEW ALL",
-      "clientName": "Customer"
+      "clientName": "Customer",
+      "ustadActive": "USTAD ON THE WAY / IN PROGRESS",
+      "trackUstadBtn": "Track on Map & View Status",
+      "offersReadyBadge": "OFFERS RECEIVED",
+      "radarSearchingBadge": "FINDING USTADS NEARBY",
+      "offersReadyDesc": "{{count}} Ustads sent their rates. Review profiles and book.",
+      "findingUstadsDesc": "Alerting qualified Ustads near your area in real-time...",
+      "reviewOffersBtn": "Review {{count}} Offers & Hire",
+      "viewLiveRadarBtn": "View Live Radar",
+      "customJobTitle": "Need a Custom Repair or Task?",
+      "customJobDesc": "Post details with photos & set your budget. Qualified Ustads will bid on it.",
+      "postJobBtn": "Post Custom Job",
+      "verifiedUstads": "100% Verified Ustads",
+      "transparentRates": "Transparent Rates"
     },
     "worker": {
       "online": "ONLINE",

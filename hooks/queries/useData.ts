@@ -198,6 +198,7 @@ export interface ClientHomeStats {
 }
 
 export interface ClientHomeSummary {
+  activeBooking?: Booking | null;
   stats: ClientHomeStats;
   recentBookings: Booking[];
 }
@@ -472,6 +473,7 @@ const fetchClientHomeSummary = async (): Promise<ClientHomeSummary> => {
     params: { recentLimit: 3 },
   });
   return response.data.data || {
+    activeBooking: null,
     stats: {
       total: 0,
       active: 0,
