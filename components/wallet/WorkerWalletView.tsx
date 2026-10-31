@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { WorkerWallet } from '../../hooks';
 import { WorkerEarningsChart } from '../home/WorkerEarningsChart';
+import { Skeleton, useShimmerTranslateX } from '../ui/Skeleton';
 
 // ─── Constants & Types ────────────────────────────────────────────────────────
 interface WalletTransaction {
@@ -76,6 +77,11 @@ interface WorkerWalletViewProps {
   refreshing: boolean;
   onRefresh: () => void;
   onOpenRecharge: () => void;
+  isWalletLoading?: boolean;
+  isTransactionsLoading?: boolean;
+  areTopUpsLoading?: boolean;
+  isAnalyticsLoading?: boolean;
+  isPaymentsLoading?: boolean;
 }
 
 const formatMoney = (value = 0) => `Rs. ${Number(value || 0).toLocaleString(undefined, {
@@ -112,6 +118,11 @@ export function WorkerWalletView({
   refreshing,
   onRefresh,
   onOpenRecharge,
+  isWalletLoading = false,
+  isTransactionsLoading = false,
+  areTopUpsLoading = false,
+  isAnalyticsLoading = false,
+  isPaymentsLoading = false,
 }: WorkerWalletViewProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -119,6 +130,7 @@ export function WorkerWalletView({
   const theme = useTheme();
   const colors = useThemeColors();
   const typography = useThemeTypography();
+  const translateX = useShimmerTranslateX();
 
   const requiredBalance = wallet?.requiredBalance ?? 500;
   const availableBalance = wallet?.availableBalance ?? wallet?.balance ?? 0;
@@ -174,71 +186,77 @@ export function WorkerWalletView({
       )}
 
       {/* Wallet balance hero */}
-      <Animated.View entering={FadeInDown.duration(800)} style={styles.balanceSection}>
-        <GlassCard
-          style={styles.balanceCard}
-          intensity={44}
-          padding={20}
-          hasGlow
-          glowColor={isBalanceLow ? colors.error : colors.cyan}
-          gradient={isBalanceLow
-            ? [alpha(colors.error, 0.68), alpha(theme.colors.brand.accent, 0.28), alpha(theme.colors.surface.card, 0.16)]
-            : [alpha(colors.cyan, 0.62), alpha(theme.colors.brand.primary, 0.36), alpha(theme.colors.brand.secondary, 0.18)]}
-        >
-          <View style={styles.balanceHeaderRow}>
-            <View style={styles.balanceEyebrowRow}>
-              <Wallet size={14} color={colors.cyan} strokeWidth={2.2} />
-              <Text style={[styles.balanceEyebrow, { color: colors.cyan }]}>{t('wallet.workWallet').toUpperCase()}</Text>
-            </View>
-            <View style={[
-              styles.balanceEligibilityPill,
-              { borderColor: (isBalanceLow ? colors.error : colors.success) + '55' },
-            ]}>
-              <View style={[styles.statusIndicator, { backgroundColor: isBalanceLow ? colors.error : colors.success }]} />
-              <Text style={[styles.balanceEligibilityText, { color: isBalanceLow ? '#FF6B63' : colors.success }]}>
-                {isBalanceLow ? t('wallet.topUpNeeded') : t('wallet.jobReady')}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.balanceContent, styles.workerBalanceContent]}>
-            <View style={styles.balanceTextGroup}>
-              <Text style={[styles.balanceLabel, { color: theme.colors.text.muted }]}>{t('wallet.availableBalance').toUpperCase()}</Text>
-              <Text
-                style={[styles.balanceAmount, typography.threeD, { color: isBalanceLow ? '#FF6B63' : theme.colors.text.primary }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.68}
-              >
-                {formatMoney(availableBalance)}
-              </Text>
-              <Text style={[styles.balanceReserveText, { color: theme.colors.text.muted }]}>
-                {reservedBalance > 0
-                  ? `${formatMoney(reservedBalance)} ${t('wallet.heldActiveJobs')}`
-                  : `${t('wallet.minimumReserve')} ${formatMoney(requiredBalance)}`}
-              </Text>
-            </View>
-            <View style={[styles.walletIconWrap,
-              { borderColor: alpha(colors.cyan, 0.35), backgroundColor: alpha(colors.cyan, 0.06) },
-              isBalanceLow && { borderColor: alpha(colors.error, 0.4), backgroundColor: alpha(colors.error, 0.08) }
-            ]}>
-              <Wallet size={28} color={isBalanceLow ? colors.error : colors.cyan} strokeWidth={1.8} />
-            </View>
-          </View>
-
-          {/* Quick actions inside card */}
-          <TouchableOpacity
-            style={[styles.rechargeBtn,
-              { borderColor: alpha(colors.cyan, 0.35) },
-              isBalanceLow && { backgroundColor: alpha(colors.error, 0.25), borderColor: alpha(colors.error, 0.4) }
-            ]}
-            onPress={onOpenRecharge}
+      {isWalletLoading && !wallet ? (
+        <View style={styles.balanceSection}>
+          <Skeleton width="100%" height={170} borderRadius={24} translateX={translateX} />
+        </View>
+      ) : (
+        <Animated.View entering={FadeInDown.duration(800)} style={styles.balanceSection}>
+          <GlassCard
+            style={styles.balanceCard}
+            intensity={44}
+            padding={20}
+            hasGlow
+            glowColor={isBalanceLow ? colors.error : colors.cyan}
+            gradient={isBalanceLow
+              ? [alpha(colors.error, 0.68), alpha(theme.colors.brand.accent, 0.28), alpha(theme.colors.surface.card, 0.16)]
+              : [alpha(colors.cyan, 0.62), alpha(theme.colors.brand.primary, 0.36), alpha(theme.colors.brand.secondary, 0.18)]}
           >
-            <Plus size={18} color={isBalanceLow ? '#FF4F4F' : colors.cyan} strokeWidth={2.5} style={{ marginRight: 6 }} />
-            <Text style={[styles.rechargeBtnText, { color: isBalanceLow ? '#FF4F4F' : colors.cyan }]}>{t('wallet.topUpWallet')}</Text>
-          </TouchableOpacity>
-        </GlassCard>
-      </Animated.View>
+            <View style={styles.balanceHeaderRow}>
+              <View style={styles.balanceEyebrowRow}>
+                <Wallet size={14} color={colors.cyan} strokeWidth={2.2} />
+                <Text style={[styles.balanceEyebrow, { color: colors.cyan }]}>{t('wallet.workWallet').toUpperCase()}</Text>
+              </View>
+              <View style={[
+                styles.balanceEligibilityPill,
+                { borderColor: (isBalanceLow ? colors.error : colors.success) + '55' },
+              ]}>
+                <View style={[styles.statusIndicator, { backgroundColor: isBalanceLow ? colors.error : colors.success }]} />
+                <Text style={[styles.balanceEligibilityText, { color: isBalanceLow ? '#FF6B63' : colors.success }]}>
+                  {isBalanceLow ? t('wallet.topUpNeeded') : t('wallet.jobReady')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.balanceContent, styles.workerBalanceContent]}>
+              <View style={styles.balanceTextGroup}>
+                <Text style={[styles.balanceLabel, { color: theme.colors.text.muted }]}>{t('wallet.availableBalance').toUpperCase()}</Text>
+                <Text
+                  style={[styles.balanceAmount, typography.threeD, { color: isBalanceLow ? '#FF6B63' : theme.colors.text.primary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.68}
+                >
+                  {formatMoney(availableBalance)}
+                </Text>
+                <Text style={[styles.balanceReserveText, { color: theme.colors.text.muted }]}>
+                  {reservedBalance > 0
+                    ? `${formatMoney(reservedBalance)} ${t('wallet.heldActiveJobs')}`
+                    : `${t('wallet.minimumReserve')} ${formatMoney(requiredBalance)}`}
+                </Text>
+              </View>
+              <View style={[styles.walletIconWrap,
+                { borderColor: alpha(colors.cyan, 0.35), backgroundColor: alpha(colors.cyan, 0.06) },
+                isBalanceLow && { borderColor: alpha(colors.error, 0.4), backgroundColor: alpha(colors.error, 0.08) }
+              ]}>
+                <Wallet size={28} color={isBalanceLow ? colors.error : colors.cyan} strokeWidth={1.8} />
+              </View>
+            </View>
+
+            {/* Quick actions inside card */}
+            <TouchableOpacity
+              style={[styles.rechargeBtn,
+                { borderColor: alpha(colors.cyan, 0.35) },
+                isBalanceLow && { backgroundColor: alpha(colors.error, 0.25), borderColor: alpha(colors.error, 0.4) }
+              ]}
+              onPress={onOpenRecharge}
+            >
+              <Plus size={18} color={isBalanceLow ? '#FF4F4F' : colors.cyan} strokeWidth={2.5} style={{ marginRight: 6 }} />
+              <Text style={[styles.rechargeBtnText, { color: isBalanceLow ? '#FF4F4F' : colors.cyan }]}>{t('wallet.topUpWallet')}</Text>
+            </TouchableOpacity>
+          </GlassCard>
+        </Animated.View>
+      )}
 
       {/* Earnings overview card */}
       <Animated.View entering={FadeInDown.delay(80).duration(700)} style={styles.earningsSection}>
@@ -299,73 +317,87 @@ export function WorkerWalletView({
       </Animated.View>
 
       {/* Visual Interactive Earnings Breakdown Chart */}
-      <Animated.View entering={FadeInDown.delay(90).duration(700)} style={{ marginBottom: 14 }}>
-        <WorkerEarningsChart
-          daily={analyticsData?.daily || []}
-          weekly={analyticsData?.weekly || []}
-          monthly={analyticsData?.monthly || []}
-          summary={analyticsData?.summary || {
-            todayEarnings: 0,
-            thisWeekEarnings: 0,
-            thisMonthEarnings: 0,
-            todayJobs: 0,
-            thisWeekJobs: 0,
-            thisMonthJobs: 0,
-            bestDay: { label: '-', earnings: 0 },
-            streak: 0,
-            trendPercent: 0,
-          }}
-        />
-      </Animated.View>
+      {isAnalyticsLoading && !analyticsData ? (
+        <View style={{ marginBottom: 14 }}>
+          <Skeleton width="100%" height={160} borderRadius={20} translateX={translateX} />
+        </View>
+      ) : (
+        <Animated.View entering={FadeInDown.delay(90).duration(700)} style={{ marginBottom: 14 }}>
+          <WorkerEarningsChart
+            daily={analyticsData?.daily || []}
+            weekly={analyticsData?.weekly || []}
+            monthly={analyticsData?.monthly || []}
+            summary={analyticsData?.summary || {
+              todayEarnings: 0,
+              thisWeekEarnings: 0,
+              thisMonthEarnings: 0,
+              todayJobs: 0,
+              thisWeekJobs: 0,
+              thisMonthJobs: 0,
+              bestDay: { label: '-', earnings: 0 },
+              streak: 0,
+              trendPercent: 0,
+            }}
+          />
+        </Animated.View>
+      )}
 
       {/* Wallet Statistics Grid */}
       <View style={styles.walletStatsHeader}>
         <Text style={[styles.walletStatsTitle, { color: theme.colors.text.primary }]}>{t('wallet.walletActivity')}</Text>
         <Text style={[styles.walletStatsCaption, { color: theme.colors.text.muted }]}>{t('wallet.walletActivityDesc')}</Text>
       </View>
-      <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.summaryRow}>
-        <GlassCard
-          intensity={24}
-          padding={12}
-          style={[styles.chipCard, { borderColor: colors.success + '48' }]}
-          glowColor={colors.success}
-          gradient={cardGradient(colors.success, colors.cyan)}
-        >
-          <View style={[styles.chipDot, { backgroundColor: colors.success }]} />
-          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-            {formatMoney(wallet?.totalRecharged)}
-          </Text>
-          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.approvedTopUps')}</Text>
-        </GlassCard>
+      {isWalletLoading && !wallet ? (
+        <View style={[styles.summaryRow, { gap: 8 }]}>
+          <Skeleton width="31%" height={74} borderRadius={16} translateX={translateX} />
+          <Skeleton width="31%" height={74} borderRadius={16} translateX={translateX} />
+          <Skeleton width="31%" height={74} borderRadius={16} translateX={translateX} />
+        </View>
+      ) : (
+        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.summaryRow}>
+          <GlassCard
+            intensity={24}
+            padding={12}
+            style={[styles.chipCard, { borderColor: colors.success + '48' }]}
+            glowColor={colors.success}
+            gradient={cardGradient(colors.success, colors.cyan)}
+          >
+            <View style={[styles.chipDot, { backgroundColor: colors.success }]} />
+            <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+              {formatMoney(wallet?.totalRecharged)}
+            </Text>
+            <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.approvedTopUps')}</Text>
+          </GlassCard>
 
-        <GlassCard
-          intensity={24}
-          padding={12}
-          style={[styles.chipCard, { borderColor: '#FF8C0048' }]}
-          glowColor="#FF8C00"
-          gradient={cardGradient('#FF8C00', '#FF1493')}
-        >
-          <View style={[styles.chipDot, { backgroundColor: '#FF8C00' }]} />
-          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-            {formatMoney(wallet?.totalCommissionDeducted)}
-          </Text>
-          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.commissionsTaken')}</Text>
-        </GlassCard>
+          <GlassCard
+            intensity={24}
+            padding={12}
+            style={[styles.chipCard, { borderColor: '#FF8C0048' }]}
+            glowColor="#FF8C00"
+            gradient={cardGradient('#FF8C00', '#FF1493')}
+          >
+            <View style={[styles.chipDot, { backgroundColor: '#FF8C00' }]} />
+            <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+              {formatMoney(wallet?.totalCommissionDeducted)}
+            </Text>
+            <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.commissionsTaken')}</Text>
+          </GlassCard>
 
-        <GlassCard
-          intensity={24}
-          padding={12}
-          style={[styles.chipCard, { borderColor: '#BF5AF248' }]}
-          glowColor="#BF5AF2"
-          gradient={cardGradient('#BF5AF2', colors.cyan)}
-        >
-          <View style={[styles.chipDot, { backgroundColor: '#BF5AF2' }]} />
-          <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
-            {formatMoney(wallet?.totalSubscriptionDeducted)}
-          </Text>
-          <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.categoryRenewals')}</Text>
-        </GlassCard>
-      </Animated.View>
+          <GlassCard
+            intensity={24}
+            padding={12}
+            style={[styles.chipCard, { borderColor: '#BF5AF248' }]}
+            glowColor="#BF5AF2"
+            gradient={cardGradient('#BF5AF2', colors.cyan)}
+          >
+            <View style={[styles.chipDot, { backgroundColor: '#BF5AF2' }]} />
+            <Text style={[styles.chipValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+              {formatMoney(wallet?.totalSubscriptionDeducted)}
+            </Text>
+            <Text style={[styles.chipLabel, { color: theme.colors.text.secondary }]}>{t('wallet.categoryRenewals')}</Text>
+          </GlassCard>
+        </Animated.View>
+      )}
 
       <Animated.View entering={FadeInDown.delay(150).duration(600)} style={styles.summaryRow}>
         <SummaryChip label={t('wallet.pendingProofs')} value={topUpSummary.pending} color="#FFB020" theme={theme} />
@@ -454,223 +486,253 @@ export function WorkerWalletView({
         <View style={styles.transactionList}>
           {workerTab === 'wallet' && (
             <>
-              {transactions.map((tx, index) => {
-                const txConf = {
-                  recharge: { color: colors.success, icon: ArrowDownLeft, labelKey: 'wallet.recharge' },
-                  commission_deduction: { color: colors.worker, icon: ArrowUpRight, labelKey: 'wallet.commission' },
-                  specialty_subscription: { color: theme.colors.brand.secondary, icon: ArrowUpRight, labelKey: 'wallet.categoryRenewal' },
-                  refund: { color: '#00B8FF', icon: RefreshCw, labelKey: 'wallet.refund' },
-                  adjustment: { color: colors.cyan, icon: Info, labelKey: 'wallet.adjustment' },
-                }[tx.type] || { color: colors.cyan, icon: Info, labelKey: 'wallet.adjustment' };
-                const IconComponent = txConf.icon;
-                const isPositive = ['recharge', 'refund'].includes(tx.type);
-                const dateStr = new Date(tx.createdAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
-
-                return (
-                  <Animated.View
-                    key={tx._id}
-                    entering={FadeInRight.delay(index * 80).duration(500)}
-                    layout={Layout.springify()}
-                  >
-                    <GlassCard
-                      intensity={20}
-                      style={[styles.transactionCard, { borderColor: txConf.color + '48' }]}
-                      padding={14}
-                      gradient={cardGradient(txConf.color, isPositive ? '#00B8FF' : '#FF1493')}
-                    >
-                      <View style={styles.txRow}>
-                        <View style={[
-                          styles.txIconBox,
-                          { backgroundColor: txConf.color + '18', borderColor: txConf.color + '30' },
-                        ]}>
-                          <IconComponent size={18} color={txConf.color} strokeWidth={2} />
-                        </View>
-
-                         <View style={styles.txInfo}>
-                           <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                             {t(txConf.labelKey)}
-                           </Text>
-                           <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
-                         </View>
-
-                         <View style={styles.txAmountGroup}>
-                           <Text style={[styles.txAmount, { color: isPositive ? colors.success : colors.error }]}>
-                             {isPositive ? '+' : '-'}Rs. {tx.amount.toLocaleString()}
-                           </Text>
-                           <Text style={[styles.txBalanceAfter, { color: theme.colors.text.muted }]}>{t('wallet.balAfterShort', { amount: tx.balanceAfter.toLocaleString() })}</Text>
-                         </View>
-                      </View>
-                    </GlassCard>
-                  </Animated.View>
-                );
-              })}
-
-              {transactions.length === 0 && (
-                <View style={styles.emptyContainer}>
-                  <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
-                  <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.emptyTitle')}</Text>
-                  <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('wallet.noLedgerDesc')}</Text>
+              {isTransactionsLoading && transactions.length === 0 ? (
+                <View style={{ gap: 10 }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} width="100%" height={72} borderRadius={18} translateX={translateX} />
+                  ))}
                 </View>
+              ) : (
+                <>
+                  {transactions.map((tx, index) => {
+                    const txConf = {
+                      recharge: { color: colors.success, icon: ArrowDownLeft, labelKey: 'wallet.recharge' },
+                      commission_deduction: { color: colors.worker, icon: ArrowUpRight, labelKey: 'wallet.commission' },
+                      specialty_subscription: { color: theme.colors.brand.secondary, icon: ArrowUpRight, labelKey: 'wallet.categoryRenewal' },
+                      refund: { color: '#00B8FF', icon: RefreshCw, labelKey: 'wallet.refund' },
+                      adjustment: { color: colors.cyan, icon: Info, labelKey: 'wallet.adjustment' },
+                    }[tx.type] || { color: colors.cyan, icon: Info, labelKey: 'wallet.adjustment' };
+                    const IconComponent = txConf.icon;
+                    const isPositive = ['recharge', 'refund'].includes(tx.type);
+                    const dateStr = new Date(tx.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
+
+                    return (
+                      <Animated.View
+                        key={tx._id}
+                        entering={FadeInRight.delay(index * 80).duration(500)}
+                        layout={Layout.springify()}
+                      >
+                        <GlassCard
+                          intensity={20}
+                          style={[styles.transactionCard, { borderColor: txConf.color + '48' }]}
+                          padding={14}
+                          gradient={cardGradient(txConf.color, isPositive ? '#00B8FF' : '#FF1493')}
+                        >
+                          <View style={styles.txRow}>
+                            <View style={[
+                              styles.txIconBox,
+                              { backgroundColor: txConf.color + '18', borderColor: txConf.color + '30' },
+                            ]}>
+                              <IconComponent size={18} color={txConf.color} strokeWidth={2} />
+                            </View>
+
+                            <View style={styles.txInfo}>
+                              <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                                {t(txConf.labelKey)}
+                              </Text>
+                              <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
+                            </View>
+
+                            <View style={styles.txAmountGroup}>
+                              <Text style={[styles.txAmount, { color: isPositive ? colors.success : colors.error }]}>
+                                {isPositive ? '+' : '-'}Rs. {tx.amount.toLocaleString()}
+                              </Text>
+                              <Text style={[styles.txBalanceAfter, { color: theme.colors.text.muted }]}>{t('wallet.balAfterShort', { amount: tx.balanceAfter.toLocaleString() })}</Text>
+                            </View>
+                          </View>
+                        </GlassCard>
+                      </Animated.View>
+                    );
+                  })}
+
+                  {transactions.length === 0 && (
+                    <View style={styles.emptyContainer}>
+                      <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
+                      <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.emptyTitle')}</Text>
+                      <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('wallet.noLedgerDesc')}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}
 
           {workerTab === 'topups' && (
             <>
-              {topUps.map((req, index) => {
-                const conf = {
-                  pending: { color: '#FFB020', icon: Clock, labelKey: 'wallet.pending' },
-                  approved: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.approved' },
-                  rejected: { color: colors.error, icon: XCircle, labelKey: 'wallet.rejected' },
-                }[req.status] || { color: '#FFB020', icon: Clock, labelKey: 'wallet.pending' };
-                const IconComponent = conf.icon;
-                const dateStr = new Date(req.createdAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                });
+              {areTopUpsLoading && topUps.length === 0 ? (
+                <View style={{ gap: 10 }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} width="100%" height={72} borderRadius={18} translateX={translateX} />
+                  ))}
+                </View>
+              ) : (
+                <>
+                  {topUps.map((req, index) => {
+                    const conf = {
+                      pending: { color: '#FFB020', icon: Clock, labelKey: 'wallet.pending' },
+                      approved: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.approved' },
+                      rejected: { color: colors.error, icon: XCircle, labelKey: 'wallet.rejected' },
+                    }[req.status] || { color: '#FFB020', icon: Clock, labelKey: 'wallet.pending' };
+                    const IconComponent = conf.icon;
+                    const dateStr = new Date(req.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    });
 
-                return (
-                  <Animated.View
-                    key={req._id}
-                    entering={FadeInRight.delay(index * 80).duration(500)}
-                    layout={Layout.springify()}
-                  >
-                    <GlassCard
-                      intensity={20}
-                      style={[styles.transactionCard, { borderColor: conf.color + '48' }]}
-                      padding={14}
-                      gradient={cardGradient(conf.color, '#00B8FF')}
-                    >
-                      <View style={styles.txRow}>
-                        <View style={[
-                          styles.txIconBox,
-                          { backgroundColor: conf.color + '18', borderColor: conf.color + '30' },
-                        ]}>
-                          <IconComponent size={18} color={conf.color} strokeWidth={2} />
-                        </View>
+                    return (
+                      <Animated.View
+                        key={req._id}
+                        entering={FadeInRight.delay(index * 80).duration(500)}
+                        layout={Layout.springify()}
+                      >
+                        <GlassCard
+                          intensity={20}
+                          style={[styles.transactionCard, { borderColor: conf.color + '48' }]}
+                          padding={14}
+                          gradient={cardGradient(conf.color, '#00B8FF')}
+                        >
+                          <View style={styles.txRow}>
+                            <View style={[
+                              styles.txIconBox,
+                              { backgroundColor: conf.color + '18', borderColor: conf.color + '30' },
+                            ]}>
+                              <IconComponent size={18} color={conf.color} strokeWidth={2} />
+                            </View>
 
-                        <View style={styles.txInfo}>
-                          <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                            {t('wallet.topUpRequest')} ({req.method.toUpperCase()})
-                          </Text>
-                          <View style={styles.txMeta}>
-                            <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
-                            <View style={[styles.txStatusBadge, { backgroundColor: conf.color + '15' }]}>
-                              <Text style={[styles.txStatusText, { color: conf.color }]}>
-                                {t('wallet.' + req.status)}
+                            <View style={styles.txInfo}>
+                              <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                                {t('wallet.topUpRequest')} ({req.method.toUpperCase()})
                               </Text>
+                              <View style={styles.txMeta}>
+                                <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
+                                <View style={[styles.txStatusBadge, { backgroundColor: conf.color + '15' }]}>
+                                  <Text style={[styles.txStatusText, { color: conf.color }]}>
+                                    {t('wallet.' + req.status)}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            <View style={styles.txAmountGroup}>
+                              <Text style={[styles.txAmount, { color: theme.colors.text.primary }]}>
+                                Rs. {req.amount.toLocaleString()}
+                              </Text>
+                              <Text style={[styles.txCurrency, { color: theme.colors.text.muted }]}>PKR</Text>
                             </View>
                           </View>
-                        </View>
+                        </GlassCard>
+                      </Animated.View>
+                    );
+                  })}
 
-                        <View style={styles.txAmountGroup}>
-                          <Text style={[styles.txAmount, { color: theme.colors.text.primary }]}>
-                            Rs. {req.amount.toLocaleString()}
-                          </Text>
-                          <Text style={[styles.txCurrency, { color: theme.colors.text.muted }]}>PKR</Text>
-                        </View>
-                      </View>
-                    </GlassCard>
-                  </Animated.View>
-                );
-              })}
-
-              {topUps.length === 0 && (
-                <View style={styles.emptyContainer}>
-                  <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
-                  <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.emptyTitle')}</Text>
-                  <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('wallet.noTopUpsDesc')}</Text>
-                </View>
+                  {topUps.length === 0 && (
+                    <View style={styles.emptyContainer}>
+                      <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
+                      <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.emptyTitle')}</Text>
+                      <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('wallet.noTopUpsDesc')}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}
 
           {workerTab === 'earnings' && (
             <>
-              {payments.map((item, index) => {
-                const statusConf = {
-                  paid: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },
-                  payable: { color: '#00B8FF', icon: Clock, labelKey: 'wallet.payable' },
-                  pending: { color: colors.worker, icon: AlertCircle, labelKey: 'wallet.pending' },
-                  cancelled: { color: colors.error, icon: XCircle, labelKey: 'wallet.cancelled' },
-                }[item.status.toLowerCase()] || { color: colors.worker, icon: AlertCircle, labelKey: 'wallet.pending' };
-                const IconComponent = statusConf.icon;
-                const category = item.booking?.category || 'Service';
-                const dateStr = new Date(item.updatedAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                });
+              {isPaymentsLoading && payments.length === 0 ? (
+                <View style={{ gap: 10 }}>
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} width="100%" height={72} borderRadius={18} translateX={translateX} />
+                  ))}
+                </View>
+              ) : (
+                <>
+                  {payments.map((item, index) => {
+                    const statusConf = {
+                      paid: { color: colors.success, icon: CheckCircle2, labelKey: 'wallet.paid' },
+                      payable: { color: '#00B8FF', icon: Clock, labelKey: 'wallet.payable' },
+                      pending: { color: colors.worker, icon: AlertCircle, labelKey: 'wallet.pending' },
+                      cancelled: { color: colors.error, icon: XCircle, labelKey: 'wallet.cancelled' },
+                    }[item.status.toLowerCase()] || { color: colors.worker, icon: AlertCircle, labelKey: 'wallet.pending' };
+                    const IconComponent = statusConf.icon;
+                    const category = item.booking?.category || 'Service';
+                    const dateStr = new Date(item.updatedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    });
 
-                return (
-                  <Animated.View
-                    key={item._id}
-                    entering={FadeInRight.delay(index * 80).duration(500)}
-                    layout={Layout.springify()}
-                  >
-                    <GlassCard
-                      intensity={20}
-                      style={[styles.transactionCard, { borderColor: statusConf.color + '48' }]}
-                      padding={14}
-                      gradient={cardGradient(statusConf.color, '#00B8FF')}
-                      onPress={() => {
-                        if (item.booking?._id) {
-                          router.push({
-                            pathname: '/transaction-details',
-                            params: { id: item.booking._id },
-                          });
-                        }
-                      }}
-                    >
-                      <View style={styles.txRow}>
-                        <View style={[
-                          styles.txIconBox,
-                          { backgroundColor: statusConf.color + '18', borderColor: statusConf.color + '30' },
-                        ]}>
-                          <IconComponent size={18} color={statusConf.color} strokeWidth={2} />
-                        </View>
+                    return (
+                      <Animated.View
+                        key={item._id}
+                        entering={FadeInRight.delay(index * 80).duration(500)}
+                        layout={Layout.springify()}
+                      >
+                        <GlassCard
+                          intensity={20}
+                          style={[styles.transactionCard, { borderColor: statusConf.color + '48' }]}
+                          padding={14}
+                          gradient={cardGradient(statusConf.color, '#00B8FF')}
+                          onPress={() => {
+                            if (item.booking?._id) {
+                              router.push({
+                                pathname: '/transaction-details',
+                                params: { id: item.booking._id },
+                              });
+                            }
+                          }}
+                        >
+                          <View style={styles.txRow}>
+                            <View style={[
+                              styles.txIconBox,
+                              { backgroundColor: statusConf.color + '18', borderColor: statusConf.color + '30' },
+                            ]}>
+                              <IconComponent size={18} color={statusConf.color} strokeWidth={2} />
+                            </View>
 
-                        <View style={styles.txInfo}>
-                          <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                            {category}
-                          </Text>
-                          <View style={styles.txMeta}>
-                            <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
-                            <View style={[styles.txStatusBadge, { backgroundColor: statusConf.color + '15' }]}>
-                              <Text style={[styles.txStatusText, { color: statusConf.color }]}>
-                                {t('wallet.' + item.status.toLowerCase())}
+                            <View style={styles.txInfo}>
+                              <Text style={[styles.txTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                                {category}
                               </Text>
+                              <View style={styles.txMeta}>
+                                <Text style={[styles.txDate, { color: theme.colors.text.muted }]}>{dateStr}</Text>
+                                <View style={[styles.txStatusBadge, { backgroundColor: statusConf.color + '15' }]}>
+                                  <Text style={[styles.txStatusText, { color: statusConf.color }]}>
+                                    {t('wallet.' + item.status.toLowerCase())}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            <View style={styles.txAmountGroup}>
+                              <Text style={[styles.txAmount, { color: colors.success }]}>
+                                Rs. {item.amount.toLocaleString()}
+                              </Text>
+                              <Text style={[styles.txCurrency, { color: theme.colors.text.muted }]}>PKR</Text>
                             </View>
                           </View>
-                        </View>
+                        </GlassCard>
+                      </Animated.View>
+                    );
+                  })}
 
-                        <View style={styles.txAmountGroup}>
-                          <Text style={[styles.txAmount, { color: colors.success }]}>
-                            Rs. {item.amount.toLocaleString()}
-                          </Text>
-                          <Text style={[styles.txCurrency, { color: theme.colors.text.muted }]}>PKR</Text>
-                        </View>
-                      </View>
-                    </GlassCard>
-                  </Animated.View>
-                );
-              })}
-
-              {payments.length === 0 && (
-                <View style={styles.emptyContainer}>
-                  <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
-                  <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.noEarnings')}</Text>
-                  <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('wallet.noEarningsDesc')}</Text>
-                </View>
+                  {payments.length === 0 && (
+                    <View style={styles.emptyContainer}>
+                      <Wallet size={40} color={theme.colors.text.muted} strokeWidth={1.2} />
+                      <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('wallet.noEarnings')}</Text>
+                      <Text style={[styles.emptySub, { color: theme.colors.text.muted }]}>{t('wallet.noEarningsDesc')}</Text>
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}

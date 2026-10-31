@@ -25,6 +25,7 @@ import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimat
 
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { GlassCard } from '../home/GlassCard';
+import { Skeleton, useShimmerTranslateX } from '../ui/Skeleton';
 
 // ─── Filter Constants ──────────────────────────────────────────────────────────
 const FILTERS = ['All', 'Paid', 'Pending'] as const;
@@ -63,6 +64,7 @@ interface ClientWalletViewProps {
   onRefresh: () => void;
   walletBalance?: number;
   walletTransactions?: any[];
+  isLoading?: boolean;
 }
 
 const initialsFor = (name?: string) => {
@@ -82,6 +84,7 @@ export function ClientWalletView({
   onFilterChange,
   refreshing,
   onRefresh,
+  isLoading = false,
 }: ClientWalletViewProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -89,6 +92,7 @@ export function ClientWalletView({
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const insets = useSafeAreaInsets();
+  const translateX = useShimmerTranslateX();
 
   // Normalize and sort payments chronologically descending
   const paymentList = useMemo(() => {
@@ -135,60 +139,66 @@ export function ClientWalletView({
       </View>
 
       {/* ── 2. Total Spending Overview Hero Card ── */}
-      <Animated.View entering={FadeInDown.duration(450)} style={styles.heroSection}>
-        <GlassCard
-          style={styles.heroCard}
-          intensity={36}
-          glowColor={colors.success}
-          hasGlow
-          gradient={[alpha(colors.success, 0.22), alpha(theme.colors.surface.card, 0.9), alpha(colors.cyan, 0.08)]}
-        >
-          <View style={styles.heroContent}>
-            <View style={styles.heroLeft}>
-              <View style={styles.heroLabelRow}>
-                <Receipt size={14} color={colors.success} strokeWidth={2.4} />
-                <Text style={[styles.heroLabel, { color: colors.success }]}>
-                  {t('wallet.totalPaidLabel', 'TOTAL SPENT ON SERVICES')}
-                </Text>
-              </View>
-
-              <Text style={[styles.heroAmount, typography.threeD, { color: theme.colors.text.primary }]}>
-                Rs. {totalSpent.toLocaleString()}
-              </Text>
-
-              {/* Sub-metrics pill row */}
-              <View style={styles.heroMetricsRow}>
-                <View style={[styles.metricPill, { backgroundColor: alpha(colors.success, 0.12) }]}>
-                  <CheckCircle2 size={11} color={colors.success} strokeWidth={2.5} />
-                  <Text style={[styles.metricText, { color: colors.success }]}>
-                    {paidCount} {t('wallet.paidServices', 'Jobs Paid')}
+      {isLoading && payments.length === 0 ? (
+        <View style={styles.heroSection}>
+          <Skeleton width="100%" height={140} borderRadius={24} translateX={translateX} />
+        </View>
+      ) : (
+        <Animated.View entering={FadeInDown.duration(450)} style={styles.heroSection}>
+          <GlassCard
+            style={styles.heroCard}
+            intensity={36}
+            glowColor={colors.success}
+            hasGlow
+            gradient={[alpha(colors.success, 0.22), alpha(theme.colors.surface.card, 0.9), alpha(colors.cyan, 0.08)]}
+          >
+            <View style={styles.heroContent}>
+              <View style={styles.heroLeft}>
+                <View style={styles.heroLabelRow}>
+                  <Receipt size={14} color={colors.success} strokeWidth={2.4} />
+                  <Text style={[styles.heroLabel, { color: colors.success }]}>
+                    {t('wallet.totalPaidLabel', 'TOTAL SPENT ON SERVICES')}
                   </Text>
                 </View>
 
-                {pendingAmount > 0 ? (
-                  <View style={[styles.metricPill, { backgroundColor: alpha(colors.worker, 0.14) }]}>
-                    <Clock size={11} color={colors.worker} strokeWidth={2.5} />
-                    <Text style={[styles.metricText, { color: colors.worker }]}>
-                      Rs. {pendingAmount.toLocaleString()} {t('wallet.due', 'Due')}
+                <Text style={[styles.heroAmount, typography.threeD, { color: theme.colors.text.primary }]}>
+                  Rs. {totalSpent.toLocaleString()}
+                </Text>
+
+                {/* Sub-metrics pill row */}
+                <View style={styles.heroMetricsRow}>
+                  <View style={[styles.metricPill, { backgroundColor: alpha(colors.success, 0.12) }]}>
+                    <CheckCircle2 size={11} color={colors.success} strokeWidth={2.5} />
+                    <Text style={[styles.metricText, { color: colors.success }]}>
+                      {paidCount} {t('wallet.paidServices', 'Jobs Paid')}
                     </Text>
                   </View>
-                ) : (
-                  <View style={[styles.metricPill, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]}>
-                    <Sparkles size={11} color={theme.colors.text.muted} strokeWidth={2.2} />
-                    <Text style={[styles.metricText, { color: theme.colors.text.muted }]}>
-                      {t('wallet.allSettled', 'All settled')}
-                    </Text>
-                  </View>
-                )}
+
+                  {pendingAmount > 0 ? (
+                    <View style={[styles.metricPill, { backgroundColor: alpha(colors.worker, 0.14) }]}>
+                      <Clock size={11} color={colors.worker} strokeWidth={2.5} />
+                      <Text style={[styles.metricText, { color: colors.worker }]}>
+                        Rs. {pendingAmount.toLocaleString()} {t('wallet.due', 'Due')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.metricPill, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]}>
+                      <Sparkles size={11} color={theme.colors.text.muted} strokeWidth={2.2} />
+                      <Text style={[styles.metricText, { color: theme.colors.text.muted }]}>
+                        {t('wallet.allSettled', 'All settled')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View style={[styles.walletIconWrap, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.25) }]}>
+                <Banknote size={26} color={colors.success} strokeWidth={2} />
               </View>
             </View>
-
-            <View style={[styles.walletIconWrap, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.25) }]}>
-              <Banknote size={26} color={colors.success} strokeWidth={2} />
-            </View>
-          </View>
-        </GlassCard>
-      </Animated.View>
+          </GlassCard>
+        </Animated.View>
+      )}
 
       {/* ── 3. Simple Filter Pills ── */}
       <View style={styles.filterSection}>
@@ -228,7 +238,20 @@ export function ClientWalletView({
 
       {/* ── 4. Receipts & Payment History List ── */}
       <View style={styles.listSection}>
-        {filteredPayments.length === 0 ? (
+        {isLoading && payments.length === 0 ? (
+          <View style={styles.cardsContainer}>
+            {[1, 2, 3].map((i) => (
+              <Skeleton
+                key={i}
+                width="100%"
+                height={76}
+                borderRadius={18}
+                translateX={translateX}
+                style={{ marginBottom: 10 }}
+              />
+            ))}
+          </View>
+        ) : filteredPayments.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={[styles.emptyIconWrap, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]}>
               <Receipt size={32} color={theme.colors.text.muted} strokeWidth={1.8} />

@@ -312,7 +312,11 @@ export function WorkerHome() {
         </View>
 
         {/* ── Dynamic Operational Cockpit: Ongoing Work (when active) OR Ready For Jobs (when idle) ── */}
-        {hasActiveJobs ? (
+        {summaryLoading && !homeSummary ? (
+          <View style={styles.heroSection}>
+            <SkeletonBox translateX={translateX} width={'100%'} height={160} borderRadius={24} />
+          </View>
+        ) : hasActiveJobs ? (
           <Animated.View entering={FadeInDown.duration(350)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -635,7 +639,13 @@ export function WorkerHome() {
         )}
 
         {/* ── Section: Your Active Bids (Sent Offers) ── */}
-        {pendingBids.length > 0 && (
+        {bidsLoading && !workerBids ? (
+          <View style={styles.section}>
+            <View style={{ marginBottom: 12 }}>
+              <SkeletonBox translateX={translateX} width={'100%'} height={90} borderRadius={20} />
+            </View>
+          </View>
+        ) : pendingBids.length > 0 ? (
           <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -666,7 +676,7 @@ export function WorkerHome() {
               ))}
             </View>
           </Animated.View>
-        )}
+        ) : null}
 
         {/* ── Section 3: Clean Job History Shortcut ── */}
         <TouchableOpacity
