@@ -179,7 +179,7 @@ export default function WorkerDetailsScreen() {
     if (!jobId || !bidId) return;
     setIsAccepting(true);
     try {
-      const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
+      const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`, {});
       router.replace({ pathname: '/transaction-details', params: { id: response.data.data._id } });
     } catch (error: any) {
       Toast.show({

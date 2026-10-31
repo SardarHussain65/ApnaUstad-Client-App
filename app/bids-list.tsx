@@ -30,6 +30,7 @@ import { Spacing, alpha, useTheme, useThemeColors, getAccessibleColor } from '..
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import Toast from 'react-native-toast-message';
 import api from '../services/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -155,10 +156,15 @@ export default function BidsListScreen() {
   const handleAccept = async (bidId: string) => {
     setAccepting(bidId);
     try {
-      const res = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`);
+      const res = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`, {});
       router.replace({ pathname: '/transaction-details', params: { id: res.data.data._id } });
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error('Accept bid error:', e?.response?.data || e.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Could not hire Ustad',
+        text2: e?.response?.data?.message || 'Something went wrong. Please try again.',
+      });
     } finally {
       setAccepting(null);
     }
