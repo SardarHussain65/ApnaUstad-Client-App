@@ -149,14 +149,15 @@ export function ClientWalletView({
             style={styles.heroCard}
             intensity={36}
             glowColor={colors.success}
+            borderColor={theme.isDark ? alpha(colors.success, 0.35) : '#86EFAC'}
             hasGlow
-            gradient={[alpha(colors.success, 0.22), alpha(theme.colors.surface.card, 0.9), alpha(colors.cyan, 0.08)]}
+            gradient={[alpha(colors.success, theme.isDark ? 0.22 : 0.12), alpha(theme.colors.surface.card, 0.95), alpha(colors.cyan, 0.05)]}
           >
             <View style={styles.heroContent}>
               <View style={styles.heroLeft}>
                 <View style={styles.heroLabelRow}>
-                  <Receipt size={14} color={colors.success} strokeWidth={2.4} />
-                  <Text style={[styles.heroLabel, { color: colors.success }]}>
+                  <Receipt size={14} color={theme.isDark ? colors.success : '#15803D'} strokeWidth={2.4} />
+                  <Text style={[styles.heroLabel, { color: theme.isDark ? colors.success : '#15803D' }]}>
                     {t('wallet.totalPaidLabel', 'TOTAL SPENT ON SERVICES')}
                   </Text>
                 </View>
@@ -167,9 +168,9 @@ export function ClientWalletView({
 
                 {/* Sub-metrics pill row */}
                 <View style={styles.heroMetricsRow}>
-                  <View style={[styles.metricPill, { backgroundColor: alpha(colors.success, 0.12) }]}>
-                    <CheckCircle2 size={11} color={colors.success} strokeWidth={2.5} />
-                    <Text style={[styles.metricText, { color: colors.success }]}>
+                  <View style={[styles.metricPill, { backgroundColor: alpha(colors.success, theme.isDark ? 0.12 : 0.16) }]}>
+                    <CheckCircle2 size={11} color={theme.isDark ? colors.success : '#15803D'} strokeWidth={2.5} />
+                    <Text style={[styles.metricText, { color: theme.isDark ? colors.success : '#15803D' }]}>
                       {paidCount} {t('wallet.paidServices', 'Jobs Paid')}
                     </Text>
                   </View>
@@ -193,7 +194,7 @@ export function ClientWalletView({
               </View>
 
               <View style={[styles.walletIconWrap, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.25) }]}>
-                <Banknote size={26} color={colors.success} strokeWidth={2} />
+                <Banknote size={26} color={theme.isDark ? colors.success : '#15803D'} strokeWidth={2} />
               </View>
             </View>
           </GlassCard>
@@ -205,6 +206,13 @@ export function ClientWalletView({
         <View style={styles.filterRow}>
           {FILTERS.map((filter) => {
             const isActive = activeFilter === filter || (filter === 'Pending' && activeFilter === 'Payable');
+            const activeBg = theme.isDark ? alpha(colors.cyan, 0.22) : '#0284C7';
+            const activeBorder = theme.isDark ? colors.cyan : '#0284C7';
+            const activeText = theme.isDark ? colors.cyan : '#FFFFFF';
+            const inactiveBg = theme.isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9';
+            const inactiveBorder = theme.isDark ? 'rgba(255,255,255,0.14)' : '#CBD5E1';
+            const inactiveText = theme.isDark ? '#CBD5E1' : '#475569';
+
             return (
               <TouchableOpacity
                 key={filter}
@@ -212,8 +220,8 @@ export function ClientWalletView({
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: isActive ? alpha(colors.cyan, 0.14) : alpha(theme.colors.text.primary, 0.04),
-                    borderColor: isActive ? alpha(colors.cyan, 0.38) : theme.colors.border.subtle,
+                    backgroundColor: isActive ? activeBg : inactiveBg,
+                    borderColor: isActive ? activeBorder : inactiveBorder,
                   },
                 ]}
                 activeOpacity={0.8}
@@ -221,7 +229,10 @@ export function ClientWalletView({
                 <Text
                   style={[
                     styles.filterText,
-                    { color: isActive ? colors.cyan : theme.colors.text.muted },
+                    {
+                      color: isActive ? activeText : inactiveText,
+                      fontWeight: isActive ? '800' : '600',
+                    },
                   ]}
                 >
                   {filter === 'All'
@@ -268,7 +279,9 @@ export function ClientWalletView({
               onPress={() => router.push('/(tabs)')}
               activeOpacity={0.82}
             >
-              <Text style={styles.emptyBtnText}>{t('home.client.bookServiceBtn', 'Browse Services')}</Text>
+              <Text style={[styles.emptyBtnText, { color: theme.isDark ? '#001014' : '#FFFFFF' }]}>
+                {t('wallet.browseServices', 'Browse Services')}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (

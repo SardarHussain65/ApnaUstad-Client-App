@@ -45,6 +45,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useJobDetails, useToast, useWorkerWallet } from '../hooks';
+import { useIsRTL } from '../context/LanguageContext';
 import api from '../services/api';
 import { useTheme, useThemeColors, alpha, useThemedStyles, type AppTheme } from '../constants/Theme';
 
@@ -55,6 +56,13 @@ const formatPlaybackTime = (seconds: number) => {
   const safeSeconds = Math.max(0, Math.floor(seconds || 0));
   return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
 };
+
+const QUICK_NOTES = [
+  '🛠️ Have complete tools with me',
+  '📍 Nearby, can arrive in 20-30 mins',
+  '⭐ Expert in this work, quality guaranteed',
+  '⚡ Ready to start right away',
+];
 
 const createStyles = (theme: AppTheme) => {
   const isDark = theme.isDark;
@@ -517,6 +525,33 @@ const createStyles = (theme: AppTheme) => {
     quoteSuggestionTextSelected: {
       color: CYAN,
     },
+    quickNotesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 7,
+      marginBottom: 12,
+    },
+    quickNoteChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: inputBorder,
+      backgroundColor: alpha(theme.colors.text.primary, 0.035),
+    },
+    quickNoteChipSelected: {
+      borderColor: alpha(CYAN, 0.42),
+      backgroundColor: alpha(CYAN, 0.12),
+    },
+    quickNoteText: {
+      color: textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    quickNoteTextSelected: {
+      color: CYAN,
+      fontWeight: '800',
+    },
     inputRow: {
       flexDirection: 'row',
       gap: 10,
@@ -909,6 +944,7 @@ export default function BidSubmissionScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { jobId, title, urgency: urgencyParam, responseMode } = useLocalSearchParams<{
     jobId: string;
     title?: string;
@@ -1129,7 +1165,12 @@ export default function BidSubmissionScreen() {
             onPress={() => router.back()} 
             activeOpacity={0.75}
           >
-            <ChevronLeft size={21} color={theme.colors.text.primary} strokeWidth={2.4} />
+            <ChevronLeft
+              size={21}
+              color={theme.colors.text.primary}
+              strokeWidth={2.4}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
             <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{isInstant ? t('bidSubmission.instantRequest', 'INSTANT REQUEST') : t('bidSubmission.scheduledRequest', 'SCHEDULED REQUEST')}</Text>
@@ -1326,6 +1367,24 @@ export default function BidSubmissionScreen() {
                 </View>
 
                 <Text style={styles.formLabel}>{t('bidSubmission.messageToClient', 'MESSAGE TO CLIENT')}</Text>
+
+                <View style={styles.quickNotesRow}>
+                  {QUICK_NOTES.map(note => {
+                    const isSelected = message === note;
+                    return (
+                      <TouchableOpacity
+                        key={note}
+                        style={[styles.quickNoteChip, isSelected && styles.quickNoteChipSelected]}
+                        onPress={() => setMessage(note)}
+                        activeOpacity={0.78}
+                      >
+                        <Text style={[styles.quickNoteText, isSelected && styles.quickNoteTextSelected]}>
+                          {note}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
                 <View style={[styles.inputShell, styles.messageShell]}>
                   <MessageSquare size={16} color={CYAN} style={styles.messageIcon} />
                   <TextInput

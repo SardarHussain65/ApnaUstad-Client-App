@@ -31,6 +31,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { Spacing, useTheme, useThemeColors, useThemeTypography, alpha } from '../constants/Theme';
 import { useBookingDetails, useCreateReviewMutation, useToast } from '../hooks';
+import { useIsRTL } from '../context/LanguageContext';
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Needs serious improvement',
@@ -91,6 +92,7 @@ export default function ReviewScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const theme = useTheme();
   const colors = useThemeColors();
@@ -215,7 +217,12 @@ export default function ReviewScreen() {
             ]} 
             activeOpacity={0.8}
           >
-            <ChevronLeft color={theme.colors.text.primary} size={22} strokeWidth={2.4} />
+            <ChevronLeft
+              color={theme.colors.text.primary}
+              size={22}
+              strokeWidth={2.4}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
             <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('review.jobFeedback', 'JOB FEEDBACK')}</Text>

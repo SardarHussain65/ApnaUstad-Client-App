@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import {
   Mic,
   MoreVertical,
   PauseCircle,
+  Phone,
   PlayCircle,
   Send,
   ShieldCheck,
@@ -31,6 +33,7 @@ import { Colors, useTheme } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useAuth } from '../context/AuthContext';
+import { useIsRTL } from '../context/LanguageContext';
 import { socketService } from '../services/socketService';
 import { useBookingDetails, useMessages, useSendMessageMutation, type Message } from '../hooks';
 import Animated, { FadeInRight, FadeInLeft } from 'react-native-reanimated';
@@ -92,6 +95,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const theme = useTheme();
   const colors = theme.legacy;
   const { bookingId, recipientName } = useLocalSearchParams<{
@@ -116,6 +120,21 @@ export default function ChatScreen() {
   const canSendMessages = Boolean(booking) && !isCommunicationLocked;
   const isRecording = recorderState.isRecording;
   const isComposerBusy = isSending || isUploadingVoice;
+
+  const bookingWorker = typeof booking?.worker === 'object' ? booking.worker : null;
+  const bookingCustomer = typeof booking?.customer === 'object' ? booking.customer : null;
+  const contactPhone = role === 'client' ? (bookingWorker as any)?.phone : (bookingCustomer as any)?.phone;
+
+  const handleCall = () => {
+    if (contactPhone) {
+      void Linking.openURL(`tel:${contactPhone}`);
+    } else {
+      Toast.show({
+        type: 'info',
+        text1: t('workerDetails.phoneUnavailable', 'Phone not available'),
+      });
+    }
+  };
 
   // Combine and deduplicate messages (prefer local for instant feedback, then official from server)
   const allMessages = React.useMemo(() => {
@@ -339,7 +358,7 @@ export default function ChatScreen() {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border.subtle }]}>
           <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-            <ChevronLeft color={theme.colors.text.primary} size={24} />
+            <ChevronLeft color={theme.colors.text.primary} size={24} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.userInfo}>
@@ -360,9 +379,17 @@ export default function ChatScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.headerAction}>
-            <MoreVertical color={theme.colors.text.primary} size={20} />
-          </TouchableOpacity>
+          {contactPhone && canSendMessages ? (
+            <TouchableOpacity
+              onPress={handleCall}
+              style={[styles.headerAction, { backgroundColor: 'rgba(0,232,135,0.12)', borderColor: 'rgba(0,232,135,0.3)' }]}
+              activeOpacity={0.75}
+            >
+              <Phone color="#00E887" size={18} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
         </View>
 
         {/* Messages */}
