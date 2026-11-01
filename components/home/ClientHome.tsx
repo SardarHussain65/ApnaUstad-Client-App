@@ -223,11 +223,6 @@ export function ClientHome() {
     return categories.filter(cat => cat.name.toLowerCase().includes(q));
   }, [categories, searchQuery]);
 
-  const displayedCategories = useMemo(() => {
-    if (searchQuery.trim() || showAllServices) return filteredCategories;
-    return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
-  }, [filteredCategories, showAllServices, searchQuery]);
-
   // Active Booking (assigned Ustad on the way or ongoing work)
   const activeBooking = useMemo(() => {
     if (homeSummary?.activeBooking) return homeSummary.activeBooking;
@@ -256,6 +251,16 @@ export function ClientHome() {
   }, [homeSummary?.recentBookings, activeBooking]);
 
   const totalBookingsCount = homeSummary?.stats?.total ?? (homeSummary?.recentBookings?.length ?? 0);
+
+  // If there are ongoing or recent jobs below, keep categories compact (6 cards = 2 rows).
+  // If there is no activity below, show one more row (9 cards = 3 rows) so the screen looks balanced.
+  const hasBottomActivity = recentBookings.length > 0;
+  const baseCategoryLimit = hasBottomActivity ? INITIAL_CATEGORY_LIMIT : 9;
+
+  const displayedCategories = useMemo(() => {
+    if (searchQuery.trim() || showAllServices) return filteredCategories;
+    return filteredCategories.slice(0, baseCategoryLimit);
+  }, [filteredCategories, showAllServices, searchQuery, baseCategoryLimit]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -463,7 +468,7 @@ export function ClientHome() {
               </Text>
             </View>
 
-            {!searchQuery && categories.length > INITIAL_CATEGORY_LIMIT && (
+            {!searchQuery && categories.length > baseCategoryLimit && (
               <TouchableOpacity
                 onPress={handleToggleServices}
                 hitSlop={styles.hitSlop}
