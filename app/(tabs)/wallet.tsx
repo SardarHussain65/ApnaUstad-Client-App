@@ -17,6 +17,7 @@ import {
   useToast,
   useUserWallet,
 } from '../../hooks';
+import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
 
 // Subcomponents & Shimmer Skeletons
 import { ClientWalletView } from '../../components/wallet/ClientWalletView';
@@ -45,12 +46,12 @@ function WalletSkeleton({ isWorker, insets }: WalletSkeletonProps) {
       {/* Static Header shown immediately while content shimmers load */}
       <View style={{ marginBottom: 8 }}>
         <Text style={[{ fontSize: 28, fontWeight: '900', color: theme.colors.text.primary, letterSpacing: 0.5 }, typography.threeD]}>
-          {t('wallet.title')}
+          {isWorker ? t('wallet.title') : t('wallet.clientPaymentsTitle', 'Payments & Spending')}
         </Text>
         <Text style={{ fontSize: 13, color: theme.colors.text.muted, fontWeight: '600', marginTop: 4 }}>
           {isWorker
             ? t('wallet.workerSub')
-            : t('wallet.clientSub')}
+            : t('wallet.clientPaymentsDesc', 'Receipts and spending history for your home services')}
         </Text>
       </View>
 
@@ -99,7 +100,7 @@ export default function WalletTab() {
   const handleClientRefresh = useCallback(async () => {
     setIsClientRefreshing(true);
     try {
-      await Promise.all([
+      await Promise.allSettled([
         refetchPayments(),
         refetchUserWallet(),
       ]);
@@ -129,6 +130,7 @@ export default function WalletTab() {
   const { data: topUpsData, isLoading: areTopUpsLoading, refetch: refetchTopUps } = useWalletTopUps(1, 50, {
     enabled: isWorker,
   });
+  const { data: analyticsData, isLoading: isAnalyticsLoading, refetch: refetchAnalytics } = useWorkerAnalytics();
 
   const transactions = transactionsData?.transactions ?? [];
   const topUps = useMemo(() => topUpsData?.requests ?? [], [topUpsData?.requests]);
@@ -145,17 +147,18 @@ export default function WalletTab() {
   const handleWorkerRefresh = useCallback(async () => {
     setIsWorkerRefreshing(true);
     try {
-      await Promise.all([
+      await Promise.allSettled([
         refetchWallet(),
         refetchTransactions(),
         refetchPayments(),
         refetchPaymentMethods(),
         refetchTopUps(),
+        refetchAnalytics(),
       ]);
     } finally {
       setIsWorkerRefreshing(false);
     }
-  }, [refetchWallet, refetchTransactions, refetchPayments, refetchPaymentMethods, refetchTopUps]);
+  }, [refetchWallet, refetchTransactions, refetchPayments, refetchPaymentMethods, refetchTopUps, refetchAnalytics]);
 
   const handleCopy = async (label: string, value?: string) => {
     if (!value) return;
@@ -252,17 +255,9 @@ export default function WalletTab() {
     await Share.share({ message: lines.join('\n') });
   };
 
-  // Determine full page loading state
-  const isClientLoading = (isPaymentsLoading || isUserWalletLoading) && !isClientRefreshing;
-  const isWorkerLoading = (isWalletLoading || isTransactionsLoading || areMethodsLoading || areTopUpsLoading) && !isWorkerRefreshing;
-
-  const showSkeleton = isWorker ? isWorkerLoading : isClientLoading;
-
   return (
     <BackgroundWrapper>
-      {showSkeleton ? (
-        <WalletSkeleton isWorker={isWorker} insets={insets} />
-      ) : isWorker ? (
+      {isWorker ? (
         <>
           <WorkerWalletView
             wallet={wallet ?? null}
@@ -270,11 +265,17 @@ export default function WalletTab() {
             topUps={topUps}
             payments={payments}
             summary={summary}
+            analyticsData={analyticsData}
             workerTab={workerTab}
             onTabChange={setWorkerTab}
             refreshing={isWorkerRefreshing}
             onRefresh={handleWorkerRefresh}
             onOpenRecharge={() => setShowRechargeModal(true)}
+            isWalletLoading={isWalletLoading && !isWorkerRefreshing}
+            isTransactionsLoading={isTransactionsLoading && !isWorkerRefreshing}
+            areTopUpsLoading={areTopUpsLoading && !isWorkerRefreshing}
+            isAnalyticsLoading={isAnalyticsLoading && !isWorkerRefreshing}
+            isPaymentsLoading={isPaymentsLoading && !isWorkerRefreshing}
           />
           <RechargeModal
             visible={showRechargeModal}
@@ -301,6 +302,7 @@ export default function WalletTab() {
           onRefresh={handleClientRefresh}
           walletBalance={walletBalance}
           walletTransactions={walletTransactions}
+          isLoading={isPaymentsLoading && !isClientRefreshing}
         />
       )}
     </BackgroundWrapper>

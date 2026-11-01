@@ -1,3 +1,37 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
+import {
+  ArrowLeft,
+  MapPin,
+  Mic,
+  Square,
+  Trash2,
+  Camera,
+  X,
+  Target,
+  Send,
+  Calendar,
+  Clock,
+  CheckCircle2,
+} from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -6,142 +40,52 @@ import {
   useAudioRecorderState,
   type RecordingStatus,
 } from 'expo-audio';
-import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  Banknote,
-  Calendar,
-  Camera,
-  ChevronDown,
-  ChevronUp,
-  ClipboardList,
-  Clock,
-  FileText,
-  Mic,
-  Send,
-  ShieldCheck,
-  Target,
-} from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeInUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { AlertModal, ConfirmModal } from '../components/ui';
 import { useConfirmModal, useCreateJobMutation, useToast, useUploadJobImagesMutation } from '../hooks';
-import { addAlpha } from '../utils/colorUtils';
-import { useTranslation } from 'react-i18next';
 import { useTheme, alpha } from '../constants/Theme';
-
-// Sub-components
-import { BudgetInput } from '../components/job-creation/BudgetInput';
-import { LocationSelector } from '../components/job-creation/LocationSelector';
-import { MediaEvidencePicker } from '../components/job-creation/MediaEvidencePicker';
+import { useJobCreationPalette } from '../components/job-creation/shared';
 import { SchedulePickerModal } from '../components/job-creation/SchedulePickerModal';
-import { GlassInput, P, SectionLabel, StatBadge, useJobCreationPalette } from '../components/job-creation/shared';
-import { UrgencyToggle } from '../components/job-creation/UrgencyToggle';
-import { VoiceBriefRecorder } from '../components/job-creation/VoiceBriefRecorder';
-import { UrgentPricingCard } from '../components/job-creation/UrgentPricingCard';
 import { calculateUrgentPrice, getRateForCategory } from '../constants/UrgentPricing';
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types & Constants ────────────────────────────────────────────────────────
+
 type Urgency = 'instant' | 'scheduled';
 type EvidenceAsset = { uri: string; type: 'image' | 'video' };
 
-const formatVoiceDuration = (durationMillis: number) => {
-  const seconds = Math.max(0, Math.floor(durationMillis / 1000));
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+const CATEGORY_QUICK_CHIPS: Record<string, string[]> = {
+  'AC & Appliances': ['Not cooling', 'Gas refill', 'Water leaking', 'Noisy unit', 'Compressor issue'],
+  'AC Technician': ['Not cooling', 'Gas refill', 'Water leaking', 'Noisy unit', 'Compressor issue'],
+  'Electrician': ['Short circuit', 'Switch replacement', 'Fan installation', 'Wiring issue', 'UPS problem'],
+  'Plumber': ['Pipe leaking', 'Tap replacement', 'Drain blockage', 'Water motor', 'Sanitary fitting'],
+  'Carpenter': ['Door lock repair', 'Hinge repair', 'Furniture assembly', 'Wood polish', 'Cabinet fixing'],
+  'Painter': ['Wall touchup', 'Full room paint', 'Ceiling dampness', 'Door paint', 'Exterior wall'],
+  'Cleaner': ['Deep home cleaning', 'Sofa & carpet wash', 'Kitchen cleaning', 'Water tank', 'Bathroom wash'],
+  'Mason': ['Tile fixing', 'Plaster repair', 'Wall crack', 'Roof seepage', 'Marble grinding'],
+  'Welder': ['Gate repair', 'Grill fixing', 'Railing welding', 'Sheet repair', 'Window frame'],
+  'Solar Panel Services': ['Panel cleaning', 'Inverter issue', 'Wiring inspection', 'Battery check', 'Capacity test'],
 };
 
-// ─── CollapsibleCard Component ───────────────────────────────────────────────
-interface CollapsibleCardProps {
-  title: string;
-  icon: React.ComponentType<{ size: number; color: string; strokeWidth: number }>;
-  color: string;
-  summary: string;
-  isExpanded: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
+const DEFAULT_QUICK_CHIPS = ['Not working', 'Inspection needed', 'Replacement', 'Emergency fix'];
 
-function CollapsibleCard({
-  title,
-  icon: Icon,
-  color,
-  summary,
-  isExpanded,
-  onToggle,
-  children,
-}: CollapsibleCardProps) {
-  const palette = useJobCreationPalette();
-
-  return (
-    <View style={[
-      styles.collapsibleContainer,
-      {
-        backgroundColor: palette.surfaceRaised,
-        borderColor: palette.border,
-      },
-      isExpanded && { borderColor: addAlpha(color, '30') }
-    ]}>
-      <TouchableOpacity
-        style={styles.collapsibleHeader}
-        onPress={onToggle}
-        activeOpacity={0.7}
-      >
-        <View style={[styles.collapsibleIconWrap, { backgroundColor: addAlpha(color, '12') }]}>
-          <Icon size={16} color={color} strokeWidth={2.2} />
-        </View>
-        <View style={styles.collapsibleHeaderText}>
-          <Text style={[styles.collapsibleTitle, { color }]}>{title}</Text>
-          <Text style={[styles.collapsibleSummary, { color: palette.textSecondary }]} numberOfLines={1}>{summary}</Text>
-        </View>
-        <View style={styles.collapsibleRight}>
-          {isExpanded ? (
-            <ChevronUp size={16} color={palette.textSecondary} strokeWidth={2.5} />
-          ) : (
-            <ChevronDown size={16} color={palette.textSecondary} strokeWidth={2.5} />
-          )}
-        </View>
-      </TouchableOpacity>
-      {isExpanded && (
-        <View style={[styles.collapsibleContent, { borderTopColor: palette.border }]}>
-          {children}
-        </View>
-      )}
-    </View>
-  );
-}
+const formatCleanAddress = (rawAddress: string) => {
+  if (!rawAddress) return '';
+  const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+  return cleaned || rawAddress;
+};
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
+
 export default function JobCreationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const palette = useJobCreationPalette();
   const theme = useTheme();
   const { success, error: showError } = useToast();
+
   const {
     visible: confirmVisible,
     showConfirm,
@@ -166,58 +110,61 @@ export default function JobCreationScreen() {
     urgency?: Urgency;
   }>();
 
+  const categoryName = title ?? 'AC & Appliances';
+  const isDark = theme.isDark;
+
   // ─── State ──────────────────────────────────────────────────────────────────
-  const [urgency, setUrgency] = useState<Urgency>(
-    (urgencyParam as Urgency) || 'instant'
-  );
+  const [urgency, setUrgency] = useState<Urgency>((urgencyParam as Urgency) || 'instant');
   const [description, setDescription] = useState<string>(initialDescription ?? '');
   const [amount, setAmount] = useState<string>('');
   const [estimatedHours, setEstimatedHours] = useState<number>(2);
   const [selectedMedia, setSelectedMedia] = useState<EvidenceAsset[]>([]);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
+
+  // Location state
   const [address, setAddress] = useState<string>('Detecting location...');
   const [latitude, setLatitude] = useState<number>(33.6927);
   const [longitude, setLongitude] = useState<number>(73.0743);
   const [isGettingLocation, setIsGettingLocation] = useState<boolean>(false);
+  const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
+  const [tempAddressInput, setTempAddressInput] = useState<string>('');
+
+  // Scheduled date & time state
+  const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'custom'>('tomorrow');
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date(Date.now() + 86_400_000));
   const [scheduledTime, setScheduledTime] = useState<string>('10:00');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('10:00 AM');
+  const [showPickerModal, setShowPickerModal] = useState<boolean>(false);
+
+  // Modals state
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
   const [createdJobId, setCreatedJobId] = useState<string | null>(null);
 
-  const [showPickerModal, setShowPickerModal] = useState<boolean>(false);
+  const isInstant = urgency === 'instant';
+  const activeColor = isInstant ? '#2DD4BF' : '#FB923C';
 
-  const [expandedSections, setExpandedSections] = useState({
-    budget: false,
-    schedule: false,
-    media: false,
-    voice: false,
-  });
+  // Rate calculations
+  const rateInfo = useMemo(() => getRateForCategory(categoryName), [categoryName]);
+  const baseRate = rateInfo.baseRatePerHour;
+  const fixedPrice = useMemo(() => calculateUrgentPrice(categoryName, estimatedHours), [categoryName, estimatedHours]);
 
-  // ─── Initialize Urgent Price on mount/urgency toggle ─────────────────────
-  useEffect(() => {
-    if (urgency === 'instant') {
-      const calculated = calculateUrgentPrice(title ?? 'General', estimatedHours);
-      setAmount(calculated.toString());
-    } else {
-      setAmount('');
-    }
-  }, [urgency, title, estimatedHours]);
+  // Quick chips
+  const quickChips = useMemo(() => CATEGORY_QUICK_CHIPS[categoryName] || DEFAULT_QUICK_CHIPS, [categoryName]);
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
+  // ─── Audio Recorder ─────────────────────────────────────────────────────────
   const handleRecordingStatus = useCallback((status: RecordingStatus) => {
     if (status.isFinished && status.url) {
       setVoiceNoteUri(status.url);
       void setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
     }
   }, []);
+
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY, handleRecordingStatus);
   const recorderState = useAudioRecorderState(audioRecorder, 250);
+  const isRecording = recorderState.isRecording;
+  const voiceDurationMillis = recorderState.durationMillis;
+  const voiceSeconds = Math.max(0, Math.floor(voiceDurationMillis / 1000));
+  const voiceTimerText = `${Math.floor(voiceSeconds / 60)}:${String(voiceSeconds % 60).padStart(2, '0')}`;
 
   const startVoiceNote = useCallback(async () => {
     try {
@@ -232,7 +179,7 @@ export default function JobCreationScreen() {
       setVoiceNoteUri(null);
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
-      showError('Recording Failed', error instanceof Error ? error.message : 'Could not start the voice note.');
+      showError('Recording Failed', error instanceof Error ? error.message : 'Could not start recording.');
     }
   }, [audioRecorder, showError]);
 
@@ -243,96 +190,41 @@ export default function JobCreationScreen() {
       setVoiceNoteUri(audioRecorder.uri);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      showError('Recording Failed', error instanceof Error ? error.message : 'Could not save the voice note.');
+      showError('Recording Failed', error instanceof Error ? error.message : 'Could not save recording.');
     }
   }, [audioRecorder, showError]);
 
-  const validateSchedule = useCallback((date: Date, timeStr: string): boolean => {
-    const [h, m] = timeStr.split(':').map(Number);
-    const check = new Date(date);
-    check.setHours(h, m, 0, 0);
-    const oneHourLater = new Date(Date.now() + 60 * 60 * 1000);
-    return check.getTime() >= oneHourLater.getTime();
-  }, []);
-
-  const handleScheduleSave = useCallback((date: Date, time: string) => {
-    setScheduledDate(date);
-    setScheduledTime(time);
-    setShowPickerModal(false);
-    success('Schedule Saved', `Visit scheduled for ${date.toLocaleDateString('en-GB')} at ${time}`);
-  }, [success]);
-
-  // --- DEPLOY BUTTON HEARTBEAT PULSE ---
-  const deployBtnScale = useSharedValue(1);
-  useEffect(() => {
-    deployBtnScale.value = withRepeat(
-      withSequence(
-        withTiming(1.025, { duration: 1100 }),
-        withTiming(1, { duration: 1100 })
-      ),
-      -1,
-      true
-    );
-  }, [deployBtnScale]);
-
-  const deployBtnStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: deployBtnScale.value }],
-  }));
-
-  const { mutate: createJob, isPending: isSubmittingJob } = useCreateJobMutation();
-  const { mutateAsync: uploadImages } = useUploadJobImagesMutation();
-  const isSubmitting = isSubmittingJob || isConfirming;
-
-  const accentColor: string = color ?? palette.cyan;
-  const isInstant = urgency === 'instant';
-  const selectedImageCount = selectedMedia.filter((asset) => asset.type === 'image').length;
-  const selectedVideoCount = selectedMedia.filter((asset) => asset.type === 'video').length;
-  const hasDescription = description.trim().length >= 10;
-  const hasLocation = Boolean(address.trim() && address !== 'Detecting location...' && address !== 'Detecting location');
-  const requiredStepCount = 3;
-  const completedStepCount = [true, hasDescription, hasLocation].filter(Boolean).length;
-  const completionPercentage = Math.round((completedStepCount / requiredStepCount) * 100);
-  const submitLabel = targetWorkerId
-    ? t('jobCreation.submitDirect')
-    : isInstant
-      ? t('jobCreation.submitInstant')
-      : t('jobCreation.submitScheduled');
-
-  // ─── Auto-fetch location on mount ─────────────────────────────────────────
-  useEffect(() => {
-    void handleGetLiveLocation(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ─── Location ─────────────────────────────────────────────────────────────
+  // ─── Location Fetcher ───────────────────────────────────────────────────────
   const handleGetLiveLocation = useCallback(async (silent = false) => {
     try {
       setIsGettingLocation(true);
-
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const req = await Location.requestForegroundPermissionsAsync();
+        status = req.status;
+      }
       if (status !== 'granted') {
         if (!silent) showError('Permission Denied', 'Location permission is required.');
         return;
       }
-
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude: lat, longitude: lng } = loc.coords;
       setLatitude(lat);
       setLongitude(lng);
 
-      // Reverse geocode to get a human-readable address
       const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
       if (results.length > 0) {
         const geo = results[0];
         const name = geo.name && geo.name !== geo.city ? geo.name : null;
+        const street = geo.street ? geo.street : null;
+        const area = name || street;
         const city = geo.city ?? geo.subregion ?? '';
-        const country = geo.country ?? '';
-        setAddress(name ? `${name}, ${city}` : `${city}, ${country}`);
+        const resolved = area ? `${area}, ${city}` : city;
+        const clean = formatCleanAddress(resolved);
+        setAddress(clean);
+        setTempAddressInput(clean);
       }
-
-      if (!silent) success('Location Locked', 'Position updated to your current location.');
+      if (!silent) success('Location Updated', 'Position updated to your current location.');
     } catch (e) {
       if (!silent && e instanceof Error) {
         showError('Location Error', e.message || 'Failed to acquire location.');
@@ -342,12 +234,18 @@ export default function JobCreationScreen() {
     }
   }, [showError, success]);
 
+  // Run location fetch ONLY ONCE on mount
+  useEffect(() => {
+    void handleGetLiveLocation(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ─── Media Picker ──────────────────────────────────────────────────────────
   const pickMedia = useCallback(async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showError(t('common.error', 'Permission Needed'), t('jobCreation.permissionDenied'));
+        showError('Permission Needed', 'Please allow photo access in settings to attach pictures.');
         return;
       }
       const remainingSlots = Math.max(1, 5 - selectedMedia.length);
@@ -368,60 +266,89 @@ export default function JobCreationScreen() {
         setSelectedMedia((prev) => [...prev, ...nextAssets].slice(0, 5));
       }
     } catch {
-      showError(t('common.error', 'Media Error'), t('jobCreation.mediaLibraryError'));
+      showError('Media Error', 'Could not open media library.');
     }
-  }, [selectedMedia.length, showError, t]);
+  }, [selectedMedia.length, showError]);
 
   const removeMedia = useCallback((indexToRemove: number) => {
     setSelectedMedia((current) => current.filter((_, index) => index !== indexToRemove));
     void Haptics.selectionAsync();
   }, []);
 
-  // ─── Submit flow ──────────────────────────────────────────────────────────
-  const handlePostJob = useCallback(() => {
-    if (description.trim().length < 10) {
-      showError(t('jobCreation.descTooShortTitle'), t('jobCreation.descTooShortDesc'));
-      return;
-    }
-    if (!address.trim() || address === 'Detecting location...' || address === 'Detecting location') {
-      showError(t('jobCreation.invalidLocation'), t('jobCreation.invalidLocationDesc'));
-      return;
-    }
-    if (isInstant) {
-      const rateInfo = getRateForCategory(title ?? 'General');
-      const minPrice = rateInfo.minimumPrice;
-      const currentPrice = Number(amount) || 0;
-      if (currentPrice < minPrice) {
-        showError(
-          t('common.error', 'Error'),
-          t('jobCreation.minPriceRequired', 'Minimum price required is Rs. {{price}}', { price: minPrice })
-        );
-        return;
-      }
+  // ─── Quick Chip Toggle ─────────────────────────────────────────────────────
+  const handleToggleChip = useCallback((chip: string) => {
+    void Haptics.selectionAsync();
+    const hasChip = description.toLowerCase().includes(chip.toLowerCase());
+    if (hasChip) {
+      const regex = new RegExp(`(^|,\\s*)${chip}`, 'i');
+      const updated = description.replace(regex, '').replace(/^,\s*/, '').trim();
+      setDescription(updated);
     } else {
-      if (amount && Number(amount) <= 0) {
-        showError(t('jobCreation.invalidOffer'), t('jobCreation.invalidOfferDesc'));
-        return;
-      }
-      if (!validateSchedule(scheduledDate, scheduledTime)) {
-        showError(t('jobCreation.invalidSchedule'), t('jobCreation.invalidScheduleDesc'));
-        return;
+      if (!description.trim()) {
+        setDescription(chip);
+      } else {
+        setDescription(`${description.trim()}, ${chip}`);
       }
     }
-    
-    const fixedPrice = isInstant ? calculateUrgentPrice(title ?? 'General', estimatedHours) : 0;
+  }, [description]);
+
+  // ─── Date & Time Selection ─────────────────────────────────────────────────
+  const handleSelectDateOption = useCallback((option: 'today' | 'tomorrow' | 'custom') => {
+    void Haptics.selectionAsync();
+    setSelectedDateOption(option);
+    if (option === 'today') {
+      setScheduledDate(new Date());
+    } else if (option === 'tomorrow') {
+      setScheduledDate(new Date(Date.now() + 86400000));
+    } else {
+      setShowPickerModal(true);
+    }
+  }, []);
+
+  const handleSelectTimeSlot = useCallback((slot: string) => {
+    void Haptics.selectionAsync();
+    setSelectedTimeSlot(slot);
+    if (slot === '10:00 AM') setScheduledTime('10:00');
+    else if (slot === '2:00 PM') setScheduledTime('14:00');
+    else if (slot === '6:00 PM') setScheduledTime('18:00');
+  }, []);
+
+  const handleCustomScheduleSave = useCallback((date: Date, time: string) => {
+    setScheduledDate(date);
+    setScheduledTime(time);
+    setSelectedDateOption('custom');
+    setSelectedTimeSlot(time);
+    setShowPickerModal(false);
+  }, []);
+
+  // ─── Submit Mutation ───────────────────────────────────────────────────────
+  const { mutate: createJob, isPending: isSubmittingJob } = useCreateJobMutation();
+  const { mutateAsync: uploadImages } = useUploadJobImagesMutation();
+  const isSubmitting = isSubmittingJob || isConfirming;
+
+  const handlePostJob = useCallback(() => {
+    if (description.trim().length < 5) {
+      showError(t('jobCreation.descTooShortTitle', 'Add More Details'), t('jobCreation.descTooShortDesc', 'Please describe the problem or pick a quick tag above.'));
+      return;
+    }
+    if (!address.trim() || address.includes('Detecting')) {
+      showError(t('jobCreation.invalidLocation', 'Address Needed'), t('jobCreation.invalidLocationDesc', 'Please tap Change to enter your address or refresh GPS.'));
+      return;
+    }
+
+    const priceText = isInstant ? `Rs. ${fixedPrice.toLocaleString()}` : (amount ? `Rs. ${amount}` : 'Open to offers');
     showConfirm(
-      isInstant ? t('jobCreation.postUrgentTitle') : t('jobCreation.postServiceTitle'),
-      isInstant 
+      isInstant ? t('jobCreation.postUrgentTitle', 'Confirm Urgent Job') : t('jobCreation.postServiceTitle', 'Post Job Request'),
+      isInstant
         ? t('jobCreation.postUrgentConfirm', { price: fixedPrice.toLocaleString() })
-        : t('jobCreation.postServiceConfirm'),
+        : t('jobCreation.postServiceConfirm', 'Your request will be sent to nearby Ustads so they can bid their rates.'),
       handleConfirmSubmit,
       closeConfirm,
-      t('jobCreation.postRequest'),
-      t('jobCreation.keepEditing'),
+      isInstant ? `Find Ustad - ${priceText}` : 'Post Request',
+      t('jobCreation.keepEditing', 'Go Back'),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, address, amount, estimatedHours, isInstant, scheduledDate, scheduledTime, validateSchedule, t]);
+  }, [description, address, isInstant, fixedPrice, amount, t]);
 
   const handleConfirmSubmit = useCallback(async () => {
     setConfirmLoading(true);
@@ -448,6 +375,7 @@ export default function JobCreationScreen() {
             type,
           } as unknown as Blob);
         });
+
         if (voiceNoteUri) {
           const filename = voiceNoteUri.split('/').pop() ?? 'job-voice-note.m4a';
           formData.append('images', {
@@ -456,22 +384,22 @@ export default function JobCreationScreen() {
             type: 'audio/m4a',
           } as unknown as Blob);
         }
+
         const response = await uploadImages(formData);
         uploadedImageUrls = response.imageUrls ?? [];
         uploadedVideoUrls = response.videoUrls ?? [];
         uploadedAudioUrls = response.audioUrls ?? [];
       }
 
-      const fixedPrice = isInstant
-        ? (amount && Number(amount) > 0 ? parseFloat(amount) : calculateUrgentPrice(title ?? 'General', estimatedHours))
-        : (amount && Number(amount) > 0) ? parseFloat(amount) : 500;
+      const clientOffer = amount && Number(amount) > 0 ? parseFloat(amount) : 0;
+      const finalPrice = isInstant ? fixedPrice : clientOffer;
 
       const payload = {
-        category: title ?? 'General',
+        category: categoryName,
         description,
         urgency,
         address,
-        amount: fixedPrice,
+        amount: finalPrice,
         estimatedHours: isInstant ? estimatedHours : undefined,
         imageUrls: uploadedImageUrls,
         videoUrls: uploadedVideoUrls,
@@ -492,18 +420,35 @@ export default function JobCreationScreen() {
         },
         onError: (err: Error) => {
           setConfirmLoading(false);
-          showError(t('jobCreation.requestFailed'), err.message || t('jobDetails.toastUnableRespond'));
+          showError(t('jobCreation.requestFailed', 'Could Not Send Request'), err.message || 'Something went wrong.');
         },
       });
     } catch (err) {
       setConfirmLoading(false);
-      showError(t('jobCreation.uploadFailed'), err instanceof Error ? err.message : t('registerDetails.uploadError'));
+      showError(t('jobCreation.uploadFailed', 'Upload Failed'), err instanceof Error ? err.message : 'Media upload failed.');
     }
   }, [
-    selectedMedia, voiceNoteUri, uploadImages, title, description, urgency,
-    address, amount, estimatedHours, longitude, latitude, targetWorkerId,
-    isInstant, scheduledDate, scheduledTime,
-    createJob, closeConfirm, showError, setConfirmLoading, t
+    selectedMedia,
+    voiceNoteUri,
+    uploadImages,
+    categoryName,
+    description,
+    urgency,
+    address,
+    isInstant,
+    fixedPrice,
+    amount,
+    estimatedHours,
+    longitude,
+    latitude,
+    targetWorkerId,
+    scheduledDate,
+    scheduledTime,
+    createJob,
+    closeConfirm,
+    showError,
+    setConfirmLoading,
+    t,
   ]);
 
   const handleSuccessModalDismiss = useCallback(() => {
@@ -511,410 +456,572 @@ export default function JobCreationScreen() {
     router.push({ pathname: '/finding-worker', params: { jobId: createdJobId } });
   }, [createdJobId, router]);
 
-  // Summaries for collapsible sections
-  const budgetSummary = amount ? `Rs. ${Number(amount).toLocaleString('en-PK')}` : t('jobCreation.openNegotiable', 'Open — Ustads will send rates');
-  const scheduleSummary = `${scheduledDate.toLocaleDateString('en-GB')} • ${scheduledTime}`;
-
-  const mediaCount = selectedMedia.length;
-  const mediaSummary = mediaCount === 0
-    ? t('jobCreation.noMediaAttached', 'No photos or video added')
-    : t('jobCreation.filesAttached', { count: mediaCount });
-
-  const voiceDuration = recorderState.durationMillis;
-  const voiceSummary = recorderState.isRecording
-    ? `${t('jobCreation.recordingExplanation', 'Recording voice message...')} ${formatVoiceDuration(voiceDuration)}`
-    : voiceNoteUri
-      ? t('jobCreation.voiceBriefAttached', 'Voice message added')
-      : t('jobCreation.noVoiceRecorded', 'No voice message added');
-
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.safe}>
-
-        {/* ── Header ── */}
-        <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            style={[
-              styles.backBtn,
-              {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.colors.text.primary, 0.04),
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
-              }
-            ]}
+        {/* ── 1. Top Minimal Header: Back Arrow + Category Title ── */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.backBtn, { borderColor: palette.border }]}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ArrowLeft color={palette.textPrimary} size={18} strokeWidth={2} />
+            <ArrowLeft color={palette.textPrimary} size={20} strokeWidth={2.2} />
           </TouchableOpacity>
-
-          <View style={styles.headerCenter}>
-            <Text style={[styles.headerEyebrow, { color: palette.textMuted }]}>{t('jobCreation.urgent').toUpperCase()}</Text>
-            <Text style={[styles.headerTitle, { color: palette.textPrimary }]}>{t('jobCreation.findUstad')}</Text>
-          </View>
-
-          {/* Live status indicator */}
-          <View style={[
-            styles.liveIndicator,
-            {
-              backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : alpha(theme.colors.text.primary, 0.03),
-              borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : theme.colors.border.subtle,
-            }
-          ]}>
-            <View style={[styles.liveDot, { backgroundColor: isInstant ? palette.cyan : palette.orange }]} />
-            <Text style={[styles.liveText, { color: isInstant ? palette.cyan : palette.orange }]}>
-              {isInstant ? t('jobCreation.nowBadge', 'NOW') : t('jobCreation.plannedBadge', 'LATER')}
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* ── Urgency Toggle ── */}
-        <Animated.View entering={FadeInDown.delay(80).duration(500)}>
-          <UrgencyToggle
-            urgency={urgency}
-            onChange={setUrgency}
-            colors={palette}
-          />
-        </Animated.View>
+          <Text style={[styles.headerTitle, { color: palette.textPrimary }]} numberOfLines={1}>
+            {categoryName}
+          </Text>
+        </View>
 
         <KeyboardAvoidingView
           style={styles.keyboardAvoider}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* ── Scrollable Content ── */}
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scroll}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-
-            {/* ── Request Summary Card ── */}
-            <Animated.View entering={FadeInDown.delay(150).duration(600)} style={[styles.missionCard, { borderColor: addAlpha(accentColor, '20') }]}>
-              <LinearGradient
-                colors={[addAlpha(accentColor, '22'), 'rgba(10,16,35,0.94)', 'rgba(123,97,255,0.10)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1.2, y: 1.2 }}
-                style={styles.missionCardGradient}
+            {/* ── 2. Mode Selector Pill Toggle ── */}
+            <View style={styles.modeToggleRow}>
+              <TouchableOpacity
+                style={[
+                  styles.modePill,
+                  isInstant
+                    ? [styles.modePillActive, { backgroundColor: '#2DD4BF', borderColor: '#2DD4BF' }]
+                    : [styles.modePillInactive, { borderColor: palette.border }]
+                ]}
+                onPress={() => {
+                  setUrgency('instant');
+                  void Haptics.selectionAsync();
+                }}
+                activeOpacity={0.8}
               >
-                <View style={styles.missionCardInner}>
-                  <View style={[styles.categoryIcon, { borderColor: addAlpha(accentColor, '50') }]}>
-                    <LinearGradient
-                      colors={[addAlpha(accentColor, '25'), addAlpha(accentColor, '05')]}
-                      style={StyleSheet.absoluteFill}
-                    />
-                    {targetWorkerName
-                      ? <Target color={accentColor} size={24} strokeWidth={1.5} />
-                      : <ClipboardList color={accentColor} size={24} strokeWidth={1.5} />}
-                  </View>
+                <Text style={[styles.modePillText, isInstant ? styles.modePillTextActive : { color: palette.textSecondary }]}>
+                  Urgent - Now
+                </Text>
+              </TouchableOpacity>
 
-                  <View style={styles.missionMeta}>
-                    <Text style={[styles.missionEyebrow, { color: accentColor }]}>
-                      {targetWorkerName ? t('jobCreation.selectedUstad', 'SELECTED USTAD') : t('jobCreation.serviceCategoryLabel', 'SERVICE TYPE')}
-                    </Text>
-                    <Text style={styles.missionName} numberOfLines={1}>
-                      {targetWorkerName ?? title ?? t('jobDetails.defaultTitle', 'Home Service')}
-                    </Text>
-                    <Text style={styles.missionSub}>
-                      {targetWorkerName
-                        ? t('jobCreation.directRequestSub', { category: title ?? t('jobDetails.defaultTitle', 'Home Service') })
-                        : isInstant
-                          ? t('jobCreation.urgentNearbySub', 'Urgent job for nearby Ustads')
-                          : t('jobCreation.scheduledNearbySub', 'Scheduled visit for nearby Ustads')}
-                    </Text>
-                  </View>
-                </View>
+              <TouchableOpacity
+                style={[
+                  styles.modePill,
+                  !isInstant
+                    ? [styles.modePillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                    : [styles.modePillInactive, { borderColor: palette.border }]
+                ]}
+                onPress={() => {
+                  setUrgency('scheduled');
+                  void Haptics.selectionAsync();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modePillText, !isInstant ? styles.modePillTextActive : { color: palette.textSecondary }]}>
+                  Book later
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-                {/* Stats row */}
-                <View style={styles.statsRow}>
-                  <StatBadge
-                    label={t('jobCreation.service')}
-                    value={isInstant ? t('jobCreation.nowBadge', 'NOW') : t('jobCreation.plannedBadge', 'LATER')}
-                    color={isInstant ? palette.cyan : palette.orange}
-                  />
-                  <View style={styles.statDivider} />
-                  <StatBadge
-                    label={t('jobCreation.evidence')}
-                    value={`${selectedMedia.length}/5`}
-                    color={palette.purple}
-                  />
-                  <View style={styles.statDivider} />
-                  <StatBadge
-                    label={t('jobCreation.budgetLabel')}
-                    value={amount ? `RS ${amount}` : t('common.add', 'Add').toUpperCase()}
-                    color={palette.success}
-                  />
-                </View>
-              </LinearGradient>
-            </Animated.View>
+            {/* ── 3. Section: What needs fixing? ── */}
+            <View style={styles.sectionWrap}>
+              <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
+                {t('jobCreation.whatNeedsFixing', 'What needs fixing?')}
+              </Text>
 
-            {/* ── Service Details (Required) ── */}
-            <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.section}>
-              <SectionLabel icon={FileText} label={t('jobCreation.describeNeed').toUpperCase()} badge={t('common.required', 'Required')} />
-              <GlassInput glowColor={description.trim().length >= 10 ? palette.cyan : (description.trim().length > 0 ? palette.error : undefined)}>
+              {/* Text Card with Embedded Mic Button */}
+              <View style={[styles.inputCard, { borderColor: palette.border }]} collapsable={false}>
                 <TextInput
-                  style={styles.textArea}
-                  placeholder={t('jobCreation.placeholder')}
+                  style={[styles.textArea, { color: palette.textPrimary }]}
+                  placeholder={t('jobCreation.describePlaceholder', 'Describe the problem...')}
                   placeholderTextColor={palette.textMuted}
                   multiline
-                  numberOfLines={5}
+                  numberOfLines={4}
                   maxLength={1000}
                   value={description}
                   onChangeText={setDescription}
                   textAlignVertical="top"
+                  autoCapitalize="sentences"
+                  autoCorrect={false}
                 />
-                <View style={styles.inputFooter}>
-                  {description.trim().length > 0 && description.trim().length < 10 ? (
-                    <Text style={[styles.inputHint, { color: palette.error, fontWeight: '700' }]}>
-                      {t('jobCreation.descTooShort')}
-                    </Text>
+
+                <View style={styles.inputCardBottomRow}>
+                  {voiceNoteUri ? (
+                    <View style={[styles.voiceStatusPill, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}>
+                      <Mic size={13} color={activeColor} strokeWidth={2.5} />
+                      <Text style={[styles.voiceStatusText, { color: activeColor }]}>
+                        Voice note attached
+                      </Text>
+                      <TouchableOpacity onPress={() => setVoiceNoteUri(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Trash2 size={13} color="#FF6B63" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : isRecording ? (
+                    <View style={styles.recordingStatusWrap}>
+                      <View style={styles.pulseDotRed} />
+                      <Text style={styles.recordingTimerText}>
+                        {voiceTimerText} / 1:00
+                      </Text>
+                    </View>
                   ) : (
-                    <Text style={styles.inputHint}>{t('jobCreation.descHint')}</Text>
+                    <View style={{ flex: 1 }} />
                   )}
-                  <Text style={[
-                    styles.charCount,
-                    description.trim().length > 0 && description.trim().length < 10 && { color: palette.error, fontWeight: '700' }
-                  ]}>
-                    {description.length}/1000
+
+                  <TouchableOpacity
+                    style={[
+                      styles.micCircleBtn,
+                      { backgroundColor: isRecording ? '#EF4444' : activeColor }
+                    ]}
+                    onPress={isRecording ? stopVoiceNote : (voiceNoteUri ? () => setVoiceNoteUri(null) : startVoiceNote)}
+                    activeOpacity={0.8}
+                  >
+                    {isRecording ? (
+                      <Square size={16} color="#FFFFFF" fill="#FFFFFF" />
+                    ) : (
+                      <Mic size={18} color="#001014" strokeWidth={2.5} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Quick Problem Tag Chips */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickChipsScroll}
+              >
+                {quickChips.map((chip) => {
+                  const isChipActive = description.toLowerCase().includes(chip.toLowerCase());
+                  return (
+                    <TouchableOpacity
+                      key={chip}
+                      style={[
+                        styles.quickChip,
+                        { borderColor: isChipActive ? activeColor : palette.border },
+                        isChipActive && { backgroundColor: alpha(activeColor, 0.15) }
+                      ]}
+                      onPress={() => handleToggleChip(chip)}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.quickChipText,
+                          { color: isChipActive ? activeColor : palette.textSecondary },
+                          isChipActive && { fontWeight: '700' }
+                        ]}
+                      >
+                        {chip}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* ── 4. Service Location Card ── */}
+            <View style={styles.sectionWrap}>
+              <View style={[styles.locationCard, { borderColor: palette.border }]}>
+                <View style={[styles.locationIconWrap, { backgroundColor: alpha(activeColor, 0.14) }]}>
+                  <MapPin size={18} color={activeColor} strokeWidth={2.3} />
+                </View>
+
+                <View style={styles.locationDetails}>
+                  <Text style={[styles.locationAddressText, { color: palette.textPrimary }]} numberOfLines={1}>
+                    {formatCleanAddress(address) || 'Detecting location...'}
+                  </Text>
+                  <Text style={[styles.locationSubText, { color: palette.textSecondary }]}>
+                    {t('jobCreation.serviceLocationSub', 'Service location')}
                   </Text>
                 </View>
-              </GlassInput>
-            </Animated.View>
 
-            {/* ── Location Selector (Required) ── */}
-            <Animated.View entering={FadeInDown.delay(260).duration(600)}>
-              <LocationSelector
-                address={address}
-                latitude={latitude}
-                longitude={longitude}
-                isGettingLocation={isGettingLocation}
-                onAddressChange={setAddress}
-                onGetLiveLocation={() => handleGetLiveLocation(false)}
-              />
-            </Animated.View>
+                <TouchableOpacity
+                  style={styles.locationChangeBtn}
+                  onPress={() => {
+                    setTempAddressInput(address);
+                    setShowLocationModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.locationChangeBtnText, { color: activeColor }]}>
+                    {t('common.change', 'Change')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-            {/* ── Optional Details Divider ── */}
-            <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.optionalDividerRow}>
-              <View style={[styles.optionalLine, { backgroundColor: palette.border }]} />
-              <Text style={[styles.optionalDividerText, { color: palette.textSecondary }]}>{t('jobCreation.optionalDetails')}</Text>
-              <View style={[styles.optionalLine, { backgroundColor: palette.border }]} />
-            </Animated.View>
-
-            {/* ── Budget / Urgent Fixed Price Card ── */}
+            {/* ── 5. Mode Dependent Details ── */}
             {isInstant ? (
-              <Animated.View entering={FadeInDown.delay(320).duration(600)}>
-                <UrgentPricingCard
-                  category={title ?? 'General'}
-                  estimatedHours={estimatedHours}
-                  onChangeHours={setEstimatedHours}
-                  amount={amount}
-                  onChangeAmount={setAmount}
-                />
-              </Animated.View>
-            ) : (
-              <Animated.View entering={FadeInDown.delay(320).duration(600)}>
-                <CollapsibleCard
-                  title={t('jobCreation.yourOffer')}
-                  icon={Banknote}
-                  color={palette.success}
-                  summary={budgetSummary}
-                  isExpanded={expandedSections.budget}
-                  onToggle={() => toggleSection('budget')}
-                >
-                  <BudgetInput
-                    amount={amount}
-                    onChangeAmount={setAmount}
-                    hideLabel
-                  />
-                </CollapsibleCard>
-              </Animated.View>
-            )}
-
-            {/* ── Schedule (Collapsible Optional, conditional) ── */}
-            {!isInstant && (
-              <Animated.View entering={FadeInDown.delay(340).duration(500)}>
-                <CollapsibleCard
-                  title={t('jobCreation.visitSchedule')}
-                  icon={Calendar}
-                  color={palette.orange}
-                  summary={scheduleSummary}
-                  isExpanded={expandedSections.schedule}
-                  onToggle={() => toggleSection('schedule')}
-                >
-                  <View style={styles.scheduleRow}>
-                    <TouchableOpacity
-                      style={[styles.scheduleCard, { borderColor: addAlpha(palette.orange, '35'), backgroundColor: palette.orangeMuted }]}
-                      activeOpacity={0.7}
-                      onPress={() => setShowPickerModal(true)}
-                    >
-                      <Calendar size={15} color={palette.orange} strokeWidth={1.5} />
-                      <Text style={[styles.scheduleValue, { color: palette.orange }]}>
-                        {scheduledDate.toLocaleDateString('en-GB')}
+              /* Urgent - Now Details (Hours needed & Fixed price) */
+              <View style={styles.sectionWrap}>
+                <View style={[styles.pricingCard, { borderColor: palette.border }]}>
+                  {/* Hours needed row */}
+                  <View style={styles.hoursRow}>
+                    <View>
+                      <Text style={[styles.hoursTitle, { color: palette.textPrimary }]}>
+                        {t('jobCreation.hoursNeeded', 'Hours needed')}
                       </Text>
-                      <Clock size={13} color={addAlpha(palette.orange, '80')} />
-                    </TouchableOpacity>
+                      <Text style={[styles.hoursRateSub, { color: palette.textSecondary }]}>
+                        {t('jobCreation.hoursRate', 'Rs. {{rate}} / hour', { rate: baseRate })}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.stepperContainer, { borderColor: palette.border }]}>
+                      <TouchableOpacity
+                        style={[styles.stepperBtn, estimatedHours <= 1 && styles.stepperBtnDisabled]}
+                        onPress={() => {
+                          if (estimatedHours > 1) {
+                            setEstimatedHours((h) => h - 1);
+                            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                        }}
+                        disabled={estimatedHours <= 1}
+                      >
+                        <Text style={[styles.stepperBtnText, { color: palette.textPrimary }]}>-</Text>
+                      </TouchableOpacity>
+
+                      <Text style={[styles.stepperValText, { color: palette.textPrimary }]}>
+                        {estimatedHours}
+                      </Text>
+
+                      <TouchableOpacity
+                        style={[styles.stepperBtn, estimatedHours >= 8 && styles.stepperBtnDisabled]}
+                        onPress={() => {
+                          if (estimatedHours < 8) {
+                            setEstimatedHours((h) => h + 1);
+                            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }
+                        }}
+                        disabled={estimatedHours >= 8}
+                      >
+                        <Text style={[styles.stepperBtnText, { color: palette.textPrimary }]}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={[styles.cardDivider, { backgroundColor: palette.border }]} />
+
+                  {/* Fixed price row */}
+                  <View style={styles.fixedPriceRow}>
+                    <View style={styles.fixedPriceLeft}>
+                      <Text style={[styles.fixedPriceTitle, { color: palette.textPrimary }]}>
+                        {t('jobCreation.fixedPriceLabel', 'Fixed price')}
+                      </Text>
+                      <Text style={[styles.fixedPriceSub, { color: palette.textSecondary }]}>
+                        {t('jobCreation.fixedPriceGuarantee', "First Ustad to accept is hired. Price can't change.")}
+                      </Text>
+                    </View>
+
+                    <Text style={[styles.fixedPriceAmount, { color: '#2DD4BF' }]}>
+                      Rs. {fixedPrice.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              /* Book later Details (When date/time & Your budget) */
+              <>
+                {/* When? (Schedule) */}
+                <View style={styles.sectionWrap}>
+                  <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
+                    {t('jobCreation.whenLabel', 'When?')}
+                  </Text>
+
+                  {/* Date pills */}
+                  <View style={styles.pillRow}>
                     <TouchableOpacity
-                      style={[styles.scheduleCard, { borderColor: addAlpha(palette.orange, '35'), backgroundColor: palette.orangeMuted }]}
-                      activeOpacity={0.7}
+                      style={[
+                        styles.chipPill,
+                        selectedDateOption === 'today'
+                          ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                          : [styles.chipPillInactive, { borderColor: palette.border }]
+                      ]}
+                      onPress={() => handleSelectDateOption('today')}
+                    >
+                      <Text style={[styles.chipPillText, selectedDateOption === 'today' ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
+                        {t('jobCreation.today', 'Today')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.chipPill,
+                        selectedDateOption === 'tomorrow'
+                          ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                          : [styles.chipPillInactive, { borderColor: palette.border }]
+                      ]}
+                      onPress={() => handleSelectDateOption('tomorrow')}
+                    >
+                      <Text style={[styles.chipPillText, selectedDateOption === 'tomorrow' ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
+                        {t('jobCreation.tomorrow', 'Tomorrow')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.chipPill,
+                        selectedDateOption === 'custom'
+                          ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                          : [styles.chipPillInactive, { borderColor: palette.border }]
+                      ]}
                       onPress={() => setShowPickerModal(true)}
                     >
-                      <Clock size={15} color={palette.orange} strokeWidth={1.5} />
-                      <Text style={[styles.scheduleValue, { color: palette.orange }]}>{scheduledTime}</Text>
-                      <Clock size={13} color={addAlpha(palette.orange, '80')} />
+                      <Text style={[styles.chipPillText, selectedDateOption === 'custom' ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
+                        {selectedDateOption === 'custom' ? scheduledDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : t('jobCreation.pickDate', 'Pick date')}
+                      </Text>
                     </TouchableOpacity>
                   </View>
-                </CollapsibleCard>
-              </Animated.View>
+
+                  {/* Time pills */}
+                  <View style={[styles.pillRow, { marginTop: 10 }]}>
+                    {['10:00 AM', '2:00 PM', '6:00 PM'].map((slot) => {
+                      const isSelected = selectedTimeSlot === slot;
+                      return (
+                        <TouchableOpacity
+                          key={slot}
+                          style={[
+                            styles.chipPill,
+                            isSelected
+                              ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                              : [styles.chipPillInactive, { borderColor: palette.border }]
+                          ]}
+                          onPress={() => handleSelectTimeSlot(slot)}
+                        >
+                          <Text style={[styles.chipPillText, isSelected ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
+                            {slot}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Your budget */}
+                <View style={styles.sectionWrap}>
+                  <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
+                    {t('jobCreation.yourBudgetLabel', 'Your budget')}
+                  </Text>
+
+                  <View style={[styles.budgetInputCard, { borderColor: palette.border }]}>
+                    <Text style={[styles.budgetCurrencyLabel, { color: palette.textSecondary }]}>PKR</Text>
+                    <TextInput
+                      style={[styles.budgetTextInput, { color: palette.textPrimary }]}
+                      placeholder={t('jobCreation.openToOffers', 'Open to offers')}
+                      placeholderTextColor={palette.textMuted}
+                      keyboardType="numeric"
+                      value={amount}
+                      onChangeText={setAmount}
+                    />
+                  </View>
+
+                  <View style={styles.budgetChipsRow}>
+                    {['500', '1000', '2000'].map((amt) => {
+                      const isSelected = amount === amt;
+                      return (
+                        <TouchableOpacity
+                          key={amt}
+                          style={[
+                            styles.budgetChipBtn,
+                            { borderColor: isSelected ? '#FB923C' : palette.border },
+                            isSelected && { backgroundColor: alpha('#FB923C', 0.15) }
+                          ]}
+                          onPress={() => {
+                            setAmount(isSelected ? '' : amt);
+                            void Haptics.selectionAsync();
+                          }}
+                        >
+                          <Text style={[styles.budgetChipText, { color: isSelected ? '#FB923C' : palette.textSecondary }, isSelected && { fontWeight: '700' }]}>
+                            Rs. {Number(amt).toLocaleString()}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              </>
             )}
 
-            {/* ── Media Evidence Picker (Collapsible Optional) ── */}
-            <Animated.View entering={FadeInDown.delay(380).duration(600)}>
-              <CollapsibleCard
-                title={t('jobCreation.photosOrVideo')}
-                icon={Camera}
-                color={palette.purple}
-                summary={mediaSummary}
-                isExpanded={expandedSections.media}
-                onToggle={() => toggleSection('media')}
+            {/* ── 6. Photos or Video (Optional) ── */}
+            <View style={styles.sectionWrap}>
+              <TouchableOpacity
+                style={[styles.photoCard, { borderColor: palette.border }]}
+                onPress={pickMedia}
+                activeOpacity={0.8}
               >
-                <MediaEvidencePicker
-                  selectedMedia={selectedMedia}
-                  onPickMedia={pickMedia}
-                  onRemoveMedia={removeMedia}
-                  onClearAll={() => setSelectedMedia([])}
-                  hideLabel
-                />
-              </CollapsibleCard>
-            </Animated.View>
+                <View style={[styles.photoIconBox, { backgroundColor: alpha(palette.textSecondary, 0.12) }]}>
+                  <Camera size={18} color={palette.textSecondary} strokeWidth={2} />
+                </View>
+                <Text style={[styles.photoCardText, { color: palette.textSecondary }]}>
+                  {selectedMedia.length > 0
+                    ? `${selectedMedia.length}/5 files attached (Tap to add more)`
+                    : t('jobCreation.addPhotosOrVideo', 'Add photos or a short video (optional)')}
+                </Text>
+              </TouchableOpacity>
 
-            {/* ── Voice Brief Recorder (Collapsible Optional) ── */}
-            <Animated.View entering={FadeInDown.delay(420).duration(600)}>
-              <CollapsibleCard
-                title={t('jobCreation.voiceBrief')}
-                icon={Mic}
-                color={palette.orange}
-                summary={voiceSummary}
-                isExpanded={expandedSections.voice}
-                onToggle={() => toggleSection('voice')}
-              >
-                <VoiceBriefRecorder
-                  isRecording={recorderState.isRecording}
-                  durationMillis={recorderState.durationMillis}
-                  voiceNoteUri={voiceNoteUri}
-                  onStartRecord={startVoiceNote}
-                  onStopRecord={stopVoiceNote}
-                  onRemoveRecord={() => setVoiceNoteUri(null)}
-                  hideLabel
-                />
-              </CollapsibleCard>
-            </Animated.View>
-
-            <View style={styles.scrollBottomSpace} />
+              {/* Thumbnails preview */}
+              {selectedMedia.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbsScroll}>
+                  {selectedMedia.map((asset, index) => (
+                    <View key={index} style={styles.thumbWrapper}>
+                      <Image source={{ uri: asset.uri }} style={styles.thumbImage} />
+                      <TouchableOpacity
+                        style={styles.thumbRemoveBtn}
+                        onPress={() => removeMedia(index)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <X size={11} color="#FFFFFF" strokeWidth={2.5} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
           </ScrollView>
 
-          {/* ── Persistent Submit Panel ── */}
-          <Animated.View 
-            entering={FadeInUp.delay(450).duration(600)} 
+          {/* ── 7. Clean Full-Width Sticky Bottom Button ── */}
+          <View
             style={[
               styles.stickyFooter,
               {
-                backgroundColor: theme.isDark ? 'rgba(4,8,20,0.94)' : alpha(theme.colors.background.elevated, 0.96),
-                borderTopColor: theme.isDark ? 'rgba(0,245,255,0.12)' : theme.colors.border.subtle,
+                backgroundColor: isDark ? 'rgba(8,12,24,0.96)' : 'rgba(255,255,255,0.96)',
+                borderTopColor: palette.border,
+                paddingBottom: Math.max(insets.bottom, 16),
               }
             ]}
           >
-            <View style={styles.completionRow}>
-              <View style={styles.completionCopy}>
-                <View style={styles.completionTitleRow}>
-                  <ShieldCheck size={14} color={completionPercentage === 100 ? palette.success : palette.cyanDim} strokeWidth={2.3} />
-                  <Text style={[styles.completionTitle, { color: palette.textPrimary }]}>{t('jobCreation.requiredDetails')}</Text>
-                </View>
-                <Text style={[styles.completionText, { color: palette.textSecondary }]}>
-                  {t('jobCreation.stepsFilled', { completed: completedStepCount, total: requiredStepCount })}
-                </Text>
-              </View>
-              <Text style={[styles.completionPercent, { color: completionPercentage === 100 ? palette.success : palette.cyan }]}>
-                {completionPercentage}%
-              </Text>
-            </View>
-            <View style={[styles.completionTrack, { backgroundColor: palette.border }]}>
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={handlePostJob}
+              disabled={isSubmitting}
+              style={[
+                styles.bottomActionBtn,
+                {
+                  shadowColor: isInstant ? '#2DD4BF' : '#FB923C',
+                  shadowOpacity: 0.35,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 8,
+                },
+                isSubmitting && { opacity: 0.7 }
+              ]}
+            >
               <LinearGradient
-                colors={completionPercentage === 100 ? [palette.success, palette.cyan] : [palette.cyan, palette.purple]}
+                colors={isInstant ? ['#2DD4BF', '#00E5FF'] : ['#FB923C', '#F97316']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={[styles.completionFill, { width: `${completionPercentage}%` }]}
-              />
-            </View>
-            <Animated.View style={deployBtnStyle}>
-              <TouchableOpacity
-                activeOpacity={0.76}
-                onPress={handlePostJob}
-                disabled={isSubmitting}
-                style={[
-                  styles.submitWrapper,
-                  {
-                    shadowColor: isInstant ? '#007AFF' : '#FF6B00',
-                    shadowOpacity: 0.38,
-                    shadowRadius: 16,
-                    shadowOffset: { width: 0, height: 8 },
-                    elevation: 10,
-                  },
-                  isSubmitting && { opacity: 0.7 }
-                ]}
+                style={styles.bottomActionGradient}
               >
-                <LinearGradient
-                  colors={isInstant
-                    ? ['#00F5FF', '#007AFF', '#7D00FF']
-                    : ['#FF6B00', '#FF8F00', '#FF3D00']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.submitGradient}
-                >
-                  <LinearGradient
-                    colors={['rgba(255, 255, 255, 0.22)', 'rgba(255, 255, 255, 0.0)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={styles.glassHighlight}
-                  />
-
-                  {isSubmitting ? (
-                    <ActivityIndicator color={isInstant ? '#FFFFFF' : '#001014'} size="small" />
-                  ) : (
-                    <View style={styles.submitInner}>
-                      <Send size={18} color={isInstant ? '#FFFFFF' : '#001014'} strokeWidth={2.5} />
-                      <Text style={[styles.submitText, { color: isInstant ? '#FFFFFF' : '#001014' }]}>
-                        {submitLabel}
-                      </Text>
-                    </View>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </Animated.View>
-          </Animated.View>
+                {isSubmitting ? (
+                  <ActivityIndicator color="#001014" size="small" />
+                ) : (
+                  <Text style={styles.bottomActionText}>
+                    {isInstant
+                      ? t('jobCreation.findUstadBtn', 'Find an Ustad - Rs. {{price}}', { price: fixedPrice.toLocaleString() })
+                      : t('jobCreation.postRequestBtn', 'Post request')}
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
 
-        {/* ── Modals ── */}
+        {/* ── Location Edit Modal ── */}
+        <Modal
+          visible={showLocationModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLocationModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: isDark ? '#111527' : '#FFFFFF', borderColor: palette.border }]}>
+              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>
+                {t('jobCreation.serviceLocation', 'Service Location')}
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.modalGpsBtn, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}
+                onPress={() => handleGetLiveLocation(false)}
+                disabled={isGettingLocation}
+              >
+                {isGettingLocation ? (
+                  <ActivityIndicator size="small" color={activeColor} />
+                ) : (
+                  <>
+                    <Target size={16} color={activeColor} />
+                    <Text style={[styles.modalGpsText, { color: activeColor }]}>
+                      {t('jobCreation.useCurrentLocation', 'Use my current location')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <Text style={[styles.modalInputLabel, { color: palette.textSecondary }]}>
+                Or type your address:
+              </Text>
+              <TextInput
+                style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC' }]}
+                placeholder={t('jobCreation.locationPlaceholder', 'House / flat, street, block, area...')}
+                placeholderTextColor={palette.textMuted}
+                multiline
+                value={tempAddressInput}
+                onChangeText={setTempAddressInput}
+              />
+
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  style={[styles.modalCancelBtn, { borderColor: palette.border }]}
+                  onPress={() => setShowLocationModal(false)}
+                >
+                  <Text style={[styles.modalCancelText, { color: palette.textSecondary }]}>
+                    {t('common.cancel', 'Cancel')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalSaveBtn, { backgroundColor: activeColor }]}
+                  onPress={() => {
+                    if (tempAddressInput.trim()) {
+                      setAddress(tempAddressInput.trim());
+                    }
+                    setShowLocationModal(false);
+                  }}
+                >
+                  <Text style={styles.modalSaveText}>
+                    {t('common.done', 'Done')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ── Confirmation Modal ── */}
         <ConfirmModal
           visible={confirmVisible}
           onConfirm={handleConfirmSubmit}
           onCancel={closeConfirm}
-          title={isInstant ? t('jobCreation.postUrgentConfirmQuestion') : t('jobCreation.postJobConfirmQuestion')}
-          message={isInstant 
-            ? t('jobCreation.postUrgentAlertConfirm', { price: (amount && Number(amount) > 0 ? parseFloat(amount) : calculateUrgentPrice(title ?? 'General', estimatedHours)).toLocaleString() })
-            : t('jobCreation.postJobAlertConfirm')
+          title={isInstant ? t('jobCreation.postUrgentTitle') : t('jobCreation.postServiceTitle')}
+          message={
+            isInstant
+              ? t('jobCreation.postUrgentConfirm', { price: fixedPrice.toLocaleString() })
+              : t('jobCreation.postServiceConfirm')
           }
-          confirmText={t('jobCreation.yesPostJob')}
+          confirmText={isInstant ? `Find Ustad - Rs. ${fixedPrice.toLocaleString()}` : 'Post Request'}
           cancelText={t('jobCreation.cancel')}
           isLoading={isConfirming}
-          confirmColor={isInstant ? palette.cyan : palette.orange}
+          confirmColor={activeColor}
         />
+
+        {/* ── Success Modal ── */}
         <AlertModal
           visible={showSuccessModal}
           onDismiss={handleSuccessModalDismiss}
-          title={t('jobCreation.successTitle')}
+          title={t('jobCreation.successTitle', 'REQUEST SENT!')}
           type="success"
-          buttonText={t('common.done')}
-          message={isInstant 
-            ? t('jobCreation.successModalUrgentDesc') 
-            : t('jobCreation.successModalScheduledDesc')
+          buttonText={t('common.done', 'Done')}
+          message={
+            isInstant
+              ? t('jobCreation.successModalUrgentDesc', 'Your urgent request has been sent to nearby Ustads!\n\nThe first Ustad who accepts will get the job right away.')
+              : t('jobCreation.successModalScheduledDesc', 'Your job has been posted! Nearby Ustads will check it and send you their rates shortly.')
           }
         />
 
@@ -922,7 +1029,7 @@ export default function JobCreationScreen() {
         <SchedulePickerModal
           visible={showPickerModal}
           onDismiss={() => setShowPickerModal(false)}
-          onSave={handleScheduleSave}
+          onSave={handleCustomScheduleSave}
           initialDate={scheduledDate}
           initialTime={scheduledTime}
         />
@@ -932,248 +1039,486 @@ export default function JobCreationScreen() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   keyboardAvoider: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
 
-  // Header
+  // 1. Header
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 14,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  headerEyebrow: {
-    fontSize: 9, fontWeight: '800', letterSpacing: 3,
-    color: P.textMuted, marginBottom: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
   },
   headerTitle: {
-    fontSize: 16, fontWeight: '800', color: P.textPrimary, letterSpacing: 0.3,
-  },
-  liveIndicator: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 9, paddingVertical: 5,
-    borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-  },
-  liveDot: {
-    width: 6, height: 6, borderRadius: 3,
-  },
-  liveText: { fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
-
-  // Scroll
-  scroll: { paddingHorizontal: 20, paddingTop: 4 },
-  scrollBottomSpace: { height: 22 },
-
-  // Mission Card
-  missionCard: {
-    borderRadius: 20, overflow: 'hidden',
-    borderWidth: 1, marginBottom: 26,
-  },
-  missionCardGradient: { padding: 18 },
-  missionCardInner: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16,
-  },
-  categoryIcon: {
-    width: 54, height: 54, borderRadius: 16,
-    borderWidth: 1.5, overflow: 'hidden',
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  missionMeta: { flex: 1 },
-  missionEyebrow: {
-    fontSize: 9, fontWeight: '800', letterSpacing: 2, marginBottom: 3,
-  },
-  missionName: {
-    fontSize: 19, fontWeight: '800', color: P.white,
-  },
-  missionSub: {
-    fontSize: 11, color: P.textSecondary, fontWeight: '600',
-    marginTop: 3, letterSpacing: 0.3,
-  },
-  statsRow: {
-    flexDirection: 'row', gap: 10,
-    paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
-  },
-  statDivider: {
-    width: 1,
-    marginVertical: 5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    fontSize: 19,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    flex: 1,
   },
 
-  // Section
-  section: { marginBottom: 24 },
+  // 2. Mode Selector Pill Toggle
+  modeToggleRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  modePill: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  modePillActive: {},
+  modePillInactive: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  modePillText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modePillTextActive: {
+    color: '#001014',
+    fontWeight: '800',
+  },
 
-  // Text Area
+  // Section Wrap
+  sectionWrap: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 10,
+    letterSpacing: 0.1,
+  },
+
+  // 3. What Needs Fixing Card
+  inputCard: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
+  },
   textArea: {
-    fontSize: 15, color: P.textPrimary,
-    minHeight: 110, padding: 16,
-    fontWeight: '500', lineHeight: 22,
+    fontSize: 15,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    padding: 0,
+    marginBottom: 10,
   },
-  inputFooter: {
-    paddingHorizontal: 16, paddingBottom: 12,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
-  inputHint: { flex: 1, fontSize: 10, color: P.textMuted, fontWeight: '600' },
-  charCount: { fontSize: 11, color: P.textMuted, fontWeight: '600' },
-
-  // Schedule
-  scheduleRow: { flexDirection: 'row', gap: 12 },
-  scheduleCard: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 14, borderWidth: 1,
-    paddingHorizontal: 13, paddingVertical: 13,
-  },
-  scheduleValue: {
-    flex: 1, fontSize: 13, fontWeight: '700',
-  },
-
-  // Persistent submit panel
-  stickyFooter: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 10,
-    gap: 10,
-    backgroundColor: 'rgba(4,8,20,0.94)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,245,255,0.12)',
-  },
-  completionRow: {
+  inputCardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  completionCopy: { gap: 2 },
-  completionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  completionTitle: {
-    fontSize: 11,
-    color: P.textPrimary,
-    fontWeight: '800',
+  voiceStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  completionText: {
-    fontSize: 10,
-    color: P.textSecondary,
+  voiceStatusText: {
+    fontSize: 12,
     fontWeight: '600',
   },
-  completionPercent: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  completionTrack: {
-    height: 3,
-    borderRadius: 2,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  completionFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  submitWrapper: {
-    borderRadius: 18,
-    overflow: 'visible',
-  },
-  submitGradient: {
-    minHeight: 56,
-    borderRadius: 18,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  glassHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '45%',
-  },
-  submitInner: {
+  recordingStatusWrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  pulseDotRed: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+  },
+  recordingTimerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+  micCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    paddingHorizontal: 24,
+    marginLeft: 'auto',
   },
-  submitText: {
-    fontSize: 15,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    textShadowColor: 'rgba(0, 0, 0, 0.25)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+
+  // Quick chips
+  quickChipsScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
   },
-  // Collapsible Card styles
-  collapsibleContainer: {
-    backgroundColor: P.surfaceRaised,
+  quickChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+  },
+  quickChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // 4. Location Card
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: P.border,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  collapsibleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+    padding: 14,
     gap: 12,
   },
-  collapsibleIconWrap: {
-    width: 34,
-    height: 34,
+  locationIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationDetails: {
+    flex: 1,
+  },
+  locationAddressText: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  locationSubText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  locationChangeBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  locationChangeBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  // 5. Urgent Pricing Card (Hours & Fixed Price)
+  pricingCard: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  hoursTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  hoursRateSub: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 4,
+    gap: 10,
+  },
+  stepperBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  stepperBtnDisabled: {
+    opacity: 0.35,
+  },
+  stepperBtnText: {
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  stepperValText: {
+    fontSize: 15,
+    fontWeight: '800',
+    minWidth: 16,
+    textAlign: 'center',
+  },
+  cardDivider: {
+    height: 1,
+    marginVertical: 14,
+  },
+  fixedPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fixedPriceLeft: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  fixedPriceTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  fixedPriceSub: {
+    fontSize: 11,
+    fontWeight: '500',
+    lineHeight: 15,
+  },
+  fixedPriceAmount: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+
+  // 5. Book Later: Date & Time Pills
+  pillRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  chipPill: {
+    flex: 1,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  chipPillActive: {},
+  chipPillInactive: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  chipPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  chipPillTextActive: {
+    color: '#001014',
+    fontWeight: '800',
+  },
+
+  // Book Later: Budget
+  budgetInputCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    height: 50,
+  },
+  budgetCurrencyLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginRight: 10,
+  },
+  budgetTextInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  budgetChipsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  budgetChipBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+  },
+  budgetChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // 6. Photos/Video
+  photoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+  },
+  photoIconBox: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  collapsibleHeaderText: {
-    flex: 1,
-    gap: 2,
-  },
-  collapsibleTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  collapsibleSummary: {
-    fontSize: 11,
-    color: P.textSecondary,
+  photoCardText: {
+    fontSize: 13,
     fontWeight: '600',
+    flex: 1,
   },
-  collapsibleRight: {
+  thumbsScroll: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  thumbWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbRemoveBtn: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // 7. Sticky Bottom Action
+  stickyFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  bottomActionBtn: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  bottomActionGradient: {
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomActionText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#001014',
+    letterSpacing: 0.3,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  collapsibleContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.04)',
-    paddingTop: 16,
+  modalCard: {
+    width: '100%',
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
   },
-  optionalDividerRow: {
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 16,
+  },
+  modalGpsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+    marginBottom: 14,
+  },
+  modalGpsText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalInputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  modalTextInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 70,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
-    marginBottom: 20,
-    paddingHorizontal: 4,
   },
-  optionalLine: {
+  modalCancelBtn: {
     flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  optionalDividerText: {
-    fontSize: 10,
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSaveText: {
+    fontSize: 14,
     fontWeight: '800',
-    color: P.textSecondary,
-    letterSpacing: 2.5,
+    color: '#001014',
   },
 });

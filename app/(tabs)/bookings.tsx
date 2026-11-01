@@ -114,9 +114,11 @@ export default function BookingsTab() {
   const isLoading = loadingBookings || (loadingJobs && !isWorker);
   const isRefetching = isRefetchingBookings || isRefetchingJobs;
 
-  const handleRefresh = useCallback(() => {
-    refetchBookings();
-    if (!isWorker) refetchJobs();
+  const handleRefresh = useCallback(async () => {
+    await Promise.allSettled([
+      refetchBookings(),
+      !isWorker ? refetchJobs() : Promise.resolve(),
+    ]);
   }, [isWorker, refetchBookings, refetchJobs]);
 
   useEffect(() => {

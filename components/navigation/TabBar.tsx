@@ -10,27 +10,38 @@ import Animated, {
   withTiming
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Home, ClipboardList, Wallet, User } from 'lucide-react-native';
+import { Home, ClipboardList, Wallet, User, Compass } from 'lucide-react-native';
 import { useTheme } from '../../constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const TAB_BAR_WIDTH = width - 40;
-const TAB_WIDTH = TAB_BAR_WIDTH / 4;
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme();
-  const translateX = useSharedValue(state.index * TAB_WIDTH);
   const insets = useSafeAreaInsets();
 
+  const visibleRoutes = state.routes.filter((route) => {
+    const opts = descriptors[route.key]?.options as any;
+    return opts?.href !== null && opts?.tabBarItemStyle?.display !== 'none';
+  });
+
+  const numTabs = visibleRoutes.length || 4;
+  const tabWidth = TAB_BAR_WIDTH / numTabs;
+  const activeRoute = state.routes[state.index];
+  const activeVisibleIndex = visibleRoutes.findIndex((r) => r.key === activeRoute?.key);
+
+  const translateX = useSharedValue(Math.max(0, activeVisibleIndex) * tabWidth);
+
   useEffect(() => {
-    translateX.value = withSpring(state.index * TAB_WIDTH, {
+    const targetIndex = activeVisibleIndex >= 0 ? activeVisibleIndex : 0;
+    translateX.value = withSpring(targetIndex * tabWidth, {
       damping: 20,
       stiffness: 150,
       mass: 0.8
     });
-  }, [state.index]);
+  }, [activeVisibleIndex, tabWidth]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -75,6 +86,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           style={[
             styles.activeIndicator,
             {
+              width: tabWidth - 12,
               backgroundColor: theme.colors.tabBar.activeBackground,
               borderColor: theme.colors.tabBar.activeBorder,
             },
@@ -83,8 +95,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         />
 
         <View style={styles.tabsRow}>
-          {state.routes.map((route, index) => {
-            const isFocused = state.index === index;
+          {visibleRoutes.map((route) => {
+            const isFocused = activeRoute?.key === route.key;
 
             return (
               <TabItem
@@ -143,6 +155,7 @@ function TabItem({
     const size = 20;
     switch (routeName) {
       case 'index': return <Home size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
+      case 'jobs': return <Compass size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
       case 'bookings': return <ClipboardList size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
       case 'wallet': return <Wallet size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
       case 'profile': return <User size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
@@ -153,6 +166,7 @@ function TabItem({
   const getLabel = () => {
     switch (routeName) {
       case 'index': return t('tabs.home');
+      case 'jobs': return t('tabs.jobs', 'Find Jobs');
       case 'bookings': return t('tabs.bookings');
       case 'wallet': return t('tabs.wallet');
       case 'profile': return t('tabs.profile');
@@ -206,7 +220,6 @@ const styles = StyleSheet.create({
   },
   activeIndicator: {
     position: 'absolute',
-    width: TAB_WIDTH - 12,
     height: 52,
     borderRadius: 26,
     left: 6,

@@ -7,6 +7,8 @@ export {
   useBookings,
   useMyBookings,
   useClientHomeSummary,
+  useWorkerHomeSummary,
+  useMissedJobs,
   useWorkerBookings,
   useBookingDetails,
   useWorkerReviews,
@@ -35,6 +37,8 @@ export {
   type BookingPerson,
   type ClientHomeSummary,
   type ClientHomeStats,
+  type WorkerHomeSummary,
+  type WorkerHomeStats,
 } from './queries/useData';
 
 export {

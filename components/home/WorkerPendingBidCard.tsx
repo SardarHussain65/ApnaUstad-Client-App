@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
-  Banknote,
-  BriefcaseBusiness,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Hourglass,
   MapPin,
-  Radar,
   Zap,
 } from 'lucide-react-native';
 import { Bid, Job } from '../../hooks/queries/useMessagesAndJobs';
@@ -24,9 +23,6 @@ interface WorkerPendingBidCardProps {
   onWithdraw: (bid: Bid) => void;
   isWithdrawing?: boolean;
 }
-
-const withAlpha = (color: string, alpha: string) =>
-  color.startsWith('#') && color.length === 7 ? `${color}${alpha}` : color;
 
 const initialsFor = (name?: string) => {
   if (!name?.trim()) return 'CL';
@@ -61,52 +57,63 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const shadows = useThemeShadows();
+
   const job = useMemo(() => getJobFromBid(bid), [bid]);
   const meta = bid.cardMeta;
-  const workerPerson = bid.worker && typeof bid.worker === 'object' ? bid.worker : null;
   const customer = job?.customer && typeof job.customer === 'object' ? job.customer : null;
   const rawAccent = meta?.statusInfo?.accentColor || colors.worker;
   const accentColor = getAccessibleColor(rawAccent, theme.isDark);
   const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
-  const MissionIcon = isInstant ? Zap : CalendarDays;
+
   const clientName = meta?.counterParty?.fullName || customer?.fullName || t('common.client', 'Customer');
-  const clientRole = (!meta?.counterParty?.roleLabel || meta?.counterParty?.roleLabel === 'Client' || meta?.counterParty?.roleLabel === 'Customer')
-    ? t('common.client', 'Customer')
-    : meta.counterParty.roleLabel;
   const clientAvatar = meta?.primaryImageUrl || meta?.counterParty?.profileImage || customer?.profileImage || '';
   const completedJobs = Number(meta?.counterParty?.completedJobs || 0);
+
   const title = meta?.title || job?.category || t('home.worker.pendingJob', 'Open Job');
-  const description = meta?.description || job?.description || bid.message || t('home.worker.waitingClientReview', 'Waiting for the customer to check your rate.');
-  const missionKindLabel = isInstant ? t('home.worker.instant', 'URGENT') : t('home.worker.scheduled', 'LATER');
+  const description = meta?.description || job?.description || bid.message || '';
+
   const rawDateLabel = meta?.schedule?.dateLabel || fallbackDate(job?.scheduledDate);
   const dateLabel = rawDateLabel === 'Today' ? t('common.today', 'Today') : rawDateLabel;
   const rawTimeLabel = meta?.schedule?.timeLabel || job?.scheduledTime || 'ASAP';
   const timeLabel = rawTimeLabel === 'ASAP' ? t('common.asap', 'Right Away') : rawTimeLabel;
-  const locationLabel = meta?.location?.address || job?.address || t('incomingJobModal.serviceLocation', 'Job Address');
+
+  // Clean location by stripping Google plus codes (e.g. "J3VF+58W, Rawalpindi" -> "Rawalpindi")
+  const rawAddress = meta?.location?.address || job?.address || '';
+  const cleanLocation = useMemo(() => {
+    if (!rawAddress) return t('incomingJobModal.serviceLocation', 'Nearby service area');
+    const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+    const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length > 2) {
+      return `${parts[0]}, ${parts[parts.length - 1]}`;
+    }
+    return cleaned || rawAddress;
+  }, [rawAddress, t]);
+
   const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
   const statusLabel = bid.status === 'pending' || !meta?.statusInfo?.label
     ? t('pendingBidDetails.awaitingClient', 'Waiting for customer')
     : meta.statusInfo.label;
 
+  const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
+
   const gradientColors: [string, string, string] = [
-    alpha(accentColor, theme.isDark ? 0.2 : 0.05),
-    alpha(theme.colors.background.screen, theme.isDark ? 0.9 : 0.98),
-    alpha(theme.colors.brand.primary, theme.isDark ? 0.09 : 0.03),
+    alpha(accentColor, theme.isDark ? 0.16 : 0.05),
+    alpha(theme.colors.background.screen, theme.isDark ? 0.92 : 0.98),
+    alpha(theme.colors.brand.primary, theme.isDark ? 0.07 : 0.02),
   ];
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 90).duration(520)}>
+    <Animated.View entering={FadeInDown.delay(index * 90).duration(450)}>
       <TouchableOpacity
-        activeOpacity={0.85}
+        activeOpacity={0.84}
         onPress={() => onDetails(bid)}
         style={[
           styles.card,
           {
-            borderColor: theme.isDark ? alpha(accentColor, 0.35) : theme.colors.border.subtle,
-            borderTopColor: theme.isDark ? alpha(accentColor, 0.4) : theme.colors.border.subtle,
-            borderLeftColor: theme.isDark ? alpha(accentColor, 0.3) : theme.colors.border.subtle,
-            shadowColor: theme.isDark ? accentColor : theme.colors.shadow.color,
-            backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.9) : theme.colors.surface.card,
+            borderColor: theme.isDark ? alpha(accentColor, 0.28) : theme.colors.border.subtle,
+            borderLeftColor: accentColor,
+            borderLeftWidth: 3.5,
+            backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.92) : theme.colors.surface.card,
           },
           shadows.bevel,
         ]}
@@ -117,78 +124,109 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.accentGlow, { backgroundColor: alpha(accentColor, theme.isDark ? 0.15 : 0.04) }]} />
-        <View style={[styles.accentLine, { backgroundColor: accentColor }]} />
 
+        {/* ── Row 1: Service Title + Urgent Badge & Status Badge ── */}
         <View style={styles.topRow}>
-          <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(accentColor, 0.45) : theme.colors.border.subtle }]}>
-            {clientAvatar ? (
-              <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
-            ) : (
-              <LinearGradient
-                colors={[alpha(accentColor, 0.45), alpha(theme.colors.brand.primary, 0.15)]}
-                style={styles.avatarFallback}
-              >
-                <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{initialsFor(clientName)}</Text>
-              </LinearGradient>
+          <View style={styles.titleArea}>
+            <Text
+              style={[styles.serviceTitle, typography.threeD, { color: theme.colors.text.primary }]}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            {isInstant && (
+              <View style={[styles.urgentBadge, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.3) }]}>
+                <Zap size={10} color={colors.worker} strokeWidth={2.6} />
+                <Text style={[styles.urgentBadgeText, { color: colors.worker }]}>
+                  {t('home.worker.instant', 'Urgent')}
+                </Text>
+              </View>
             )}
           </View>
 
-          <View style={styles.identityBlock}>
-            <Text style={[styles.personRole, { color: theme.colors.text.muted }]}>{clientRole}</Text>
-            <Text style={[styles.personName, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{clientName}</Text>
-            <Text style={[styles.clientHistory, { color: alpha(theme.colors.text.primary, 0.42) }]} numberOfLines={1}>
-              {completedJobs > 0 ? t('incomingJobModal.jobsCompletedCount', '{{count}} completed jobs', { count: completedJobs }) : t('home.worker.proposalSubmitted', 'Proposal submitted')}
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                borderColor: alpha(accentColor, 0.35),
+                backgroundColor: alpha(accentColor, 0.1),
+              },
+            ]}
+          >
+            <Hourglass size={11} color={accentColor} strokeWidth={2.5} />
+            <Text style={[styles.statusText, { color: accentColor }]} numberOfLines={1}>
+              {statusLabel}
+            </Text>
+          </View>
+        </View>
+
+        {/* ── Row 2: Customer Identity & Schedule ── */}
+        <View style={styles.middleRow}>
+          <View style={styles.customerGroup}>
+            <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(accentColor, 0.35) : theme.colors.border.subtle }]}>
+              {clientAvatar ? (
+                <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
+              ) : (
+                <LinearGradient
+                  colors={[alpha(accentColor, 0.4), alpha(theme.colors.brand.primary, 0.18)]}
+                  style={styles.avatarFallback}
+                >
+                  <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>
+                    {initialsFor(clientName)}
+                  </Text>
+                </LinearGradient>
+              )}
+            </View>
+            <View style={styles.customerMeta}>
+              <Text style={[styles.customerName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                {clientName}
+              </Text>
+              {completedJobs > 0 && (
+                <Text style={[styles.customerHistory, { color: theme.colors.text.muted }]}>
+                  {t('incomingJobModal.jobsCompletedCount', '{{count}} completed jobs', { count: completedJobs })}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.scheduleGroup}>
+            <CalendarDays size={11} color={theme.colors.text.muted} strokeWidth={2.2} />
+            <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{dateLabel}</Text>
+            <View style={[styles.scheduleDot, { backgroundColor: alpha(theme.colors.text.muted, 0.45) }]} />
+            <Clock3 size={11} color={theme.colors.text.muted} strokeWidth={2.2} />
+            <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{timeLabel}</Text>
+          </View>
+        </View>
+
+        {/* ── Optional Problem Description Preview ── */}
+        {Boolean(description && description.trim()) && (
+          <Text
+            style={[styles.descriptionText, { color: theme.colors.text.muted }]}
+            numberOfLines={1}
+          >
+            {description}
+          </Text>
+        )}
+
+        {/* ── Row 3 / Footer: Clean Location (left) & Quoted Rate + Action (right) ── */}
+        <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, 0.07) }]}>
+          <View style={styles.locationGroup}>
+            <MapPin size={12} color={theme.colors.text.muted} strokeWidth={2.2} />
+            <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+              {cleanLocation}
             </Text>
           </View>
 
-          <View style={[styles.statusBadge, { borderColor: alpha(accentColor, 0.4), backgroundColor: alpha(accentColor, 0.1) }]}>
-            <Hourglass size={11} color={accentColor} strokeWidth={2.6} />
-            <Text style={[styles.statusText, { color: accentColor }]} numberOfLines={1}>{statusLabel}</Text>
-          </View>
-        </View>
-
-        <View style={styles.serviceRow}>
-          <View style={[styles.serviceIcon, { borderColor: alpha(colors.cyan, 0.25), backgroundColor: alpha(colors.cyan, 0.05) }]}>
-            <BriefcaseBusiness size={18} color={colors.cyan} strokeWidth={2.4} />
-          </View>
-          <View style={styles.serviceCopy}>
-            <Text style={[styles.category, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>{title}</Text>
-            <Text style={[styles.description, { color: theme.colors.text.muted }]} numberOfLines={2}>{description}</Text>
-          </View>
-        </View>
-
-        <View style={styles.metaGrid}>
-          <View style={styles.metaPill}>
-            <MissionIcon size={13} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.4} />
-            <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={1}>{missionKindLabel}</Text>
-          </View>
-          <View style={styles.metaPill}>
-            <CalendarDays size={13} color={colors.cyan} strokeWidth={2.4} />
-            <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={1}>{dateLabel}</Text>
-          </View>
-          <View style={styles.metaPill}>
-            <Clock3 size={13} color={colors.worker} strokeWidth={2.4} />
-            <Text style={[styles.metaText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={1}>{timeLabel}</Text>
-          </View>
-        </View>
-
-        <View style={[styles.locationRow, { borderColor: alpha(theme.colors.text.primary, 0.08), backgroundColor: alpha(theme.colors.background.screen, 0.12) }]}>
-          <MapPin size={14} color={theme.colors.text.muted} strokeWidth={2.2} />
-          <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>{locationLabel}</Text>
-        </View>
-
-        <View style={styles.offerRow}>
-          <View style={[styles.amountBox, { borderColor: alpha(colors.success, 0.2), backgroundColor: alpha(colors.success, 0.06) }]}>
-            <Banknote size={14} color={colors.success} strokeWidth={2.4} />
-            <View>
-              <Text style={[styles.amountLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('pendingBidDetails.yourQuote', 'Your rate')}</Text>
-              <Text style={[styles.amountValue, { color: colors.success }]}>{amountText}</Text>
+          <View style={styles.footerRight}>
+            <View style={styles.priceContainer}>
+              <Text style={[styles.priceLabel, { color: alpha(theme.colors.text.primary, 0.52) }]}>
+                {t('pendingBidDetails.yourQuote', 'Your rate')}
+              </Text>
+              <Text style={[styles.priceValue, { color: colors.success }]}>
+                {amountText}
+              </Text>
             </View>
-          </View>
-          <View style={[styles.sentState, { borderColor: alpha(colors.cyan, 0.15), backgroundColor: alpha(colors.cyan, 0.05) }]}>
-            <Radar size={14} color={colors.cyan} strokeWidth={2.4} />
-            <Text style={[styles.sentText, { color: colors.cyan }]}>{t('pendingBidDetails.interestSent', 'Offer sent')}</Text>
+            <ChevronIcon size={15} color={alpha(theme.colors.text.primary, 0.36)} strokeWidth={2.4} />
           </View>
         </View>
       </TouchableOpacity>
@@ -202,194 +240,162 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    marginBottom: 14,
-    padding: 14,
-  },
-  accentGlow: {
-    position: 'absolute',
-    width: 126,
-    height: 126,
-    borderRadius: 63,
-    right: -45,
-    top: -54,
-  },
-  accentLine: {
-    position: 'absolute',
-    start: 0,
-    top: 18,
-    bottom: 18,
-    width: 3,
-    borderTopRightRadius: 4,
-    borderBottomRightRadius: 4,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 13,
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 9,
   },
-  avatarShell: {
-    width: 50,
-    height: 50,
-    borderRadius: 18,
-    borderWidth: 1.4,
-    padding: 3,
-    backgroundColor: alpha('#fff', 0.04),
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 14,
-    backgroundColor: alpha('#fff', 0.05),
-  },
-  avatarFallback: {
+  titleArea: {
     flex: 1,
-    borderRadius: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  identityBlock: {
-    flex: 1,
+    gap: 7,
     minWidth: 0,
   },
-  personRole: {
-    fontSize: 9,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  serviceTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    flexShrink: 1,
   },
-  personName: {
-    fontSize: 15,
-    fontWeight: '900',
-    marginTop: 2,
+  urgentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
   },
-  clientHistory: {
+  urgentBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
-    marginTop: 3,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     paddingHorizontal: 8,
-    paddingVertical: 5,
-    maxWidth: 126,
+    paddingVertical: 4,
+    flexShrink: 0,
   },
   statusText: {
-    fontSize: 9,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    padding: 11,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  serviceIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  serviceCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  category: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  description: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    marginTop: 3,
-  },
-  metaGrid: {
-    flexDirection: 'row',
-    gap: 7,
-    marginBottom: 9,
-  },
-  metaPill: {
-    flex: 1,
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 7,
-    borderRadius: 13,
-    borderWidth: 1,
-  },
-  metaText: {
-    flexShrink: 1,
     fontSize: 10,
     fontWeight: '800',
   },
-  locationRow: {
-    minHeight: 38,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 13,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    marginBottom: 10,
-  },
-  locationText: {
-    flex: 1,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  offerRow: {
+  middleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 9,
+    gap: 10,
+    marginBottom: 7,
   },
-  amountBox: {
+  customerGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderRadius: 15,
+    flex: 1,
+    minWidth: 0,
+  },
+  avatarShell: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    overflow: 'hidden',
+    backgroundColor: alpha('#fff', 0.05),
   },
-  amountLabel: {
-    fontSize: 8,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
-  amountValue: {
-    fontSize: 14,
-    fontWeight: '900',
+  avatarFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  customerMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  customerName: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  customerHistory: {
+    fontSize: 9,
+    fontWeight: '600',
     marginTop: 1,
   },
-  sentState: {
+  scheduleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    gap: 4,
+    flexShrink: 0,
   },
-  sentText: {
-    fontSize: 10,
-    fontWeight: '900',
+  scheduleText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  scheduleDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    marginHorizontal: 2,
+  },
+  descriptionText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    gap: 10,
+  },
+  locationGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+    minWidth: 0,
+  },
+  locationText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    flexShrink: 0,
+  },
+  priceContainer: {
+    alignItems: 'flex-end',
+  },
+  priceLabel: {
+    fontSize: 8,
+    fontWeight: '800',
     textTransform: 'uppercase',
+  },
+  priceValue: {
+    fontSize: 13,
+    fontWeight: '900',
   },
 });

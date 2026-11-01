@@ -198,7 +198,25 @@ export interface ClientHomeStats {
 }
 
 export interface ClientHomeSummary {
+  activeBooking?: Booking | null;
   stats: ClientHomeStats;
+  recentBookings: Booking[];
+}
+
+export interface WorkerHomeStats {
+  revenue: number;
+  rating: number;
+  missions: number;
+  total: number;
+  completed: number;
+  successRate: number;
+  successRateLabel: string;
+  activeCount: number;
+}
+
+export interface WorkerHomeSummary {
+  activeBooking?: Booking | null;
+  stats: WorkerHomeStats;
   recentBookings: Booking[];
 }
 
@@ -455,6 +473,7 @@ const fetchClientHomeSummary = async (): Promise<ClientHomeSummary> => {
     params: { recentLimit: 3 },
   });
   return response.data.data || {
+    activeBooking: null,
     stats: {
       total: 0,
       active: 0,
@@ -465,6 +484,31 @@ const fetchClientHomeSummary = async (): Promise<ClientHomeSummary> => {
     },
     recentBookings: [],
   };
+};
+
+const fetchWorkerHomeSummary = async (): Promise<WorkerHomeSummary> => {
+  const response = await api.get('/bookings/worker-home-summary', {
+    params: { recentLimit: 3 },
+  });
+  return response.data.data || {
+    activeBooking: null,
+    stats: {
+      revenue: 0,
+      rating: 0,
+      missions: 0,
+      total: 0,
+      completed: 0,
+      successRate: 0,
+      successRateLabel: '100%',
+      activeCount: 0,
+    },
+    recentBookings: [],
+  };
+};
+
+const fetchMissedJobs = async (): Promise<any[]> => {
+  const response = await api.get('/jobs/missed');
+  return response.data.data || [];
 };
 
 const fetchWorkerBookings = async (): Promise<Booking[]> => {
@@ -610,6 +654,26 @@ export function useClientHomeSummary(options?: Omit<UseQueryOptions<ClientHomeSu
   return useQuery<ClientHomeSummary>({
     queryKey: queryKeys.bookings.homeSummary(),
     queryFn: fetchClientHomeSummary,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useWorkerHomeSummary(options?: Omit<UseQueryOptions<WorkerHomeSummary>, 'queryKey' | 'queryFn'>) {
+  return useQuery<WorkerHomeSummary>({
+    queryKey: ['bookings', 'worker-home-summary'],
+    queryFn: fetchWorkerHomeSummary,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    ...options,
+  });
+}
+
+export function useMissedJobs(options?: Omit<UseQueryOptions<any[]>, 'queryKey' | 'queryFn'>) {
+  return useQuery<any[]>({
+    queryKey: ['jobs', 'missed'],
+    queryFn: fetchMissedJobs,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
     ...options,

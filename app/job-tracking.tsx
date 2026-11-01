@@ -99,6 +99,7 @@ export default function JobTrackingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     bookingId?: string | string[];
+    id?: string | string[];
     customerId?: string | string[];
     workerId?: string | string[];
     latitude?: string | string[];
@@ -107,7 +108,7 @@ export default function JobTrackingScreen() {
   }>();
   const { role } = useAuth();
   const isWorker = role === 'worker';
-  const bookingId = firstParam(params.bookingId);
+  const bookingId = firstParam(params.bookingId) || firstParam(params.id);
   const routeCustomerId = firstParam(params.customerId);
   const routeWorkerId = firstParam(params.workerId);
   const routeLatitude = firstParam(params.latitude);
