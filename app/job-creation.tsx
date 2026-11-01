@@ -25,6 +25,8 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
+  UserRound,
+  Sparkles,
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,6 +43,7 @@ import {
   type RecordingStatus,
 } from 'expo-audio';
 import { useTranslation } from 'react-i18next';
+import { useIsRTL } from '../context/LanguageContext';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { AlertModal, ConfirmModal } from '../components/ui';
@@ -55,21 +58,6 @@ import { calculateUrgentPrice, getRateForCategory } from '../constants/UrgentPri
 type Urgency = 'instant' | 'scheduled';
 type EvidenceAsset = { uri: string; type: 'image' | 'video' };
 
-const CATEGORY_QUICK_CHIPS: Record<string, string[]> = {
-  'AC & Appliances': ['Not cooling', 'Gas refill', 'Water leaking', 'Noisy unit', 'Compressor issue'],
-  'AC Technician': ['Not cooling', 'Gas refill', 'Water leaking', 'Noisy unit', 'Compressor issue'],
-  'Electrician': ['Short circuit', 'Switch replacement', 'Fan installation', 'Wiring issue', 'UPS problem'],
-  'Plumber': ['Pipe leaking', 'Tap replacement', 'Drain blockage', 'Water motor', 'Sanitary fitting'],
-  'Carpenter': ['Door lock repair', 'Hinge repair', 'Furniture assembly', 'Wood polish', 'Cabinet fixing'],
-  'Painter': ['Wall touchup', 'Full room paint', 'Ceiling dampness', 'Door paint', 'Exterior wall'],
-  'Cleaner': ['Deep home cleaning', 'Sofa & carpet wash', 'Kitchen cleaning', 'Water tank', 'Bathroom wash'],
-  'Mason': ['Tile fixing', 'Plaster repair', 'Wall crack', 'Roof seepage', 'Marble grinding'],
-  'Welder': ['Gate repair', 'Grill fixing', 'Railing welding', 'Sheet repair', 'Window frame'],
-  'Solar Panel Services': ['Panel cleaning', 'Inverter issue', 'Wiring inspection', 'Battery check', 'Capacity test'],
-};
-
-const DEFAULT_QUICK_CHIPS = ['Not working', 'Inspection needed', 'Replacement', 'Emergency fix'];
-
 const formatCleanAddress = (rawAddress: string) => {
   if (!rawAddress) return '';
   const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
@@ -82,6 +70,7 @@ export default function JobCreationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const isRTL = useIsRTL();
   const palette = useJobCreationPalette();
   const theme = useTheme();
   const { success, error: showError } = useToast();
@@ -147,9 +136,6 @@ export default function JobCreationScreen() {
   const rateInfo = useMemo(() => getRateForCategory(categoryName), [categoryName]);
   const baseRate = rateInfo.baseRatePerHour;
   const fixedPrice = useMemo(() => calculateUrgentPrice(categoryName, estimatedHours), [categoryName, estimatedHours]);
-
-  // Quick chips
-  const quickChips = useMemo(() => CATEGORY_QUICK_CHIPS[categoryName] || DEFAULT_QUICK_CHIPS, [categoryName]);
 
   // ─── Audio Recorder ─────────────────────────────────────────────────────────
   const handleRecordingStatus = useCallback((status: RecordingStatus) => {
@@ -275,23 +261,6 @@ export default function JobCreationScreen() {
     void Haptics.selectionAsync();
   }, []);
 
-  // ─── Quick Chip Toggle ─────────────────────────────────────────────────────
-  const handleToggleChip = useCallback((chip: string) => {
-    void Haptics.selectionAsync();
-    const hasChip = description.toLowerCase().includes(chip.toLowerCase());
-    if (hasChip) {
-      const regex = new RegExp(`(^|,\\s*)${chip}`, 'i');
-      const updated = description.replace(regex, '').replace(/^,\s*/, '').trim();
-      setDescription(updated);
-    } else {
-      if (!description.trim()) {
-        setDescription(chip);
-      } else {
-        setDescription(`${description.trim()}, ${chip}`);
-      }
-    }
-  }, [description]);
-
   // ─── Date & Time Selection ─────────────────────────────────────────────────
   const handleSelectDateOption = useCallback((option: 'today' | 'tomorrow' | 'custom') => {
     void Haptics.selectionAsync();
@@ -415,8 +384,13 @@ export default function JobCreationScreen() {
         onSuccess: (response) => {
           setConfirmLoading(false);
           closeConfirm();
-          setCreatedJobId(response._id as string);
-          setShowSuccessModal(true);
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          const newId = (response as any)?._id || createdJobId;
+          if (isInstant) {
+            router.replace({ pathname: '/finding-worker', params: { jobId: newId } });
+          } else {
+            router.replace({ pathname: '/bids-list', params: { jobId: newId } });
+          }
         },
         onError: (err: Error) => {
           setConfirmLoading(false);
@@ -467,7 +441,12 @@ export default function JobCreationScreen() {
             style={[styles.backBtn, { borderColor: palette.border }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ArrowLeft color={palette.textPrimary} size={20} strokeWidth={2.2} />
+            <ArrowLeft
+              color={palette.textPrimary}
+              size={20}
+              strokeWidth={2.2}
+              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+            />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: palette.textPrimary }]} numberOfLines={1}>
             {categoryName}
@@ -522,6 +501,22 @@ export default function JobCreationScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Direct Ustad Target Banner (if requested from profile) */}
+            {Boolean(targetWorkerName) && (
+              <View style={[styles.targetWorkerBanner, { borderColor: alpha(activeColor, 0.35), backgroundColor: alpha(activeColor, 0.08) }]}>
+                <UserRound size={16} color={activeColor} strokeWidth={2.4} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.targetWorkerEyebrow, { color: activeColor }]}>
+                    DIRECT REQUEST
+                  </Text>
+                  <Text style={[styles.targetWorkerNameText, { color: palette.textPrimary }]}>
+                    Sending to {targetWorkerName}
+                  </Text>
+                </View>
+                <Sparkles size={16} color={activeColor} />
+              </View>
+            )}
 
             {/* ── 3. Section: What needs fixing? ── */}
             <View style={styles.sectionWrap}>
@@ -583,39 +578,6 @@ export default function JobCreationScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-
-              {/* Quick Problem Tag Chips */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.quickChipsScroll}
-              >
-                {quickChips.map((chip) => {
-                  const isChipActive = description.toLowerCase().includes(chip.toLowerCase());
-                  return (
-                    <TouchableOpacity
-                      key={chip}
-                      style={[
-                        styles.quickChip,
-                        { borderColor: isChipActive ? activeColor : palette.border },
-                        isChipActive && { backgroundColor: alpha(activeColor, 0.15) }
-                      ]}
-                      onPress={() => handleToggleChip(chip)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[
-                          styles.quickChipText,
-                          { color: isChipActive ? activeColor : palette.textSecondary },
-                          isChipActive && { fontWeight: '700' }
-                        ]}
-                      >
-                        {chip}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
             </View>
 
             {/* ── 4. Service Location Card ── */}
@@ -847,10 +809,10 @@ export default function JobCreationScreen() {
                 onPress={pickMedia}
                 activeOpacity={0.8}
               >
-                <View style={[styles.photoIconBox, { backgroundColor: alpha(palette.textSecondary, 0.12) }]}>
-                  <Camera size={18} color={palette.textSecondary} strokeWidth={2} />
+                <View style={[styles.photoIconBox, { backgroundColor: alpha(activeColor, 0.14) }]}>
+                  <Camera size={18} color={activeColor} strokeWidth={2} />
                 </View>
-                <Text style={[styles.photoCardText, { color: palette.textSecondary }]}>
+                <Text style={[styles.photoCardText, { color: palette.textPrimary }]}>
                   {selectedMedia.length > 0
                     ? `${selectedMedia.length}/5 files attached (Tap to add more)`
                     : t('jobCreation.addPhotosOrVideo', 'Add photos or a short video (optional)')}
@@ -1087,11 +1049,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.2,
   },
   modePillActive: {},
   modePillInactive: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
   },
   modePillText: {
     fontSize: 14,
@@ -1102,12 +1064,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  // Direct Target Banner
+  targetWorkerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  targetWorkerEyebrow: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  targetWorkerNameText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
   // Section Wrap
   sectionWrap: {
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     marginBottom: 10,
     letterSpacing: 0.1,
@@ -1115,9 +1100,9 @@ const styles = StyleSheet.create({
 
   // 3. What Needs Fixing Card
   inputCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.2,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 12,
@@ -1172,31 +1157,13 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
 
-  // Quick chips
-  quickChipsScroll: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  quickChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-  },
-  quickChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
   // 4. Location Card
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.2,
     padding: 14,
     gap: 12,
   },
@@ -1216,7 +1183,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   locationSubText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
   },
   locationChangeBtn: {
@@ -1230,9 +1197,9 @@ const styles = StyleSheet.create({
 
   // 5. Urgent Pricing Card (Hours & Fixed Price)
   pricingCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.2,
     padding: 16,
   },
   hoursRow: {
@@ -1252,19 +1219,19 @@ const styles = StyleSheet.create({
   stepperContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.2,
     padding: 4,
     gap: 10,
   },
   stepperBtn: {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   stepperBtnDisabled: {
     opacity: 0.35,
@@ -1283,6 +1250,7 @@ const styles = StyleSheet.create({
   cardDivider: {
     height: 1,
     marginVertical: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   fixedPriceRow: {
     flexDirection: 'row',
@@ -1299,9 +1267,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   fixedPriceSub: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
-    lineHeight: 15,
+    lineHeight: 16,
   },
   fixedPriceAmount: {
     fontSize: 22,
@@ -1324,7 +1292,8 @@ const styles = StyleSheet.create({
   },
   chipPillActive: {},
   chipPillInactive: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
+    borderWidth: 1.2,
   },
   chipPillText: {
     fontSize: 13,
@@ -1339,9 +1308,9 @@ const styles = StyleSheet.create({
   budgetInputCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.2,
     paddingHorizontal: 16,
     height: 50,
   },
@@ -1366,8 +1335,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
+    borderWidth: 1.2,
   },
   budgetChipText: {
     fontSize: 12,
@@ -1378,9 +1347,9 @@ const styles = StyleSheet.create({
   photoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.2,
     padding: 14,
     gap: 12,
   },
