@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {
   ArrowLeft,
+  ArrowRight,
   MapPin,
   Mic,
   Square,
@@ -51,12 +52,38 @@ import { useConfirmModal, useCreateJobMutation, useToast, useUploadJobImagesMuta
 import { useTheme, alpha } from '../constants/Theme';
 import { useJobCreationPalette } from '../components/job-creation/shared';
 import { SchedulePickerModal } from '../components/job-creation/SchedulePickerModal';
-import { calculateUrgentPrice, getRateForCategory } from '../constants/UrgentPricing';
 
 // ─── Types & Constants ────────────────────────────────────────────────────────
 
 type Urgency = 'instant' | 'scheduled';
 type EvidenceAsset = { uri: string; type: 'image' | 'video' };
+
+const CATEGORY_TRANSLATIONS_UR: Record<string, string> = {
+  'cctv & security': 'سی سی ٹی وی کیمرے اور سیکیورٹی',
+  'cctv': 'سی سی ٹی وی کیمرے',
+  'ac & appliances': 'اے سی اور ایپلائینسز',
+  'ac technician': 'اے سی ٹیکنیشن',
+  'electrician': 'الیکٹریشن',
+  'electrical work': 'الیکٹریکل کا کام',
+  'plumber': 'پلمبر',
+  'plumbing': 'پلمبنگ',
+  'carpenter': 'بڑھئی / کارپینٹر',
+  'carpentry & woodwork': 'لکڑی اور فرنیچر کا کام',
+  'painter': 'پینٹر',
+  'painting & renovation': 'رنگ و روغن اور پینٹ',
+  'cleaner': 'صفائی ستھرائی',
+  'home cleaning': 'گھر کی صفائی',
+  'mason': 'معمار / راج مزدور',
+  'mason & construction': 'تعمیراتی کام اور چنائی',
+  'welder': 'ویلڈر',
+  'geyser service': 'گیزر سروس اور مرمت',
+  'handyman services': 'مرمتی کام (ہینڈی مین)',
+  'pest control': 'کیڑے مکوڑے کا خاتمہ (پیسٹ کنٹرول)',
+  'tiling & flooring': 'ٹائل اور فرش کا کام',
+  'internet & networking': 'انٹرنیٹ اور نیٹ ورکنگ',
+  'computer & mobile repair': 'کمپیوٹر اور موبائل مرمت',
+  'solar panel services': 'سولر پینل سروسز',
+};
 
 const formatCleanAddress = (rawAddress: string) => {
   if (!rawAddress) return '';
@@ -101,12 +128,22 @@ export default function JobCreationScreen() {
 
   const categoryName = title ?? 'AC & Appliances';
   const isDark = theme.isDark;
+  const displayCategory = isRTL
+    ? (CATEGORY_TRANSLATIONS_UR[categoryName.toLowerCase().trim()] || categoryName)
+    : categoryName;
+
+  const cardBg = isDark ? 'rgba(14, 20, 38, 0.82)' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.16)' : '#E2E8F0';
+  const inactivePillBg = isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9';
+  const inactivePillBorder = isDark ? 'rgba(255, 255, 255, 0.16)' : '#CBD5E1';
+  const pillTextColor = isDark ? '#CBD5E1' : '#475569';
+  const backBtnBg = isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF';
+  const backBtnBorder = isDark ? 'rgba(255, 255, 255, 0.18)' : '#CBD5E1';
 
   // ─── State ──────────────────────────────────────────────────────────────────
   const [urgency, setUrgency] = useState<Urgency>((urgencyParam as Urgency) || 'instant');
   const [description, setDescription] = useState<string>(initialDescription ?? '');
   const [amount, setAmount] = useState<string>('');
-  const [estimatedHours, setEstimatedHours] = useState<number>(2);
   const [selectedMedia, setSelectedMedia] = useState<EvidenceAsset[]>([]);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
 
@@ -131,11 +168,6 @@ export default function JobCreationScreen() {
 
   const isInstant = urgency === 'instant';
   const activeColor = isInstant ? '#2DD4BF' : '#FB923C';
-
-  // Rate calculations
-  const rateInfo = useMemo(() => getRateForCategory(categoryName), [categoryName]);
-  const baseRate = rateInfo.baseRatePerHour;
-  const fixedPrice = useMemo(() => calculateUrgentPrice(categoryName, estimatedHours), [categoryName, estimatedHours]);
 
   // ─── Audio Recorder ─────────────────────────────────────────────────────────
   const handleRecordingStatus = useCallback((status: RecordingStatus) => {
@@ -305,19 +337,22 @@ export default function JobCreationScreen() {
       return;
     }
 
-    const priceText = isInstant ? `Rs. ${fixedPrice.toLocaleString()}` : (amount ? `Rs. ${amount}` : 'Open to offers');
+    const hasBudget = amount && Number(amount) > 0;
+    const priceText = hasBudget ? `Rs. ${Number(amount).toLocaleString()}` : t('jobCreation.openToOffers', 'Open to offers');
     showConfirm(
       isInstant ? t('jobCreation.postUrgentTitle', 'Confirm Urgent Job') : t('jobCreation.postServiceTitle', 'Post Job Request'),
       isInstant
-        ? t('jobCreation.postUrgentConfirm', { price: fixedPrice.toLocaleString() })
+        ? (hasBudget
+            ? t('jobCreation.postUrgentConfirmBudget', 'Broadcast urgent job for {{price}} to nearby Ustads?', { price: priceText })
+            : t('jobCreation.postUrgentConfirmOpen', 'Broadcast urgent job to nearby Ustads to receive rapid quotes?'))
         : t('jobCreation.postServiceConfirm', 'Your request will be sent to nearby Ustads so they can bid their rates.'),
       handleConfirmSubmit,
       closeConfirm,
-      isInstant ? `Find Ustad - ${priceText}` : 'Post Request',
+      isInstant ? (hasBudget ? `Find Ustad - ${priceText}` : 'Find Ustad Now') : 'Post Request',
       t('jobCreation.keepEditing', 'Go Back'),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, address, isInstant, fixedPrice, amount, t]);
+  }, [description, address, isInstant, amount, t]);
 
   const handleConfirmSubmit = useCallback(async () => {
     setConfirmLoading(true);
@@ -361,15 +396,13 @@ export default function JobCreationScreen() {
       }
 
       const clientOffer = amount && Number(amount) > 0 ? parseFloat(amount) : 0;
-      const finalPrice = isInstant ? fixedPrice : clientOffer;
 
       const payload = {
         category: categoryName,
         description,
         urgency,
         address,
-        amount: finalPrice,
-        estimatedHours: isInstant ? estimatedHours : undefined,
+        amount: clientOffer,
         imageUrls: uploadedImageUrls,
         videoUrls: uploadedVideoUrls,
         audioUrls: uploadedAudioUrls,
@@ -410,9 +443,7 @@ export default function JobCreationScreen() {
     urgency,
     address,
     isInstant,
-    fixedPrice,
     amount,
-    estimatedHours,
     longitude,
     latitude,
     targetWorkerId,
@@ -438,18 +469,17 @@ export default function JobCreationScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={[styles.backBtn, { borderColor: palette.border }]}
+            style={[styles.backBtn, { backgroundColor: backBtnBg, borderColor: backBtnBorder }]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ArrowLeft
-              color={palette.textPrimary}
-              size={20}
-              strokeWidth={2.2}
-              style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-            />
+            {isRTL ? (
+              <ArrowRight color={palette.textPrimary} size={20} strokeWidth={2.4} />
+            ) : (
+              <ArrowLeft color={palette.textPrimary} size={20} strokeWidth={2.4} />
+            )}
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: palette.textPrimary }]} numberOfLines={1}>
-            {categoryName}
+            {displayCategory}
           </Text>
         </View>
 
@@ -470,7 +500,7 @@ export default function JobCreationScreen() {
                   styles.modePill,
                   isInstant
                     ? [styles.modePillActive, { backgroundColor: '#2DD4BF', borderColor: '#2DD4BF' }]
-                    : [styles.modePillInactive, { borderColor: palette.border }]
+                    : [styles.modePillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                 ]}
                 onPress={() => {
                   setUrgency('instant');
@@ -478,8 +508,8 @@ export default function JobCreationScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.modePillText, isInstant ? styles.modePillTextActive : { color: palette.textSecondary }]}>
-                  Urgent - Now
+                <Text style={[styles.modePillText, isInstant ? styles.modePillTextActive : { color: pillTextColor }]}>
+                  {t('jobCreation.urgentNow', 'Urgent - Now')}
                 </Text>
               </TouchableOpacity>
 
@@ -488,7 +518,7 @@ export default function JobCreationScreen() {
                   styles.modePill,
                   !isInstant
                     ? [styles.modePillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
-                    : [styles.modePillInactive, { borderColor: palette.border }]
+                    : [styles.modePillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                 ]}
                 onPress={() => {
                   setUrgency('scheduled');
@@ -496,22 +526,22 @@ export default function JobCreationScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.modePillText, !isInstant ? styles.modePillTextActive : { color: palette.textSecondary }]}>
-                  Book later
+                <Text style={[styles.modePillText, !isInstant ? styles.modePillTextActive : { color: pillTextColor }]}>
+                  {t('jobCreation.bookLater', 'Book later')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Direct Ustad Target Banner (if requested from profile) */}
             {Boolean(targetWorkerName) && (
-              <View style={[styles.targetWorkerBanner, { borderColor: alpha(activeColor, 0.35), backgroundColor: alpha(activeColor, 0.08) }]}>
+              <View style={[styles.targetWorkerBanner, { borderColor: alpha(activeColor, 0.35), backgroundColor: cardBg }]}>
                 <UserRound size={16} color={activeColor} strokeWidth={2.4} />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.targetWorkerEyebrow, { color: activeColor }]}>
-                    DIRECT REQUEST
+                    {t('jobCreation.selectedUstad', 'SELECTED USTAD')}
                   </Text>
                   <Text style={[styles.targetWorkerNameText, { color: palette.textPrimary }]}>
-                    Sending to {targetWorkerName}
+                    {targetWorkerName}
                   </Text>
                 </View>
                 <Sparkles size={16} color={activeColor} />
@@ -525,7 +555,7 @@ export default function JobCreationScreen() {
               </Text>
 
               {/* Text Card with Embedded Mic Button */}
-              <View style={[styles.inputCard, { borderColor: palette.border }]} collapsable={false}>
+              <View style={[styles.inputCard, { backgroundColor: cardBg, borderColor: cardBorder }]} collapsable={false}>
                 <TextInput
                   style={[styles.textArea, { color: palette.textPrimary }]}
                   placeholder={t('jobCreation.describePlaceholder', 'Describe the problem...')}
@@ -545,7 +575,7 @@ export default function JobCreationScreen() {
                     <View style={[styles.voiceStatusPill, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}>
                       <Mic size={13} color={activeColor} strokeWidth={2.5} />
                       <Text style={[styles.voiceStatusText, { color: activeColor }]}>
-                        Voice note attached
+                        {t('jobCreation.voiceBriefAttached', 'Voice message added')}
                       </Text>
                       <TouchableOpacity onPress={() => setVoiceNoteUri(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                         <Trash2 size={13} color="#FF6B63" />
@@ -582,14 +612,14 @@ export default function JobCreationScreen() {
 
             {/* ── 4. Service Location Card ── */}
             <View style={styles.sectionWrap}>
-              <View style={[styles.locationCard, { borderColor: palette.border }]}>
+              <View style={[styles.locationCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
                 <View style={[styles.locationIconWrap, { backgroundColor: alpha(activeColor, 0.14) }]}>
                   <MapPin size={18} color={activeColor} strokeWidth={2.3} />
                 </View>
 
                 <View style={styles.locationDetails}>
                   <Text style={[styles.locationAddressText, { color: palette.textPrimary }]} numberOfLines={1}>
-                    {formatCleanAddress(address) || 'Detecting location...'}
+                    {formatCleanAddress(address) || t('jobCreation.updatingLocation', 'Detecting location...')}
                   </Text>
                   <Text style={[styles.locationSubText, { color: palette.textSecondary }]}>
                     {t('jobCreation.serviceLocationSub', 'Service location')}
@@ -611,201 +641,142 @@ export default function JobCreationScreen() {
               </View>
             </View>
 
-            {/* ── 5. Mode Dependent Details ── */}
-            {isInstant ? (
-              /* Urgent - Now Details (Hours needed & Fixed price) */
+            {/* ── 5. Schedule (Only for Book Later) ── */}
+            {!isInstant && (
               <View style={styles.sectionWrap}>
-                <View style={[styles.pricingCard, { borderColor: palette.border }]}>
-                  {/* Hours needed row */}
-                  <View style={styles.hoursRow}>
-                    <View>
-                      <Text style={[styles.hoursTitle, { color: palette.textPrimary }]}>
-                        {t('jobCreation.hoursNeeded', 'Hours needed')}
-                      </Text>
-                      <Text style={[styles.hoursRateSub, { color: palette.textSecondary }]}>
-                        {t('jobCreation.hoursRate', 'Rs. {{rate}} / hour', { rate: baseRate })}
-                      </Text>
-                    </View>
+                <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
+                  {t('jobCreation.whenLabel', 'When?')}
+                </Text>
 
-                    <View style={[styles.stepperContainer, { borderColor: palette.border }]}>
-                      <TouchableOpacity
-                        style={[styles.stepperBtn, estimatedHours <= 1 && styles.stepperBtnDisabled]}
-                        onPress={() => {
-                          if (estimatedHours > 1) {
-                            setEstimatedHours((h) => h - 1);
-                            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          }
-                        }}
-                        disabled={estimatedHours <= 1}
-                      >
-                        <Text style={[styles.stepperBtnText, { color: palette.textPrimary }]}>-</Text>
-                      </TouchableOpacity>
-
-                      <Text style={[styles.stepperValText, { color: palette.textPrimary }]}>
-                        {estimatedHours}
-                      </Text>
-
-                      <TouchableOpacity
-                        style={[styles.stepperBtn, estimatedHours >= 8 && styles.stepperBtnDisabled]}
-                        onPress={() => {
-                          if (estimatedHours < 8) {
-                            setEstimatedHours((h) => h + 1);
-                            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          }
-                        }}
-                        disabled={estimatedHours >= 8}
-                      >
-                        <Text style={[styles.stepperBtnText, { color: palette.textPrimary }]}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={[styles.cardDivider, { backgroundColor: palette.border }]} />
-
-                  {/* Fixed price row */}
-                  <View style={styles.fixedPriceRow}>
-                    <View style={styles.fixedPriceLeft}>
-                      <Text style={[styles.fixedPriceTitle, { color: palette.textPrimary }]}>
-                        {t('jobCreation.fixedPriceLabel', 'Fixed price')}
-                      </Text>
-                      <Text style={[styles.fixedPriceSub, { color: palette.textSecondary }]}>
-                        {t('jobCreation.fixedPriceGuarantee', "First Ustad to accept is hired. Price can't change.")}
-                      </Text>
-                    </View>
-
-                    <Text style={[styles.fixedPriceAmount, { color: '#2DD4BF' }]}>
-                      Rs. {fixedPrice.toLocaleString()}
+                {/* Date pills */}
+                <View style={styles.pillRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.chipPill,
+                      selectedDateOption === 'today'
+                        ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                        : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
+                    ]}
+                    onPress={() => handleSelectDateOption('today')}
+                  >
+                    <Text style={[styles.chipPillText, selectedDateOption === 'today' ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                      {t('jobCreation.today', 'Today')}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.chipPill,
+                      selectedDateOption === 'tomorrow'
+                        ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                        : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
+                    ]}
+                    onPress={() => handleSelectDateOption('tomorrow')}
+                  >
+                    <Text style={[styles.chipPillText, selectedDateOption === 'tomorrow' ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                      {t('jobCreation.tomorrow', 'Tomorrow')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.chipPill,
+                      selectedDateOption === 'custom'
+                        ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                        : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
+                    ]}
+                    onPress={() => setShowPickerModal(true)}
+                  >
+                    <Text style={[styles.chipPillText, selectedDateOption === 'custom' ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                      {selectedDateOption === 'custom' ? scheduledDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : t('jobCreation.pickDate', 'Pick date')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Time pills */}
+                <View style={[styles.pillRow, { marginTop: 10 }]}>
+                  {['10:00 AM', '2:00 PM', '6:00 PM'].map((slot) => {
+                    const isSelected = selectedTimeSlot === slot;
+                    return (
+                      <TouchableOpacity
+                        key={slot}
+                        style={[
+                          styles.chipPill,
+                          isSelected
+                            ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                            : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
+                        ]}
+                        onPress={() => handleSelectTimeSlot(slot)}
+                      >
+                        <Text style={[styles.chipPillText, isSelected ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                          {slot}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
-            ) : (
-              /* Book later Details (When date/time & Your budget) */
-              <>
-                {/* When? (Schedule) */}
-                <View style={styles.sectionWrap}>
-                  <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-                    {t('jobCreation.whenLabel', 'When?')}
-                  </Text>
-
-                  {/* Date pills */}
-                  <View style={styles.pillRow}>
-                    <TouchableOpacity
-                      style={[
-                        styles.chipPill,
-                        selectedDateOption === 'today'
-                          ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
-                          : [styles.chipPillInactive, { borderColor: palette.border }]
-                      ]}
-                      onPress={() => handleSelectDateOption('today')}
-                    >
-                      <Text style={[styles.chipPillText, selectedDateOption === 'today' ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
-                        {t('jobCreation.today', 'Today')}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.chipPill,
-                        selectedDateOption === 'tomorrow'
-                          ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
-                          : [styles.chipPillInactive, { borderColor: palette.border }]
-                      ]}
-                      onPress={() => handleSelectDateOption('tomorrow')}
-                    >
-                      <Text style={[styles.chipPillText, selectedDateOption === 'tomorrow' ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
-                        {t('jobCreation.tomorrow', 'Tomorrow')}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.chipPill,
-                        selectedDateOption === 'custom'
-                          ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
-                          : [styles.chipPillInactive, { borderColor: palette.border }]
-                      ]}
-                      onPress={() => setShowPickerModal(true)}
-                    >
-                      <Text style={[styles.chipPillText, selectedDateOption === 'custom' ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
-                        {selectedDateOption === 'custom' ? scheduledDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : t('jobCreation.pickDate', 'Pick date')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Time pills */}
-                  <View style={[styles.pillRow, { marginTop: 10 }]}>
-                    {['10:00 AM', '2:00 PM', '6:00 PM'].map((slot) => {
-                      const isSelected = selectedTimeSlot === slot;
-                      return (
-                        <TouchableOpacity
-                          key={slot}
-                          style={[
-                            styles.chipPill,
-                            isSelected
-                              ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
-                              : [styles.chipPillInactive, { borderColor: palette.border }]
-                          ]}
-                          onPress={() => handleSelectTimeSlot(slot)}
-                        >
-                          <Text style={[styles.chipPillText, isSelected ? styles.chipPillTextActive : { color: palette.textSecondary }]}>
-                            {slot}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Your budget */}
-                <View style={styles.sectionWrap}>
-                  <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
-                    {t('jobCreation.yourBudgetLabel', 'Your budget')}
-                  </Text>
-
-                  <View style={[styles.budgetInputCard, { borderColor: palette.border }]}>
-                    <Text style={[styles.budgetCurrencyLabel, { color: palette.textSecondary }]}>PKR</Text>
-                    <TextInput
-                      style={[styles.budgetTextInput, { color: palette.textPrimary }]}
-                      placeholder={t('jobCreation.openToOffers', 'Open to offers')}
-                      placeholderTextColor={palette.textMuted}
-                      keyboardType="numeric"
-                      value={amount}
-                      onChangeText={setAmount}
-                    />
-                  </View>
-
-                  <View style={styles.budgetChipsRow}>
-                    {['500', '1000', '2000'].map((amt) => {
-                      const isSelected = amount === amt;
-                      return (
-                        <TouchableOpacity
-                          key={amt}
-                          style={[
-                            styles.budgetChipBtn,
-                            { borderColor: isSelected ? '#FB923C' : palette.border },
-                            isSelected && { backgroundColor: alpha('#FB923C', 0.15) }
-                          ]}
-                          onPress={() => {
-                            setAmount(isSelected ? '' : amt);
-                            void Haptics.selectionAsync();
-                          }}
-                        >
-                          <Text style={[styles.budgetChipText, { color: isSelected ? '#FB923C' : palette.textSecondary }, isSelected && { fontWeight: '700' }]}>
-                            Rs. {Number(amt).toLocaleString()}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              </>
             )}
+
+            {/* ── 6. Your Target Budget / Offer ── */}
+            <View style={styles.sectionWrap}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <Text style={[styles.sectionTitle, { color: palette.textPrimary, marginBottom: 0 }]}>
+                  {t('jobCreation.yourBudgetLabel', 'Your Budget (Optional)')}
+                </Text>
+                <Text style={{ fontSize: 12, color: activeColor, fontWeight: '700' }}>
+                  {isInstant ? `⚡ ${t('jobCreation.instantBroadcast', 'Instant broadcast')}` : `📋 ${t('jobCreation.openQuotes', 'Open quotes')}`}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 12, color: palette.textSecondary, marginBottom: 10 }}>
+                {isInstant
+                  ? t('jobCreation.urgentBudgetSub', 'Set your target price, or leave empty to receive live quotes from nearby Ustads.')
+                  : t('jobCreation.scheduledBudgetSub', 'Specify your budget, or leave empty to get competitive quotes.')}
+              </Text>
+
+              <View style={[styles.budgetInputCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                <Text style={[styles.budgetCurrencyLabel, { color: palette.textSecondary }]}>PKR</Text>
+                <TextInput
+                  style={[styles.budgetTextInput, { color: palette.textPrimary }]}
+                  placeholder={t('jobCreation.openToOffers', 'Open to offers')}
+                  placeholderTextColor={palette.textMuted}
+                  keyboardType="numeric"
+                  value={amount}
+                  onChangeText={setAmount}
+                />
+              </View>
+
+              <View style={styles.budgetChipsRow}>
+                {['500', '1000', '1500', '2000'].map((amt) => {
+                  const isSelected = amount === amt;
+                  return (
+                    <TouchableOpacity
+                      key={amt}
+                      style={[
+                        styles.budgetChipBtn,
+                        {
+                          backgroundColor: isSelected ? alpha(activeColor, isDark ? 0.2 : 0.14) : inactivePillBg,
+                          borderColor: isSelected ? activeColor : inactivePillBorder,
+                        },
+                      ]}
+                      onPress={() => {
+                        setAmount(isSelected ? '' : amt);
+                        void Haptics.selectionAsync();
+                      }}
+                    >
+                      <Text style={[styles.budgetChipText, { color: isSelected ? activeColor : pillTextColor }, isSelected && { fontWeight: '700' }]}>
+                        Rs. {Number(amt).toLocaleString()}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* ── 6. Photos or Video (Optional) ── */}
             <View style={styles.sectionWrap}>
               <TouchableOpacity
-                style={[styles.photoCard, { borderColor: palette.border }]}
+                style={[styles.photoCard, { backgroundColor: cardBg, borderColor: cardBorder }]}
                 onPress={pickMedia}
                 activeOpacity={0.8}
               >
@@ -814,7 +785,9 @@ export default function JobCreationScreen() {
                 </View>
                 <Text style={[styles.photoCardText, { color: palette.textPrimary }]}>
                   {selectedMedia.length > 0
-                    ? `${selectedMedia.length}/5 files attached (Tap to add more)`
+                    ? (isRTL
+                        ? `${selectedMedia.length}/5 فائلز منسلک (مزید شامل کریں)`
+                        : `${selectedMedia.length}/5 files attached (Tap to add more)`)
                     : t('jobCreation.addPhotosOrVideo', 'Add photos or a short video (optional)')}
                 </Text>
               </TouchableOpacity>
@@ -877,8 +850,12 @@ export default function JobCreationScreen() {
                 ) : (
                   <Text style={styles.bottomActionText}>
                     {isInstant
-                      ? t('jobCreation.findUstadBtn', 'Find an Ustad - Rs. {{price}}', { price: fixedPrice.toLocaleString() })
-                      : t('jobCreation.postRequestBtn', 'Post request')}
+                      ? (amount && Number(amount) > 0
+                          ? t('jobCreation.findUstadNowPrice', { price: Number(amount).toLocaleString() })
+                          : t('jobCreation.findUstadNow', 'Find an Ustad Now'))
+                      : (amount && Number(amount) > 0
+                          ? t('jobCreation.scheduleJobPrice', { price: Number(amount).toLocaleString() })
+                          : t('jobCreation.postRequest', 'Post Request'))}
                   </Text>
                 )}
               </LinearGradient>
@@ -894,9 +871,9 @@ export default function JobCreationScreen() {
           onRequestClose={() => setShowLocationModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, { backgroundColor: isDark ? '#111527' : '#FFFFFF', borderColor: palette.border }]}>
+            <View style={[styles.modalCard, { backgroundColor: isDark ? '#111527' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.18)' : '#E2E8F0' }]}>
               <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>
-                {t('jobCreation.serviceLocation', 'Service Location')}
+                {t('jobCreation.serviceLocation', 'WHERE IS THE WORK?')}
               </Text>
 
               <TouchableOpacity
@@ -917,10 +894,10 @@ export default function JobCreationScreen() {
               </TouchableOpacity>
 
               <Text style={[styles.modalInputLabel, { color: palette.textSecondary }]}>
-                Or type your address:
+                {t('jobCreation.orTypeAddress', 'Or type your address:')}
               </Text>
               <TextInput
-                style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: palette.border, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC' }]}
+                style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC' }]}
                 placeholder={t('jobCreation.locationPlaceholder', 'House / flat, street, block, area...')}
                 placeholderTextColor={palette.textMuted}
                 multiline
@@ -930,7 +907,7 @@ export default function JobCreationScreen() {
 
               <View style={styles.modalActionsRow}>
                 <TouchableOpacity
-                  style={[styles.modalCancelBtn, { borderColor: palette.border }]}
+                  style={[styles.modalCancelBtn, { borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1' }]}
                   onPress={() => setShowLocationModal(false)}
                 >
                   <Text style={[styles.modalCancelText, { color: palette.textSecondary }]}>
@@ -964,10 +941,12 @@ export default function JobCreationScreen() {
           title={isInstant ? t('jobCreation.postUrgentTitle') : t('jobCreation.postServiceTitle')}
           message={
             isInstant
-              ? t('jobCreation.postUrgentConfirm', { price: fixedPrice.toLocaleString() })
+              ? (amount && Number(amount) > 0
+                  ? `Broadcast urgent job for Rs. ${Number(amount).toLocaleString()} to nearby Ustads?`
+                  : 'Broadcast urgent job to nearby Ustads to receive rapid quotes?')
               : t('jobCreation.postServiceConfirm')
           }
-          confirmText={isInstant ? `Find Ustad - Rs. ${fixedPrice.toLocaleString()}` : 'Post Request'}
+          confirmText={isInstant ? (amount && Number(amount) > 0 ? `Find Ustad - Rs. ${Number(amount).toLocaleString()}` : 'Find Ustad Now') : 'Post Request'}
           cancelText={t('jobCreation.cancel')}
           isLoading={isConfirming}
           confirmColor={activeColor}
@@ -1026,7 +1005,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
   },
   headerTitle: {
@@ -1052,9 +1030,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
   },
   modePillActive: {},
-  modePillInactive: {
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
-  },
+  modePillInactive: {},
   modePillText: {
     fontSize: 14,
     fontWeight: '700',
@@ -1071,7 +1047,6 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 14,
     borderWidth: 1.2,
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 16,
@@ -1100,7 +1075,6 @@ const styles = StyleSheet.create({
 
   // 3. What Needs Fixing Card
   inputCard: {
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 18,
     borderWidth: 1.2,
     paddingHorizontal: 16,
@@ -1161,7 +1135,6 @@ const styles = StyleSheet.create({
   locationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 16,
     borderWidth: 1.2,
     padding: 14,
@@ -1195,88 +1168,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // 5. Urgent Pricing Card (Hours & Fixed Price)
-  pricingCard: {
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
-    borderRadius: 18,
-    borderWidth: 1.2,
-    padding: 16,
-  },
-  hoursRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  hoursTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  hoursRateSub: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  stepperContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    borderWidth: 1.2,
-    padding: 4,
-    gap: 10,
-  },
-  stepperBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  stepperBtnDisabled: {
-    opacity: 0.35,
-  },
-  stepperBtnText: {
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 20,
-  },
-  stepperValText: {
-    fontSize: 15,
-    fontWeight: '800',
-    minWidth: 16,
-    textAlign: 'center',
-  },
-  cardDivider: {
-    height: 1,
-    marginVertical: 14,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  fixedPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  fixedPriceLeft: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  fixedPriceTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  fixedPriceSub: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
-  },
-  fixedPriceAmount: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-
   // 5. Book Later: Date & Time Pills
   pillRow: {
     flexDirection: 'row',
@@ -1292,7 +1183,6 @@ const styles = StyleSheet.create({
   },
   chipPillActive: {},
   chipPillInactive: {
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderWidth: 1.2,
   },
   chipPillText: {
@@ -1308,7 +1198,6 @@ const styles = StyleSheet.create({
   budgetInputCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 14,
     borderWidth: 1.2,
     paddingHorizontal: 16,
@@ -1335,7 +1224,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderWidth: 1.2,
   },
   budgetChipText: {
@@ -1347,7 +1235,6 @@ const styles = StyleSheet.create({
   photoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 14, 28, 0.78)',
     borderRadius: 14,
     borderWidth: 1.2,
     padding: 14,
