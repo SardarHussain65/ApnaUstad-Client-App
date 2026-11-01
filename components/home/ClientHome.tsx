@@ -31,7 +31,6 @@ import {
   ArrowRight,
   Radio,
   Zap,
-  ShieldCheck,
   CheckCircle2,
   Clock,
 } from 'lucide-react-native';
@@ -553,25 +552,7 @@ export function ClientHome() {
               />
             ))}
           </Animated.View>
-        ) : (
-          <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.trustSection}>
-            <View style={styles.trustRow}>
-              <View style={[styles.trustPill, { backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.22) }]}>
-                <ShieldCheck size={16} color={colors.cyan} strokeWidth={2.2} />
-                <Text style={[styles.trustPillText, { color: theme.colors.text.primary }]}>
-                  {t('home.client.verifiedUstads', '100% Verified Ustads')}
-                </Text>
-              </View>
-
-              <View style={[styles.trustPill, { backgroundColor: alpha(colors.success, 0.08), borderColor: alpha(colors.success, 0.22) }]}>
-                <CheckCircle2 size={16} color={colors.success} strokeWidth={2.2} />
-                <Text style={[styles.trustPillText, { color: theme.colors.text.primary }]}>
-                  {t('home.client.transparentRates', 'Transparent Rates')}
-                </Text>
-              </View>
-            </View>
-          </Animated.View>
-        )}
+        ) : null}
 
         {/* Clean bottom padding to scroll nicely above tab bar */}
         <View style={{ height: 100 }} />
@@ -755,31 +736,5 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 13,
     fontWeight: '500',
-  },
-
-  // ── Trust & Quality Guarantee
-  trustSection: {
-    paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.l,
-  },
-  trustRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  trustPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 13,
-    paddingHorizontal: 8,
-    borderRadius: BorderRadius.l,
-    borderWidth: 1,
-  },
-  trustPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
 });

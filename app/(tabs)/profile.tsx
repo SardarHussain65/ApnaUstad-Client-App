@@ -259,8 +259,20 @@ export default function ProfileTab() {
         {/* ── Avatar Block ── */}
         <Animated.View style={[styles.avatarSection, avatarParallax]}>
           <View style={styles.avatarWrap}>
-            <Image source={{ uri: avatarUri }} style={[styles.avatar, { borderColor: theme.id === 'light' ? '#FFFFFF' : alpha('#FFFFFF', 0.9) }]} />
-            <TouchableOpacity style={styles.cameraBtn} onPress={() => router.push('/profile/personal-info')}>
+            <Image
+              source={{ uri: avatarUri }}
+              style={[
+                styles.avatar,
+                { borderColor: theme.isDark ? alpha('#FFFFFF', 0.9) : '#0F172A' },
+              ]}
+            />
+            <TouchableOpacity
+              style={[
+                styles.cameraBtn,
+                { borderColor: theme.isDark ? '#000000' : '#0F172A' },
+              ]}
+              onPress={() => router.push('/profile/personal-info')}
+            >
               <LinearGradient colors={theme.colors.gradients.primary} style={[StyleSheet.absoluteFillObject, { borderRadius: 15 }]} />
               <Camera size={12} color={theme.colors.text.onBrand} strokeWidth={2.5} />
             </TouchableOpacity>
