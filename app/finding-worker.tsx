@@ -763,8 +763,8 @@ export default function FindingWorkerScreen() {
                 </View>
               </View>
 
-              {/* Instant job indicators - sleek pills preserving essential instant details */}
-              {isInstant && (
+              {/* Job indicators - sleek pills preserving essential details */}
+              {isInstant ? (
                 <View style={styles.instantBadgesRow}>
                   <View style={[
                     styles.instantChip,
@@ -791,9 +791,38 @@ export default function FindingWorkerScreen() {
                     </Text>
                   </View>
                 </View>
+              ) : (
+                <View style={styles.instantBadgesRow}>
+                  {Number(job?.amount ?? job?.budget ?? 0) > 0 && (
+                    <View style={[
+                      styles.instantChip,
+                      {
+                        backgroundColor: theme.isDark ? 'rgba(0,245,255,0.08)' : alpha(colors.brand.primary, 0.08),
+                        borderColor: theme.isDark ? 'rgba(0,245,255,0.22)' : alpha(colors.brand.primary, 0.18),
+                      }
+                    ]}>
+                      <Tag size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                      <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
+                        {t('findingWorker.budget', 'Budget')}: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={[
+                    styles.instantChip,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
+                      borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
+                    }
+                  ]}>
+                    <CalendarDays size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                      {scheduledDateLabel}
+                    </Text>
+                  </View>
+                </View>
               )}
 
-              {isInstant && !!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
+              {!!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
                 <View style={[
                   styles.notifiedContainer,
                   {
@@ -823,7 +852,7 @@ export default function FindingWorkerScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {showBoosterPrompt && (
+          {showBoosterPrompt && isInstant && (
             <Animated.View 
               entering={FadeIn.duration(400)} 
               style={[

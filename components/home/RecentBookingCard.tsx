@@ -62,10 +62,13 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const meta = booking.cardMeta;
+  const isPaymentPending = (booking.status === 'completed' && booking.paymentStatus !== 'paid') || Boolean((meta as any)?.isPaymentPending);
   const baseStatus = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const rawStatusColor = (meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string;
+  const rawStatusColor = isPaymentPending
+    ? (meta?.statusInfo?.accentColor || colors.orange || '#F59E0B')
+    : ((meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string);
   const statusColor = getAccessibleColor(rawStatusColor, theme.isDark);
-  const StatusIcon = baseStatus.Icon;
+  const StatusIcon = isPaymentPending ? Clock : baseStatus.Icon;
   const isInstant = (meta?.missionKind || booking.bookingType) === 'instant';
 
   const personName =
@@ -154,7 +157,9 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
         >
           <StatusIcon size={11} color={statusColor} strokeWidth={2.5} />
           <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-            {t(`bookingStatus.${booking.status}.label`, meta?.statusInfo?.label || baseStatus.label)}
+            {isPaymentPending
+              ? t('bookingStatus.paymentDue.label', meta?.statusInfo?.label || 'Payment Due')
+              : t(`bookingStatus.${booking.status}.label`, meta?.statusInfo?.label || baseStatus.label)}
           </Text>
         </View>
       </View>

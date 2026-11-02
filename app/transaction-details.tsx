@@ -36,6 +36,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   CreditCard,
   MapPin,
@@ -56,7 +57,6 @@ import {
   useBookingDetails,
   useUpdateBookingStatusMutation,
   usePayBookingMutation,
-  useCreateReviewMutation,
   useRefreshOnFocus,
 } from '../hooks';
 import { MAPTILER_API_KEY } from '../constants/Config';
@@ -68,6 +68,7 @@ import {
 } from '../utils/mapUtils';
 import { AlertModal } from '../components/ui/BeautifulModal';
 import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
+import { ReviewModal } from '../components/review/ReviewModal';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
 import {
   alpha,
@@ -128,8 +129,7 @@ export default function TransactionDetailsScreen() {
   const isWorker = role === 'worker';
 
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
-  const [selectedRating, setSelectedRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [showAutoAssignedModal, setShowAutoAssignedModal] = useState(autoAssigned === 'true');
   const alertModal = useAlertModal();
@@ -163,7 +163,6 @@ export default function TransactionDetailsScreen() {
   const { data: booking, isLoading, refetch } = useBookingDetails(id);
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateBookingStatusMutation();
   const { mutate: payBooking, isPending: isPaying } = usePayBookingMutation();
-  const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
 
   // Auto-refresh when TransactionDetails screen regains focus
   useRefreshOnFocus(refetch);
@@ -195,7 +194,8 @@ export default function TransactionDetailsScreen() {
     disputeMeta?.hasDispute && ['open', 'under_review'].includes(disputeMeta.disputeStatus || '')
   );
   const canRaiseDispute = disputeMeta?.canRaiseDispute === true;
-  const isJobEnded = status === 'completed' || status === 'cancelled';
+  const isPaid = booking?.paymentStatus === 'paid';
+  const isJobEnded = (status === 'completed' && isPaid) || status === 'cancelled';
   const showDisputeAction = hasActiveDispute || (canRaiseDispute && !isJobEnded);
   const isCommunicationLocked = isJobEnded;
 
@@ -212,7 +212,6 @@ export default function TransactionDetailsScreen() {
 
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking?.workerEarning : booking?.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
-  const isPaid = booking?.paymentStatus === 'paid';
   const isInstant = booking?.bookingType === 'instant';
 
   const serviceTitle = meta?.title || booking?.category || t('transactionDetails.jobDetails', 'Service Booking');
@@ -410,6 +409,11 @@ export default function TransactionDetailsScreen() {
       return t('transactionDetails.workInProgress', 'Work in progress');
     }
     if (status === 'completed') {
+      if (!isPaid) {
+        return isWorker
+          ? t('transactionDetails.workDoneAwaitingPayment', 'Work completed — Awaiting Cash')
+          : t('transactionDetails.workDonePayCash', 'Work completed — Please Pay Cash');
+      }
       return t('transactionDetails.workCompleted', 'Work completed');
     }
     if (status === 'cancelled') {
@@ -887,7 +891,7 @@ export default function TransactionDetailsScreen() {
                       onSuccess: () => {
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         refetch();
-                        setShowPaymentSuccess(true);
+                        setShowReviewModal(true);
                       },
                       onError: (error: any) => {
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -907,8 +911,8 @@ export default function TransactionDetailsScreen() {
             </View>
           )}
 
-          {/* Client Star Rating & Review Widget */}
-          {!isWorker && status === 'completed' && (
+          {/* Client Feedback Notice / Rate Action */}
+          {!isWorker && status === 'completed' && isPaid && (
             <View style={styles.reviewSection}>
               {booking.isReviewed ? (
                 <View style={[styles.reviewNotice, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.3) }]}>
@@ -918,102 +922,29 @@ export default function TransactionDetailsScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={[styles.reviewCard, { borderColor: alpha(theme.colors.text.primary, 0.08) }]}>
-                  <Text style={[styles.reviewTitle, { color: theme.colors.text.primary }]}>
-                    {t('transactionDetails.ratePartner', `Rate ${partnerName}`, { name: partnerName })}
-                  </Text>
-                  <Text style={[styles.reviewSubtitle, { color: theme.colors.text.muted }]}>
-                    {t('transactionDetails.reviewSubtitle', 'A quick review helps maintain quality on Apna Ustad.')}
-                  </Text>
-
-                  {/* 5-Star Row */}
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((starNum) => {
-                      const isActive = starNum <= selectedRating;
-                      return (
-                        <TouchableOpacity
-                          key={starNum}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setSelectedRating(starNum);
-                          }}
-                          activeOpacity={0.7}
-                          style={styles.starTouch}
-                        >
-                          <Star
-                            size={28}
-                            color={isActive ? '#FFD700' : 'rgba(255,255,255,0.2)'}
-                            fill={isActive ? '#FFD700' : 'transparent'}
-                          />
-                        </TouchableOpacity>
-                      );
-                    })}
+                <TouchableOpacity
+                  style={[
+                    styles.rateUstadActionCard,
+                    {
+                      borderColor: alpha(colors.yellow, 0.35),
+                      backgroundColor: alpha(colors.yellow, 0.08),
+                    },
+                  ]}
+                  onPress={() => setShowReviewModal(true)}
+                  activeOpacity={0.82}
+                >
+                  <View style={styles.rateUstadActionLeft}>
+                    <Star size={18} color="#FFD700" fill="#FFD700" />
+                    <Text style={[styles.rateUstadActionTitle, { color: theme.colors.text.primary }]}>
+                      {t('review.rateYourUstad', 'Rate Your Ustad')}
+                    </Text>
                   </View>
-
-                  {/* Comment Input */}
-                  <TextInput
-                    style={[
-                      styles.reviewInput,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : theme.colors.surface.subtle,
-                        borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
-                        color: theme.colors.text.primary,
-                      },
-                    ]}
-                    placeholder={t('transactionDetails.commentPlaceholder', 'Write a comment about their work... (optional)')}
-                    placeholderTextColor={theme.colors.text.muted}
-                    value={reviewComment}
-                    onChangeText={setReviewComment}
-                    multiline
-                    numberOfLines={2}
-                  />
-
-                  {/* Submit Review */}
-                  <TouchableOpacity
-                    style={[
-                      styles.reviewSubmitBtn,
-                      (selectedRating === 0 || isCreatingReview) && styles.buttonDisabled,
-                    ]}
-                    disabled={selectedRating === 0 || isCreatingReview}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      createReview(
-                        {
-                          booking: id as string,
-                          worker: workerId as string,
-                          rating: selectedRating,
-                          comment: reviewComment.trim() || undefined,
-                        },
-                        {
-                          onSuccess: () => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            Toast.show({
-                              type: 'success',
-                              text1: t('review.successTitle', 'Review Submitted'),
-                              text2: t('review.successDesc', 'Thank you for your feedback!'),
-                            });
-                            refetch();
-                          },
-                          onError: (err: any) => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                            Toast.show({
-                              type: 'error',
-                              text1: t('review.failedTitle', 'Failed to Submit Review'),
-                              text2: err.response?.data?.message || t('common.tryAgain', 'Please try again.'),
-                            });
-                          },
-                        }
-                      );
-                    }}
-                    activeOpacity={0.82}
-                  >
-                    {isCreatingReview ? (
-                      <ActivityIndicator size="small" color="#001014" />
-                    ) : (
-                      <Text style={styles.reviewSubmitText}>{t('transactionDetails.submitReview', 'Submit Review')}</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                  {isRTL ? (
+                    <ChevronLeft size={16} color={theme.colors.text.muted} />
+                  ) : (
+                    <ChevronRight size={16} color={theme.colors.text.muted} />
+                  )}
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -1035,6 +966,25 @@ export default function TransactionDetailsScreen() {
       </View>
 
       {/* ──────────────── Modals ──────────────── */}
+      <ReviewModal
+        visible={showReviewModal}
+        bookingId={id as string}
+        workerId={workerId as string}
+        workerName={partnerName}
+        workerImage={partnerImage}
+        category={serviceTitle}
+        onClose={() => setShowReviewModal(false)}
+        onSkip={() => {
+          setShowReviewModal(false);
+          router.replace('/(tabs)' as any);
+        }}
+        onSuccess={() => {
+          setShowReviewModal(false);
+          refetch();
+          router.replace('/(tabs)' as any);
+        }}
+      />
+
       <RaiseDisputeModal
         visible={showDisputeModal}
         onClose={() => setShowDisputeModal(false)}
@@ -1603,6 +1553,24 @@ const styles = StyleSheet.create({
   reviewNoticeText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  rateUstadActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.2,
+  },
+  rateUstadActionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  rateUstadActionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
   },
   reviewCard: {
     padding: 14,

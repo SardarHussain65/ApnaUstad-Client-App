@@ -197,13 +197,15 @@ export default function BookingsTab() {
   const filteredData = combinedData.filter(item => {
     const status = item.status;
     const isDisputed = item._type === 'booking' && item.disputeMeta?.hasDispute && (item.disputeMeta.disputeStatus === 'open' || item.disputeMeta.disputeStatus === 'under_review');
+    const isPaymentPending = item._type === 'booking' && item.status === 'completed' && item.paymentStatus !== 'paid';
 
     if (activeTab === 'Active') {
       if (isDisputed) return false;
-      return ['pending', 'accepted', 'ongoing', 'in-progress', 'open', 'assigned', 'reviewing'].includes(status);
+      return ['pending', 'accepted', 'ongoing', 'in-progress', 'open', 'assigned', 'reviewing'].includes(status) || isPaymentPending;
     }
     if (activeTab === 'Completed') {
       if (isDisputed) return false;
+      if (isPaymentPending) return false;
       return ['completed', 'closed'].includes(status);
     }
     if (activeTab === 'Cancelled') {
@@ -286,12 +288,13 @@ export default function BookingsTab() {
           >
             {filteredData.map((item, index) => {
               const isDisputed = item._type === 'booking' && item.disputeMeta?.hasDispute && (item.disputeMeta.disputeStatus === 'open' || item.disputeMeta.disputeStatus === 'under_review');
-              const statusColor = isDisputed ? colors.error : getStatusColor(item.status);
               const isBooking = '_type' in item && item._type === 'booking';
               
               // Type safety helpers
               const booking = isBooking ? (item as any) : null;
               const job = !isBooking ? (item as any) : null;
+              const isPaymentPending = isBooking && item.status === 'completed' && booking?.paymentStatus !== 'paid';
+              const statusColor = isDisputed ? colors.error : isPaymentPending ? colors.orange : getStatusColor(item.status);
 
               const meta = item.cardMeta;
               const title = meta?.title || (isBooking ? booking.category : job.category);
@@ -299,7 +302,7 @@ export default function BookingsTab() {
               const scheduledTime = isBooking ? booking.scheduledTime : job.scheduledTime;
               const address = isBooking ? booking.address : job.address;
               const status = item.status;
-              const canReview = !isWorker && isBooking && status === 'completed' && !booking?.isReviewed;
+              const canReview = !isWorker && isBooking && status === 'completed' && booking?.paymentStatus === 'paid' && !booking?.isReviewed;
               const isAwaitingProposals = !isBooking && ['open', 'reviewing'].includes(status);
               const missionKind = meta?.missionKind || (isBooking ? booking.bookingType : job.urgency);
               const isInstant = missionKind === 'instant';
@@ -432,9 +435,19 @@ export default function BookingsTab() {
                             },
                           ]}
                         >
-                          {isDisputed ? <Scale size={11} color={statusColor} /> : getStatusIcon(status, statusColor)}
+                          {isDisputed ? (
+                            <Scale size={11} color={statusColor} />
+                          ) : isPaymentPending ? (
+                            <Clock size={11} color={statusColor} />
+                          ) : (
+                            getStatusIcon(status, statusColor)
+                          )}
                           <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-                            {isDisputed ? t('bookings.disputed', 'DISPUTED') : t(`bookingStatus.${status}.label`, statusLabel(status))}
+                            {isDisputed
+                              ? t('bookings.disputed', 'DISPUTED')
+                              : isPaymentPending
+                              ? t('bookingStatus.paymentDue.label', 'Payment Due')
+                              : t(`bookingStatus.${status}.label`, statusLabel(status))}
                           </Text>
                         </View>
                       </View>

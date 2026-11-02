@@ -33,6 +33,7 @@ import {
   Zap,
   CheckCircle2,
   Clock,
+  Banknote,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -226,12 +227,33 @@ export function ClientHome() {
     return categories.filter(cat => cat.name.toLowerCase().includes(q));
   }, [categories, searchQuery]);
 
-  // Active Booking (assigned Ustad on the way or ongoing work)
+  // Active Booking (assigned Ustad on the way, ongoing work, or work completed awaiting cash payment)
   const activeBooking = useMemo(() => {
     if (homeSummary?.activeBooking) return homeSummary.activeBooking;
     const recent = homeSummary?.recentBookings ?? [];
-    return recent.find(b => ['accepted', 'ongoing'].includes(b.status)) || null;
+    return (
+      recent.find(b =>
+        ['accepted', 'ongoing'].includes(b.status) ||
+        (b.status === 'completed' && b.paymentStatus !== 'paid')
+      ) || null
+    );
   }, [homeSummary]);
+
+  const isPaymentDue = Boolean(
+    activeBooking &&
+    activeBooking.status === 'completed' &&
+    activeBooking.paymentStatus !== 'paid'
+  );
+
+  const dueAmount = useMemo(() => {
+    if (!activeBooking) return 0;
+    return Number(
+      (activeBooking.cardMeta?.financial as any)?.cashDue ??
+      activeBooking.cardMeta?.financial?.amount ??
+      activeBooking.totalAmount ??
+      0
+    );
+  }, [activeBooking]);
 
   // Active Custom Job Post (open or reviewing)
   const activeMissions = useMemo<JobPost[]>(
@@ -332,14 +354,34 @@ export function ClientHome() {
                 intensity={35}
                 padding={18}
                 hasGlow
-                glowColor={colors.success}
-                style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+                glowColor={isPaymentDue ? colors.orange : colors.success}
+                style={[
+                  styles.heroCard,
+                  { borderColor: alpha(isPaymentDue ? colors.orange : colors.success, 0.45) }
+                ]}
               >
                 <View style={styles.heroTopRow}>
-                  <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
-                    <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
-                    <Text style={[styles.heroStatusText, { color: colors.success }]}>
-                      {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
+                  <View
+                    style={[
+                      styles.heroStatusPill,
+                      { backgroundColor: alpha(isPaymentDue ? colors.orange : colors.success, 0.14) }
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.pulseDot,
+                        { backgroundColor: isPaymentDue ? colors.orange : colors.success }
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.heroStatusText,
+                        { color: isPaymentDue ? colors.orange : colors.success }
+                      ]}
+                    >
+                      {isPaymentDue
+                        ? t('home.client.paymentDueBadge', 'WORK DONE • CASH PAYMENT DUE')
+                        : t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
                     </Text>
                   </View>
                   <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
@@ -366,13 +408,22 @@ export function ClientHome() {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
+                  style={[
+                    styles.heroCtaBtn,
+                    { backgroundColor: isPaymentDue ? colors.orange : colors.success }
+                  ]}
                   onPress={() => router.push({ pathname: '/transaction-details', params: { id: activeBooking._id } })}
                   activeOpacity={0.84}
                 >
-                  <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  {isPaymentDue ? (
+                    <Banknote size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  ) : (
+                    <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  )}
                   <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
-                    {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                    {isPaymentDue
+                      ? t('home.client.payCashBtn', { amount: dueAmount.toLocaleString(), defaultValue: `Pay Cash to Ustad (Rs. ${dueAmount.toLocaleString()})` })
+                      : t('home.client.trackUstadBtn', 'Track on Map & View Status')}
                   </Text>
                   <ArrowRight size={16} color="#000" strokeWidth={2.5} />
                 </TouchableOpacity>

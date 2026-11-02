@@ -28,7 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useIsRTL } from '../../context/LanguageContext';
 
-import { alpha, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
+import { alpha, getAccessibleColor, isLightColor, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { SkeletonCard } from '../../components/ui';
 import { useFavoriteWorkers, type Worker } from '../../hooks';
@@ -48,6 +48,11 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
   const theme = useTheme();
   const colors = useThemeColors();
   const themeColor = colors.cyan;
+  const accessibleAccent = getAccessibleColor(themeColor, theme.isDark);
+  const isBtnLight = isLightColor(themeColor);
+  const btnTextColor = isBtnLight ? '#0A0A1F' : '#FFFFFF';
+  const btnLabelColor = isBtnLight ? 'rgba(10, 10, 31, 0.65)' : 'rgba(255, 255, 255, 0.8)';
+  const btnDividerColor = isBtnLight ? 'rgba(10, 10, 31, 0.15)' : 'rgba(255, 255, 255, 0.2)';
   const ratingStr = worker.rating ? worker.rating.toFixed(1) : '5.0';
   const ratingNum = worker.rating ?? 5.0;
 
@@ -79,7 +84,7 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
           style={styles.cardTopGradient}
         />
 
-        <View style={[styles.leftStripe, { backgroundColor: themeColor }]} />
+        <View style={[styles.leftStripe, { backgroundColor: accessibleAccent }]} />
 
         <TouchableOpacity
           style={styles.cardInner}
@@ -106,15 +111,24 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
                   {worker.fullName}
                 </Text>
                 {worker.isVerified && (
-                  <BadgeCheck size={16} color={themeColor} fill={alpha(themeColor, 0.2)} />
+                  <BadgeCheck size={16} color={accessibleAccent} fill={alpha(accessibleAccent, 0.2)} />
                 )}
                 <Heart size={14} color={theme.colors.status.error} fill={theme.colors.status.error} style={{ marginLeft: 'auto' }} />
               </View>
 
               <View style={styles.metaRow}>
-                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
-                  <Briefcase size={9} color={themeColor} />
-                  <Text style={[styles.metaChipText, { color: themeColor }]}>
+                <View
+                  style={[
+                    styles.metaChip,
+                    {
+                      backgroundColor: theme.isDark ? theme.colors.surface.subtle : alpha(accessibleAccent, 0.08),
+                      borderColor: theme.isDark ? 'transparent' : alpha(accessibleAccent, 0.22),
+                      borderWidth: theme.isDark ? 0 : 1,
+                    },
+                  ]}
+                >
+                  <Briefcase size={9} color={accessibleAccent} />
+                  <Text style={[styles.metaChipText, { color: accessibleAccent }]}>
                     {worker.category.toUpperCase()}
                   </Text>
                 </View>
@@ -142,19 +156,19 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
 
           <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
             <View style={styles.statItem}>
-              <Star size={12} color={themeColor} />
+              <Star size={12} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{(worker.rating ?? 0) > 0 ? worker.rating!.toFixed(1) : '—'}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('profile.rating')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
-              <Briefcase size={12} color={themeColor} />
+              <Briefcase size={12} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.jobsLabel')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
-              <Zap size={12} color={themeColor} />
+              <Zap size={12} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: worker.isAvailable ? theme.colors.status.success : theme.colors.status.error }]}>
                 {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
               </Text>
@@ -169,25 +183,31 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
           )}
 
           <TouchableOpacity
-            style={styles.deployBtn}
+            style={[
+              styles.deployBtn,
+              !theme.isDark && isBtnLight && {
+                borderWidth: 1,
+                borderColor: alpha(accessibleAccent, 0.3),
+              },
+            ]}
             onPress={() => onHire(worker)}
             activeOpacity={0.78}
           >
             <LinearGradient
-              colors={[themeColor, alpha(themeColor, 0.8)]}
+              colors={[themeColor, alpha(themeColor, 0.85)]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.deployBtnGradient}
             >
               <View style={styles.deployBtnLeft}>
-                <Text style={[styles.deployRateLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.ratePerHour')}</Text>
-                <Text style={[styles.deployRateValue, { color: theme.colors.text.primary }]}>
+                <Text style={[styles.deployRateLabel, { color: btnLabelColor }]}>{t('workerDetails.ratePerHour')}</Text>
+                <Text style={[styles.deployRateValue, { color: btnTextColor }]}>
                   Rs. {worker.hourlyRate ?? '0'}/hr
                 </Text>
               </View>
-              <View style={[styles.deployBtnRight, { borderLeftColor: alpha(theme.colors.text.primary, 0.1) }]}>
-                <Zap size={14} color={theme.colors.text.primary} fill={theme.colors.text.primary} />
-                <Text style={[styles.deployBtnText, { color: theme.colors.text.primary }]}>{t('workerList.hire')}</Text>
+              <View style={[styles.deployBtnRight, { borderLeftColor: btnDividerColor }]}>
+                <Zap size={14} color={btnTextColor} fill={btnTextColor} />
+                <Text style={[styles.deployBtnText, { color: btnTextColor }]}>{t('workerList.hire')}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>

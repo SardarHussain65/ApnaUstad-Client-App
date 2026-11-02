@@ -137,7 +137,7 @@ export function WorkerHome() {
     if (homeSummary?.recentBookings) {
       homeSummary.recentBookings.forEach((b) => {
         if (
-          (b.status === 'accepted' || b.status === 'ongoing') &&
+          (['accepted', 'ongoing'].includes(b.status) || (b.status === 'completed' && b.paymentStatus !== 'paid')) &&
           !list.some((item) => item._id === b._id)
         ) {
           list.push(b);
@@ -511,6 +511,8 @@ export function WorkerHome() {
             <View style={styles.agendaList}>
               {activeBookings.map((booking) => {
                 const isOngoing = booking.status === 'ongoing';
+                const isPaymentPending = booking.status === 'completed' && booking.paymentStatus !== 'paid';
+                const accentColor = isPaymentPending ? colors.orange : isOngoing ? colors.success : colors.cyan;
                 const customerName =
                   booking.customer?.fullName ||
                   booking.cardMeta?.counterParty?.fullName ||
@@ -539,13 +541,13 @@ export function WorkerHome() {
                     intensity={35}
                     padding={16}
                     hasGlow
-                    glowColor={isOngoing ? colors.success : colors.cyan}
+                    glowColor={accentColor}
                     style={[
                       styles.heroCard,
                       {
-                        borderColor: alpha(isOngoing ? colors.success : colors.cyan, 0.35),
+                        borderColor: alpha(accentColor, 0.35),
                         borderLeftWidth: 3.5,
-                        borderLeftColor: isOngoing ? colors.success : colors.cyan,
+                        borderLeftColor: accentColor,
                         marginBottom: 12,
                       },
                     ]}
@@ -556,30 +558,26 @@ export function WorkerHome() {
                         style={[
                           styles.heroStatusPill,
                           {
-                            backgroundColor: alpha(
-                              isOngoing ? colors.success : colors.cyan,
-                              0.12
-                            ),
-                            borderColor: alpha(
-                              isOngoing ? colors.success : colors.cyan,
-                              0.3
-                            ),
+                            backgroundColor: alpha(accentColor, 0.12),
+                            borderColor: alpha(accentColor, 0.3),
                           },
                         ]}
                       >
                         <View
                           style={[
                             styles.pulseDot,
-                            { backgroundColor: isOngoing ? colors.success : colors.cyan },
+                            { backgroundColor: accentColor },
                           ]}
                         />
                         <Text
                           style={[
                             styles.heroStatusText,
-                            { color: isOngoing ? colors.success : colors.cyan },
+                            { color: accentColor },
                           ]}
                         >
-                          {isOngoing
+                          {isPaymentPending
+                            ? t('bookingStatus.awaitingPayment.title', 'AWAITING CASH PAYMENT')
+                            : isOngoing
                             ? t('bookingStatus.ongoing.title', 'WORK IN PROGRESS')
                             : t('bookingStatus.accepted.title', 'BOOKED / ASSIGNED')}
                         </Text>
@@ -718,7 +716,7 @@ export function WorkerHome() {
                         style={[
                           styles.heroCtaBtn,
                           {
-                            backgroundColor: isOngoing ? colors.success : colors.cyan,
+                            backgroundColor: accentColor,
                           },
                         ]}
                         onPress={() =>
@@ -730,7 +728,9 @@ export function WorkerHome() {
                         activeOpacity={0.82}
                       >
                         <Text style={styles.heroCtaBtnText}>
-                          {t('home.worker.continueJob', 'Track & Continue Job')}
+                          {isPaymentPending
+                            ? t('home.worker.collectPaymentBtn', 'Collect Cash Payment')
+                            : t('home.worker.continueJob', 'Track & Continue Job')}
                         </Text>
                         <ArrowRight size={15} color="#001014" strokeWidth={2.5} />
                       </TouchableOpacity>

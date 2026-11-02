@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Touchable
 import { MapPin, Phone, Mail, Award, Zap, Briefcase, Star, TrendingUp, BadgeCheck } from 'lucide-react-native';
 import { BeautifulModal } from './BeautifulModal';
 import { useWorker } from '../../hooks';
-import { Spacing, Typography, useTheme, useThemeColors } from '../../constants/Theme';
+import { Spacing, Typography, alpha, getAccessibleColor, isLightColor, useTheme, useThemeColors } from '../../constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +28,12 @@ export function WorkerDetailsModal({
   const theme = useTheme();
   const colors = useThemeColors();
   const modalThemeColor = themeColor || colors.cyan;
+  const accessibleColor = getAccessibleColor(modalThemeColor, theme.isDark);
+  const isBtnLight = isLightColor(modalThemeColor);
+  const btnTextColor = isBtnLight ? '#0A0A1F' : '#FFFFFF';
+  const starColor = theme.isDark ? '#FFD700' : '#D97706';
+  const statusSuccessColor = theme.isDark ? '#00E5A0' : theme.colors.status.success;
+  const statusBusyColor = theme.isDark ? '#FF4C6A' : theme.colors.status.error;
   const { data: worker, isLoading } = useWorker(workerId || undefined, category);
   const [imageError, setImageError] = React.useState(false);
 
@@ -49,7 +55,7 @@ export function WorkerDetailsModal({
     >
       {isLoading || !worker ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={modalThemeColor} />
+          <ActivityIndicator size="large" color={accessibleColor} />
           <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>{t('workerDetailsModal.fetchingProfile', 'Fetching profile...')}</Text>
         </View>
       ) : (
@@ -58,7 +64,7 @@ export function WorkerDetailsModal({
 
             {/* Header / Avatar Section */}
             <View style={styles.headerSection}>
-              <View style={[styles.avatarRing, { borderColor: themeColor + '60' }]}>
+              <View style={[styles.avatarRing, { borderColor: alpha(accessibleColor, 0.4) }]}>
                 <Image
                   source={{ uri: avatarUri }}
                   style={styles.avatar}
@@ -68,12 +74,12 @@ export function WorkerDetailsModal({
               <View style={styles.nameBlock}>
                 <View style={styles.nameRow}>
                   <Text style={[styles.fullName, { color: theme.colors.text.primary }]}>{worker.fullName}</Text>
-                  {worker.isVerified && <BadgeCheck size={18} color={themeColor} />}
+                  {worker.isVerified && <BadgeCheck size={18} color={accessibleColor} />}
                 </View>
-                <Text style={[styles.categoryText, { color: modalThemeColor }]}>{worker.category.toUpperCase()}</Text>
+                <Text style={[styles.categoryText, { color: accessibleColor }]}>{worker.category.toUpperCase()}</Text>
                 <View style={styles.statusRow}>
-                  <View style={[styles.statusDot, { backgroundColor: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]} />
-                  <Text style={[styles.statusText, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
+                  <View style={[styles.statusDot, { backgroundColor: worker.isAvailable ? statusSuccessColor : statusBusyColor }]} />
+                  <Text style={[styles.statusText, { color: worker.isAvailable ? statusSuccessColor : statusBusyColor }]}>
                     {worker.isAvailable ? t('common.availableNow', 'AVAILABLE NOW') : t('common.busyNow', 'BUSY NOW')}
                   </Text>
                 </View>
@@ -83,17 +89,17 @@ export function WorkerDetailsModal({
             {/* Stats Grid */}
             <View style={styles.statsGrid}>
               <View style={[styles.statBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <TrendingUp size={16} color={themeColor} style={styles.statIcon} />
+                <TrendingUp size={16} color={accessibleColor} style={styles.statIcon} />
                 <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
                 <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetailsModal.jobsDone', 'Jobs Done')}</Text>
               </View>
               <View style={[styles.statBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <Award size={16} color={themeColor} style={styles.statIcon} />
+                <Award size={16} color={accessibleColor} style={styles.statIcon} />
                 <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{t('workerDetailsModal.experienceYears', '{{count}}yr', { count: worker.experience ?? 0 })}</Text>
                 <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetailsModal.experience', 'Experience')}</Text>
               </View>
               <View style={[styles.statBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <Star size={16} color="#FFD700" style={styles.statIcon} />
+                <Star size={16} color={starColor} fill={starColor} style={styles.statIcon} />
                 <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{(worker.rating ?? 5.0).toFixed(1)}</Text>
                 <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetailsModal.reviewsCount', '{{count}} Reviews', { count: worker.totalReviews ?? 0 })}</Text>
               </View>
@@ -130,8 +136,17 @@ export function WorkerDetailsModal({
                 <Text style={[styles.sectionTitle, { color: theme.colors.text.muted }]}>{t('workerDetailsModal.skills', 'SKILLS')}</Text>
                 <View style={styles.skillsRow}>
                   {worker.skills?.map((skill) => (
-                    <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35', backgroundColor: theme.colors.surface.card }]}>
-                      <Text style={[styles.skillText, { color: themeColor }]}>{skill}</Text>
+                    <View
+                      key={skill}
+                      style={[
+                        styles.skillPill,
+                        {
+                          borderColor: theme.isDark ? modalThemeColor + '35' : alpha(accessibleColor, 0.25),
+                          backgroundColor: theme.isDark ? theme.colors.surface.card : alpha(accessibleColor, 0.08),
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.skillText, { color: accessibleColor }]}>{skill}</Text>
                     </View>
                   ))}
                 </View>
@@ -146,18 +161,24 @@ export function WorkerDetailsModal({
               <Text style={[styles.rateValue, { color: theme.colors.text.primary }]}>{t('common.rupeesFormat', 'Rs. {{amount}}', { amount: worker.hourlyRate ?? '—' })}</Text>
             </View>
             <TouchableOpacity
-              style={styles.deployBtn}
+              style={[
+                styles.deployBtn,
+                !theme.isDark && isBtnLight && {
+                  borderWidth: 1,
+                  borderColor: alpha(accessibleColor, 0.3),
+                },
+              ]}
               activeOpacity={0.8}
               onPress={() => onDeploy?.(worker)}
             >
               <LinearGradient
-                colors={[modalThemeColor, modalThemeColor + 'CC']}
+                colors={[modalThemeColor, modalThemeColor + 'E6']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.deployBtnGradient}
               >
-                <Zap size={16} color={theme.colors.button.primaryText} fill={theme.colors.button.primaryText} />
-                <Text style={[styles.deployBtnText, { color: theme.colors.button.primaryText }]}>{t('workerDetailsModal.hireUstad', 'HIRE USTAD')}</Text>
+                <Zap size={16} color={btnTextColor} fill={btnTextColor} />
+                <Text style={[styles.deployBtnText, { color: btnTextColor }]}>{t('workerDetailsModal.hireUstad', 'HIRE USTAD')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>

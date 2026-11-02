@@ -72,6 +72,14 @@
       "label": "مکمل",
       "title": "کام مکمل ہو گیا"
     },
+    "paymentDue": {
+      "label": "ادائیگی باقی",
+      "title": "کام مکمل — رقم ادا کریں"
+    },
+    "awaitingPayment": {
+      "label": "ادائیگی کے منتظر",
+      "title": "نقد ادائیگی کا انتظار ہے"
+    },
     "closed": {
       "label": "ختم",
       "title": "کام مکمل"
@@ -186,7 +194,9 @@
       "viewAll": "سب دیکھیں",
       "clientName": "کسٹمر",
       "ustadActive": "استاد راستے میں ہے / کام جاری ہے",
+      "paymentDueBadge": "کام مکمل • نقد ادائیگی باقی ہے",
       "trackUstadBtn": "نقشے پر ٹریک کریں اور اسٹیٹس دیکھیں",
+      "payCashBtn": "استاد کو نقدی ادا کریں (روپے {{amount}})",
       "offersReadyBadge": "پیشکشیں موصول ہو گئیں",
       "radarSearchingBadge": "قریبی استاد تلاش کیے جا رہے ہیں",
       "offersReadyDesc": "{{count}} استادوں نے ریٹس بھیجے ہیں۔ پروفائل دیکھ کر بک کریں۔",
@@ -947,6 +957,9 @@
     "workerControls": "کام کا اسٹیٹس اپڈیٹ کریں",
     "startJob": "کام شروع کریں",
     "completeJob": "کام مکمل ہو گیا",
+    "workDonePayCash": "کام مکمل — براہ کرم نقد ادا کریں",
+    "workDoneAwaitingPayment": "کام مکمل — نقد ادائیگی کا انتظار ہے",
+    "paymentDueHeadline": "کام مکمل — رقم ادا کریں",
     "cashSettlement": "نقد ادائیگی",
     "confirmCash": "میں نے استاد کو نقد پیسے دے دیے ہیں",
     "paymentFailed": "ادائیگی کنفرم نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
@@ -1026,7 +1039,8 @@
     "submitReviewBtn": "ریٹنگ جمع کروائیں",
     "successTitle": "بہت شکریہ!",
     "successDesc": "آپ کی رائے دوسرے کسٹمرز کو اچھے استاد چننے میں مدد دیتی ہے۔",
-    "failedTitle": "ریٹنگ محفوظ نہیں ہو سکی"
+    "failedTitle": "ریٹنگ محفوظ نہیں ہو سکی",
+    "skipForNow": "فی الحال چھوڑیں"
   },
   "wallet": {
     "title": "والٹ اور حساب کتاب",

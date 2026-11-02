@@ -210,6 +210,48 @@ export function alpha(color: string, opacity: number | string): string {
 }
 
 /**
+ * Determines whether a color is visually light (brightness >= 155).
+ * Useful for deciding whether text on top of this color should be dark or white.
+ */
+export function isLightColor(color: string): boolean {
+  if (!color || typeof color !== 'string') return false;
+  const c = color.trim().toLowerCase();
+  let r = 0, g = 0, b = 0;
+
+  if (c.startsWith('#')) {
+    const hex = c.slice(1);
+    if (hex.length === 3 || hex.length === 4) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length >= 6) {
+      r = parseInt(hex.substring(0, 2), 16);
+      g = parseInt(hex.substring(2, 4), 16);
+      b = parseInt(hex.substring(4, 6), 16);
+    }
+  } else {
+    const rgbMatch = c.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (rgbMatch) {
+      r = Number(rgbMatch[1]);
+      g = Number(rgbMatch[2]);
+      b = Number(rgbMatch[3]);
+    } else {
+      return false;
+    }
+  }
+
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness >= 155;
+}
+
+/**
+ * Returns a high-contrast text color ('#0A0A1F' for light backgrounds, '#FFFFFF' for dark).
+ */
+export function getContrastTextColor(backgroundColor: string): string {
+  return isLightColor(backgroundColor) ? '#0A0A1F' : '#FFFFFF';
+}
+
+/**
  * Ensures any color (e.g. backend accent colors or neon legacy colors)
  * is fully legible on the active theme's background.
  * In Light mode, bright aqua/cyan, neon green, and bright yellow
@@ -241,8 +283,10 @@ export function getAccessibleColor(color: string, isDark: boolean = true): strin
     normalized === '#00ff7f' ||
     normalized === '#39ff14' ||
     normalized === '#00e887' ||
+    normalized === '#00e5a0' ||
     normalized === '#4ade80' ||
-    normalized === '#86efac'
+    normalized === '#86efac' ||
+    normalized === '#22c55e'
   ) {
     return '#15803D';
   }
@@ -251,10 +295,44 @@ export function getAccessibleColor(color: string, isDark: boolean = true): strin
   if (
     normalized === '#ffd700' ||
     normalized === '#ffe600' ||
+    normalized === '#ffcc00' ||
     normalized === '#facc15' ||
-    normalized === '#fde047'
+    normalized === '#fde047' ||
+    normalized === '#fbbf24' ||
+    normalized === '#f59e0b' ||
+    normalized === '#eab308' ||
+    normalized === '#fef08a' ||
+    normalized === 'yellow' ||
+    normalized === 'gold'
   ) {
     return '#B45309';
+  }
+
+  // General RGB analysis for any arbitrary hex color in light mode:
+  if (normalized.startsWith('#')) {
+    const hex = normalized.slice(1);
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 3 || hex.length === 4) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length >= 6) {
+      r = parseInt(hex.substring(0, 2), 16);
+      g = parseInt(hex.substring(2, 4), 16);
+      b = parseInt(hex.substring(4, 6), 16);
+    }
+    // High red + high green, low blue = Yellow / Gold / Amber
+    if (r > 190 && g > 150 && b < 120) {
+      return '#B45309';
+    }
+    // High blue + high green, low red = Cyan / Aqua
+    if (b > 180 && g > 160 && r < 120) {
+      return '#0369A1';
+    }
+    // High green, moderate red/blue = Light green
+    if (g > 180 && r < 160 && b < 160) {
+      return '#15803D';
+    }
   }
 
   return color;

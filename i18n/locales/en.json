@@ -72,6 +72,14 @@
       "label": "Completed",
       "title": "Work completed"
     },
+    "paymentDue": {
+      "label": "Payment Due",
+      "title": "Payment Due"
+    },
+    "awaitingPayment": {
+      "label": "Awaiting Cash",
+      "title": "Awaiting Cash Payment"
+    },
     "closed": {
       "label": "Closed",
       "title": "Closed"
@@ -186,7 +194,9 @@
       "viewAll": "VIEW ALL",
       "clientName": "Customer",
       "ustadActive": "USTAD ON THE WAY / IN PROGRESS",
+      "paymentDueBadge": "WORK DONE • CASH PAYMENT DUE",
       "trackUstadBtn": "Track on Map & View Status",
+      "payCashBtn": "Pay Cash to Ustad (Rs. {{amount}})",
       "offersReadyBadge": "OFFERS RECEIVED",
       "radarSearchingBadge": "FINDING USTADS NEARBY",
       "offersReadyDesc": "{{count}} Ustads sent their rates. Review profiles and book.",
@@ -947,6 +957,9 @@
     "workerControls": "Update Job Status",
     "startJob": "Start Work",
     "completeJob": "Mark Work Complete",
+    "workDonePayCash": "Work completed — Please Pay Cash",
+    "workDoneAwaitingPayment": "Work completed — Awaiting Cash",
+    "paymentDueHeadline": "Work completed — Payment Due",
     "cashSettlement": "Cash Payment",
     "confirmCash": "I Have Paid Cash to Ustad",
     "paymentFailed": "Could not confirm payment. Please try again.",
@@ -1026,7 +1039,8 @@
     "submitReviewBtn": "SEND RATING",
     "successTitle": "Thank you!",
     "successDesc": "Your rating helps other customers pick trusted Ustads.",
-    "failedTitle": "Could not save rating"
+    "failedTitle": "Could not save rating",
+    "skipForNow": "Skip for now"
   },
   "wallet": {
     "title": "Wallet & Payments",
