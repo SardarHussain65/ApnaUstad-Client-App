@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -17,9 +17,9 @@ import { useTranslation } from 'react-i18next';
 import {
   CheckCheck,
   ChevronLeft,
+  ChevronRight,
   MessageCircle,
   Mic,
-  MoreVertical,
   PauseCircle,
   Phone,
   PlayCircle,
@@ -28,15 +28,14 @@ import {
   Square,
   Trash2,
   Volume2,
+  Sparkles,
 } from 'lucide-react-native';
 import { Colors, useTheme } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { GlassCard } from '../components/home/GlassCard';
 import { useAuth } from '../context/AuthContext';
-import { useIsRTL } from '../context/LanguageContext';
+import { useLanguage, useIsRTL } from '../context/LanguageContext';
 import { socketService } from '../services/socketService';
 import { useBookingDetails, useMessages, useSendMessageMutation, type Message } from '../hooks';
-import Animated, { FadeInRight, FadeInLeft } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import {
   RecordingPresets,
@@ -55,12 +54,13 @@ const formatSeconds = (seconds: number) => {
   return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
 };
 
-function VoiceMessageBubble({ item }: { item: Message }) {
+function VoiceMessageBubble({ item, isMe }: { item: Message; isMe: boolean }) {
   const player = useAudioPlayer(item.audioUrl || null);
   const status = useAudioPlayerStatus(player);
   const { t } = useTranslation();
   const theme = useTheme();
-  const colors = theme.legacy;
+  const { language } = useLanguage();
+
   const togglePlayback = async () => {
     if (status.playing) {
       player.pause();
@@ -72,17 +72,28 @@ function VoiceMessageBubble({ item }: { item: Message }) {
     player.play();
   };
 
+  const iconColor = isMe ? '#FFFFFF' : theme.colors.brand.primary;
+  const titleColor = isMe ? '#FFFFFF' : theme.colors.text.primary;
+  const durationColor = isMe ? 'rgba(255,255,255,0.75)' : theme.colors.text.muted;
+  const playBg = isMe
+    ? 'rgba(255,255,255,0.22)'
+    : theme.isDark
+    ? 'rgba(0, 245, 255, 0.12)'
+    : 'rgba(37, 99, 235, 0.08)';
+
   return (
     <TouchableOpacity style={styles.voiceBubble} onPress={togglePlayback} activeOpacity={0.8}>
-      <View style={styles.voicePlay}>
-        {status.playing ? <PauseCircle size={30} color={colors.cyan} /> : <PlayCircle size={30} color={colors.cyan} />}
+      <View style={[styles.voicePlay, { backgroundColor: playBg }]}>
+        {status.playing ? <PauseCircle size={26} color={iconColor} /> : <PlayCircle size={26} color={iconColor} />}
       </View>
       <View style={styles.voiceCopy}>
         <View style={styles.voiceTitleRow}>
-          <Volume2 size={13} color={colors.cyan} strokeWidth={2.4} />
-          <Text style={styles.voiceTitle}>{t('chat.voiceMessage')}</Text>
+          <Volume2 size={13} color={iconColor} strokeWidth={2.4} />
+          <Text style={[styles.voiceTitle, { color: titleColor }]}>
+            {language === 'ur' ? 'وائس میسج' : t('chat.voiceMessage', 'Voice message')}
+          </Text>
         </View>
-        <Text style={styles.voiceDuration}>
+        <Text style={[styles.voiceDuration, { color: durationColor }]}>
           {formatSeconds(status.currentTime)} / {formatSeconds(status.duration || item.audioDurationSeconds || 0)}
         </Text>
       </View>
@@ -95,9 +106,8 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { user, role } = useAuth();
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
+  const { language, isRTL } = useLanguage();
   const theme = useTheme();
-  const colors = theme.legacy;
   const { bookingId, recipientName } = useLocalSearchParams<{
     bookingId: string;
     recipientName: string;
@@ -131,21 +141,26 @@ export default function ChatScreen() {
     } else {
       Toast.show({
         type: 'info',
-        text1: t('workerDetails.phoneUnavailable', 'Phone not available'),
+        text1: language === 'ur' ? 'فون نمبر دستیاب نہیں' : t('workerDetails.phoneUnavailable', 'Phone not available'),
       });
     }
   };
 
-  // Combine and deduplicate messages (prefer local for instant feedback, then official from server)
-  const allMessages = React.useMemo(() => {
+  // Combine and deduplicate messages, then SORT DESCENDING (newest first)
+  // With FlatList inverted: true, index 0 (newest) stays pinned at the BOTTOM.
+  const allMessages = useMemo(() => {
     const combined = [...localMessages, ...messages];
-    const unique = new Map();
+    const unique = new Map<string, Message>();
     combined.forEach(m => {
-      if (!unique.has(m._id)) {
+      if (m?._id && !unique.has(m._id)) {
         unique.set(m._id, m);
       }
     });
-    return Array.from(unique.values());
+
+    // Sort strictly newest to oldest so index 0 is always the latest message
+    return Array.from(unique.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }, [localMessages, messages]);
 
   useEffect(() => {
@@ -160,39 +175,40 @@ export default function ChatScreen() {
     return () => unsubscribe();
   }, [bookingId, user?._id]);
 
-  const handleSendMessage = () => {
-    if (!inputText.trim() || isComposerBusy || !canSendMessages) return;
-
-    const content = inputText.trim();
+  const handleSendMessage = (customText?: string) => {
+    const textToSend = (customText || inputText).trim();
+    if (!textToSend || isComposerBusy || !canSendMessages) return;
 
     // Optimistic UI update
-    const tempId = Date.now().toString();
+    const tempId = `temp-${Date.now()}`;
     const optimisticMsg: Message = {
       _id: tempId,
       sender: user?._id || 'anonymous',
       senderModel: role === 'worker' ? 'Worker' : 'User',
-      content,
+      content: textToSend,
       createdAt: new Date().toISOString(),
     };
 
     setLocalMessages(prev => [optimisticMsg, ...prev]);
-    setInputText('');
+    if (!customText) setInputText('');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    // Send message via mutation
     sendMessage(
-      { bookingId: bookingId as string, message: content },
+      { bookingId: bookingId as string, message: textToSend },
       {
         onSuccess: (data) => {
-          // Replace optimistic message with real one to prevent duplication
-          setLocalMessages(prev => prev.map(m => m._id === tempId ? data : m));
+          setLocalMessages(prev => prev.map(m => (m._id === tempId ? data : m)));
         },
         onError: () => {
-          // Remove optimistic message on error
           setLocalMessages(prev => prev.filter(m => m._id !== tempId));
-        }
+        },
       }
     );
+  };
+
+  const handleSelectSuggestion = (text: string) => {
+    Haptics.selectionAsync();
+    setInputText(text);
   };
 
   const startVoiceRecording = async () => {
@@ -203,8 +219,8 @@ export default function ChatScreen() {
       if (!permission.granted) {
         Toast.show({
           type: 'warning',
-          text1: t('chat.micAccessNeeded'),
-          text2: t('chat.allowMic'),
+          text1: language === 'ur' ? 'مائیک کی اجازت دیں' : t('chat.micAccessNeeded', 'Allow Microphone'),
+          text2: language === 'ur' ? 'وائس میسج بھیجنے کے لیے مائیکروفون کی اجازت دیں۔' : t('chat.allowMic', 'Please allow microphone access.'),
         });
         return;
       }
@@ -216,7 +232,10 @@ export default function ChatScreen() {
       recorder.record();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
-      Toast.show({ type: 'error', text1: t('chat.couldNotStart'), text2: t('bidSubmission.tryAgain') });
+      Toast.show({
+        type: 'error',
+        text1: language === 'ur' ? 'ریکارڈنگ شروع نہیں ہو سکی' : t('chat.couldNotStart', 'Could not start recording'),
+      });
     }
   };
 
@@ -230,13 +249,20 @@ export default function ChatScreen() {
       if (!recorder.uri || recordedDuration < 500) {
         setVoiceUri(null);
         setVoiceDurationMillis(0);
-        Toast.show({ type: 'info', text1: t('chat.tooShort'), text2: t('chat.holdThought') });
+        Toast.show({
+          type: 'info',
+          text1: language === 'ur' ? 'وائس میسج بہت چھوٹا تھا' : t('chat.tooShort', 'Voice message too short'),
+          text2: language === 'ur' ? 'بولتے وقت مائیک کا بٹن دبا کر رکھیں۔' : t('chat.holdThought', 'Hold the mic button while speaking.'),
+        });
         return;
       }
       setVoiceUri(recorder.uri);
       setVoiceDurationMillis(recordedDuration);
     } catch (error) {
-      Toast.show({ type: 'error', text1: t('chat.couldNotFinish'), text2: t('bidSubmission.tryAgain') });
+      Toast.show({
+        type: 'error',
+        text1: language === 'ur' ? 'وائس میسج محفوظ نہیں ہو سکا' : t('chat.couldNotFinish', 'Could not save voice message'),
+      });
     }
   };
 
@@ -294,15 +320,15 @@ export default function ChatScreen() {
           audioDurationSeconds: durationSeconds,
         },
         {
-          onSuccess: data => setLocalMessages(prev => prev.map(item => item._id === tempId ? data : item)),
+          onSuccess: (data) => setLocalMessages(prev => prev.map(item => (item._id === tempId ? data : item))),
           onError: () => setLocalMessages(prev => prev.filter(item => item._id !== tempId)),
         }
       );
     } catch (error: any) {
       Toast.show({
         type: 'error',
-        text1: t('chat.notSent'),
-        text2: error.response?.data?.message || t('chat.checkConnection'),
+        text1: language === 'ur' ? 'وائس میسج نہیں جا سکا' : t('chat.notSent', 'Could not send voice message'),
+        text2: error.response?.data?.message || (language === 'ur' ? 'انٹرنیٹ چیک کریں۔' : 'Please check connection.'),
       });
     } finally {
       setIsUploadingVoice(false);
@@ -315,40 +341,73 @@ export default function ChatScreen() {
     }
   }, [isRecording, recorderState.durationMillis]);
 
-  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
+  const quickSuggestions = useMemo(() => {
+    return language === 'ur'
+      ? ['السلام علیکم!', 'آپ کہاں پہنچے ہیں؟', 'اپنی لوکیشن شیئر کر دیں']
+      : ['Assalam-o-Alaikum!', 'Where have you reached?', 'Please share your location'];
+  }, [language]);
+
+  const renderMessage = ({ item }: { item: Message; index: number }) => {
     const isMe = item.sender === user?._id;
 
+    // In React Native:
+    // If isRTL is true: flex-start = RIGHT, flex-end = LEFT.
+    // If isRTL is false: flex-start = LEFT, flex-end = RIGHT.
+    // This formula ensures `isMe` is ALWAYS pinned to the RIGHT side,
+    // and `their` messages are ALWAYS pinned to the LEFT side in both languages!
+    const bubbleAlign = isMe
+      ? (isRTL ? 'flex-start' : 'flex-end')
+      : (isRTL ? 'flex-end' : 'flex-start');
+
     return (
-      <Animated.View
-        entering={isMe ? FadeInRight.delay(index * 50) : FadeInLeft.delay(index * 50)}
-        style={[
-          styles.messageRow,
-          isMe ? styles.myMessageRow : styles.theirMessageRow
-        ]}
-      >
-        <GlassCard
-          intensity={isMe ? 35 : 20}
-          borderColor={isMe ? theme.colors.gradients.success[1] : theme.colors.border.subtle}
+      <View style={[styles.messageRow, { alignSelf: bubbleAlign }]}>
+        <View
           style={[
             styles.bubble,
             isMe
-              ? [styles.myBubble, { backgroundColor: theme.colors.gradients.success[0], borderColor: theme.colors.gradients.success[1] }]
-              : [styles.theirBubble, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]
+              ? [
+                  styles.myBubble,
+                  {
+                    backgroundColor: theme.isDark ? '#059669' : '#10B981',
+                    borderColor: theme.isDark ? '#047857' : '#059669',
+                  },
+                ]
+              : [
+                  styles.theirBubble,
+                  {
+                    backgroundColor: theme.isDark ? '#1A1D26' : '#FFFFFF',
+                    borderColor: theme.isDark ? '#2D3240' : '#E2E8F0',
+                  },
+                ],
           ]}
         >
           {item.messageType === 'audio' && item.audioUrl ? (
-            <VoiceMessageBubble item={item} />
+            <VoiceMessageBubble item={item} isMe={isMe} />
           ) : (
-            <Text style={[styles.messageContent, { color: isMe ? '#FFFFFF' : theme.colors.text.primary }]}>{item.content}</Text>
+            <Text
+              style={[
+                styles.messageContent,
+                { color: isMe ? '#FFFFFF' : theme.colors.text.primary },
+              ]}
+              selectable
+            >
+              {item.content}
+            </Text>
           )}
+
           <View style={styles.messageFooter}>
-            <Text style={[styles.timeText, { color: isMe ? 'rgba(255,255,255,0.7)' : theme.colors.text.muted }]}>
+            <Text
+              style={[
+                styles.timeText,
+                { color: isMe ? 'rgba(255,255,255,0.78)' : theme.colors.text.muted },
+              ]}
+            >
               {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
             {isMe && <CheckCheck size={12} color="#FFFFFF" style={{ marginLeft: 4 }} />}
           </View>
-        </GlassCard>
-      </Animated.View>
+        </View>
+      </View>
     );
   };
 
@@ -356,47 +415,121 @@ export default function ChatScreen() {
     <BackgroundWrapper>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border.subtle }]}>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
-            <ChevronLeft color={theme.colors.text.primary} size={24} style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
+        <View style={[styles.header, { borderBottomColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.card }]}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={[styles.backBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}
+            activeOpacity={0.7}
+          >
+            {isRTL ? (
+              <ChevronRight color={theme.colors.text.primary} size={22} />
+            ) : (
+              <ChevronLeft color={theme.colors.text.primary} size={22} />
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.userInfo}>
+          <View style={styles.userInfo}>
             <View style={styles.avatarWrapper}>
-              <View style={[styles.avatarGlow, { backgroundColor: colors.cyan }]} />
-              <View style={[styles.avatar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <Text style={[styles.avatarInitial, { color: theme.colors.text.primary }]}>{recipientName?.[0] || 'U'}</Text>
-              </View>
-            </View>
-            <View style={styles.userMeta}>
-              <Text style={[styles.userName, { color: theme.colors.text.primary }]}>{recipientName || t('transactionDetails.servicePartner')}</Text>
-              <View style={styles.statusRow}>
-                <View style={[styles.activeDot, isCommunicationLocked ? { backgroundColor: theme.colors.text.muted } : { backgroundColor: theme.colors.status.success }]} />
-                <Text style={[styles.statusText, !canSendMessages && styles.inactiveStatusText]}>
-                  {isLoadingBooking ? t('chat.checkingAccess') : canSendMessages ? t('chat.secureLine') : t('chat.historyOnly')}
+              <View style={[styles.avatar, { backgroundColor: theme.isDark ? '#1E293B' : '#E2E8F0', borderColor: theme.colors.border.subtle }]}>
+                <Text style={[styles.avatarInitial, { color: theme.colors.brand.primary }]}>
+                  {recipientName?.[0]?.toUpperCase() || 'U'}
                 </Text>
               </View>
             </View>
-          </TouchableOpacity>
+            <View style={styles.userMeta}>
+              <Text style={[styles.userName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                {recipientName || (language === 'ur' ? 'سروس پارٹنر' : t('transactionDetails.servicePartner', 'Service Partner'))}
+              </Text>
+              <View style={styles.statusRow}>
+                <View
+                  style={[
+                    styles.activeDot,
+                    isCommunicationLocked ? styles.inactiveDot : { backgroundColor: '#10B981' },
+                  ]}
+                />
+                <Text style={[styles.statusText, !canSendMessages && styles.inactiveStatusText]}>
+                  {isLoadingBooking
+                    ? (language === 'ur' ? 'لوڈ ہو رہا ہے...' : 'LOADING CHAT...')
+                    : canSendMessages
+                    ? (language === 'ur' ? 'چیٹ آن ہے' : 'CHAT OPEN')
+                    : (language === 'ur' ? 'پرانے پیغامات' : 'PAST MESSAGES')}
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {contactPhone && canSendMessages ? (
             <TouchableOpacity
               onPress={handleCall}
-              style={[styles.headerAction, { backgroundColor: 'rgba(0,232,135,0.12)', borderColor: 'rgba(0,232,135,0.3)' }]}
+              style={[
+                styles.headerAction,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+                  borderColor: theme.isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.3)',
+                },
+              ]}
               activeOpacity={0.75}
             >
-              <Phone color="#00E887" size={18} />
+              <Phone color={theme.isDark ? '#34D399' : '#059669'} size={18} />
             </TouchableOpacity>
           ) : (
             <View style={{ width: 40 }} />
           )}
         </View>
 
-        {/* Messages */}
+        {/* Messages List Area */}
         <View style={styles.chatArea}>
           {isLoading && localMessages.length === 0 ? (
             <View style={styles.center}>
-              <ActivityIndicator color={colors.cyan} />
+              <ActivityIndicator color={theme.colors.brand.primary} size="large" />
+            </View>
+          ) : allMessages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyChat}>
+                <View style={[styles.emptyChatIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                  <MessageCircle size={32} color={theme.colors.brand.primary} />
+                </View>
+                <Text style={[styles.emptyChatTitle, { color: theme.colors.text.primary }]}>
+                  {language === 'ur' ? 'ابھی کوئی پیغام نہیں ہے' : t('chat.emptyTitle', 'No messages yet')}
+                </Text>
+                <Text style={[styles.emptyChatText, { color: theme.colors.text.muted }]}>
+                  {language === 'ur'
+                    ? 'سلام کریں یا کام کے متعلق بات چیت شروع کریں۔'
+                    : t('chat.emptySubtitle', 'Say Salam or send a message to coordinate your booking.')}
+                </Text>
+
+                {/* Suggestion Chips */}
+                {canSendMessages && (
+                  <View style={styles.suggestionsContainer}>
+                    <View style={styles.suggestionHeader}>
+                      <Sparkles size={12} color={theme.colors.brand.primary} />
+                      <Text style={[styles.suggestionHeaderText, { color: theme.colors.text.muted }]}>
+                        {language === 'ur' ? 'فوری پیغامات' : 'Quick Suggestions'}
+                      </Text>
+                    </View>
+                    <View style={styles.suggestionChipsRow}>
+                      {quickSuggestions.map((suggestion, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[
+                            styles.suggestionChip,
+                            {
+                              backgroundColor: theme.colors.surface.card,
+                              borderColor: theme.colors.border.subtle,
+                            },
+                          ]}
+                          onPress={() => handleSelectSuggestion(suggestion)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.suggestionChipText, { color: theme.colors.text.primary }]}>
+                            {suggestion}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
           ) : (
             <FlatList
@@ -408,72 +541,114 @@ export default function ChatScreen() {
                 inverted: true,
                 contentContainerStyle: styles.messageList,
                 showsVerticalScrollIndicator: false,
-                ListEmptyComponent: (
-                  <View style={styles.emptyChat}>
-                    <View style={[styles.emptyChatIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}><MessageCircle size={24} color={theme.colors.brand.primary} /></View>
-                    <Text style={[styles.emptyChatTitle, { color: theme.colors.text.primary }]}>{t('chat.secureReady')}</Text>
-                    <Text style={[styles.emptyChatText, { color: theme.colors.text.muted }]}>{t('chat.bookingActiveDesc')}</Text>
-                  </View>
-                ),
               } as any)}
             />
           )}
         </View>
 
-        {/* Input */}
+        {/* Input Composer / Locked Bar */}
         {!canSendMessages ? (
-          <View style={[styles.lockedContainer, { backgroundColor: theme.colors.surface.card, borderTopColor: theme.colors.border.subtle, paddingBottom: insets.bottom + 12 }]}>
-            <ShieldCheck size={16} color={theme.colors.text.muted} />
+          <View
+            style={[
+              styles.lockedContainer,
+              {
+                backgroundColor: theme.colors.surface.card,
+                borderTopColor: theme.colors.border.subtle,
+                paddingBottom: insets.bottom + 12,
+              },
+            ]}
+          >
+            <ShieldCheck size={18} color={theme.colors.text.muted} />
             <View style={styles.lockedCopy}>
-              <Text style={[styles.lockedTitle, { color: theme.colors.text.primary }]}>{isLoadingBooking ? t('chat.checkingChatAccess') : t('chat.chatClosed')}</Text>
+              <Text style={[styles.lockedTitle, { color: theme.colors.text.primary }]}>
+                {isLoadingBooking
+                  ? (language === 'ur' ? 'لوڈ ہو رہا ہے...' : t('chat.checkingChatAccess', 'LOADING...'))
+                  : (language === 'ur' ? 'کام مکمل ہو چکا' : t('chat.chatClosed', 'JOB FINISHED'))}
+              </Text>
               <Text style={[styles.lockedText, { color: theme.colors.text.secondary }]}>
                 {isLoadingBooking
-                  ? t('chat.confirmingStatus')
-                  : t('chat.bookingEnded')}
+                  ? (language === 'ur' ? 'بکنگ اسٹیٹس چیک ہو رہا ہے...' : t('chat.confirmingStatus', 'Loading booking details...'))
+                  : (language === 'ur'
+                      ? 'یہ کام ختم ہو چکا ہے۔ پرانے پیغامات نیچے پڑھے جا سکتے ہیں۔'
+                      : t('chat.bookingEnded', 'This job is finished. You can still read past messages.'))}
               </Text>
             </View>
           </View>
         ) : (
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
           >
-            <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 10 }]}>
-              <GlassCard intensity={60} style={styles.inputGlass} padding={0} borderColor={theme.colors.border.subtle}>
+            <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+              <View
+                style={[
+                  styles.inputCard,
+                  {
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.subtle,
+                  },
+                ]}
+              >
                 {isRecording || voiceUri ? (
                   <View style={styles.voiceComposer}>
-                    <TouchableOpacity style={styles.discardVoiceBtn} onPress={discardVoiceRecording} activeOpacity={0.78}>
-                      <Trash2 size={18} color="#FF453A" strokeWidth={2.5} />
+                    <TouchableOpacity
+                      style={styles.discardVoiceBtn}
+                      onPress={discardVoiceRecording}
+                      activeOpacity={0.78}
+                    >
+                      <Trash2 size={18} color="#EF4444" strokeWidth={2.4} />
                     </TouchableOpacity>
                     <View style={styles.recordingCopy}>
                       <View style={styles.recordingTitleRow}>
                         <View style={[styles.recordingDot, !isRecording && styles.voiceReadyDot]} />
-                        <Text style={[styles.recordingTitle, { color: theme.colors.text.primary }]}>{isRecording ? t('chat.recordingVoice') : t('chat.voiceReady')}</Text>
+                        <Text style={[styles.recordingTitle, { color: theme.colors.text.primary }]}>
+                          {isRecording
+                            ? (language === 'ur' ? 'آواز ریکارڈ ہو رہی ہے...' : t('chat.recordingVoice', 'Recording voice message...'))
+                            : (language === 'ur' ? 'وائس میسج تیار ہے' : t('chat.voiceReady', 'Voice message ready'))}
+                        </Text>
                       </View>
                       <Text style={[styles.recordingDuration, { color: theme.colors.brand.primary }]}>
                         {formatSeconds((isRecording ? recorderState.durationMillis : voiceDurationMillis) / 1000)}
                       </Text>
                     </View>
                     {isRecording ? (
-                      <TouchableOpacity style={styles.stopRecordingBtn} onPress={stopVoiceRecording} activeOpacity={0.78}>
-                        <Square size={17} color="#FFFFFF" fill="#FFFFFF" />
+                      <TouchableOpacity
+                        style={styles.stopRecordingBtn}
+                        onPress={stopVoiceRecording}
+                        activeOpacity={0.78}
+                      >
+                        <Square size={16} color="#FFFFFF" fill="#FFFFFF" />
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
-                        style={[styles.sendBtn, { backgroundColor: theme.colors.brand.primary }, isUploadingVoice && styles.composerDisabled]}
+                        style={[
+                          styles.sendBtn,
+                          { backgroundColor: theme.colors.brand.primary },
+                          isUploadingVoice && styles.composerDisabled,
+                        ]}
                         onPress={sendVoiceMessage}
                         disabled={isUploadingVoice}
                         activeOpacity={0.78}
                       >
-                        {isUploadingVoice ? <ActivityIndicator size="small" color={theme.colors.button.primaryText} /> : <Send size={20} color={theme.colors.button.primaryText} />}
+                        {isUploadingVoice ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Send size={18} color="#FFFFFF" />
+                        )}
                       </TouchableOpacity>
                     )}
                   </View>
                 ) : (
                   <View style={styles.inputInner}>
                     <TextInput
-                      style={[styles.textInput, { color: theme.colors.text.primary }]}
-                      placeholder={t('chat.placeholder')}
+                      style={[
+                        styles.textInput,
+                        {
+                          color: theme.colors.text.primary,
+                          textAlign: isRTL ? 'right' : 'left',
+                        },
+                      ]}
+                      placeholder={language === 'ur' ? 'پیغام لکھیں...' : t('chat.placeholder', 'Write a message...')}
                       placeholderTextColor={theme.colors.text.muted}
                       value={inputText}
                       onChangeText={setInputText}
@@ -482,25 +657,42 @@ export default function ChatScreen() {
                     />
                     {inputText.trim() ? (
                       <TouchableOpacity
-                        style={[styles.sendBtn, { backgroundColor: theme.colors.brand.primary }, isComposerBusy && styles.composerDisabled]}
-                        onPress={handleSendMessage}
+                        style={[
+                          styles.sendBtn,
+                          { backgroundColor: theme.isDark ? '#059669' : '#10B981' },
+                          isComposerBusy && styles.composerDisabled,
+                        ]}
+                        onPress={() => handleSendMessage()}
                         disabled={isComposerBusy}
                         activeOpacity={0.78}
                       >
-                        <Send size={20} color={theme.colors.button.primaryText} />
+                        <Send size={18} color="#FFFFFF" />
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity style={[styles.micBtn, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]} onPress={startVoiceRecording} disabled={isComposerBusy} activeOpacity={0.78}>
-                        <Mic size={20} color={theme.colors.brand.primary} strokeWidth={2.5} />
+                      <TouchableOpacity
+                        style={[
+                          styles.micBtn,
+                          {
+                            borderColor: theme.colors.border.subtle,
+                            backgroundColor: theme.colors.surface.subtle,
+                          },
+                        ]}
+                        onPress={startVoiceRecording}
+                        disabled={isComposerBusy}
+                        activeOpacity={0.78}
+                      >
+                        <Mic size={20} color={theme.colors.brand.primary} strokeWidth={2.4} />
                       </TouchableOpacity>
                     )}
                   </View>
                 )}
-              </GlassCard>
+              </View>
 
               <View style={styles.securitySeal}>
-                <ShieldCheck size={10} color={theme.colors.text.muted} />
-                <Text style={[styles.securityTxt, { color: theme.colors.text.muted }]}>{t('chat.protected')}</Text>
+                <ShieldCheck size={11} color={theme.colors.text.muted} />
+                <Text style={[styles.securityTxt, { color: theme.colors.text.muted }]}>
+                  {language === 'ur' ? 'محفوظ بکنگ چیٹ' : t('chat.protected', 'PRIVATE BOOKING CHAT')}
+                </Text>
               </View>
             </View>
           </KeyboardAvoidingView>
@@ -517,60 +709,56 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   userInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 15,
+    marginHorizontal: 12,
   },
   avatarWrapper: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  avatarGlow: {
-    position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    opacity: 0.15,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   avatarInitial: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 17,
+    fontWeight: '800',
   },
   userMeta: {
-    marginLeft: 12,
+    marginLeft: 10,
+    marginRight: 10,
+    flex: 1,
   },
   userName: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   statusRow: {
     flexDirection: 'row',
@@ -578,29 +766,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.success,
-    marginRight: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 5,
   },
   inactiveDot: {
-    backgroundColor: Colors.textMuted,
+    backgroundColor: '#94A3B8',
   },
   statusText: {
-    fontSize: 8,
-    color: Colors.success,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    color: '#10B981',
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   inactiveStatusText: {
-    color: Colors.textMuted,
+    color: '#94A3B8',
   },
   headerAction: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   chatArea: {
     flex: 1,
@@ -610,86 +799,121 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 30,
+  },
   emptyChat: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 26,
-    paddingVertical: 40,
-    transform: [{ scaleY: -1 }],
+    width: '100%',
   },
   emptyChatIcon: {
-    width: 58,
-    height: 58,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
+    borderRadius: 32,
     borderWidth: 1,
-    backgroundColor: 'rgba(0,245,255,0.09)',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   emptyChatTitle: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+    textAlign: 'center',
   },
   emptyChatText: {
-    maxWidth: 280,
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
+    maxWidth: 290,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
     textAlign: 'center',
-    marginTop: 7,
+  },
+  suggestionsContainer: {
+    marginTop: 24,
+    width: '100%',
+    alignItems: 'center',
+  },
+  suggestionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  suggestionHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  suggestionChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  suggestionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  suggestionChipText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   messageList: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 12,
   },
   messageRow: {
     flexDirection: 'row',
-    marginBottom: 16,
-    maxWidth: '85%',
-  },
-  myMessageRow: {
-    alignSelf: 'flex-end',
-  },
-  theirMessageRow: {
-    alignSelf: 'flex-start',
+    marginBottom: 10,
+    maxWidth: '82%',
   },
   bubble: {
-    padding: 12,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 18,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
   },
   myBubble: {
     borderBottomRightRadius: 4,
-    borderWidth: 1,
   },
   theirBubble: {
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
   },
   messageContent: {
-    color: '#fff',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 21,
     fontWeight: '500',
   },
   voiceBubble: {
-    minWidth: 185,
+    minWidth: 175,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingVertical: 2,
   },
   voicePlay: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 13,
-    backgroundColor: 'rgba(0,245,255,0.08)',
+    borderRadius: 18,
   },
   voiceCopy: {
     flex: 1,
@@ -700,15 +924,13 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   voiceTitle: {
-    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   voiceDuration: {
-    color: 'rgba(255,255,255,0.52)',
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 5,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3,
   },
   messageFooter: {
     flexDirection: 'row',
@@ -717,62 +939,68 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   timeText: {
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.4)',
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
   },
   inputContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: 14,
+    paddingTop: 8,
   },
-  inputGlass: {
-    borderRadius: 28,
-    minHeight: 56,
+  inputCard: {
+    borderRadius: 26,
+    minHeight: 52,
+    borderWidth: 1,
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   inputInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   textInput: {
     flex: 1,
-    color: '#fff',
     fontSize: 15,
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     maxHeight: 100,
-    minHeight: 44,
+    minHeight: 40,
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   micBtn: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1,
-    backgroundColor: 'rgba(0,245,255,0.08)',
   },
   voiceComposer: {
-    minHeight: 56,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   discardVoiceBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,69,58,0.1)',
+    borderRadius: 19,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
   recordingCopy: {
     flex: 1,
@@ -780,74 +1008,69 @@ const styles = StyleSheet.create({
   recordingTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 6,
   },
   recordingDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FF453A',
+    backgroundColor: '#EF4444',
   },
   voiceReadyDot: {
-    backgroundColor: '#00FF7F',
+    backgroundColor: '#10B981',
   },
   recordingTitle: {
-    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   recordingDuration: {
     fontSize: 11,
-    fontWeight: '900',
-    marginTop: 5,
+    fontWeight: '800',
+    marginTop: 3,
   },
   stopRecordingBtn: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
-    backgroundColor: '#FF453A',
+    borderRadius: 19,
+    backgroundColor: '#EF4444',
   },
   composerDisabled: {
-    opacity: 0.56,
+    opacity: 0.5,
   },
   securitySeal: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    marginTop: 6,
     gap: 4,
-    opacity: 0.5,
   },
   securityTxt: {
-    fontSize: 8,
-    color: '#fff',
-    fontWeight: '900',
-    letterSpacing: 1,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
   lockedContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
-    backgroundColor: 'rgba(7,10,24,0.88)',
   },
   lockedCopy: {
     flex: 1,
   },
   lockedTitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginBottom: 2,
   },
   lockedText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: '600',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '500',
   },
 });

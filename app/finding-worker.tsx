@@ -87,7 +87,7 @@ export default function FindingWorkerScreen() {
 
   const [remainingSeconds, setRemainingSeconds] = useState<number>(600);
   const [isBoosting, setIsBoosting] = useState(false);
-  const [isSearchExpired, setIsSearchExpired] = useState(false);
+  const [showBoosterPrompt, setShowBoosterPrompt] = useState(false);
   const [selectedIncrement, setSelectedIncrement] = useState<number | null>(200);
   const [customPriceInput, setCustomPriceInput] = useState<string>('');
 
@@ -102,11 +102,6 @@ export default function FindingWorkerScreen() {
     }
     return basePrice + 200;
   }, [basePrice, selectedIncrement, customPriceInput]);
-
-  const isExpired = isInstant && (remainingSeconds <= 0 || isSearchExpired);
-
-  const elapsedMs = job?.createdAt ? Date.now() - new Date(job.createdAt).getTime() : 0;
-  const isEscalationSuggested = isInstant && (elapsedMs >= 2 * 60 * 1000 || (job?.urgencyPricingVersion ?? 1) >= 1);
 
   const isDark = theme.isDark;
 
@@ -167,11 +162,12 @@ export default function FindingWorkerScreen() {
       if (res.data?.success) {
         Toast.show({
           type: 'success',
-          text1: t('findingWorker.boosterApplied', 'Rate updated to {{amount}}! Sending to more Ustads...', {
+          text1: t('findingWorker.boosterApplied', 'Rate updated to {{amount}}! Searching for Ustads...', {
             amount: `Rs. ${finalPrice.toLocaleString()}`,
           }),
         });
-        setIsSearchExpired(false);
+        setShowBoosterPrompt(false);
+        setRemainingSeconds(600);
         setCustomPriceInput('');
         setSelectedIncrement(200);
         await refetchJob();
@@ -187,27 +183,25 @@ export default function FindingWorkerScreen() {
     }
   };
 
-  const handleExtendSearch = async () => {
+  const handleDismissBooster = async () => {
     try {
       setIsBoosting(true);
       const res = await api.post(`/jobs/${jobId}/escalate`, {
         additionalMinutes: 10,
       });
       if (res.data?.success) {
+        setShowBoosterPrompt(false);
+        setRemainingSeconds(600);
         Toast.show({
-          type: 'success',
+          type: 'info',
           text1: t('findingWorker.searchExtendedTitle', 'Search Extended!'),
           text2: t('findingWorker.searchExtendedDesc', 'Searching for 10 more minutes at current rate...'),
         });
-        setIsSearchExpired(false);
         await refetchJob();
       }
     } catch (err: any) {
-      Toast.show({
-        type: 'error',
-        text1: 'Could not extend search',
-        text2: err.response?.data?.message || 'Please try again.',
-      });
+      setShowBoosterPrompt(false);
+      setRemainingSeconds(600);
     } finally {
       setIsBoosting(false);
     }
@@ -219,7 +213,7 @@ export default function FindingWorkerScreen() {
       const rem = getRemainingTimeForEscalation();
       setRemainingSeconds(rem);
       if (rem <= 0) {
-        setIsSearchExpired(true);
+        setShowBoosterPrompt(true);
       }
     }, 1000);
     return () => clearInterval(timer);
@@ -365,15 +359,10 @@ export default function FindingWorkerScreen() {
   }, [initialBids]);
 
   useEffect(() => {
-    if (isExpired) {
-      pulse.value = 1;
-      rotation.value = 0;
-      return;
-    }
-    // Animations
+    // Animations - always keep live pulse and rotation running
     pulse.value = withRepeat(withTiming(1.2, { duration: 1500 }), -1, true);
     rotation.value = withRepeat(withTiming(360, { duration: 8000 }), -1, false);
-  }, [isExpired, pulse, rotation]);
+  }, [pulse, rotation]);
 
   useEffect(() => {
     // Socket Listeners
@@ -413,35 +402,14 @@ export default function FindingWorkerScreen() {
     const unsubscribeSearchExtended = socketService.on('job:search_extended', (data: any) => {
       if (data?.jobId && String(data.jobId) !== String(jobId)) return;
       
-      if (data?.timeout || data?.expired) {
-        setIsSearchExpired(true);
-        setStatus(t('findingWorker.searchExpiredTitle', 'Search Time Expired'));
-        Toast.show({
-          type: 'info',
-          text1: t('findingWorker.searchExpiredTitle', 'Search Time Expired'),
-          text2: t('findingWorker.searchExpiredDesc', 'No Ustads accepted yet. Choose to increase amount, search 10 more minutes, or stop.'),
-          visibilityTime: 6000
-        });
+      if (data?.suggestEscalation || data?.timeout || data?.expired) {
+        setShowBoosterPrompt(true);
         refetchJob();
       } else if (data?.resumed) {
-        setIsSearchExpired(false);
-        refetchJob();
-      } else if (data?.suggestEscalation) {
-        Toast.show({
-          type: 'info',
-          text1: t('findingWorker.boosterTitle', "Want an Ustad Faster?"),
-          text2: t('findingWorker.boosterDesc', "Nearby Ustads haven't accepted this rate yet. Increase your offer to attract Ustads faster!"),
-          visibilityTime: 6000
-        });
+        setShowBoosterPrompt(false);
+        setRemainingSeconds(600);
         refetchJob();
       } else {
-        setIsSearchExpired(false);
-        Toast.show({
-          type: 'info',
-          text1: t('findingWorker.searchExpandedTitle', 'Searching Expanded! ⚡'),
-          text2: t('findingWorker.searchExpandedDesc', 'Increasing fixed price to Rs. {{price}} for wider search.', { price: data.newPrice ? data.newPrice.toLocaleString() : '' }),
-          visibilityTime: 6000
-        });
         refetchJob();
       }
     });
@@ -765,17 +733,15 @@ export default function FindingWorkerScreen() {
                   styles.centerNode,
                   {
                     backgroundColor: theme.isDark 
-                      ? (isExpired ? 'rgba(255,59,48,0.18)' : 'rgba(0,245,255,0.12)') 
-                      : (isExpired ? alpha(colors.status.error, 0.15) : alpha(colors.brand.primary, 0.1)),
+                      ? 'rgba(0,245,255,0.12)' 
+                      : alpha(colors.brand.primary, 0.1),
                     borderColor: theme.isDark 
-                      ? (isExpired ? 'rgba(255,59,48,0.45)' : 'rgba(0,245,255,0.4)') 
-                      : (isExpired ? alpha(colors.status.error, 0.4) : alpha(colors.brand.primary, 0.3)),
-                    shadowColor: isExpired ? colors.status.error : colors.brand.primary,
+                      ? 'rgba(0,245,255,0.4)' 
+                      : alpha(colors.brand.primary, 0.3),
+                    shadowColor: colors.brand.primary,
                   }
                 ]}>
-                  {isExpired ? (
-                    <Clock color={colors.status.error} size={28} />
-                  ) : isBidsLoading ? (
+                  {isBidsLoading ? (
                     <ActivityIndicator size="small" color={colors.brand.primary} />
                   ) : (
                     <Search color={colors.brand.primary} size={28} />
@@ -798,33 +764,18 @@ export default function FindingWorkerScreen() {
                       Fixed Rate: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
                     </Text>
                   </View>
-                  {remainingSeconds > 0 && !isExpired ? (
-                    <View style={[
-                      styles.instantChip,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
-                        borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
-                      }
-                    ]}>
-                      <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
-                      <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
-                        {formatCountdown(remainingSeconds)} left
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={[
-                      styles.instantChip,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(255,59,48,0.12)' : alpha(colors.status.error, 0.1),
-                        borderColor: theme.isDark ? 'rgba(255,59,48,0.3)' : alpha(colors.status.error, 0.25),
-                      }
-                    ]}>
-                      <Clock size={12} color={colors.status.error} />
-                      <Text style={[styles.instantChipText, { color: colors.status.error, fontWeight: '800' }]}>
-                        {t('findingWorker.timeExpired', 'Time Expired')}
-                      </Text>
-                    </View>
-                  )}
+                  <View style={[
+                    styles.instantChip,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
+                      borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
+                    }
+                  ]}>
+                    <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                      {remainingSeconds > 0 ? `${formatCountdown(remainingSeconds)} left` : t('findingWorker.liveSearching', 'Searching live...')}
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -845,220 +796,22 @@ export default function FindingWorkerScreen() {
                 </View>
               )}
 
-              <Text style={[styles.statusText, typography.threeD, { color: isExpired ? colors.status.error : colors.text.primary }]}>
-                {isExpired ? t('findingWorker.searchExpiredTitle', 'Search Time Expired') : status}
+              <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>
+                {status}
               </Text>
               <Text style={[styles.subText, { color: colors.text.secondary }]}>
-                {isExpired
-                  ? t('findingWorker.searchExpiredRadarSub', 'Please choose an option below to proceed.')
-                  : (isInstant
-                    ? t('findingWorker.broadcastDesc')
-                    : (isSearching
-                      ? t('findingWorker.searchDesc')
-                      : t('findingWorker.compareProfiles')))}
+                {isInstant
+                  ? t('findingWorker.broadcastDesc')
+                  : (isSearching
+                    ? t('findingWorker.searchDesc')
+                    : t('findingWorker.compareProfiles'))}
               </Text>
             </LinearGradient>
           </Animated.View>
 
-          {isExpired && (
+          {showBoosterPrompt && (
             <Animated.View 
               entering={FadeIn.duration(400)} 
-              style={[
-                styles.expiredDecisionCard,
-                {
-                  backgroundColor: decisionTheme.expiredCardBg,
-                  borderColor: decisionTheme.expiredCardBorder,
-                  elevation: isDark ? 0 : 3,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: isDark ? 0 : 0.08,
-                  shadowRadius: 8,
-                }
-              ]}
-            >
-              <LinearGradient
-                colors={decisionTheme.expiredGradient as any}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.boosterGradient}
-              >
-                <View style={styles.boosterHeadingRow}>
-                  <View style={[
-                    styles.boosterIconContainer, 
-                    { 
-                      borderColor: isDark ? 'rgba(255,59,48,0.4)' : '#FCA5A5', 
-                      backgroundColor: isDark ? 'rgba(255,59,48,0.15)' : '#FEE2E2',
-                    }
-                  ]}>
-                    <Clock size={18} color="#FF3B30" />
-                  </View>
-                  <View style={styles.boosterHeadingCopy}>
-                    <Text style={[styles.boosterEyebrow, { color: '#FF3B30' }]}>
-                      ⏳ {t('findingWorker.searchExpiredTitle', 'Search Time Expired')}
-                    </Text>
-                    <Text style={[styles.boosterUrduTitle, { color: decisionTheme.urduTitle }]}>
-                      استاد اس ریٹ پر راضی نہیں ہوئے
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.boosterDescription, { color: decisionTheme.desc }]}>
-                  {t('findingWorker.searchExpiredDesc', 'No Ustads accepted this request within 10 minutes. What would you like to do?')}
-                </Text>
-
-                {/* 1. INCREASE RATE */}
-                <View style={styles.decisionOptionSection}>
-                  <View style={styles.decisionOptionHeader}>
-                    <Zap size={14} color={isDark ? '#FF8C00' : '#EA580C'} fill={isDark ? '#FF8C00' : '#EA580C'} />
-                    <Text style={[styles.decisionOptionTitle, { color: decisionTheme.title }]}>
-                      1. {t('findingWorker.increaseRateAndSearch', 'Increase Rate & Search Again (Recommended)')}
-                    </Text>
-                  </View>
-                  <Text style={[styles.decisionOptionSubtext, { color: decisionTheme.subtext }]}>
-                    Current Rate: Rs. {basePrice.toLocaleString()} • {t('findingWorker.chooseIncreaseAmount', 'Choose amount to increase:')}
-                  </Text>
-
-                  {/* Quick Chips */}
-                  <View style={styles.quickIncrementsRow}>
-                    {[200, 500, 1000].map((inc) => {
-                      const isSelected = selectedIncrement === inc && !customPriceInput;
-                      const target = basePrice + inc;
-                      return (
-                        <TouchableOpacity
-                          key={inc}
-                          style={[
-                            styles.quickIncrementChip,
-                            {
-                              backgroundColor: isSelected ? decisionTheme.chipSelectedBg : decisionTheme.chipBg,
-                              borderColor: isSelected ? decisionTheme.chipSelectedBorder : decisionTheme.chipBorder,
-                            },
-                          ]}
-                          onPress={() => {
-                            setSelectedIncrement(inc);
-                            setCustomPriceInput('');
-                          }}
-                          activeOpacity={0.75}
-                        >
-                          <Text style={[
-                            styles.quickIncrementText,
-                            {
-                              color: isSelected ? decisionTheme.chipSelectedText : decisionTheme.chipText,
-                              fontWeight: isSelected ? '900' : '800',
-                            }
-                          ]}>
-                            +{inc} (Rs. {target.toLocaleString()})
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  {/* Custom Input & Submit */}
-                  <View style={styles.customPriceRow}>
-                    <View style={[
-                      styles.customPriceInputWrap,
-                      {
-                        backgroundColor: decisionTheme.inputWrapBg,
-                        borderColor: decisionTheme.inputWrapBorder,
-                      }
-                    ]}>
-                      <Text style={[styles.customPricePrefix, { color: decisionTheme.inputPrefix }]}>PKR</Text>
-                      <TextInput
-                        style={[styles.customPriceInput, { color: decisionTheme.inputText }]}
-                        value={customPriceInput}
-                        onChangeText={(val) => {
-                          const cleaned = val.replace(/[^\d]/g, '');
-                          setCustomPriceInput(cleaned);
-                          if (cleaned) setSelectedIncrement(null);
-                        }}
-                        placeholder={String(effectiveNewPrice)}
-                        placeholderTextColor={decisionTheme.inputPlaceholder}
-                        keyboardType="number-pad"
-                      />
-                    </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.boostSubmitBtn,
-                        { backgroundColor: decisionTheme.submitBtnBg },
-                        isBoosting && { opacity: 0.6 }
-                      ]}
-                      onPress={() => handleBoostPrice()}
-                      disabled={isBoosting}
-                      activeOpacity={0.8}
-                    >
-                      {isBoosting ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <Text style={[styles.boostSubmitBtnText, { color: decisionTheme.submitBtnText }]}>
-                          {t('findingWorker.boosterBtn', 'Set Rs. {{amount}} & Search', { amount: effectiveNewPrice.toLocaleString() })}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={[styles.decisionDivider, { backgroundColor: decisionTheme.divider }]} />
-
-                {/* 2. EXTEND 10 MORE MINUTES */}
-                <View style={styles.decisionOptionSection}>
-                  <View style={styles.decisionOptionHeader}>
-                    <Clock size={14} color={isDark ? '#00F0FF' : '#0284C7'} />
-                    <Text style={[styles.decisionOptionTitle, { color: decisionTheme.title }]}>
-                      2. {t('findingWorker.tryMoreMinutes', 'Try 10 More Minutes at Same Rate')}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.extendSearchBtn,
-                      {
-                        backgroundColor: decisionTheme.extendBtnBg,
-                        borderColor: decisionTheme.extendBtnBorder,
-                      },
-                      isBoosting && { opacity: 0.6 }
-                    ]}
-                    onPress={handleExtendSearch}
-                    disabled={isBoosting}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.extendSearchBtnText, { color: decisionTheme.extendBtnText }]}>
-                      ⏱ {t('findingWorker.extendSearchBtn', 'Search 10 More Minutes (Rs. {{amount}})', { amount: basePrice.toLocaleString() })}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={[styles.decisionDivider, { backgroundColor: decisionTheme.divider }]} />
-
-                {/* 3. STOP OPERATION */}
-                <View style={styles.decisionOptionSection}>
-                  <View style={styles.decisionOptionHeader}>
-                    <X size={14} color={isDark ? '#FF3B30' : '#DC2626'} />
-                    <Text style={[styles.decisionOptionTitle, { color: decisionTheme.title }]}>
-                      3. {t('findingWorker.stopOperation', 'Stop Operation')}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.stopSearchBtn,
-                      {
-                        backgroundColor: decisionTheme.stopBtnBg,
-                        borderColor: decisionTheme.stopBtnBorder,
-                      }
-                    ]}
-                    onPress={handleCancelJob}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.stopSearchBtnText, { color: decisionTheme.stopBtnText }]}>
-                      🛑 {t('findingWorker.stopOperationBtn', 'Stop Search & Cancel Request')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </Animated.View>
-          )}
-
-          {!isExpired && isEscalationSuggested && (
-            <Animated.View 
-              entering={FadeIn.duration(500)} 
               style={[
                 styles.boosterCard,
                 {
@@ -1174,11 +927,22 @@ export default function FindingWorkerScreen() {
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <Text style={[styles.boostSubmitBtnText, { color: decisionTheme.submitBtnText }]}>
-                        {t('findingWorker.boosterBtn', 'Set Rs. {{amount}}', { amount: effectiveNewPrice.toLocaleString() })}
+                        {t('findingWorker.boosterBtn', 'Set Rs. {{amount}} & Search', { amount: effectiveNewPrice.toLocaleString() })}
                       </Text>
                     )}
                   </TouchableOpacity>
                 </View>
+
+                {/* Option to continue at current rate */}
+                <TouchableOpacity
+                  style={{ marginTop: 14, alignItems: 'center', paddingVertical: 6 }}
+                  onPress={handleDismissBooster}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: decisionTheme.subtext, textDecorationLine: 'underline' }}>
+                    ⏱ {t('findingWorker.keepCurrentRate', 'Keep searching at Rs. {{amount}}', { amount: basePrice.toLocaleString() })}
+                  </Text>
+                </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
           )}
