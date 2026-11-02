@@ -430,8 +430,17 @@ export default function IdentityVerificationScreen() {
           )}
 
           {/* Secure details nudge */}
-          <View style={[styles.secureNotice, { borderColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.subtle }]}>
-            <LinearGradient colors={[alpha(theme.colors.text.primary, 0.02), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 12 }]} />
+          <View
+            style={[
+              styles.secureNotice,
+              {
+                borderColor: theme.colors.border.subtle,
+                backgroundColor: theme.colors.surface.subtle,
+                marginBottom: Math.max(insets.bottom + 16, 28),
+              },
+            ]}
+          >
+            <LinearGradient colors={[alpha(theme.colors.text.primary, 0.02), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
             <Text style={[styles.secureText, { color: theme.colors.text.muted }]}>
               🔒 {t('identityVerification.privacySecured')}
             </Text>
@@ -573,11 +582,18 @@ const styles = StyleSheet.create({
   resubmitText: { fontSize: 14, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },
 
   // Secure Nudge
-  secureNotice: { padding: 12, borderRadius: 12, borderWidth: 1, position: 'relative' },
-  secureText: { fontSize: 11, fontWeight: '600', textAlign: 'center', lineHeight: 16 },
+  secureNotice: {
+    marginTop: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    position: 'relative',
+  },
+  secureText: { fontSize: 11.5, fontWeight: '600', textAlign: 'center', lineHeight: 18 },
 
   // Save / Footer
-  footer: { marginTop: 12 },
+  footer: { marginTop: 14, marginBottom: 4 },
   saveBtn: { borderRadius: BorderRadius.xl, overflow: 'hidden' },
   saveGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
   saveText: { fontSize: 14, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.2 },

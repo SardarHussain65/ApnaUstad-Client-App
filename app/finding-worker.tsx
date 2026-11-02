@@ -70,6 +70,8 @@ export default function FindingWorkerScreen() {
   const rotation = useSharedValue(0);
 
   const bypassBeforeRemoveRef = useRef(false);
+  const hasRedirectedRef = useRef(false);
+  const assignedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: job, refetch: refetchJob } = useJobDetails(jobId as string, {
     staleTime: 0,
@@ -220,13 +222,19 @@ export default function FindingWorkerScreen() {
   }, [job, isInstant]);
 
   const handleRedirectToBooking = (bookingId: string) => {
-    if (bookingId) {
-      bypassBeforeRemoveRef.current = true;
-      router.replace({
-        pathname: '/transaction-details',
-        params: { id: bookingId, autoAssigned: 'true' }
-      });
+    if (!bookingId || hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+
+    if (assignedTimerRef.current) {
+      clearTimeout(assignedTimerRef.current);
+      assignedTimerRef.current = null;
     }
+
+    bypassBeforeRemoveRef.current = true;
+    router.replace({
+      pathname: '/transaction-details',
+      params: { id: bookingId, autoAssigned: 'true' }
+    });
   };
 
   useEffect(() => {
@@ -282,12 +290,13 @@ export default function FindingWorkerScreen() {
       });
 
       // Redirect to booking details after a brief delay for UX
-      setTimeout(() => {
-        bypassBeforeRemoveRef.current = true;
-        router.replace({
-          pathname: '/transaction-details',
-          params: { id: data._id }
-        });
+      if (assignedTimerRef.current) {
+        clearTimeout(assignedTimerRef.current);
+      }
+      assignedTimerRef.current = setTimeout(() => {
+        if (data?._id) {
+          handleRedirectToBooking(data._id);
+        }
       }, 1500);
     },
     onError: (err: any) => {
@@ -366,7 +375,15 @@ export default function FindingWorkerScreen() {
 
   useEffect(() => {
     // Socket Listeners
-    const unsubscribeAssigned = socketService.on('job:assigned', (data) => {
+    const unsubscribeAssigned = socketService.on('job:assigned', (data: any) => {
+      const incomingJobId = (data?.jobId || data?.jobPost?._id || data?.jobPost)?.toString();
+      if (incomingJobId && jobId && String(incomingJobId) !== String(jobId)) {
+        return; // Ignore assignments of other jobs
+      }
+
+      const bookingId = (data?.bookingId || data?.booking?._id || data?._id)?.toString();
+      if (!bookingId || hasRedirectedRef.current) return;
+
       setStatus(t('findingWorker.verified'));
       
       Toast.show({
@@ -375,16 +392,20 @@ export default function FindingWorkerScreen() {
         text2: 'Your booking is ready.',
       });
       
-      setTimeout(() => {
-        bypassBeforeRemoveRef.current = true;
-        router.replace({
-          pathname: '/transaction-details',
-          params: { id: data.booking._id }
-        });
+      if (assignedTimerRef.current) {
+        clearTimeout(assignedTimerRef.current);
+      }
+      assignedTimerRef.current = setTimeout(() => {
+        handleRedirectToBooking(bookingId);
       }, 1500);
     });
 
     const unsubscribeAutoAssigned = socketService.on('job:auto_assigned', (data: any) => {
+      const incomingJobId = (data?.jobPost?._id || data?.jobPost || data?.jobId)?.toString();
+      if (incomingJobId && jobId && String(incomingJobId) !== String(jobId)) {
+        return; // Ignore if not for this job
+      }
+
       setStatus('Ustad assigned');
       
       Toast.show({
@@ -393,7 +414,7 @@ export default function FindingWorkerScreen() {
         text2: t('findingWorker.assignedDesc', 'An Ustad has accepted your urgent request.'),
       });
       
-      const bookingId = data._id || data.booking?._id || null;
+      const bookingId = (data?._id || data?.booking?._id || data?.bookingId)?.toString();
       if (bookingId) {
         handleRedirectToBooking(bookingId);
       }
@@ -452,6 +473,10 @@ export default function FindingWorkerScreen() {
     });
 
     return () => {
+      if (assignedTimerRef.current) {
+        clearTimeout(assignedTimerRef.current);
+        assignedTimerRef.current = null;
+      }
       unsubscribeAssigned();
       unsubscribeAutoAssigned();
       unsubscribeSearchExtended();

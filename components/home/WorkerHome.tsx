@@ -193,6 +193,14 @@ export function WorkerHome() {
     });
   }, [dismissedJobs, activeBookings, homeSummary?.recentBookings]);
 
+  // Whether any actionable/extra cards are already occupying screen space
+  // (urgent missions waiting, ongoing work, or sent proposals/bids)
+  const hasExtraCards = Boolean(
+    activePendingUrgentJobs.length > 0 ||
+    hasActiveJobs ||
+    pendingBids.length > 0
+  );
+
   // ─── Location & Background Sync (Non-blocking) ───────────────────────────────
   const getSavedCoordinates = useCallback((): WorkerCoordinates | null => {
     const coordinates = (user as any)?.location?.coordinates;
@@ -899,8 +907,8 @@ export function WorkerHome() {
           </Animated.View>
         ) : null}
 
-        {/* ── Section 3: Recent Completed Jobs (Cards) or History Shortcut if 0 jobs ── */}
-        {summaryLoading && !homeSummary ? (
+        {/* ── Section 3: Recent Jobs (shown only when idle with no extra cards) OR History Shortcut ── */}
+        {!hasExtraCards && summaryLoading && !homeSummary ? (
           <View style={styles.recentSection}>
             <View style={styles.recentSectionHeader}>
               <View>
@@ -915,7 +923,7 @@ export function WorkerHome() {
             <BookingCardSkeleton translateX={translateX} />
             <BookingCardSkeleton translateX={translateX} />
           </View>
-        ) : recentBookings.length > 0 ? (
+        ) : !hasExtraCards && recentBookings.length > 0 ? (
           <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.recentSection}>
             <View style={styles.recentSectionHeader}>
               <View style={{ flex: 1, marginRight: 8 }}>

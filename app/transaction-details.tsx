@@ -147,12 +147,6 @@ export default function TransactionDetailsScreen() {
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
 
   useEffect(() => {
-    if (autoAssigned === 'true') {
-      router.setParams({ autoAssigned: undefined } as any);
-    }
-  }, [autoAssigned]);
-
-  useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (bypassBeforeRemoveRef.current) return;
       e.preventDefault();
@@ -486,12 +480,33 @@ export default function TransactionDetailsScreen() {
         <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
           {t('transactionDetails.bookingNotFound', 'Booking not found')}
         </Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
-        >
-          <Text style={styles.emptyButtonText}>{t('transactionDetails.goBack', 'Go Back')}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+          {!!id && (
+            <TouchableOpacity
+              onPress={() => refetch()}
+              style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
+            >
+              <Text style={styles.emptyButtonText}>{t('common.retry', 'Try Again')}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/bookings' as any);
+              }
+            }}
+            style={[
+              styles.emptyButton,
+              !!id && { backgroundColor: theme.colors.surface.card, borderWidth: 1, borderColor: theme.colors.border.subtle }
+            ]}
+          >
+            <Text style={[styles.emptyButtonText, !!id && { color: theme.colors.text.primary }]}>
+              {t('transactionDetails.goBack', 'Go Back')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
