@@ -321,55 +321,60 @@ export function ClientHome() {
         {/* ── 1. Top Dynamic Hero Card (State-Aware) ── */}
         {activeBooking ? (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
-            <GlassCard
-              intensity={35}
-              padding={18}
-              hasGlow
-              glowColor={colors.success}
-              style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => router.push({ pathname: '/transaction-details', params: { id: activeBooking._id } })}
             >
-              <View style={styles.heroTopRow}>
-                <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
-                  <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
-                  <Text style={[styles.heroStatusText, { color: colors.success }]}>
-                    {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
-                  </Text>
-                </View>
-                <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
-                  {activeBooking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
-                </Text>
-              </View>
-
-              <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                {activeBooking.category || (activeBooking as any).serviceName || 'Service Request'}
-              </Text>
-
-              <View style={styles.heroCustomerRow}>
-                <Text style={[styles.heroCustomerName, { color: theme.colors.text.secondary }]}>
-                  {t('common.ustad', 'Ustad')}: {activeBooking.worker?.fullName || activeBooking.cardMeta?.counterParty?.fullName || 'Assigned Ustad'}
-                </Text>
-                {activeBooking.address ? (
-                  <View style={styles.heroLocationRow}>
-                    <MapPin size={12} color={theme.colors.text.muted} />
-                    <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                      {activeBooking.address}
+              <GlassCard
+                intensity={35}
+                padding={18}
+                hasGlow
+                glowColor={colors.success}
+                style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+              >
+                <View style={styles.heroTopRow}>
+                  <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
+                    <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.heroStatusText, { color: colors.success }]}>
+                      {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
                     </Text>
                   </View>
-                ) : null}
-              </View>
+                  <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
+                    {activeBooking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+                  </Text>
+                </View>
 
-              <TouchableOpacity
-                style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
-                onPress={() => router.push({ pathname: '/job-tracking', params: { bookingId: activeBooking._id, id: activeBooking._id } })}
-                activeOpacity={0.84}
-              >
-                <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
-                <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
-                  {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {activeBooking.category || (activeBooking as any).serviceName || 'Service Request'}
                 </Text>
-                <ArrowRight size={16} color="#000" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </GlassCard>
+
+                <View style={styles.heroCustomerRow}>
+                  <Text style={[styles.heroCustomerName, { color: theme.colors.text.secondary }]}>
+                    {t('common.ustad', 'Ustad')}: {activeBooking.worker?.fullName || activeBooking.cardMeta?.counterParty?.fullName || 'Assigned Ustad'}
+                  </Text>
+                  {activeBooking.address ? (
+                    <View style={styles.heroLocationRow}>
+                      <MapPin size={12} color={theme.colors.text.muted} />
+                      <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                        {activeBooking.address}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
+                  onPress={() => router.push({ pathname: '/transaction-details', params: { id: activeBooking._id } })}
+                  activeOpacity={0.84}
+                >
+                  <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
+                    {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                  </Text>
+                  <ArrowRight size={16} color="#000" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </GlassCard>
+            </TouchableOpacity>
           </Animated.View>
         ) : activeSearchJob ? (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>

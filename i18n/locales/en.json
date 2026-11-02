@@ -1963,6 +1963,7 @@
     "walletBalanceDesc": "Keep at least Rs. {{amount}} in wallet to accept jobs",
     "offerLow": "Want to give your own rate?",
     "counterOfferDesc": "Send the rate you want to charge with a short note",
+    "sendMyRateBtn": "Send Rate: Rs. {{amount}}",
     "acceptOffer": "Accept Price",
     "counterOffer": "Give My Rate",
     "counterAgain": "Update My Rate",

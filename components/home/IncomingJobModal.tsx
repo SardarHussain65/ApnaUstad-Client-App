@@ -44,6 +44,7 @@ import {
   WalletCards,
   X,
   Zap,
+  Send,
 } from 'lucide-react-native';
 
 import { alpha, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
@@ -285,7 +286,8 @@ function JobDecisionCard({
   }, [job?._id]);
 
   const handleSubmitCounter = async (priceToSubmit?: number) => {
-    const finalPrice = priceToSubmit ?? Number(counterPrice);
+    const defaultCounter = (activeCounterPrice ?? offerAmount) + 200;
+    const finalPrice = priceToSubmit ?? (counterPrice ? Number(counterPrice) : defaultCounter);
     if (!finalPrice || finalPrice <= 0) {
       Toast.show({
         type: 'error',
@@ -613,22 +615,50 @@ function JobDecisionCard({
           {/* Inline Quick Counter Row (expandable when requested) */}
           {showCounterInput && isInstant && (
             <View style={[styles.counterBox, { backgroundColor: alpha(theme.colors.text.primary, 0.04), borderColor: alpha(accent, 0.25) }]}>
-              <Text style={[styles.counterBoxTitle, { color: theme.colors.text.primary }]}>
-                {t('incomingJobModal.offerLow', 'Want to give your own rate?')}
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={[styles.counterBoxTitle, { color: theme.colors.text.primary, marginBottom: 0 }]}>
+                  {t('incomingJobModal.offerLow', 'Want to give your own rate?')}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowCounterInput(false);
+                    setCounterPrice('');
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.muted }}>
+                    ✕ {t('common.cancel', 'Cancel')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               {/* Quick Increment Buttons for fast response */}
               <View style={styles.quickIncrementsRow}>
                 {[200, 500, 1000].map((inc) => {
                   const targetPrice = (activeCounterPrice ?? offerAmount) + inc;
+                  const isSelected = Number(counterPrice || ((activeCounterPrice ?? offerAmount) + 200)) === targetPrice;
                   return (
                     <TouchableOpacity
                       key={inc}
-                      style={[styles.quickIncrementChip, { backgroundColor: alpha(accent, 0.1), borderColor: alpha(accent, 0.25) }]}
+                      style={[
+                        styles.quickIncrementChip,
+                        {
+                          backgroundColor: isSelected ? accent : alpha(accent, 0.1),
+                          borderColor: isSelected ? accent : alpha(accent, 0.25),
+                        },
+                      ]}
                       onPress={() => setCounterPrice(String(targetPrice))}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.quickIncrementText, { color: accent }]}>
+                      <Text
+                        style={[
+                          styles.quickIncrementText,
+                          {
+                            color: isSelected ? theme.colors.text.onBrand : accent,
+                            fontWeight: isSelected ? '900' : '800',
+                          },
+                        ]}
+                      >
                         +{inc}
                       </Text>
                     </TouchableOpacity>
@@ -644,33 +674,11 @@ function JobDecisionCard({
                     value={counterPrice}
                     onChangeText={(val) => setCounterPrice(val.replace(/[^\d]/g, ''))}
                     keyboardType="number-pad"
-                    placeholder={String(activeCounterPrice ?? offerAmount)}
+                    placeholder={String((activeCounterPrice ?? offerAmount) + 200)}
                     placeholderTextColor={alpha(theme.colors.text.primary, 0.3)}
                     autoFocus
                   />
                 </View>
-
-                <TouchableOpacity
-                  style={[styles.counterSubmitBtn, submittingCounter && { opacity: 0.7 }]}
-                  onPress={() => handleSubmitCounter()}
-                  disabled={submittingCounter}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={[accent, accentSecondary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.counterSubmitGradient}
-                  >
-                    {submittingCounter ? (
-                      <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
-                    ) : (
-                      <Text style={[styles.counterSubmitText, { color: theme.colors.text.onBrand }]}>
-                        {t('common.send', 'Send')}
-                      </Text>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -678,16 +686,16 @@ function JobDecisionCard({
 
         {/* Clear Action Footer */}
         <View style={[styles.footer, { backgroundColor: theme.colors.surface.card, borderTopColor: alpha(theme.colors.text.primary, 0.08) }]}>
-          {/* Skip Button */}
+          {/* Skip / Cancel Button */}
           <TouchableOpacity
             style={[styles.skipBtn, { borderColor: alpha(theme.colors.text.primary, 0.15) }]}
-            onPress={onReject}
-            disabled={isLoading}
+            onPress={showCounterInput ? () => { setShowCounterInput(false); setCounterPrice(''); } : onReject}
+            disabled={isLoading || submittingCounter}
             activeOpacity={0.7}
           >
             <X size={17} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.4} />
             <Text style={[styles.skipBtnText, { color: alpha(theme.colors.text.primary, 0.7) }]}>
-              {t('common.skip', 'Skip')}
+              {showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
             </Text>
           </TouchableOpacity>
 
@@ -695,51 +703,92 @@ function JobDecisionCard({
           {isInstant && !showCounterInput && (
             <TouchableOpacity
               style={[styles.counterToggleBtn, { borderColor: alpha(accent, 0.35) }]}
-              onPress={() => setShowCounterInput(true)}
+              onPress={() => {
+                setShowCounterInput(true);
+                if (!counterPrice) {
+                  setCounterPrice(String((activeCounterPrice ?? offerAmount) + 200));
+                }
+              }}
               disabled={isLoading}
               activeOpacity={0.7}
             >
               <CircleDollarSign size={16} color={accent} strokeWidth={2.4} />
               <Text style={[styles.counterToggleBtnText, { color: accent }]}>
-                {t('incomingJobModal.counterOffer', 'Give Rate')}
+                {t('incomingJobModal.counterOffer', 'Give My Rate')}
               </Text>
             </TouchableOpacity>
           )}
 
-          {/* Primary Action Button (Accept / Send Proposal / Top Up) */}
-          <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={isWalletEligible ? onAccept : onWalletPress}
-            disabled={isLoading}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={isWalletEligible ? [accent, accentSecondary] : [colors.worker, alpha(colors.worker, 0.85)]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.primaryBtnGradient}
+          {/* Primary Action Button: When countering, this is the SINGLE button to send the counter rate. When normal, it's Accept Offer. */}
+          {showCounterInput ? (
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={isWalletEligible ? () => handleSubmitCounter() : onWalletPress}
+              disabled={submittingCounter || isLoading}
+              activeOpacity={0.85}
             >
-              {isLoading ? (
-                <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
-              ) : isWalletEligible ? (
-                <>
-                  <Check size={18} color={theme.colors.text.onBrand} strokeWidth={3} />
-                  <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
-                    {isInstant
-                      ? t('incomingJobModal.acceptOffer', 'Accept Offer')
-                      : t('incomingJobModal.continueBid', 'Send Proposal')}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <WalletCards size={18} color={theme.colors.text.onBrand} strokeWidth={2.6} />
-                  <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
-                    {t('incomingJobModal.topUpWallet', 'Add Balance')}
-                  </Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={isWalletEligible ? [accent, accentSecondary] : [colors.worker, alpha(colors.worker, 0.85)]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryBtnGradient}
+              >
+                {submittingCounter ? (
+                  <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
+                ) : isWalletEligible ? (
+                  <>
+                    <Send size={17} color={theme.colors.text.onBrand} strokeWidth={2.5} />
+                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                      {t('incomingJobModal.sendMyRateBtn', 'Send Rate: Rs. {{amount}}', {
+                        amount: Number(counterPrice || ((activeCounterPrice ?? offerAmount) + 200)).toLocaleString(),
+                      })}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <WalletCards size={18} color={theme.colors.text.onBrand} strokeWidth={2.6} />
+                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                      {t('incomingJobModal.topUpWallet', 'Add Balance')}
+                    </Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={isWalletEligible ? onAccept : onWalletPress}
+              disabled={isLoading}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={isWalletEligible ? [accent, accentSecondary] : [colors.worker, alpha(colors.worker, 0.85)]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.primaryBtnGradient}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
+                ) : isWalletEligible ? (
+                  <>
+                    <Check size={18} color={theme.colors.text.onBrand} strokeWidth={3} />
+                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                      {isInstant
+                        ? t('incomingJobModal.acceptOffer', 'Accept Offer')
+                        : t('incomingJobModal.continueBid', 'Send Proposal')}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <WalletCards size={18} color={theme.colors.text.onBrand} strokeWidth={2.6} />
+                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                      {t('incomingJobModal.topUpWallet', 'Add Balance')}
+                    </Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Footer Note */}

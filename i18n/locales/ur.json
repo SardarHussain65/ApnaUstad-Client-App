@@ -1963,6 +1963,7 @@
     "walletBalanceDesc": "کام پکڑنے کے لیے والٹ میں کم از کم Rs. {{amount}} رکھیں",
     "offerLow": "اپنا ریٹ خود دینا چاہتے ہیں؟",
     "counterOfferDesc": "چھوٹے پیغام کے ساتھ اپنی مناسب مزدوری لکھ کر بھیجیں",
+    "sendMyRateBtn": "اپنا ریٹ بھیجیں ({{amount}} روپے)",
     "acceptOffer": "یہ ریٹ منظور ہے",
     "counterOffer": "اپنا ریٹ دیں",
     "counterAgain": "ریٹ بدلیں",
