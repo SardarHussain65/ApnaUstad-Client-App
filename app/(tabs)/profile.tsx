@@ -7,7 +7,10 @@ import {
   Image,
   Pressable,
   Platform,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import {
   BadgeCheck,
   User,
@@ -239,7 +242,28 @@ export default function ProfileTab() {
     transform: [{ translateY: interpolate(scrollY.value, [0, HEADER_HEIGHT], [0, -30], 'clamp') }],
   }));
 
-  const handleLogout = async () => { await logout(); router.replace('/role-selection'); };
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handlePressLogout = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await logout();
+      setShowLogoutModal(false);
+      router.replace('/role-selection');
+    } catch (err) {
+      console.error('Logout error:', err);
+      setShowLogoutModal(false);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <BackgroundWrapper>
@@ -379,7 +403,7 @@ export default function ProfileTab() {
                   borderColor: alpha(theme.colors.status.error, 0.18),
                 },
               ]}
-              onPress={handleLogout}
+              onPress={handlePressLogout}
             >
               <LogOut size={16} color="#FF3B30" strokeWidth={2.3} />
               <Text style={[styles.logoutText, { color: theme.colors.status.error }]}>{t('profile.signOut')}</Text>
@@ -389,6 +413,89 @@ export default function ProfileTab() {
           <Text style={[styles.version, { color: theme.colors.text.dim }]}>{t('profile.version', 'ApnaUstad v2.4.0')}</Text>
         </View>
       </Animated.ScrollView>
+
+      {/* ── Logout Confirmation Modal ── */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !isLoggingOut && setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => !isLoggingOut && setShowLogoutModal(false)}
+          />
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.subtle,
+              },
+            ]}
+          >
+            {/* Warning Ring */}
+            <View
+              style={[
+                styles.modalIconRing,
+                {
+                  backgroundColor: alpha('#EF4444', 0.12),
+                  borderColor: alpha('#EF4444', 0.25),
+                },
+              ]}
+            >
+              <LogOut size={28} color="#EF4444" strokeWidth={2.4} />
+            </View>
+
+            {/* Title & Description */}
+            <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
+              {t('profile.logoutConfirmTitle', 'Log Out?')}
+            </Text>
+            <Text style={[styles.modalDesc, { color: theme.colors.text.muted }]}>
+              {t('profile.logoutConfirmDesc', 'Are you sure you want to log out of your account?')}
+            </Text>
+
+            {/* Actions */}
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.modalCancelBtn,
+                  {
+                    backgroundColor: theme.colors.surface.subtle,
+                    borderColor: theme.colors.border.subtle,
+                  },
+                ]}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalCancelBtnText, { color: theme.colors.text.primary }]}>
+                  {t('profile.logoutConfirmCancel', 'Cancel')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, isLoggingOut && { opacity: 0.7 }]}
+                onPress={handleConfirmLogout}
+                disabled={isLoggingOut}
+                activeOpacity={0.8}
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <LogOut size={16} color="#FFFFFF" strokeWidth={2.3} style={{ marginRight: 6 }} />
+                    <Text style={styles.modalConfirmBtnText}>
+                      {t('profile.logoutConfirmYes', 'Yes, Log Out')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </BackgroundWrapper>
   );
 }
@@ -470,4 +577,79 @@ const styles = StyleSheet.create({
 
   // Version
   version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 14 },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalIconRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalDesc: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  modalConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });
