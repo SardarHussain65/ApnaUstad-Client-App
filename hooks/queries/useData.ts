@@ -694,7 +694,7 @@ export function useMyJobPosts(options?: Omit<UseQueryOptions<JobPost[]>, 'queryK
   return useQuery<JobPost[]>({
     queryKey: queryKeys.jobs.myPosts(),
     queryFn: fetchMyJobPosts,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
     gcTime: 1000 * 60 * 10,
     ...options,
   });

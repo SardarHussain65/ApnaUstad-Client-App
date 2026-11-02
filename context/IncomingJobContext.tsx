@@ -201,6 +201,11 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     const unsubscribeWon = socketService.on('bid:won', (data: any) => {
       console.log('🏆 [IncomingJobContext] Mission Secured:', data);
 
+      const targetJobId = data?.jobPost?._id || data?.jobPost || data?.booking?.jobPost;
+      if (targetJobId) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
+
       // Close the incoming job modal and clear the queue
       setShowModal(false);
       setIncomingJobsQueue([]);
@@ -213,6 +218,11 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
     const unsubscribeLost = socketService.on('bid:lost', (data: any) => {
       console.log('📉 [IncomingJobContext] Mission Lost:', data);
+      const targetJobId = data?.jobPost?._id || data?.jobPost;
+      if (targetJobId) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
       Toast.show({
         type: 'info',
         text1: i18n.t('realtimeAlerts.jobTakenTitle'),
@@ -223,6 +233,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     // --- GENERIC: Booking Status Updates ---
     const unsubscribeAccepted = socketService.on('booking:accepted', (data: any) => {
       const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      const targetJobId = data?.jobPost?._id || data?.jobPost;
+      if (targetJobId) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
       Toast.show({
         type: 'success',
         text1: i18n.t('realtimeAlerts.bookingConfirmedTitle'),
@@ -230,6 +248,40 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           ? i18n.t('realtimeAlerts.workerAcceptedDesc', { category })
           : i18n.t('realtimeAlerts.clientAcceptedDesc', { category }),
       });
+    });
+
+    // --- JOB LIFECYCLE: Job assigned or closed elsewhere ---
+    const unsubscribeJobAssigned = socketService.on('job:assigned', (data: any) => {
+      const targetJobId = data?.jobId || data?._id;
+      if (targetJobId) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
+    });
+
+    const unsubscribeJobAutoAssigned = socketService.on('job:auto_assigned', (data: any) => {
+      const targetJobId = data?.jobPost?._id || data?.jobPost || data?.booking?.jobPost || data?._id;
+      if (targetJobId) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
+    });
+
+    const unsubscribeJobStatus = socketService.on('job:status', (data: any) => {
+      const targetJobId = data?.jobId || data?._id;
+      const status = data?.status;
+      if (targetJobId && ['assigned', 'closed', 'cancelled'].includes(status)) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
+    });
+
+    const unsubscribeJobCancelled = socketService.on('job:cancelled', (data: any) => {
+      const targetJobId = data?.jobId || data?._id;
+      if (targetJobId) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+      }
     });
 
     const unsubscribeOngoing = socketService.on('booking:ongoing', (data: any) => {
@@ -294,6 +346,10 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       unsubscribeWon();
       unsubscribeLost();
       unsubscribeAccepted();
+      unsubscribeJobAssigned();
+      unsubscribeJobAutoAssigned();
+      unsubscribeJobStatus();
+      unsubscribeJobCancelled();
       unsubscribeOngoing();
       unsubscribeCompleted();
       unsubscribeCancelled();
@@ -339,13 +395,18 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         const response = await api.post(`/jobs/${job._id}/accept-instant`);
 
         if (response.data.success) {
+          clearDismissedJob(job._id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
           Toast.show({
             type: 'success',
             text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
             text2: i18n.t('realtimeAlerts.jobAcceptedDesc'),
           });
           // Close modal cleanly - remaining jobs (not the accepted one) go to dismissed
-          const remaining = incomingJobsQueueRef.current.filter(j => j._id !== job._id);
+          const remaining = incomingJobsQueueRef.current.filter(j => (j._id || j.id) !== (job._id || job.id));
           addToDismissed(remaining);
           incomingJobsQueueRef.current = [];
           setIncomingJobsQueue([]);
@@ -440,6 +501,9 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         if (response.data.success) {
           clearDismissedJob(job._id);
           queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
           Toast.show({
             type: 'success',
             text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
@@ -513,12 +577,23 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     });
     setShowModal(true);
 
-    // If signalMeta or full details are missing, hydrate in the background and update the queue item
-    if (targetId && !job.signalMeta) {
+    // Check full details and verify status in background to update the queue item
+    if (targetId) {
       try {
         const response = await api.get(`/jobs/${targetId}`);
         if (response.data?.data) {
           const hydrated = response.data.data;
+          if (hydrated.status && hydrated.status !== 'open') {
+            setDismissedJobs(prev => prev.filter(j => (j._id || j.id) !== targetId));
+            setIncomingJobsQueue(prev => prev.filter(j => (j._id || j.id) !== targetId));
+            setShowModal(false);
+            Toast.show({
+              type: 'info',
+              text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+              text2: i18n.t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+            });
+            return;
+          }
           setIncomingJobsQueue(prevQueue => {
             const nextQueue = prevQueue.map(item =>
               (item._id || item.id) === targetId ? { ...item, ...hydrated } : item

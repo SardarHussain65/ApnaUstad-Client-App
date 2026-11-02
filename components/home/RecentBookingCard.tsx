@@ -73,12 +73,14 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
 
   const personName =
     meta?.counterParty?.fullName ||
+    booking.customer?.fullName ||
     booking.worker?.fullName ||
     (booking.worker ? t('common.ustad', 'Ustad') : t('common.client', 'Customer'));
 
   const avatarUrl =
     meta?.primaryImageUrl ||
     meta?.counterParty?.profileImage ||
+    booking.customer?.profileImage ||
     booking.worker?.profileImage ||
     '';
 
@@ -102,7 +104,7 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
 
   const amountText =
     meta?.financial?.amountText ||
-    `Rs. ${Number(meta?.financial?.amount ?? booking.totalAmount ?? 0).toLocaleString()}`;
+    `Rs. ${Number(meta?.financial?.amount ?? booking.workerEarning ?? booking.totalAmount ?? 0).toLocaleString()}`;
 
   const gradientColors: [string, string, string] = [
     alpha(statusColor, theme.isDark ? 0.16 : 0.05),

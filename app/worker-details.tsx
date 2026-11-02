@@ -37,12 +37,14 @@ import {
   Heart,
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { Skeleton, useShimmerTranslateX } from '../components/ui/Skeleton';
 import { useBookingDetails, useWorker, useWorkerReviews, useToggleFavoriteMutation } from '../hooks';
 import { useAuth } from '../context/AuthContext';
 import { useIsRTL } from '../context/LanguageContext';
+import { queryKeys } from '../lib/queryKeyFactory';
 import api from '../services/api';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../constants/Theme';
 
@@ -144,6 +146,7 @@ export default function WorkerDetailsScreen() {
   const { data: contextBooking } = useBookingDetails(bookingId);
 
   const { user, role, updateUser } = useAuth();
+  const queryClient = useQueryClient();
   const toggleFavoriteMutation = useToggleFavoriteMutation();
   const [isToggling, setIsToggling] = useState(false);
 
@@ -237,6 +240,11 @@ export default function WorkerDetailsScreen() {
     setIsAccepting(true);
     try {
       const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`, {});
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       router.replace({ pathname: '/transaction-details', params: { id: response.data.data._id } });
     } catch (error: any) {
       Toast.show({

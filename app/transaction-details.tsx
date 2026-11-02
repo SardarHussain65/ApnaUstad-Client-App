@@ -52,6 +52,8 @@ import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@mapl
 
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeyFactory';
 import {
   useAlertModal,
   useBookingDetails,
@@ -161,6 +163,7 @@ export default function TransactionDetailsScreen() {
   }, [navigation, router]);
 
   const { data: booking, isLoading, refetch } = useBookingDetails(id);
+  const queryClient = useQueryClient();
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateBookingStatusMutation();
   const { mutate: payBooking, isPending: isPaying } = usePayBookingMutation();
 
@@ -890,6 +893,9 @@ export default function TransactionDetailsScreen() {
                     {
                       onSuccess: () => {
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+                        queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+                        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
                         refetch();
                         setShowReviewModal(true);
                       },
@@ -976,10 +982,16 @@ export default function TransactionDetailsScreen() {
         onClose={() => setShowReviewModal(false)}
         onSkip={() => {
           setShowReviewModal(false);
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
           router.replace('/(tabs)' as any);
         }}
         onSuccess={() => {
           setShowReviewModal(false);
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
           refetch();
           router.replace('/(tabs)' as any);
         }}

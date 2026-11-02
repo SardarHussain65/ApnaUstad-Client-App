@@ -307,6 +307,7 @@ export function useAcceptBidMutation(options?: Omit<UseMutationOptions<any, Erro
     mutationFn: acceptBid,
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byJob(variables.jobId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
@@ -390,6 +391,8 @@ export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Err
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
     },
     ...options,
   });

@@ -255,14 +255,47 @@ export function ClientHome() {
     );
   }, [activeBooking]);
 
-  // Active Custom Job Post (open or reviewing)
-  const activeMissions = useMemo<JobPost[]>(
-    () =>
-      jobPosts
-        .filter(job => ['open', 'reviewing'].includes(job.status))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [jobPosts]
-  );
+  // Active Custom Job Post (open or reviewing without an active/accepted booking)
+  const activeMissions = useMemo<JobPost[]>(() => {
+    const recent = homeSummary?.recentBookings ?? [];
+    const bookedJobPostIds = new Set<string>();
+    const activeOrRecentCategories = new Set<string>();
+
+    recent.forEach((b: any) => {
+      if (b.jobPost) bookedJobPostIds.add(String(b.jobPost?._id || b.jobPost));
+      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+    });
+
+    if (activeBooking) {
+      if ((activeBooking as any).jobPost) {
+        bookedJobPostIds.add(String((activeBooking as any).jobPost?._id || (activeBooking as any).jobPost));
+      }
+      if (activeBooking.category) {
+        activeOrRecentCategories.add(activeBooking.category.toLowerCase().trim());
+      }
+    }
+
+    return jobPosts
+      .filter((job: any) => {
+        // Must be open or reviewing
+        if (!['open', 'reviewing'].includes(job.status)) return false;
+
+        // If it already has an accepted bid or booking linked, it is not searching
+        if (job.acceptedBid || job.hasAcceptedBid || job.cardMeta?.bidSummary?.hasAcceptedBid) return false;
+        if (job.bookingId || job.detailMeta?.bookingId) return false;
+
+        // If a booking explicitly references this job post
+        if (bookedJobPostIds.has(String(job._id))) return false;
+
+        // If there's an ongoing or recently completed booking matching this category
+        if (job.category && activeOrRecentCategories.has(job.category.toLowerCase().trim())) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [jobPosts, homeSummary?.recentBookings, activeBooking]);
   const activeSearchJob = activeMissions[0] || null;
   const proposalCount = activeSearchJob?.pendingBidCount ?? activeSearchJob?.bidCount ?? 0;
 

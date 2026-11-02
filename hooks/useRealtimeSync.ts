@@ -32,6 +32,8 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.earningsAnalytics() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
 
       // If completed or paid, refresh wallet queries
       if (['completed', 'cancelled', 'paid'].includes(data?.status || data?.eventType)) {

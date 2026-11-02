@@ -33,7 +33,9 @@ import { WorkerVerificationBanner } from './WorkerVerificationBanner';
 import {
   SkeletonBox,
   useShimmerTranslateX,
+  BookingCardSkeleton,
 } from './HomeSkeletonLoader';
+import { RecentBookingCard } from './RecentBookingCard';
 import { Booking } from '../../hooks/queries/useData';
 import { socketService } from '../../services/socketService';
 import { WorkerPendingBidCard } from './WorkerPendingBidCard';
@@ -89,14 +91,6 @@ export function WorkerHome() {
     openIncomingJobModal,
   } = useIncomingJob();
 
-  const activePendingUrgentJobs = useMemo(() => {
-    return dismissedJobs.filter((job) => {
-      if (job.urgency !== 'instant') return false;
-      if (!job.expiresAt) return true;
-      return new Date(job.expiresAt).getTime() > Date.now();
-    });
-  }, [dismissedJobs]);
-
   // ─── React Query Hooks (Each Section Loads Separately & Cached) ───
   const {
     data: homeSummary,
@@ -149,6 +143,55 @@ export function WorkerHome() {
 
   const hasActiveJobs = activeBookings.length > 0;
   const activeBooking = activeBookings[0] || null;
+
+  // Recent completed/past jobs (excluding any currently active/ongoing job)
+  const recentBookings: Booking[] = useMemo(() => {
+    const list = homeSummary?.recentBookings ?? [];
+    const activeIds = new Set(activeBookings.map((b) => b._id));
+    return list.filter((b) => !activeIds.has(b._id)).slice(0, 2);
+  }, [homeSummary?.recentBookings, activeBookings]);
+
+  // Active Pending Urgent Missions waiting to be accepted
+  const activePendingUrgentJobs = useMemo(() => {
+    const bookedJobPostIds = new Set<string>();
+    const activeOrRecentCategories = new Set<string>();
+
+    activeBookings.forEach((b: any) => {
+      const jId = b.jobPost?._id || b.jobPost;
+      if (jId) bookedJobPostIds.add(String(jId));
+      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+    });
+
+    homeSummary?.recentBookings?.forEach((b: any) => {
+      const jId = b.jobPost?._id || b.jobPost;
+      if (jId) bookedJobPostIds.add(String(jId));
+      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+    });
+
+    return dismissedJobs.filter((job) => {
+      if (job.urgency !== 'instant') return false;
+      if (job.status && job.status !== 'open') return false;
+
+      const jId = String(job._id || job.id);
+      if (bookedJobPostIds.has(jId)) return false;
+
+      // If this worker already has an active or recent booking for this category
+      if (job.category && activeOrRecentCategories.has(job.category.toLowerCase().trim())) {
+        return false;
+      }
+
+      // Check expiration: instant jobs expire 10-15 minutes after creation or at expiresAt
+      const expiresAt = job.expiresAt || job.signalMeta?.expiresAt;
+      if (expiresAt) {
+        if (new Date(expiresAt).getTime() <= Date.now()) return false;
+      } else if (job.createdAt) {
+        // Fallback: if no expiresAt, instant missions expire after 15 minutes
+        if (Date.now() - new Date(job.createdAt).getTime() > 15 * 60 * 1000) return false;
+      }
+
+      return true;
+    });
+  }, [dismissedJobs, activeBookings, homeSummary?.recentBookings]);
 
   // ─── Location & Background Sync (Non-blocking) ───────────────────────────────
   const getSavedCoordinates = useCallback((): WorkerCoordinates | null => {
@@ -856,33 +899,82 @@ export function WorkerHome() {
           </Animated.View>
         ) : null}
 
-        {/* ── Section 3: Clean Job History Shortcut ── */}
-        <TouchableOpacity
-          style={[
-            styles.historyLinkCard,
-            {
-              borderColor: theme.colors.border.subtle,
-              backgroundColor: alpha(theme.colors.surface.card, 0.35),
-            },
-          ]}
-          onPress={() => router.push('/(tabs)/bookings')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.historyLinkRow}>
-            <View style={[styles.historyIconWrap, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
-              <ShieldCheck size={20} color={colors.cyan} />
+        {/* ── Section 3: Recent Completed Jobs (Cards) or History Shortcut if 0 jobs ── */}
+        {summaryLoading && !homeSummary ? (
+          <View style={styles.recentSection}>
+            <View style={styles.recentSectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {t('home.worker.recentJobs', 'Recent Jobs')}
+                </Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
+                  {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.historyLinkTitle, { color: theme.colors.text.primary }]}>
-                {t('home.worker.viewJobHistory', 'Completed & Past Jobs')}
-              </Text>
-              <Text style={[styles.historyLinkSub, { color: theme.colors.text.muted }]}>
-                {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={theme.colors.text.muted} />
+            <BookingCardSkeleton translateX={translateX} />
+            <BookingCardSkeleton translateX={translateX} />
           </View>
-        </TouchableOpacity>
+        ) : recentBookings.length > 0 ? (
+          <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.recentSection}>
+            <View style={styles.recentSectionHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {t('home.worker.recentJobs', 'Recent Jobs')}
+                </Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                  {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/bookings')}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.seeAllBtn}
+              >
+                <Text style={[styles.viewAll, { color: colors.cyan }]}>
+                  {t('home.client.seeAll', 'SEE ALL')}
+                </Text>
+                <ChevronRight size={12} color={colors.cyan} strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
+
+            {recentBookings.map((booking) => (
+              <RecentBookingCard
+                key={booking._id}
+                booking={booking}
+                onPress={() => handleBookingDetails(booking)}
+              />
+            ))}
+          </Animated.View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.historyLinkCard,
+              {
+                borderColor: theme.colors.border.subtle,
+                backgroundColor: alpha(theme.colors.surface.card, 0.35),
+              },
+            ]}
+            onPress={() => router.push('/(tabs)/bookings')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.historyLinkRow}>
+              <View style={[styles.historyIconWrap, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
+                <ShieldCheck size={20} color={colors.cyan} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.historyLinkTitle, { color: theme.colors.text.primary }]}>
+                  {t('home.worker.viewJobHistory', 'Completed & Past Jobs')}
+                </Text>
+                <Text style={[styles.historyLinkSub, { color: theme.colors.text.muted }]}>
+                  {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.text.muted} />
+            </View>
+          </TouchableOpacity>
+        )}
 
 
         <View style={{ height: 120 }} />
@@ -1194,5 +1286,31 @@ const styles = StyleSheet.create({
   historyLinkSub: {
     fontSize: 11,
     lineHeight: 15,
+  },
+  recentSection: {
+    marginTop: Spacing.xl,
+  },
+  recentSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.l,
+    marginBottom: Spacing.m,
+  },
+  sectionSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  viewAll: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
