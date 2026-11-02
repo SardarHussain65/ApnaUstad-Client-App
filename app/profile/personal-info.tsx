@@ -158,13 +158,13 @@ export default function PersonalInfoScreen() {
             <View style={styles.avatarWrapper}>
               <LinearGradient colors={[theme.colors.brand.primary, theme.colors.brand.secondary]} style={styles.avatarGlow} />
               {profileImage || localImage ? (
-                <Image source={{ uri: localImage || profileImage || '' }} style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} resizeMode="cover" />
+                <Image source={{ uri: localImage || profileImage || '' }} style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surface.card, borderColor: theme.isDark ? theme.colors.border.default : '#0F172A' }]} resizeMode="cover" />
               ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]}>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.surface.card, borderColor: theme.isDark ? theme.colors.border.default : '#0F172A' }]}>
                   <User size={54} color={theme.colors.text.muted} strokeWidth={1.5} />
                 </View>
               )}
-              <TouchableOpacity style={[styles.cameraBtn, { backgroundColor: theme.colors.brand.secondary, borderColor: theme.colors.background.app }, shadows.glow]} onPress={pickImage}>
+              <TouchableOpacity style={[styles.cameraBtn, { backgroundColor: theme.colors.brand.secondary, borderColor: theme.isDark ? theme.colors.background.app : '#0F172A' }, shadows.glow]} onPress={pickImage}>
                 {isUploading
                   ? <ActivityIndicator color={theme.colors.text.inverse} size="small" />
                   : <Camera size={17} color={theme.colors.text.inverse} />

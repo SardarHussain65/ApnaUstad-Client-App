@@ -172,13 +172,21 @@ const handleNotificationTap = async (
     } else if (userRole === 'worker') {
       // Worker-specific navigation
       switch (notificationType) {
+        case 'new_job':
         case 'new_job_available':
         case 'job_available':
-          if (categoryId) {
+          if (jobId) {
+            router.push({
+              pathname: '/(tabs)/jobs',
+              params: { openJobId: jobId },
+            });
+          } else if (categoryId) {
             router.push({
               pathname: '/category-details',
               params: { categoryId },
             });
+          } else {
+            router.push('/(tabs)/jobs');
           }
           break;
 

@@ -14,6 +14,7 @@ import {
   BarChart3,
   Calendar,
   Zap,
+  X,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -81,7 +82,19 @@ export function WorkerHome() {
   const {
     isOnline,
     toggleOnline,
+    dismissedJobs = [],
+    clearDismissedJob,
+    acceptDismissedJob,
+    openIncomingJobModal,
   } = useIncomingJob();
+
+  const activePendingUrgentJobs = useMemo(() => {
+    return dismissedJobs.filter((job) => {
+      if (job.urgency !== 'instant') return false;
+      if (!job.expiresAt) return true;
+      return new Date(job.expiresAt).getTime() > Date.now();
+    });
+  }, [dismissedJobs]);
 
   // ─── React Query Hooks (Each Section Loads Separately & Cached) ───
   const {
@@ -310,6 +323,166 @@ export function WorkerHome() {
             <ChevronRight size={13} color={colors.cyan} />
           </TouchableOpacity>
         </View>
+
+        {/* ── Missed / Pending Urgent Mission (e.g. while adding funds to wallet) ── */}
+        {activePendingUrgentJobs.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Zap color={colors.error} size={18} />
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    typography.threeD,
+                    { color: colors.error, fontSize: 18, flexShrink: 1 },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t('home.worker.urgentMissionWaiting', 'Urgent Job Waiting')}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.sectionBadge,
+                  {
+                    backgroundColor: alpha(colors.error, 0.12),
+                    borderColor: alpha(colors.error, 0.3),
+                  },
+                ]}
+              >
+                <Text style={[styles.sectionMeta, { color: colors.error }]}>
+                  {t('home.worker.readyToAccept', 'READY TO ACCEPT')}
+                </Text>
+              </View>
+            </View>
+
+            {activePendingUrgentJobs.map((job) => {
+              const amount = job.amount || job.budget || job.signalMeta?.amount || 0;
+              return (
+                <GlassCard
+                  key={job._id}
+                  intensity={35}
+                  padding={16}
+                  hasGlow
+                  glowColor={colors.error}
+                  onPress={() => openIncomingJobModal(job)}
+                  style={[
+                    styles.heroCard,
+                    {
+                      borderColor: alpha(colors.error, 0.4),
+                      borderLeftWidth: 3.5,
+                      borderLeftColor: colors.error,
+                      marginBottom: 12,
+                    },
+                  ]}
+                >
+                  <View style={styles.heroTopRow}>
+                    <View
+                      style={[
+                        styles.heroStatusPill,
+                        {
+                          backgroundColor: alpha(colors.error, 0.15),
+                          borderColor: alpha(colors.error, 0.35),
+                          flexShrink: 1,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.pulseDot, { backgroundColor: colors.error }]} />
+                      <Text style={[styles.heroStatusText, { color: colors.error, flexShrink: 1 }]} numberOfLines={1}>
+                        ⚡ {t('jobsNearby.urgentBadge', 'URGENT')} • {t('incomingJobModal.instantMission', 'Instant Mission')}
+                      </Text>
+                    </View>
+
+                    {amount > 0 && (
+                      <Text style={[styles.heroEarningValue, { color: colors.success, flexShrink: 0, marginLeft: 8 }]}>
+                        Rs. {Number(amount).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.heroJobTitle,
+                      typography.threeD,
+                      { color: theme.colors.text.primary, marginTop: 8 },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {job.category}
+                  </Text>
+
+                  {Boolean(job.description) && (
+                    <Text
+                      style={[styles.heroDescription, { color: theme.colors.text.muted }]}
+                      numberOfLines={2}
+                    >
+                      {job.description}
+                    </Text>
+                  )}
+
+                  {Boolean(job.address) && (
+                    <View style={[styles.heroLocationRow, { marginTop: 6, marginBottom: 12 }]}>
+                      <MapPin size={12} color={theme.colors.text.muted} strokeWidth={2.2} />
+                      <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                        {cleanAddressFor(job.address)}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.heroCtaBtn,
+                        { flex: 1, backgroundColor: colors.success, marginTop: 0, minWidth: 0 },
+                      ]}
+                      onPress={() => acceptDismissedJob(job)}
+                      activeOpacity={0.82}
+                    >
+                      <Text
+                        style={[styles.heroCtaBtnText, { color: '#000', fontWeight: '800' }]}
+                        numberOfLines={1}
+                      >
+                        {t('incomingJobModal.acceptMission', 'Accept Mission')}
+                      </Text>
+                      <ArrowRight size={15} color="#000" strokeWidth={2.5} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.heroCtaBtn,
+                        {
+                          backgroundColor: alpha(theme.colors.surface.card, 0.5),
+                          borderColor: theme.colors.border.subtle,
+                          borderWidth: 1,
+                          marginTop: 0,
+                          paddingHorizontal: 14,
+                        },
+                      ]}
+                      onPress={() => openIncomingJobModal(job)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.heroCtaBtnText, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                        {t('common.details', 'Details')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        padding: 8,
+                      }}
+                      onPress={() => clearDismissedJob(job._id)}
+                      activeOpacity={0.7}
+                    >
+                      <X size={18} color={theme.colors.text.muted} />
+                    </TouchableOpacity>
+                  </View>
+                </GlassCard>
+              );
+            })}
+          </Animated.View>
+        )}
 
         {/* ── Dynamic Operational Cockpit: Ongoing Work (when active) OR Ready For Jobs (when idle) ── */}
         {summaryLoading && !homeSummary ? (
@@ -750,17 +923,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.l,
+    gap: 8,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     flex: 1,
     minWidth: 0,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
+    flexShrink: 1,
+  },
+  sectionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginLeft: 8,
+    flexShrink: 0,
   },
   sectionSubtitle: {
     fontSize: 12,
@@ -769,8 +952,8 @@ const styles = StyleSheet.create({
   },
   sectionMeta: {
     fontWeight: '900',
-    fontSize: 11,
-    letterSpacing: 0,
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
   seeAll: {
     fontWeight: '800',

@@ -31,7 +31,6 @@ import {
   ArrowRight,
   Radio,
   Zap,
-  ShieldCheck,
   CheckCircle2,
   Clock,
 } from 'lucide-react-native';
@@ -224,11 +223,6 @@ export function ClientHome() {
     return categories.filter(cat => cat.name.toLowerCase().includes(q));
   }, [categories, searchQuery]);
 
-  const displayedCategories = useMemo(() => {
-    if (searchQuery.trim() || showAllServices) return filteredCategories;
-    return filteredCategories.slice(0, INITIAL_CATEGORY_LIMIT);
-  }, [filteredCategories, showAllServices, searchQuery]);
-
   // Active Booking (assigned Ustad on the way or ongoing work)
   const activeBooking = useMemo(() => {
     if (homeSummary?.activeBooking) return homeSummary.activeBooking;
@@ -257,6 +251,16 @@ export function ClientHome() {
   }, [homeSummary?.recentBookings, activeBooking]);
 
   const totalBookingsCount = homeSummary?.stats?.total ?? (homeSummary?.recentBookings?.length ?? 0);
+
+  // If there are ongoing or recent jobs below, keep categories compact (6 cards = 2 rows).
+  // If there is no activity below, show one more row (9 cards = 3 rows) so the screen looks balanced.
+  const hasBottomActivity = recentBookings.length > 0;
+  const baseCategoryLimit = hasBottomActivity ? INITIAL_CATEGORY_LIMIT : 9;
+
+  const displayedCategories = useMemo(() => {
+    if (searchQuery.trim() || showAllServices) return filteredCategories;
+    return filteredCategories.slice(0, baseCategoryLimit);
+  }, [filteredCategories, showAllServices, searchQuery, baseCategoryLimit]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -317,55 +321,60 @@ export function ClientHome() {
         {/* ── 1. Top Dynamic Hero Card (State-Aware) ── */}
         {activeBooking ? (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
-            <GlassCard
-              intensity={35}
-              padding={18}
-              hasGlow
-              glowColor={colors.success}
-              style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => router.push({ pathname: '/transaction-details', params: { id: activeBooking._id } })}
             >
-              <View style={styles.heroTopRow}>
-                <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
-                  <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
-                  <Text style={[styles.heroStatusText, { color: colors.success }]}>
-                    {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
-                  </Text>
-                </View>
-                <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
-                  {activeBooking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
-                </Text>
-              </View>
-
-              <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                {activeBooking.category || (activeBooking as any).serviceName || 'Service Request'}
-              </Text>
-
-              <View style={styles.heroCustomerRow}>
-                <Text style={[styles.heroCustomerName, { color: theme.colors.text.secondary }]}>
-                  {t('common.ustad', 'Ustad')}: {activeBooking.worker?.fullName || activeBooking.cardMeta?.counterParty?.fullName || 'Assigned Ustad'}
-                </Text>
-                {activeBooking.address ? (
-                  <View style={styles.heroLocationRow}>
-                    <MapPin size={12} color={theme.colors.text.muted} />
-                    <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                      {activeBooking.address}
+              <GlassCard
+                intensity={35}
+                padding={18}
+                hasGlow
+                glowColor={colors.success}
+                style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+              >
+                <View style={styles.heroTopRow}>
+                  <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
+                    <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.heroStatusText, { color: colors.success }]}>
+                      {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
                     </Text>
                   </View>
-                ) : null}
-              </View>
+                  <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
+                    {activeBooking.bookingType === 'instant' ? '⚡ Urgent' : '📅 Scheduled'}
+                  </Text>
+                </View>
 
-              <TouchableOpacity
-                style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
-                onPress={() => router.push({ pathname: '/job-tracking', params: { bookingId: activeBooking._id, id: activeBooking._id } })}
-                activeOpacity={0.84}
-              >
-                <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
-                <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
-                  {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                <Text style={[styles.heroJobTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {activeBooking.category || (activeBooking as any).serviceName || 'Service Request'}
                 </Text>
-                <ArrowRight size={16} color="#000" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </GlassCard>
+
+                <View style={styles.heroCustomerRow}>
+                  <Text style={[styles.heroCustomerName, { color: theme.colors.text.secondary }]}>
+                    {t('common.ustad', 'Ustad')}: {activeBooking.worker?.fullName || activeBooking.cardMeta?.counterParty?.fullName || 'Assigned Ustad'}
+                  </Text>
+                  {activeBooking.address ? (
+                    <View style={styles.heroLocationRow}>
+                      <MapPin size={12} color={theme.colors.text.muted} />
+                      <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                        {activeBooking.address}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
+                  onPress={() => router.push({ pathname: '/transaction-details', params: { id: activeBooking._id } })}
+                  activeOpacity={0.84}
+                >
+                  <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
+                    {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                  </Text>
+                  <ArrowRight size={16} color="#000" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </GlassCard>
+            </TouchableOpacity>
           </Animated.View>
         ) : activeSearchJob ? (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
@@ -464,7 +473,7 @@ export function ClientHome() {
               </Text>
             </View>
 
-            {!searchQuery && categories.length > INITIAL_CATEGORY_LIMIT && (
+            {!searchQuery && categories.length > baseCategoryLimit && (
               <TouchableOpacity
                 onPress={handleToggleServices}
                 hitSlop={styles.hitSlop}
@@ -553,25 +562,7 @@ export function ClientHome() {
               />
             ))}
           </Animated.View>
-        ) : (
-          <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.trustSection}>
-            <View style={styles.trustRow}>
-              <View style={[styles.trustPill, { backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.22) }]}>
-                <ShieldCheck size={16} color={colors.cyan} strokeWidth={2.2} />
-                <Text style={[styles.trustPillText, { color: theme.colors.text.primary }]}>
-                  {t('home.client.verifiedUstads', '100% Verified Ustads')}
-                </Text>
-              </View>
-
-              <View style={[styles.trustPill, { backgroundColor: alpha(colors.success, 0.08), borderColor: alpha(colors.success, 0.22) }]}>
-                <CheckCircle2 size={16} color={colors.success} strokeWidth={2.2} />
-                <Text style={[styles.trustPillText, { color: theme.colors.text.primary }]}>
-                  {t('home.client.transparentRates', 'Transparent Rates')}
-                </Text>
-              </View>
-            </View>
-          </Animated.View>
-        )}
+        ) : null}
 
         {/* Clean bottom padding to scroll nicely above tab bar */}
         <View style={{ height: 100 }} />
@@ -755,31 +746,5 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 13,
     fontWeight: '500',
-  },
-
-  // ── Trust & Quality Guarantee
-  trustSection: {
-    paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.l,
-  },
-  trustRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  trustPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 13,
-    paddingHorizontal: 8,
-    borderRadius: BorderRadius.l,
-    borderWidth: 1,
-  },
-  trustPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
 });

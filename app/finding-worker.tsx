@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, ScrollView, TextInput, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -87,27 +87,121 @@ export default function FindingWorkerScreen() {
 
   const [remainingSeconds, setRemainingSeconds] = useState<number>(600);
   const [isBoosting, setIsBoosting] = useState(false);
+  const [showBoosterPrompt, setShowBoosterPrompt] = useState(false);
+  const [selectedIncrement, setSelectedIncrement] = useState<number | null>(200);
+  const [customPriceInput, setCustomPriceInput] = useState<string>('');
 
-  const elapsedMs = job?.createdAt ? Date.now() - new Date(job.createdAt).getTime() : 0;
-  const isEscalationSuggested = isInstant && (job?.urgencyPricingVersion === 1) && (elapsedMs >= 10 * 60 * 1000);
+  const basePrice = Number(job?.amount ?? job?.budget ?? 1000);
 
-  const handleBoostPrice = async () => {
+  const effectiveNewPrice = React.useMemo(() => {
+    if (customPriceInput && Number(customPriceInput) > 0) {
+      return Number(customPriceInput);
+    }
+    if (selectedIncrement !== null) {
+      return basePrice + selectedIncrement;
+    }
+    return basePrice + 200;
+  }, [basePrice, selectedIncrement, customPriceInput]);
+
+  const isDark = theme.isDark;
+
+  const decisionTheme = useMemo(() => ({
+    expiredCardBg: isDark ? 'rgba(4, 9, 29, 0.95)' : '#FFFFFF',
+    expiredCardBorder: isDark ? 'rgba(255, 59, 48, 0.4)' : '#FCA5A5',
+    expiredGradient: isDark 
+      ? ['rgba(255, 59, 48, 0.16)', 'rgba(255, 140, 0, 0.08)', 'rgba(10, 16, 32, 0.95)']
+      : ['#FFF5F5', '#FFFFFF', '#FFFBF0'],
+    boosterCardBg: isDark ? 'rgba(4, 9, 29, 0.92)' : '#FFFFFF',
+    boosterCardBorder: isDark ? 'rgba(255, 140, 0, 0.35)' : '#FCD34D',
+    boosterGradient: isDark
+      ? ['rgba(255, 140, 0, 0.16)', 'rgba(255, 59, 48, 0.08)', 'rgba(10, 16, 32, 0.95)']
+      : ['#FFFBF0', '#FFFFFF', '#FFF5F5'],
+    urduTitle: isDark ? '#FFD700' : '#B45309',
+    chipBg: isDark ? 'rgba(255, 140, 0, 0.08)' : '#F8FAFC',
+    chipBorder: isDark ? 'rgba(255, 140, 0, 0.35)' : '#CBD5E1',
+    chipText: isDark ? '#FF9A24' : '#334155',
+    chipSelectedBg: isDark ? '#FF8C00' : '#EA580C',
+    chipSelectedBorder: isDark ? '#FFA033' : '#C2410C',
+    chipSelectedText: '#FFFFFF',
+    inputWrapBg: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F8FAFC',
+    inputWrapBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : '#94A3B8',
+    inputPrefix: isDark ? '#00F0FF' : '#0284C7',
+    inputText: isDark ? '#FFFFFF' : '#0F172A',
+    inputPlaceholder: isDark ? 'rgba(255, 255, 255, 0.35)' : '#64748B',
+    submitBtnBg: isDark ? '#FF8C00' : '#EA580C',
+    submitBtnText: '#FFFFFF',
+    extendBtnBg: isDark ? 'rgba(0, 240, 255, 0.08)' : '#F0F9FF',
+    extendBtnBorder: isDark ? 'rgba(0, 240, 255, 0.35)' : '#38BDF8',
+    extendBtnText: isDark ? '#00F0FF' : '#0369A1',
+    stopBtnBg: isDark ? 'rgba(255, 59, 48, 0.08)' : '#FEF2F2',
+    stopBtnBorder: isDark ? 'rgba(255, 59, 48, 0.35)' : '#FCA5A5',
+    stopBtnText: isDark ? '#FF453A' : '#DC2626',
+    divider: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.08)',
+    title: isDark ? '#FFFFFF' : '#0F172A',
+    desc: isDark ? 'rgba(255, 255, 255, 0.72)' : '#334155',
+    subtext: isDark ? 'rgba(255, 255, 255, 0.5)' : '#475569',
+  }), [isDark]);
+
+  const handleBoostPrice = async (targetPrice?: number) => {
+    const finalPrice = targetPrice ?? effectiveNewPrice;
+    if (!finalPrice || finalPrice <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: t('common.error', 'Invalid Price'),
+        text2: 'Please enter a valid amount.',
+      });
+      return;
+    }
+
     try {
       setIsBoosting(true);
-      const res = await api.post(`/jobs/${jobId}/escalate`);
+      const res = await api.post(`/jobs/${jobId}/escalate`, {
+        newPrice: finalPrice,
+        additionalMinutes: 10,
+      });
       if (res.data?.success) {
         Toast.show({
           type: 'success',
-          text1: t('findingWorker.boosterApplied', 'Price boosted by 15%! Re-broadcasting...'),
+          text1: t('findingWorker.boosterApplied', 'Rate updated to {{amount}}! Searching for Ustads...', {
+            amount: `Rs. ${finalPrice.toLocaleString()}`,
+          }),
         });
+        setShowBoosterPrompt(false);
+        setRemainingSeconds(600);
+        setCustomPriceInput('');
+        setSelectedIncrement(200);
         await refetchJob();
       }
     } catch (err: any) {
       Toast.show({
         type: 'error',
-        text1: t('findingWorker.cancelError', 'Could Not Cancel Request'),
+        text1: t('common.error', 'Could Not Update Rate'),
         text2: err.response?.data?.message || 'Please try again.',
       });
+    } finally {
+      setIsBoosting(false);
+    }
+  };
+
+  const handleDismissBooster = async () => {
+    try {
+      setIsBoosting(true);
+      const res = await api.post(`/jobs/${jobId}/escalate`, {
+        additionalMinutes: 10,
+      });
+      if (res.data?.success) {
+        setShowBoosterPrompt(false);
+        setRemainingSeconds(600);
+        Toast.show({
+          type: 'info',
+          text1: t('findingWorker.searchExtendedTitle', 'Search Extended!'),
+          text2: t('findingWorker.searchExtendedDesc', 'Searching for 10 more minutes at current rate...'),
+        });
+        await refetchJob();
+      }
+    } catch (err: any) {
+      setShowBoosterPrompt(false);
+      setRemainingSeconds(600);
     } finally {
       setIsBoosting(false);
     }
@@ -118,6 +212,9 @@ export default function FindingWorkerScreen() {
     const timer = setInterval(() => {
       const rem = getRemainingTimeForEscalation();
       setRemainingSeconds(rem);
+      if (rem <= 0) {
+        setShowBoosterPrompt(true);
+      }
     }, 1000);
     return () => clearInterval(timer);
   }, [job, isInstant]);
@@ -262,10 +359,12 @@ export default function FindingWorkerScreen() {
   }, [initialBids]);
 
   useEffect(() => {
-    // Animations
+    // Animations - always keep live pulse and rotation running
     pulse.value = withRepeat(withTiming(1.2, { duration: 1500 }), -1, true);
     rotation.value = withRepeat(withTiming(360, { duration: 8000 }), -1, false);
+  }, [pulse, rotation]);
 
+  useEffect(() => {
     // Socket Listeners
     const unsubscribeAssigned = socketService.on('job:assigned', (data) => {
       setStatus(t('findingWorker.verified'));
@@ -303,29 +402,14 @@ export default function FindingWorkerScreen() {
     const unsubscribeSearchExtended = socketService.on('job:search_extended', (data: any) => {
       if (data?.jobId && String(data.jobId) !== String(jobId)) return;
       
-      if (data?.timeout) {
-        Toast.show({
-          type: 'info',
-          text1: t('findingWorker.searchTimeoutTitle', 'Search Timeout'),
-          text2: t('findingWorker.searchTimeoutDesc', 'No Ustads accepted yet. Keep searching or cancel.'),
-          visibilityTime: 6000
-        });
+      if (data?.suggestEscalation || data?.timeout || data?.expired) {
+        setShowBoosterPrompt(true);
         refetchJob();
-      } else if (data?.suggestEscalation) {
-        Toast.show({
-          type: 'info',
-          text1: t('findingWorker.boosterTitle', "Ustads Aren't Satisfied"),
-          text2: t('findingWorker.boosterDesc', "Ustads near you are active but haven't accepted this price. Boost your offer by 15% to attract them quickly!"),
-          visibilityTime: 6000
-        });
+      } else if (data?.resumed) {
+        setShowBoosterPrompt(false);
+        setRemainingSeconds(600);
         refetchJob();
       } else {
-        Toast.show({
-          type: 'info',
-          text1: t('findingWorker.searchExpandedTitle', 'Searching Expanded! ⚡'),
-          text2: t('findingWorker.searchExpandedDesc', 'Increasing fixed price to Rs. {{price}} for wider search.', { price: data.newPrice ? data.newPrice.toLocaleString() : '' }),
-          visibilityTime: 6000
-        });
         refetchJob();
       }
     });
@@ -648,12 +732,20 @@ export default function FindingWorkerScreen() {
                 <View style={[
                   styles.centerNode,
                   {
-                    backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(colors.brand.primary, 0.1),
-                    borderColor: theme.isDark ? 'rgba(0,245,255,0.4)' : alpha(colors.brand.primary, 0.3),
+                    backgroundColor: theme.isDark 
+                      ? 'rgba(0,245,255,0.12)' 
+                      : alpha(colors.brand.primary, 0.1),
+                    borderColor: theme.isDark 
+                      ? 'rgba(0,245,255,0.4)' 
+                      : alpha(colors.brand.primary, 0.3),
                     shadowColor: colors.brand.primary,
                   }
                 ]}>
-                  {isBidsLoading ? <ActivityIndicator size="small" color={colors.brand.primary} /> : <Search color={colors.brand.primary} size={28} />}
+                  {isBidsLoading ? (
+                    <ActivityIndicator size="small" color={colors.brand.primary} />
+                  ) : (
+                    <Search color={colors.brand.primary} size={28} />
+                  )}
                 </View>
               </View>
 
@@ -672,20 +764,18 @@ export default function FindingWorkerScreen() {
                       Fixed Rate: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
                     </Text>
                   </View>
-                  {remainingSeconds > 0 && (
-                    <View style={[
-                      styles.instantChip,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
-                        borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
-                      }
-                    ]}>
-                      <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
-                      <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
-                        {formatCountdown(remainingSeconds)} left
-                      </Text>
-                    </View>
-                  )}
+                  <View style={[
+                    styles.instantChip,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
+                      borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
+                    }
+                  ]}>
+                    <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                      {remainingSeconds > 0 ? `${formatCountdown(remainingSeconds)} left` : t('findingWorker.liveSearching', 'Searching live...')}
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -706,7 +796,9 @@ export default function FindingWorkerScreen() {
                 </View>
               )}
 
-              <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>{status}</Text>
+              <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>
+                {status}
+              </Text>
               <Text style={[styles.subText, { color: colors.text.secondary }]}>
                 {isInstant
                   ? t('findingWorker.broadcastDesc')
@@ -717,57 +809,139 @@ export default function FindingWorkerScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {isEscalationSuggested && (
+          {showBoosterPrompt && (
             <Animated.View 
-              entering={FadeIn.duration(500)} 
+              entering={FadeIn.duration(400)} 
               style={[
                 styles.boosterCard,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(4,9,29,0.85)' : colors.surface.card,
-                  borderColor: theme.isDark ? 'rgba(255,140,0,0.3)' : colors.border.subtle,
-                  shadowColor: colors.brand.worker,
+                  backgroundColor: decisionTheme.boosterCardBg,
+                  borderColor: decisionTheme.boosterCardBorder,
+                  elevation: isDark ? 0 : 3,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: isDark ? 0 : 0.08,
+                  shadowRadius: 8,
                 }
               ]}
             >
               <LinearGradient
-                colors={theme.isDark 
-                  ? ['rgba(255, 140, 0, 0.16)', 'rgba(255, 59, 48, 0.12)', 'rgba(15, 15, 26, 0.95)']
-                  : [alpha(colors.brand.worker, 0.08), colors.surface.card, alpha(colors.status.error, 0.05)]
-                }
+                colors={decisionTheme.boosterGradient as any}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.boosterGradient}
               >
                 <View style={styles.boosterHeadingRow}>
-                  <View style={[styles.boosterIconContainer, { backgroundColor: addAlpha(legacyColors.orange, '20') }]}>
-                    <Zap size={18} color={legacyColors.orange} fill={legacyColors.orange} />
+                  <View style={[
+                    styles.boosterIconContainer, 
+                    { 
+                      backgroundColor: isDark ? addAlpha(legacyColors.orange, '20') : '#FEF3C7',
+                      borderColor: isDark ? 'rgba(255,140,0,0.4)' : '#FCD34D',
+                    }
+                  ]}>
+                    <Zap size={18} color={isDark ? legacyColors.orange : '#D97706'} fill={isDark ? legacyColors.orange : '#D97706'} />
                   </View>
                   <View style={styles.boosterHeadingCopy}>
-                    <Text style={styles.boosterEyebrow}>🔥 {t('findingWorker.boosterTitle', "Ustads Aren't Satisfied")}</Text>
-                    <Text style={[styles.boosterUrduTitle, { color: colors.text.secondary }]}>استاد اس ریٹ پر راضی نہیں ہیں</Text>
+                    <Text style={[styles.boosterEyebrow, { color: isDark ? '#FF8C00' : '#D97706' }]}>
+                      🔥 {t('findingWorker.boosterTitle', "Want an Ustad Faster?")}
+                    </Text>
+                    <Text style={[styles.boosterUrduTitle, { color: decisionTheme.urduTitle }]}>
+                      استاد اس ریٹ پر راضی نہیں ہیں
+                    </Text>
                   </View>
                 </View>
 
-                <Text style={[styles.boosterDescription, { color: colors.text.secondary }]}>
-                  {t('findingWorker.boosterDesc', "Workers near you are active but haven't accepted this price. Boost your offer by 15% to attract them quickly!")}
+                <Text style={[styles.boosterDescription, { color: decisionTheme.desc }]}>
+                  {t('findingWorker.boosterDesc', "Nearby Ustads haven't accepted this rate yet. Increase your offer to attract Ustads faster!")}
                 </Text>
-                
-                <TouchableOpacity 
-                  style={[styles.boostButton, { backgroundColor: colors.brand.worker }]} 
-                  onPress={handleBoostPrice} 
-                  disabled={isBoosting}
-                  activeOpacity={0.78}
-                >
-                  {isBoosting ? (
-                    <ActivityIndicator size="small" color={theme.isDark ? "#050510" : "#FFFFFF"} />
-                  ) : (
-                    <>
-                      <Zap size={16} color={theme.isDark ? "#050510" : "#FFFFFF"} fill={theme.isDark ? "#050510" : "#FFFFFF"} style={{ marginRight: 6 }} />
-                      <Text style={[styles.boostButtonText, { color: theme.isDark ? "#050510" : "#FFFFFF" }]}>
-                        {t('findingWorker.boosterBtn', "Boost Price (+15%)")} • ریٹ بڑھائیں (+15%)
+
+                {/* Quick Increment Chips */}
+                <View style={styles.quickIncrementsRow}>
+                  {[200, 500, 1000].map((inc) => {
+                    const isSelected = selectedIncrement === inc && !customPriceInput;
+                    const target = basePrice + inc;
+                    return (
+                      <TouchableOpacity
+                        key={inc}
+                        style={[
+                          styles.quickIncrementChip,
+                          {
+                            backgroundColor: isSelected ? decisionTheme.chipSelectedBg : decisionTheme.chipBg,
+                            borderColor: isSelected ? decisionTheme.chipSelectedBorder : decisionTheme.chipBorder,
+                          },
+                        ]}
+                        onPress={() => {
+                          setSelectedIncrement(inc);
+                          setCustomPriceInput('');
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[
+                          styles.quickIncrementText,
+                          {
+                            color: isSelected ? decisionTheme.chipSelectedText : decisionTheme.chipText,
+                            fontWeight: isSelected ? '900' : '800',
+                          }
+                        ]}>
+                          +{inc} (Rs. {target.toLocaleString()})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Custom Price Input & Submit */}
+                <View style={styles.customPriceRow}>
+                  <View style={[
+                    styles.customPriceInputWrap,
+                    {
+                      backgroundColor: decisionTheme.inputWrapBg,
+                      borderColor: decisionTheme.inputWrapBorder,
+                    }
+                  ]}>
+                    <Text style={[styles.customPricePrefix, { color: decisionTheme.inputPrefix }]}>PKR</Text>
+                    <TextInput
+                      style={[styles.customPriceInput, { color: decisionTheme.inputText }]}
+                      value={customPriceInput}
+                      onChangeText={(val) => {
+                        const cleaned = val.replace(/[^\d]/g, '');
+                        setCustomPriceInput(cleaned);
+                        if (cleaned) setSelectedIncrement(null);
+                      }}
+                      placeholder={String(effectiveNewPrice)}
+                      placeholderTextColor={decisionTheme.inputPlaceholder}
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      styles.boostSubmitBtn,
+                      { backgroundColor: decisionTheme.submitBtnBg },
+                      isBoosting && { opacity: 0.6 }
+                    ]}
+                    onPress={() => handleBoostPrice()}
+                    disabled={isBoosting}
+                    activeOpacity={0.8}
+                  >
+                    {isBoosting ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={[styles.boostSubmitBtnText, { color: decisionTheme.submitBtnText }]}>
+                        {t('findingWorker.boosterBtn', 'Set Rs. {{amount}} & Search', { amount: effectiveNewPrice.toLocaleString() })}
                       </Text>
-                    </>
-                  )}
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Option to continue at current rate */}
+                <TouchableOpacity
+                  style={{ marginTop: 14, alignItems: 'center', paddingVertical: 6 }}
+                  onPress={handleDismissBooster}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: decisionTheme.subtext, textDecorationLine: 'underline' }}>
+                    ⏱ {t('findingWorker.keepCurrentRate', 'Keep searching at Rs. {{amount}}', { amount: basePrice.toLocaleString() })}
+                  </Text>
                 </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
@@ -1403,6 +1577,119 @@ const styles = StyleSheet.create({
     color: '#050510',
     fontSize: 14,
     fontWeight: '800',
+  },
+  decisionOptionSection: {
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  decisionOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 6,
+  },
+  decisionOptionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  decisionOptionSubtext: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  decisionDivider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  quickIncrementsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  quickIncrementChip: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickIncrementChipSelected: {
+  },
+  quickIncrementText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  quickIncrementTextSelected: {
+    fontWeight: '900',
+  },
+  customPriceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  customPriceInputWrap: {
+    flex: 1,
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1.2,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  customPricePrefix: {
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  customPriceInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  boostSubmitBtn: {
+    paddingHorizontal: 14,
+    height: 46,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boostSubmitBtnText: {
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  extendSearchBtn: {
+    height: 46,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  extendSearchBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  stopSearchBtn: {
+    height: 46,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  stopSearchBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  expiredDecisionCard: {
+    marginTop: 14,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1.2,
+    borderColor: 'rgba(255,59,48,0.35)',
+    backgroundColor: 'rgba(4,9,29,0.92)',
   },
   jobBriefCard: {
     marginTop: 14,

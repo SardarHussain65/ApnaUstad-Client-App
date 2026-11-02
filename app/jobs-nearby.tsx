@@ -27,6 +27,7 @@ import { Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { useNearbyJobs, useUserLocation } from '../hooks';
+import { useIncomingJob } from '../context/IncomingJobContext';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +39,7 @@ export default function JobsNearbyScreen() {
   const typography = useThemeTypography();
   const colors = theme.legacy;
   const { location } = useUserLocation();
+  const { openIncomingJobModal } = useIncomingJob();
   const { data: jobs = [], isLoading, refetch } = useNearbyJobs(location?.longitude, location?.latitude);
 
   return (
@@ -86,10 +88,16 @@ export default function JobsNearbyScreen() {
                     borderColor={theme.colors.border.subtle}
                     hasGlow={job.urgency === 'instant'}
                     glowColor={job.urgency === 'instant' ? colors.cyan : colors.primary}
-                    onPress={() => router.push({
-                      pathname: '/bid-submission',
-                      params: { jobId: job._id, title: job.category, urgency: job.urgency }
-                    })}
+                    onPress={() => {
+                      if (job.urgency === 'instant') {
+                        openIncomingJobModal(job);
+                      } else {
+                        router.push({
+                          pathname: '/bid-submission',
+                          params: { jobId: job._id, title: job.category, urgency: job.urgency }
+                        });
+                      }
+                    }}
                   >
                     <View style={styles.jobRow}>
                       <View style={[styles.typeCluster, { borderRightColor: theme.colors.border.subtle }]}>

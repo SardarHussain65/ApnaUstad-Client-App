@@ -9,7 +9,7 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   Briefcase,
   MapPin,
@@ -31,6 +31,7 @@ import { GlassCard } from '../../components/home/GlassCard';
 import { useNearbyJobs, useUserLocation, useWorkerBids } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useIsRTL } from '../../context/LanguageContext';
+import { useIncomingJob } from '../../context/IncomingJobContext';
 
 type UrgencyFilter = 'all' | 'instant' | 'scheduled';
 
@@ -46,6 +47,8 @@ export default function WorkerJobsTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { openIncomingJobModal } = useIncomingJob();
+  const { openJobId } = useLocalSearchParams<{ openJobId?: string }>();
 
   const { location } = useUserLocation();
   const { data: rawJobs = [], isLoading, refetch } = useNearbyJobs(
@@ -53,6 +56,18 @@ export default function WorkerJobsTab() {
     location?.latitude
   );
   const { data: workerBids = [], refetch: refetchBids } = useWorkerBids();
+
+  // If navigated from push notification with openJobId, open modal automatically
+  useEffect(() => {
+    if (openJobId) {
+      const targetJob = rawJobs.find((j: any) => (j._id || j.id) === openJobId);
+      if (targetJob) {
+        openIncomingJobModal(targetJob);
+      } else {
+        openIncomingJobModal({ _id: openJobId, urgency: 'instant' });
+      }
+    }
+  }, [openJobId, rawJobs, openIncomingJobModal]);
 
   // Set of job IDs where this worker has already sent an offer
   const bidJobIds = useMemo(() => {
@@ -71,6 +86,13 @@ export default function WorkerJobsTab() {
       unsub();
     };
   }, [refetch]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+      refetchBids();
+    }, [refetch, refetchBids])
+  );
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -280,16 +302,20 @@ export default function WorkerJobsTab() {
                       borderColor={theme.colors.border.subtle}
                       hasGlow={isUrgent}
                       glowColor={isUrgent ? colors.cyan : colors.worker}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/bid-submission',
-                          params: {
-                            jobId: job._id,
-                            title: job.category,
-                            urgency: job.urgency,
-                          },
-                        })
-                      }
+                      onPress={() => {
+                        if (isUrgent) {
+                          openIncomingJobModal(job);
+                        } else {
+                          router.push({
+                            pathname: '/bid-submission',
+                            params: {
+                              jobId: job._id,
+                              title: job.category,
+                              urgency: job.urgency,
+                            },
+                          });
+                        }
+                      }}
                     >
                       <View style={styles.jobRow}>
                         {/* Left urgency pill cluster */}
@@ -356,7 +382,7 @@ export default function WorkerJobsTab() {
                             >
                               {job.address || t('common.nearby', 'Nearby')}
                             </Text>
-                            {job.budget ? (
+                            {(job.budget || job.amount || job.signalMeta?.amount) ? (
                               <>
                                 <View
                                   style={[
@@ -370,7 +396,7 @@ export default function WorkerJobsTab() {
                                     { color: colors.success, fontWeight: '700' },
                                   ]}
                                 >
-                                  Rs. {Number(job.budget).toLocaleString()}
+                                  Rs. {Number(job.budget || job.amount || job.signalMeta?.amount).toLocaleString()}
                                 </Text>
                               </>
                             ) : null}
@@ -383,15 +409,15 @@ export default function WorkerJobsTab() {
                             style={[
                               styles.bidCtaPill,
                               {
-                                backgroundColor: alpha(colors.cyan, 0.15),
-                                borderColor: alpha(colors.cyan, 0.35),
+                                backgroundColor: isUrgent ? alpha(colors.error, 0.18) : alpha(colors.cyan, 0.15),
+                                borderColor: isUrgent ? alpha(colors.error, 0.4) : alpha(colors.cyan, 0.35),
                               },
                             ]}
                           >
-                            <Text style={[styles.bidCtaText, { color: colors.cyan }]}>
-                              {t('jobsNearby.bidBtn', 'BID')}
+                            <Text style={[styles.bidCtaText, { color: isUrgent ? colors.error : colors.cyan }]}>
+                              {isUrgent ? t('jobsNearby.claimBtn', 'ACCEPT') : t('jobsNearby.bidBtn', 'BID')}
                             </Text>
-                            <ChevronRight size={14} color={colors.cyan} />
+                            <ChevronRight size={14} color={isUrgent ? colors.error : colors.cyan} />
                           </View>
                         </View>
                       </View>

@@ -280,7 +280,8 @@ export function useNearbyJobs(longitude?: number, latitude?: number, options?: O
   return useQuery<Job[]>({
     queryKey: queryKeys.jobs.nearby(longitude, latitude),
     queryFn: () => fetchNearbyJobs(longitude, latitude),
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 15, // 15 seconds - urgent jobs need timely discovery
+    refetchOnMount: 'always',
     gcTime: 1000 * 60 * 10,
     ...options,
   });
