@@ -438,12 +438,26 @@ export default function FindingWorkerScreen() {
       });
     });
 
+    const unsubscribeCancelled = socketService.on('job:cancelled', (data: any) => {
+      const targetId = (data?.jobId || data?._id)?.toString();
+      if (!targetId || targetId === String(jobId)) {
+        Toast.show({
+          type: 'info',
+          text1: t('findingWorker.requestCancelled', 'Request Cancelled'),
+          text2: data?.reason || t('findingWorker.cancelSuccess', 'This service request has been cancelled.'),
+        });
+        bypassBeforeRemoveRef.current = true;
+        router.replace('/(tabs)' as any);
+      }
+    });
+
     return () => {
       unsubscribeAssigned();
       unsubscribeAutoAssigned();
       unsubscribeSearchExtended();
       unsubscribeBids();
       unsubscribeWithdrawn();
+      unsubscribeCancelled();
     };
   }, [jobId, pulse, rotation, router, t]);
 

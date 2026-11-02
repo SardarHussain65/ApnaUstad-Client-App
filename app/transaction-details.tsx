@@ -57,6 +57,7 @@ import {
   useUpdateBookingStatusMutation,
   usePayBookingMutation,
   useCreateReviewMutation,
+  useRefreshOnFocus,
 } from '../hooks';
 import { MAPTILER_API_KEY } from '../constants/Config';
 import {
@@ -164,10 +165,28 @@ export default function TransactionDetailsScreen() {
   const { mutate: payBooking, isPending: isPaying } = usePayBookingMutation();
   const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
 
+  // Auto-refresh when TransactionDetails screen regains focus
+  useRefreshOnFocus(refetch);
+
   useEffect(() => {
-    const unsub = socketService.on('booking:status', () => refetch());
-    return () => unsub();
-  }, [refetch]);
+    const handleUpdate = (data: any) => {
+      const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+      if (!incomingId || incomingId === String(id)) {
+        refetch();
+      }
+    };
+
+    const events = [
+      'booking:status',
+      'booking:accepted',
+      'booking:ongoing',
+      'booking:completed',
+      'booking:cancelled',
+      'booking:paid'
+    ];
+    const unsubs = events.map(event => socketService.on(event, handleUpdate));
+    return () => unsubs.forEach(u => u());
+  }, [id, refetch]);
 
   const meta = booking?.cardMeta;
   const status = booking?.status || 'accepted';

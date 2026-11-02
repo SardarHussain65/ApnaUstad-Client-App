@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, Calendar, Clock, ChevronRight, ChevronLeft, CheckCircle2, XCircle, Zap, Star, Inbox, Scale } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMyBookings, useWorkerBookings, useMyJobPosts } from '../../hooks';
+import { useMyBookings, useWorkerBookings, useMyJobPosts, useRefreshOnFocus } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
 import { useIsRTL } from '../../context/LanguageContext';
@@ -121,18 +121,21 @@ export default function BookingsTab() {
     ]);
   }, [isWorker, refetchBookings, refetchJobs]);
 
+  // Auto-refresh when Bookings tab gains focus
+  useRefreshOnFocus(handleRefresh);
+
   useEffect(() => {
     // Listen for real-time socket updates
-    const unsubNew = socketService.on('booking:new', () => handleRefresh());
-    const unsubStatus = socketService.on('booking:status', () => handleRefresh());
-    const unsubJob = socketService.on('job:new', () => handleRefresh());
-    const unsubBid = socketService.on('bid:new', () => handleRefresh());
+    const events = [
+      'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing',
+      'booking:completed', 'booking:cancelled', 'booking:paid',
+      'job:new', 'job:cancelled', 'job:status', 'job:assigned', 'job:auto_assigned',
+      'bid:new', 'bid:won', 'bid:lost', 'bid:withdrawn'
+    ];
+    const unsubs = events.map(event => socketService.on(event, () => handleRefresh()));
 
     return () => {
-      unsubNew();
-      unsubStatus();
-      unsubJob();
-      unsubBid();
+      unsubs.forEach(u => u());
     };
   }, [handleRefresh]);
 

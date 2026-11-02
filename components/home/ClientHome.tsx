@@ -39,7 +39,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
+import { useCategories, useClientHomeSummary, useMyJobPosts, useRefreshOnFocus, type Booking, type JobPost } from '../../hooks';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
@@ -214,6 +214,9 @@ export function ClientHome() {
       setIsRefreshing(false);
     }
   }, [refetchCategories, refetchHomeSummary, refetchJobs]);
+
+  // Auto-refresh when ClientHome regains focus (switching tabs / returning to home)
+  useRefreshOnFocus(handleRefresh);
 
   // ── Derived data ─────────────────────────────────────────────────────────
 

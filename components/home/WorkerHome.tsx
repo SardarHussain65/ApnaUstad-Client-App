@@ -43,6 +43,7 @@ import {
   useWorkerBids,
   useWithdrawBidMutation,
   useWorkerHomeSummary,
+  useRefreshOnFocus,
   Bid,
 } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
@@ -221,11 +222,15 @@ export function WorkerHome() {
     refetchAnalytics();
   }, [refetchSummary, refetchBids, refetchAnalytics]);
 
+  // Auto-refresh when WorkerHome regains focus (switching tabs / returning to home)
+  useRefreshOnFocus(refreshWorkerActivity);
+
   useEffect(() => {
     if (!token) return;
     const events = [
+      'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
       'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn',
-      'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled',
+      'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled', 'booking:paid'
     ];
     const unsubs = events.map((event) => socketService.on(event, refreshWorkerActivity));
     return () => unsubs.forEach((u) => u());

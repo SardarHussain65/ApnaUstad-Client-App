@@ -108,7 +108,7 @@ export default function SecurityScreen() {
 
         {/* Danger Zone */}
         <View style={[styles.section, { marginTop: 14 }]}>
-          <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>
+          <Text style={[styles.sectionTitle, { color: theme.isDark ? '#EF4444' : '#DC2626' }]}>
             {t('security.dangerZone', 'Danger Zone')}
           </Text>
           <SecurityItem
@@ -117,7 +117,7 @@ export default function SecurityScreen() {
             sublabel={t('security.deleteAccountSub', 'Permanently delete your account & all data')}
             onPress={handlePressDeleteAccount}
             delay={400}
-            primaryColor="#EF4444"
+            primaryColor={theme.isDark ? '#EF4444' : '#DC2626'}
             danger
           />
         </View>
@@ -149,8 +149,8 @@ export default function SecurityScreen() {
               style={[
                 styles.modalIconRing,
                 {
-                  backgroundColor: 'rgba(239, 68, 68, 0.14)',
-                  borderColor: 'rgba(239, 68, 68, 0.32)',
+                  backgroundColor: alpha('#EF4444', 0.12),
+                  borderColor: alpha('#EF4444', 0.28),
                 },
               ]}
             >
@@ -165,8 +165,26 @@ export default function SecurityScreen() {
               {t('profile.deleteConfirmDesc', 'This action is irreversible. All your profile data, booking history, ratings, and saved information will be permanently deleted.')}
             </Text>
 
-            {/* Actions */}
-            <View style={styles.modalActionsRow}>
+            {/* Actions: Staked vertically for clean fit across all devices & languages */}
+            <View style={styles.modalActionsCol}>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, isDeleting && { opacity: 0.7 }]}
+                onPress={handleConfirmDeleteAccount}
+                disabled={isDeleting}
+                activeOpacity={0.8}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Trash2 size={16} color="#FFFFFF" strokeWidth={2.3} style={{ marginEnd: 8 }} />
+                    <Text style={styles.modalConfirmBtnText} numberOfLines={1}>
+                      {t('profile.deleteConfirmYes', 'Yes, Delete Account')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[
                   styles.modalCancelBtn,
@@ -179,27 +197,9 @@ export default function SecurityScreen() {
                 disabled={isDeleting}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.modalCancelBtnText, { color: theme.colors.text.primary }]}>
+                <Text style={[styles.modalCancelBtnText, { color: theme.colors.text.primary }]} numberOfLines={1}>
                   {t('profile.deleteConfirmCancel', 'Keep Account')}
                 </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, isDeleting && { opacity: 0.7 }]}
-                onPress={handleConfirmDeleteAccount}
-                disabled={isDeleting}
-                activeOpacity={0.8}
-              >
-                {isDeleting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Trash2 size={16} color="#FFFFFF" strokeWidth={2.3} style={{ marginRight: 6 }} />
-                    <Text style={styles.modalConfirmBtnText}>
-                      {t('profile.deleteConfirmYes', 'Yes, Delete')}
-                    </Text>
-                  </>
-                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -229,6 +229,8 @@ function SecurityItem({
 }: SecurityItemProps & { primaryColor?: string }) {
   const theme = useTheme();
   const isRTL = useIsRTL();
+  const dangerColor = theme.isDark ? '#EF4444' : '#DC2626';
+
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
       <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -236,8 +238,8 @@ function SecurityItem({
           style={[
             styles.itemCard,
             danger && {
-              borderColor: alpha('#EF4444', 0.28),
-              backgroundColor: alpha('#EF4444', 0.05),
+              borderColor: alpha(dangerColor, 0.28),
+              backgroundColor: alpha(dangerColor, 0.05),
             },
           ]}
           intensity={25}
@@ -248,17 +250,17 @@ function SecurityItem({
               style={[
                 styles.itemIconBox,
                 danger
-                  ? { backgroundColor: alpha('#EF4444', 0.12), borderColor: alpha('#EF4444', 0.28) }
+                  ? { backgroundColor: alpha(dangerColor, 0.12), borderColor: alpha(dangerColor, 0.28) }
                   : { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle },
               ]}
             >
-              <Icon size={20} color={danger ? '#EF4444' : (primaryColor || theme.colors.text.primary)} />
+              <Icon size={20} color={danger ? dangerColor : (primaryColor || theme.colors.text.primary)} />
             </View>
             <View style={{ flex: 1 }}>
               <Text
                 style={[
                   styles.itemLabel,
-                  { color: danger ? '#EF4444' : theme.colors.text.primary },
+                  { color: danger ? dangerColor : theme.colors.text.primary },
                 ]}
               >
                 {label}
@@ -270,9 +272,9 @@ function SecurityItem({
               ) : null}
             </View>
             {isRTL ? (
-              <ChevronLeft size={18} color={danger ? '#EF4444' : theme.colors.text.dim} />
+              <ChevronLeft size={18} color={danger ? dangerColor : theme.colors.text.dim} />
             ) : (
-              <ChevronRight size={18} color={danger ? '#EF4444' : theme.colors.text.dim} />
+              <ChevronRight size={18} color={danger ? dangerColor : theme.colors.text.dim} />
             )}
           </View>
         </GlassCard>
@@ -375,6 +377,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+    overflow: 'hidden',
   },
   modalIconRing: {
     width: 64,
@@ -398,35 +401,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  modalActionsRow: {
-    flexDirection: 'row',
-    gap: 12,
+  modalActionsCol: {
     width: '100%',
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    gap: 10,
   },
   modalConfirmBtn: {
-    flex: 1,
+    width: '100%',
     backgroundColor: '#EF4444',
-    paddingVertical: 13,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    overflow: 'hidden',
   },
   modalConfirmBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  modalCancelBtn: {
+    width: '100%',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

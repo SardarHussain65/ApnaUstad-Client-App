@@ -1,13 +1,15 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useMemo } from "react";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import '../i18n';
-import { QueryClient, QueryClientProvider, DefaultOptions } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, DefaultOptions, focusManager } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 import { ThemeProvider, useTheme } from "../constants/Theme";
 import { LanguageProvider } from "../context/LanguageContext";
 
@@ -20,11 +22,20 @@ const shouldRetryRequest = (failureCount: number, error: unknown) => {
   return failureCount < 1;
 };
 
-// React Query default configuration
+// Bind React Native AppState to TanStack Query focus manager for auto-revalidation
+function onAppStateChange(status: AppStateStatus) {
+  if (Platform.OS !== 'web') {
+    focusManager.setFocused(status === 'active');
+  }
+}
+
+// React Query default configuration - 20s staleTime allows instantaneous navigation while auto-refreshing background data
 const queryConfig: DefaultOptions = {
   queries: {
-    staleTime: 1000 * 60 * 5, // 5 minutes default
-    gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+    staleTime: 1000 * 20, // 20 seconds
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     retry: shouldRetryRequest,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   },
@@ -99,9 +110,8 @@ function AccountRestrictionGate() {
 }
 
 function RootLayoutNav() {
-
   usePushNotifications();
-
+  useRealtimeSync();
 
   return (
     <IncomingJobProvider>
@@ -113,6 +123,11 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', onAppStateChange);
+    return () => subscription.remove();
+  }, []);
+
   return (
     <LanguageProvider>
       <ThemeProvider>

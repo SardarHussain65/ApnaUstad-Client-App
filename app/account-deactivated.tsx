@@ -166,7 +166,25 @@ export default function AccountDeactivatedScreen() {
             </Text>
 
             {/* Actions */}
-            <View style={styles.modalActionsRow}>
+            <View style={styles.modalActionsCol}>
+              <TouchableOpacity
+                style={[styles.modalConfirmBtn, isLoggingOut && { opacity: 0.7 }]}
+                onPress={handleConfirmLogout}
+                disabled={isLoggingOut}
+                activeOpacity={0.8}
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <LogOut size={16} color="#FFFFFF" strokeWidth={2.3} style={{ marginEnd: 8 }} />
+                    <Text style={styles.modalConfirmBtnText} numberOfLines={1}>
+                      {t('profile.logoutConfirmYes', 'Yes, Log Out')}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[
                   styles.modalCancelBtn,
@@ -179,27 +197,9 @@ export default function AccountDeactivatedScreen() {
                 disabled={isLoggingOut}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.modalCancelBtnText, { color: theme.colors.text.primary }]}>
+                <Text style={[styles.modalCancelBtnText, { color: theme.colors.text.primary }]} numberOfLines={1}>
                   {t('profile.logoutConfirmCancel', 'Cancel')}
                 </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalConfirmBtn, isLoggingOut && { opacity: 0.7 }]}
-                onPress={handleConfirmLogout}
-                disabled={isLoggingOut}
-                activeOpacity={0.8}
-              >
-                {isLoggingOut ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <LogOut size={16} color="#FFFFFF" strokeWidth={2.3} style={{ marginRight: 6 }} />
-                    <Text style={styles.modalConfirmBtnText}>
-                      {t('profile.logoutConfirmYes', 'Yes, Log Out')}
-                    </Text>
-                  </>
-                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -307,6 +307,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+    overflow: 'hidden',
   },
   modalIconRing: {
     width: 64,
@@ -330,35 +331,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  modalActionsRow: {
-    flexDirection: 'row',
-    gap: 12,
+  modalActionsCol: {
     width: '100%',
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    gap: 10,
   },
   modalConfirmBtn: {
-    flex: 1,
+    width: '100%',
     backgroundColor: '#EF4444',
-    paddingVertical: 13,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    overflow: 'hidden',
   },
   modalConfirmBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  modalCancelBtn: {
+    width: '100%',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
