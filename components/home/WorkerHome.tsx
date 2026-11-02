@@ -14,6 +14,7 @@ import {
   BarChart3,
   Calendar,
   Zap,
+  X,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -81,7 +82,19 @@ export function WorkerHome() {
   const {
     isOnline,
     toggleOnline,
+    dismissedJobs = [],
+    clearDismissedJob,
+    acceptDismissedJob,
+    openIncomingJobModal,
   } = useIncomingJob();
+
+  const activePendingUrgentJobs = useMemo(() => {
+    return dismissedJobs.filter((job) => {
+      if (job.urgency !== 'instant') return false;
+      if (!job.expiresAt) return true;
+      return new Date(job.expiresAt).getTime() > Date.now();
+    });
+  }, [dismissedJobs]);
 
   // ─── React Query Hooks (Each Section Loads Separately & Cached) ───
   const {
@@ -310,6 +323,145 @@ export function WorkerHome() {
             <ChevronRight size={13} color={colors.cyan} />
           </TouchableOpacity>
         </View>
+
+        {/* ── Missed / Pending Urgent Mission (e.g. while adding funds to wallet) ── */}
+        {activePendingUrgentJobs.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(300)} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Zap color={colors.error} size={20} />
+                <Text style={[styles.sectionTitle, typography.threeD, { color: colors.error }]}>
+                  {t('home.worker.urgentMissionWaiting', 'Urgent Job Waiting')}
+                </Text>
+              </View>
+              <Text style={[styles.sectionMeta, { color: colors.error }]}>
+                {t('home.worker.readyToAccept', 'READY TO ACCEPT')}
+              </Text>
+            </View>
+
+            {activePendingUrgentJobs.map((job) => {
+              const amount = job.amount || job.budget || job.signalMeta?.amount || 0;
+              return (
+                <GlassCard
+                  key={job._id}
+                  intensity={35}
+                  padding={16}
+                  hasGlow
+                  glowColor={colors.error}
+                  onPress={() => openIncomingJobModal(job)}
+                  style={[
+                    styles.heroCard,
+                    {
+                      borderColor: alpha(colors.error, 0.4),
+                      borderLeftWidth: 3.5,
+                      borderLeftColor: colors.error,
+                      marginBottom: 12,
+                    },
+                  ]}
+                >
+                  <View style={styles.heroTopRow}>
+                    <View
+                      style={[
+                        styles.heroStatusPill,
+                        {
+                          backgroundColor: alpha(colors.error, 0.15),
+                          borderColor: alpha(colors.error, 0.35),
+                        },
+                      ]}
+                    >
+                      <View style={[styles.pulseDot, { backgroundColor: colors.error }]} />
+                      <Text style={[styles.heroStatusText, { color: colors.error }]}>
+                        ⚡ {t('jobsNearby.urgentBadge', 'URGENT')} • {t('incomingJobModal.instantMission', 'Instant Mission')}
+                      </Text>
+                    </View>
+
+                    {amount > 0 && (
+                      <Text style={[styles.heroEarningValue, { color: colors.success }]}>
+                        Rs. {Number(amount).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.heroJobTitle,
+                      typography.threeD,
+                      { color: theme.colors.text.primary, marginTop: 8 },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {job.category}
+                  </Text>
+
+                  {Boolean(job.description) && (
+                    <Text
+                      style={[styles.heroDescription, { color: theme.colors.text.muted }]}
+                      numberOfLines={2}
+                    >
+                      {job.description}
+                    </Text>
+                  )}
+
+                  {Boolean(job.address) && (
+                    <View style={[styles.heroLocationRow, { marginTop: 6, marginBottom: 12 }]}>
+                      <MapPin size={12} color={theme.colors.text.muted} strokeWidth={2.2} />
+                      <Text style={[styles.heroAddressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                        {cleanAddressFor(job.address)}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.heroCtaBtn,
+                        { flex: 1, backgroundColor: colors.success, marginTop: 0 },
+                      ]}
+                      onPress={() => acceptDismissedJob(job)}
+                      activeOpacity={0.82}
+                    >
+                      <Text style={[styles.heroCtaBtnText, { color: '#000', fontWeight: '800' }]}>
+                        {t('incomingJobModal.acceptMission', 'Accept Mission')}
+                      </Text>
+                      <ArrowRight size={15} color="#000" strokeWidth={2.5} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.heroCtaBtn,
+                        {
+                          backgroundColor: alpha(theme.colors.surface.card, 0.5),
+                          borderColor: theme.colors.border.subtle,
+                          borderWidth: 1,
+                          marginTop: 0,
+                          paddingHorizontal: 16,
+                        },
+                      ]}
+                      onPress={() => openIncomingJobModal(job)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.heroCtaBtnText, { color: theme.colors.text.primary }]}>
+                        {t('common.details', 'Details')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        paddingHorizontal: 8,
+                      }}
+                      onPress={() => clearDismissedJob(job._id)}
+                      activeOpacity={0.7}
+                    >
+                      <X size={18} color={theme.colors.text.muted} />
+                    </TouchableOpacity>
+                  </View>
+                </GlassCard>
+              );
+            })}
+          </Animated.View>
+        )}
 
         {/* ── Dynamic Operational Cockpit: Ongoing Work (when active) OR Ready For Jobs (when idle) ── */}
         {summaryLoading && !homeSummary ? (

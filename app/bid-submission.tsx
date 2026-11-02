@@ -22,6 +22,8 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
+  CircleDollarSign,
   Clock3,
   Image as ImageIcon,
   MapPin,
@@ -47,6 +49,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useJobDetails, useToast, useWorkerWallet } from '../hooks';
 import { useIsRTL } from '../context/LanguageContext';
 import api from '../services/api';
+import { useIncomingJob } from '../context/IncomingJobContext';
 import { useTheme, useThemeColors, alpha, useThemedStyles, type AppTheme } from '../constants/Theme';
 
 const formatMoney = (amount: number) => `Rs. ${Number(amount || 0).toLocaleString('en-PK')}`;
@@ -738,6 +741,98 @@ const createStyles = (theme: AppTheme) => {
       fontSize: 10,
       fontWeight: '800',
     },
+    modeToggleRow: {
+      flexDirection: 'row',
+      backgroundColor: alpha(surfaceBg, 0.5),
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: borderCol,
+      padding: 4,
+      marginBottom: 12,
+      gap: 6,
+    },
+    modeToggleBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 11,
+      borderRadius: 10,
+      gap: 6,
+    },
+    modeToggleBtnActive: {
+      backgroundColor: CYAN,
+    },
+    modeToggleText: {
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    modeToggleTextActive: {
+      color: '#000',
+      fontWeight: '900',
+    },
+    switchOfferLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 14,
+      paddingVertical: 8,
+      gap: 6,
+      borderTopWidth: 1,
+      borderTopColor: borderCol,
+    },
+    switchOfferLinkText: {
+      color: CYAN,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    quickIncrementsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    quickIncrementChip: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 9,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderColor: alpha(CYAN, 0.35),
+      backgroundColor: alpha(CYAN, 0.08),
+    },
+    quickIncrementText: {
+      color: CYAN,
+      fontSize: 11,
+      fontWeight: '900',
+    },
+    dockButtonRow: {
+      flexDirection: 'row',
+      gap: 10,
+      width: '100%',
+    },
+    dockSecondaryBtn: {
+      minHeight: 62,
+      borderRadius: 10,
+      borderWidth: 1.2,
+      borderColor: alpha(CYAN, 0.45),
+      backgroundColor: alpha(surfaceBg, 0.7),
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 14,
+      gap: 3,
+    },
+    dockSecondaryBtnText: {
+      color: CYAN,
+      fontSize: 11,
+      fontWeight: '900',
+      textTransform: 'uppercase',
+    },
+    dockSecondaryBtnSub: {
+      color: textMuted,
+      fontSize: 9,
+      fontWeight: '700',
+    },
   });
 };
 
@@ -945,6 +1040,7 @@ export default function BidSubmissionScreen() {
   const toast = useToast();
   const { t } = useTranslation();
   const isRTL = useIsRTL();
+  const { openIncomingJobModal } = useIncomingJob();
   const { jobId, title, urgency: urgencyParam, responseMode } = useLocalSearchParams<{
     jobId: string;
     title?: string;
@@ -962,7 +1058,15 @@ export default function BidSubmissionScreen() {
 
   const urgency = job?.urgency || urgencyParam || 'scheduled';
   const isInstant = urgency === 'instant';
-  const isCounterProposal = !isInstant || responseMode === 'counter';
+  const [isCounterProposal, setIsCounterProposal] = useState(!isInstant || responseMode === 'counter');
+
+  useEffect(() => {
+    if (!isInstant) {
+      setIsCounterProposal(true);
+    } else if (responseMode === 'counter') {
+      setIsCounterProposal(true);
+    }
+  }, [isInstant, responseMode]);
   const signalMeta = job?.signalMeta;
   const detailMeta = job?.detailMeta;
   const client = job?.clientMeta || (typeof job?.customer === 'object'
@@ -1033,11 +1137,15 @@ export default function BidSubmissionScreen() {
   }, [isInstant, isCounterProposal, message, t]);
 
   const quoteSuggestions = useMemo(() => {
+    const base = instantOffer > 0 ? instantOffer : budget;
+    if (isInstant && base > 0) {
+      return [base, base + 200, base + 500, base + 1000];
+    }
     const values = budget > 0
       ? [Math.round(budget * 0.9), budget, Math.round(budget * 1.1)]
       : [500, 1000, 1500];
     return Array.from(new Set(values.filter(value => value > 0)));
-  }, [budget]);
+  }, [budget, instantOffer, isInstant]);
 
   const handleWalletPress = () => {
     router.push('/(tabs)/wallet' as any);
@@ -1191,6 +1299,37 @@ export default function BidSubmissionScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
         >
+          {isInstant && (
+            <Animated.View entering={FadeInUp.duration(350)}>
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: alpha(CYAN, 0.12),
+                  borderColor: alpha(CYAN, 0.35),
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 12,
+                }}
+                onPress={() => {
+                  router.back();
+                  openIncomingJobModal(job);
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Zap size={16} color={CYAN} />
+                  <Text style={{ color: theme.colors.text.primary, fontSize: 13, fontWeight: '700' }}>
+                    {t('incomingJobModal.openInModal', 'Open in Instant Job Modal (Counter & Quick Accept)')}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={CYAN} />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
           <Animated.View entering={FadeInUp.duration(450)}>
             <Surface accent={isInstant ? CYAN : ORANGE} style={styles.requestSurface}>
               <View style={styles.requestTopRow}>

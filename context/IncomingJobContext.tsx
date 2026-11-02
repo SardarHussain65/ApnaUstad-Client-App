@@ -8,6 +8,8 @@ import Toast from 'react-native-toast-message';
 import { PaymentReceivedModal } from '../components/home/PaymentReceivedModal';
 import { JobAssignedSuccessModal } from '../components/home/JobAssignedSuccessModal';
 import * as Haptics from 'expo-haptics';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeyFactory';
 import i18n from '../i18n';
 
 interface IncomingJobContextType {
@@ -25,6 +27,8 @@ interface IncomingJobContextType {
   clearDismissedJob: (jobId: string) => void;
   /** Accept a dismissed job directly from the home screen card */
   acceptDismissedJob: (job: any) => void;
+  /** Open any incoming or nearby job directly in the modal */
+  openIncomingJobModal: (job: any) => Promise<void>;
 }
 
 const IncomingJobContext = createContext<IncomingJobContextType | undefined>(undefined);
@@ -32,6 +36,7 @@ const IncomingJobContext = createContext<IncomingJobContextType | undefined>(und
 export function IncomingJobProvider({ children }: { children: React.ReactNode }) {
   const { role, user, token, updateUser } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [isInstantOnline, setInstantOnlineState] = useState(false);
   const [isScheduledOnline, setScheduledOnlineState] = useState(false);
@@ -171,6 +176,9 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
             console.warn('Could not hydrate expanded job signal:', error);
           }
         }
+
+        // Invalidate jobs queries across the app so Find Jobs tab has fresh data
+        queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
 
         // Filter by preference
         const isEnabled = availabilityHydrated && isJobTypeEnabled(jobSignal);
@@ -344,6 +352,19 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           setShowModal(false);
         }
       } catch (error: any) {
+        if (error.response?.status === 402) {
+          const required = Number(error.response?.data?.requiredBalance || 500);
+          Toast.show({
+            type: 'error',
+            text1: i18n.t('bidSubmission.topUpRequired', 'Top-Up Required'),
+            text2: i18n.t('bidSubmission.keepRequiredBalance', 'Keep at least {{amount}} in your wallet to continue.', {
+              amount: `Rs. ${required}`,
+            }),
+          });
+          setShowModal(false);
+          router.push('/(tabs)/wallet' as any);
+          return;
+        }
         Toast.show({
           type: 'error',
           text1: i18n.t('realtimeAlerts.couldNotAcceptTitle'),
@@ -411,13 +432,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
   const acceptDismissedJob = useCallback(async (job: any) => {
     if (!job) return;
-    clearDismissedJob(job._id);
 
     if (job.urgency === 'instant') {
       try {
         setAcceptingJobId(job._id);
         const response = await api.post(`/jobs/${job._id}/accept-instant`);
         if (response.data.success) {
+          clearDismissedJob(job._id);
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
           Toast.show({
             type: 'success',
             text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
@@ -434,6 +456,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         setAcceptingJobId(null);
       }
     } else {
+      clearDismissedJob(job._id);
       router.push({
         pathname: '/bid-submission' as any,
         params: {
@@ -443,7 +466,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         },
       });
     }
-  }, [router, clearDismissedJob]);
+  }, [router, clearDismissedJob, queryClient]);
 
   const toggleOnline = useCallback(async (enabled: boolean) => {
     if (role !== 'worker' || !user?._id) return;
@@ -475,6 +498,41 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     }
   }, [role, updateUser, user]);
 
+  const openIncomingJobModal = useCallback(async (job: any) => {
+    if (!job) return;
+
+    const targetId = job._id || job.id;
+    let jobSignal = { ...job };
+
+    // Immediately put the job in queue and show modal so there is zero latency
+    setIncomingJobsQueue(prevQueue => {
+      const otherJobs = prevQueue.filter(j => (j._id || j.id) !== targetId);
+      const nextQueue = [jobSignal, ...otherJobs];
+      incomingJobsQueueRef.current = nextQueue;
+      return nextQueue;
+    });
+    setShowModal(true);
+
+    // If signalMeta or full details are missing, hydrate in the background and update the queue item
+    if (targetId && !job.signalMeta) {
+      try {
+        const response = await api.get(`/jobs/${targetId}`);
+        if (response.data?.data) {
+          const hydrated = response.data.data;
+          setIncomingJobsQueue(prevQueue => {
+            const nextQueue = prevQueue.map(item =>
+              (item._id || item.id) === targetId ? { ...item, ...hydrated } : item
+            );
+            incomingJobsQueueRef.current = nextQueue;
+            return nextQueue;
+          });
+        }
+      } catch (error) {
+        console.warn('[IncomingJobContext] Could not hydrate job for modal:', error);
+      }
+    }
+  }, []);
+
   return (
     <IncomingJobContext.Provider value={{
       isInstantOnline,
@@ -487,6 +545,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       dismissedJobs,
       clearDismissedJob,
       acceptDismissedJob,
+      openIncomingJobModal,
     }}>
       {children}
 
