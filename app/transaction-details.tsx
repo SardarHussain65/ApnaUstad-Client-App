@@ -219,16 +219,26 @@ export default function TransactionDetailsScreen() {
   const rawTimeLabel = meta?.schedule?.timeLabel || booking?.scheduledTime || 'ASAP';
   const timeLabel = rawTimeLabel === 'ASAP' ? t('transactionDetails.asap', 'ASAP') : rawTimeLabel;
 
+  const isValidPakistanCoord = useCallback((lat?: number | null, lng?: number | null): boolean => {
+    if (lat == null || lng == null) return false;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    const isEmulator =
+      (Math.abs(lat - 37.422) < 0.05 && Math.abs(lng - (-122.084)) < 0.05) ||
+      (Math.abs(lat - 37.33) < 0.05 && Math.abs(lng - (-122.03)) < 0.05);
+    if (isEmulator) return false;
+    return lat >= 23.0 && lat <= 37.5 && lng >= 60.0 && lng <= 78.5;
+  }, []);
+
   // Destination Location (Customer / Service address)
   const destinationLocation = useMemo<LocationType>(() => {
-    const coords = booking?.location?.coordinates;
+    const coords = booking?.location?.coordinates || (booking?.customer as any)?.location?.coordinates;
     const lat = Number(coords?.[1] ?? (booking?.location as any)?.latitude);
     const lng = Number(coords?.[0] ?? (booking?.location as any)?.longitude);
-    if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+    if (isValidPakistanCoord(lat, lng)) {
       return { latitude: lat, longitude: lng };
     }
     return { latitude: 33.6430, longitude: 73.0733 }; // Islamabad/Rawalpindi fallback
-  }, [booking?.location]);
+  }, [booking?.location, booking?.customer, isValidPakistanCoord]);
 
   // Clean Address
   const rawAddress = meta?.location?.address || booking?.address || '';
@@ -242,12 +252,12 @@ export default function TransactionDetailsScreen() {
     return cleaned || rawAddress;
   }, [rawAddress, t]);
 
-  // Live Worker Location GPS Tracking & Sockets
+  // Live Worker Location GPS Tracking & Sockets (only when en-route, i.e. status === 'accepted')
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
-    if (isWorker && status !== 'completed' && status !== 'cancelled') {
+    if (isWorker && status === 'accepted') {
       (async () => {
         const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
         if (permStatus !== 'granted' || !isMounted) return;
@@ -256,13 +266,15 @@ export default function TransactionDetailsScreen() {
           const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           if (isMounted) {
             const loc = { latitude: current.coords.latitude, longitude: current.coords.longitude };
-            setWorkerLocation(loc);
-            if (id) {
-              socketService.emit('worker:location', {
-                bookingId: id,
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-              });
+            if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
+              setWorkerLocation(loc);
+              if (id) {
+                socketService.emit('worker:location', {
+                  bookingId: id,
+                  latitude: loc.latitude,
+                  longitude: loc.longitude,
+                });
+              }
             }
           }
 
@@ -271,13 +283,15 @@ export default function TransactionDetailsScreen() {
             (newPos) => {
               if (!isMounted) return;
               const loc = { latitude: newPos.coords.latitude, longitude: newPos.coords.longitude };
-              setWorkerLocation(loc);
-              if (id) {
-                socketService.emit('worker:location', {
-                  bookingId: id,
-                  latitude: loc.latitude,
-                  longitude: loc.longitude,
-                });
+              if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
+                setWorkerLocation(loc);
+                if (id) {
+                  socketService.emit('worker:location', {
+                    bookingId: id,
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                  });
+                }
               }
             }
           );
@@ -291,25 +305,25 @@ export default function TransactionDetailsScreen() {
       isMounted = false;
       if (subscription) subscription.remove();
     };
-  }, [isWorker, status, id]);
+  }, [isWorker, status, id, isValidPakistanCoord]);
 
   // Client listens to socket for worker location updates
   useEffect(() => {
-    if (isWorker || status === 'completed' || status === 'cancelled') return;
+    if (isWorker || status === 'ongoing' || status === 'completed' || status === 'cancelled') return;
 
     // Check if worker location already exists in booking
     const w = booking?.worker;
-    if (w && typeof w === 'object' && (w as any).location?.coordinates) {
-      const coords = (w as any).location.coordinates;
+    const coords = (w as any)?.location?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
       const lat = Number(coords[1]);
       const lng = Number(coords[0]);
-      if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+      if (isValidPakistanCoord(lat, lng)) {
         setWorkerLocation({ latitude: lat, longitude: lng });
       }
     }
 
     const unsub = socketService.on('worker:location', (data: any) => {
-      if (data && Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+      if (data && isValidPakistanCoord(data.latitude, data.longitude)) {
         setWorkerLocation({
           latitude: Number(data.latitude),
           longitude: Number(data.longitude),
@@ -320,19 +334,36 @@ export default function TransactionDetailsScreen() {
     return () => {
       unsub();
     };
-  }, [isWorker, status, booking?.worker]);
+  }, [isWorker, status, booking?.worker, isValidPakistanCoord]);
 
-  // Fallback worker position if not yet reporting
-  const workerMarkerLocation = useMemo<LocationType>(() => {
-    if (workerLocation && Number.isFinite(workerLocation.latitude) && Number.isFinite(workerLocation.longitude)) {
+  // Worker live or profile location (Exact coordinates, no fake offsets)
+  const workerMarkerLocation = useMemo<LocationType | null>(() => {
+    if (workerLocation && isValidPakistanCoord(workerLocation.latitude, workerLocation.longitude)) {
       return workerLocation;
     }
-    // Subtle realistic offset from destination
-    return {
-      latitude: destinationLocation.latitude + 0.009,
-      longitude: destinationLocation.longitude + 0.012,
-    };
-  }, [workerLocation, destinationLocation]);
+    const w = booking?.worker;
+    const coords = (w as any)?.location?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const lat = Number(coords[1]);
+      const lng = Number(coords[0]);
+      if (isValidPakistanCoord(lat, lng)) {
+        return { latitude: lat, longitude: lng };
+      }
+    }
+    const cpCoords = (meta?.counterParty as any)?.location?.coordinates;
+    if (Array.isArray(cpCoords) && cpCoords.length >= 2) {
+      const lat = Number(cpCoords[1]);
+      const lng = Number(cpCoords[0]);
+      if (isValidPakistanCoord(lat, lng)) {
+        return { latitude: lat, longitude: lng };
+      }
+    }
+    return null;
+  }, [workerLocation, booking?.worker, meta?.counterParty, isValidPakistanCoord]);
+
+  // Worker has arrived at customer workplace when status is 'ongoing' or 'completed'
+  const isWorkerArrived = status === 'ongoing' || status === 'completed';
+  const showMapSection = !isWorkerArrived && status !== 'cancelled';
 
   // Route calculation
   const drawRouteBetween = useCallback(async (from: LocationType, to: LocationType) => {
@@ -368,9 +399,15 @@ export default function TransactionDetailsScreen() {
   }, [mapReady]);
 
   useEffect(() => {
-    if (!mapReady) return;
-    drawRouteBetween(workerMarkerLocation, destinationLocation);
-  }, [mapReady, workerMarkerLocation, destinationLocation, drawRouteBetween]);
+    if (!mapReady || !showMapSection) return;
+    if (workerMarkerLocation) {
+      drawRouteBetween(workerMarkerLocation, destinationLocation);
+    } else {
+      setRouteCoords([]);
+      setRouteDistance(null);
+      setRouteETA(null);
+    }
+  }, [mapReady, showMapSection, workerMarkerLocation, destinationLocation, drawRouteBetween]);
 
   const routeGeoJSON = useMemo(() => ({
     type: 'Feature',
@@ -385,6 +422,7 @@ export default function TransactionDetailsScreen() {
   const etaText = useMemo(() => {
     if (status === 'completed') return t('bookingStatus.completed.title', 'Job Completed');
     if (status === 'ongoing') return t('bookingStatus.ongoing.title', 'Work in progress');
+    if (!workerMarkerLocation) return t('jobTracking.locating', 'Locating Ustad...');
     if (isLoadingRoute) return t('jobTracking.updating', 'Calculating ETA...');
     if (routeETA && routeDistance) {
       return `${routeETA} min away • ${routeDistance}`;
@@ -393,7 +431,7 @@ export default function TransactionDetailsScreen() {
       return `${routeDistance} away`;
     }
     return t('jobTracking.liveBadge', 'Live Tracking');
-  }, [status, isLoadingRoute, routeETA, routeDistance, t]);
+  }, [status, workerMarkerLocation, isLoadingRoute, routeETA, routeDistance, t]);
 
   // Status headline
   const statusHeadline = useMemo(() => {
@@ -517,76 +555,136 @@ export default function TransactionDetailsScreen() {
     <View style={[styles.root, { backgroundColor: theme.isDark ? '#080C16' : theme.colors.background.screen }]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* ──────────────── Upper Section: Live Map ──────────────── */}
-      <View style={[styles.mapContainer, { height: mapHeight }]}>
-        <Map
-          style={StyleSheet.absoluteFill}
-          logo={false}
-          compass={false}
-          touchZoom={true}
-          mapStyle={`https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_API_KEY}`}
-          onDidFinishLoadingMap={() => setMapReady(true)}
-          onDidFinishLoadingStyle={() => setMapReady(true)}
-        >
-          <Camera
-            ref={cameraRef}
-            zoom={14}
-            center={[destinationLocation.longitude, destinationLocation.latitude]}
-          />
+      {/* ──────────────── Upper Section: Live Map (shown only while en-route / accepted) ──────────────── */}
+      {showMapSection ? (
+        <View style={[styles.mapContainer, { height: mapHeight }]}>
+          <Map
+            style={StyleSheet.absoluteFill}
+            logo={false}
+            compass={false}
+            touchZoom={true}
+            mapStyle={`https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_API_KEY}`}
+            onDidFinishLoadingMap={() => setMapReady(true)}
+            onDidFinishLoadingStyle={() => setMapReady(true)}
+          >
+            <Camera
+              ref={cameraRef}
+              zoom={14}
+              center={[destinationLocation.longitude, destinationLocation.latitude]}
+            />
 
-          {routeCoords.length > 0 && (
-            <GeoJSONSource id="routeSource" data={routeGeoJSON as any}>
-              <Layer
-                id="routeGlow"
-                type="line"
-                style={{
-                  lineColor: '#00E5FF',
-                  lineWidth: 10,
-                  lineOpacity: 0.22,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-              <Layer
-                id="routeLine"
-                type="line"
-                style={{
-                  lineColor: '#00E5FF',
-                  lineWidth: 3.5,
-                  lineOpacity: 0.95,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-            </GeoJSONSource>
-          )}
+            {routeCoords.length > 0 && (
+              <GeoJSONSource id="routeSource" data={routeGeoJSON as any}>
+                <Layer
+                  id="routeGlow"
+                  type="line"
+                  style={{
+                    lineColor: '#00E5FF',
+                    lineWidth: 10,
+                    lineOpacity: 0.22,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+                <Layer
+                  id="routeLine"
+                  type="line"
+                  style={{
+                    lineColor: '#00E5FF',
+                    lineWidth: 3.5,
+                    lineOpacity: 0.95,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              </GeoJSONSource>
+            )}
 
-          {/* Customer / Service Destination Marker (Orange) */}
-          <Marker id="destination" lngLat={[destinationLocation.longitude, destinationLocation.latitude]}>
-            <View style={styles.destinationMarkerOuter}>
-              <View style={styles.destinationMarkerInner} />
+            {/* Customer / Service Destination Marker (Orange) */}
+            <Marker id="destination" lngLat={[destinationLocation.longitude, destinationLocation.latitude]}>
+              <View style={styles.destinationMarkerOuter}>
+                <View style={styles.destinationMarkerInner} />
+              </View>
+            </Marker>
+
+            {/* Worker Marker (Cyan) */}
+            {workerMarkerLocation && (
+              <Marker id="worker" lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}>
+                <View style={styles.workerMarkerOuter}>
+                  <View style={styles.workerMarkerInner} />
+                </View>
+              </Marker>
+            )}
+          </Map>
+
+          {/* Top Header Overlay Controls */}
+          <View style={[styles.mapTopControls, { top: insets.top + 8 }]}>
+            <TouchableOpacity
+              style={styles.circleButton}
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+            >
+              <ChevronLeft size={22} color="#FFFFFF" strokeWidth={2.4} />
+            </TouchableOpacity>
+
+            <View style={styles.mapTopRightControls}>
+              {showDisputeAction && (
+                <TouchableOpacity
+                  style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (disputeMeta?.disputeId) {
+                      router.push({ pathname: '/dispute-room' as any, params: { id: disputeMeta.disputeId } });
+                    } else {
+                      setShowDisputeModal(true);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Scale size={18} color="#FFFFFF" strokeWidth={2.4} />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.circleButton}
+                onPress={openExternalMaps}
+                activeOpacity={0.8}
+              >
+                <Navigation size={17} color="#00E5FF" strokeWidth={2.4} />
+              </TouchableOpacity>
             </View>
-          </Marker>
+          </View>
 
-          {/* Worker Marker (Cyan) */}
-          <Marker id="worker" lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}>
-            <View style={styles.workerMarkerOuter}>
-              <View style={styles.workerMarkerInner} />
-            </View>
-          </Marker>
-        </Map>
-
-        {/* Top Header Overlay Controls */}
-        <View style={[styles.mapTopControls, { top: insets.top + 8 }]}>
+          {/* Floating ETA & Distance Badge */}
+          <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.floatingEtaPill}>
+            <View style={styles.pulsingDot} />
+            <Text style={styles.floatingEtaText}>{etaText}</Text>
+          </Animated.View>
+        </View>
+      ) : (
+        /* Top Navigation Header when map is removed (worker reached workplace) */
+        <View style={[styles.standardHeader, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
-            style={styles.circleButton}
+            style={[
+              styles.circleButton,
+              { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderWidth: 1, borderColor: alpha(theme.colors.border.subtle, 0.5) }
+            ]}
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <ChevronLeft size={22} color="#FFFFFF" strokeWidth={2.4} />
+            <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.4} />
           </TouchableOpacity>
 
-          <View style={styles.mapTopRightControls}>
+          <View style={styles.standardHeaderContent}>
+            <Text style={[styles.standardHeaderTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+              {serviceTitle}
+            </Text>
+            <Text style={[styles.standardHeaderSubtitle, { color: theme.colors.text.muted }]} numberOfLines={1}>
+              {statusHeadline}
+            </Text>
+          </View>
+
+          <View style={styles.standardHeaderRight}>
             {showDisputeAction && (
               <TouchableOpacity
                 style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
@@ -605,34 +703,32 @@ export default function TransactionDetailsScreen() {
             )}
 
             <TouchableOpacity
-              style={styles.circleButton}
+              style={[
+                styles.circleButton,
+                { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderWidth: 1, borderColor: alpha(theme.colors.border.subtle, 0.5) }
+              ]}
               onPress={openExternalMaps}
               activeOpacity={0.8}
             >
-              <Navigation size={17} color="#00E5FF" strokeWidth={2.4} />
+              <Navigation size={17} color={colors.cyan} strokeWidth={2.4} />
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Floating ETA & Distance Badge */}
-        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.floatingEtaPill}>
-          <View style={styles.pulsingDot} />
-          <Text style={styles.floatingEtaText}>{etaText}</Text>
-        </Animated.View>
-      </View>
+      )}
 
       {/* ──────────────── Lower Section: Interactive Bottom Sheet ──────────────── */}
       <View
         style={[
           styles.bottomSheet,
+          !showMapSection && styles.bottomSheetFull,
           {
             backgroundColor: theme.isDark ? '#0C101E' : theme.colors.surface.card,
             borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
           },
         ]}
       >
-        {/* Sheet Drag Indicator */}
-        <View style={styles.sheetDragBar} />
+        {/* Sheet Drag Indicator (shown only when map is visible above) */}
+        {showMapSection && <View style={styles.sheetDragBar} />}
 
         {/* Status Title & Urgency Tag */}
         <View style={styles.sheetHeader}>
@@ -1245,6 +1341,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
+  },
+  standardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  standardHeaderContent: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  standardHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  standardHeaderSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  standardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bottomSheetFull: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
   },
   floatingEtaPill: {
     position: 'absolute',

@@ -219,10 +219,19 @@ export function WorkerHome() {
         const currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        return {
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
-        };
+        const lat = currentLocation.coords.latitude;
+        const lng = currentLocation.coords.longitude;
+        const isEmulator =
+          (Math.abs(lat - 37.422) < 0.05 && Math.abs(lng - (-122.084)) < 0.05) ||
+          (Math.abs(lat - 37.33) < 0.05 && Math.abs(lng - (-122.03)) < 0.05);
+        const isPakistan = lat >= 23.0 && lat <= 37.5 && lng >= 60.0 && lng <= 78.5;
+
+        if (isPakistan && !isEmulator) {
+          return {
+            latitude: lat,
+            longitude: lng,
+          };
+        }
       }
     } catch (error) {
       console.warn('Could not read device location, using saved worker location:', error);
@@ -233,12 +242,16 @@ export function WorkerHome() {
   const syncWorkerLocation = useCallback(async (coordinates?: WorkerCoordinates | null) => {
     try {
       if (!user?._id) return;
-      const payload: any = {};
-      if (coordinates) {
-        payload.longitude = coordinates.longitude;
-        payload.latitude = coordinates.latitude;
-      }
-      if (Object.keys(payload).length === 0) return;
+      if (!coordinates) return;
+      const { latitude, longitude } = coordinates;
+      const isEmulator =
+        (Math.abs(latitude - 37.422) < 0.05 && Math.abs(longitude - (-122.084)) < 0.05) ||
+        (Math.abs(latitude - 37.33) < 0.05 && Math.abs(longitude - (-122.03)) < 0.05);
+      const isPakistan = latitude >= 23.0 && latitude <= 37.5 && longitude >= 60.0 && longitude <= 78.5;
+
+      if (!isPakistan || isEmulator) return;
+
+      const payload = { latitude, longitude };
       await api.patch(`/workers/${user._id}`, payload);
     } catch (error) {
       console.error('❌ Error syncing worker location:', error);

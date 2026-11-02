@@ -111,6 +111,17 @@ export default function RegisterDetailsScreen() {
 
       const nextLatitude = currentLocation.coords.latitude;
       const nextLongitude = currentLocation.coords.longitude;
+
+      const isEmulator =
+        (Math.abs(nextLatitude - 37.422) < 0.05 && Math.abs(nextLongitude - (-122.084)) < 0.05) ||
+        (Math.abs(nextLatitude - 37.33) < 0.05 && Math.abs(nextLongitude - (-122.03)) < 0.05);
+      const isPakistan = nextLatitude >= 23.0 && nextLatitude <= 37.5 && nextLongitude >= 60.0 && nextLongitude <= 78.5;
+
+      if (!isPakistan || isEmulator) {
+        console.warn('Ignored emulator / out-of-bounds GPS during registration');
+        return;
+      }
+
       setLatitude(nextLatitude);
       setLongitude(nextLongitude);
 
