@@ -149,7 +149,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           Authorization: `Bearer ${currentToken}`,
         },
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        // If token expired, invalid, or user not found -> automatically logout
+        if (response.status === 401 || response.status === 404 || response.status === 403) {
+          console.warn(`[AuthContext] Status check failed (${response.status}), user or token not found. Logging out.`);
+          await logout();
+        }
+        return null;
+      }
       const payload = await response.json();
       const status = buildAccountStatus(payload.data || payload);
       await updateAccountStatus(status);
@@ -170,17 +177,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem('user_data')
         ]);
 
-        if (savedRole) setRoleState(savedRole as UserRole);
-        if (savedToken) {
-          setTokenState(savedToken);
-          socketService.connect(savedToken);
+        // If token or user or role is not found -> automatically clean up storage and logout
+        if (!savedToken || !savedUser || !savedRole) {
+          if (savedToken || savedUser || savedRole) {
+            console.log('[AuthContext] Incomplete auth state detected (token or user not found). Automatically logging out.');
+            await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+          }
+          setRoleState(null);
+          setTokenState(null);
+          setRefreshTokenState(null);
+          setUserState(null);
+          setAccountStatusState(null);
+          return;
         }
+
+        let parsedUser: any = null;
+        try {
+          parsedUser = JSON.parse(savedUser);
+        } catch (jsonErr) {
+          console.error('[AuthContext] Failed to parse saved user JSON:', jsonErr);
+        }
+
+        if (!parsedUser || !parsedUser._id) {
+          console.log('[AuthContext] User data invalid or corrupt. Automatically logging out.');
+          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+          setRoleState(null);
+          setTokenState(null);
+          setRefreshTokenState(null);
+          setUserState(null);
+          setAccountStatusState(null);
+          return;
+        }
+
+        setRoleState(savedRole as UserRole);
+        setTokenState(savedToken);
+        socketService.connect(savedToken);
         if (savedRefreshToken) setRefreshTokenState(savedRefreshToken);
-        if (savedUser) {
-          const parsedUser = JSON.parse(savedUser);
-          setUserState(parsedUser);
-          setAccountStatusState(buildAccountStatus(parsedUser));
-        }
+        setUserState(parsedUser);
+        setAccountStatusState(buildAccountStatus(parsedUser));
       } catch (error) {
         console.error('Error loading auth state:', error);
       } finally {
@@ -345,6 +379,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem('user_role'),
         AsyncStorage.removeItem('user_data')
       ]);
+
+      // Navigate to role-selection so the user is never left on a ghost screen
+      try {
+        const { router } = require('expo-router');
+        router.replace('/role-selection');
+      } catch (navError) {
+        console.warn('Navigation on logout:', navError);
+      }
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {

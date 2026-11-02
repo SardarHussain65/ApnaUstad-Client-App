@@ -6,11 +6,16 @@ import { CustomTabBar } from '../../components/navigation/TabBar';
 import { socketService } from '../../services/socketService';
 
 export default function TabLayout() {
-  const { role } = useAuth();
+  const { role, token, user, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!role) return;
+    if (!role || !token || !user) {
+      console.warn('[TabLayout] Missing token or user, logging out');
+      void logout();
+      router.replace('/role-selection' as any);
+      return;
+    }
 
     // job:new is handled globally by IncomingJobProvider — no duplicate listener here.
 

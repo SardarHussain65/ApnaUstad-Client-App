@@ -56,13 +56,32 @@ function ThemeSystemChrome() {
 function AccountRestrictionGate() {
   const router = useRouter();
   const segments = useSegments();
-  const { role, token, accountStatus } = useAuth();
+  const { role, token, user, accountStatus, isLoading } = useAuth();
 
   const currentPathKey = useMemo(() => segments.join('/'), [segments]);
 
   useEffect(() => {
+    if (isLoading) return;
+
+    const root = (segments[0] as string | undefined) || '';
+    const nested = (segments[1] as string | undefined) || '';
+    const isPublicScreen =
+      !root ||
+      root === '(auth)' ||
+      root === 'splash' ||
+      root === 'onboarding' ||
+      root === 'role-selection' ||
+      root === 'theme-language';
+
+    // If on a protected route but token or user is missing -> automatically redirect to role-selection
+    if (!isPublicScreen && (!token || !user || !role)) {
+      console.log('[AccountRestrictionGate] Missing token or user on protected screen, redirecting to /role-selection');
+      router.replace('/role-selection' as any);
+      return;
+    }
+
     if (!role || !token) return;
-    const [root, nested] = segments;
+
     const isLockedScreen = root === 'account-deactivated';
     const isHelpCenter = root === 'profile' && nested === 'help-center';
 
@@ -74,7 +93,7 @@ function AccountRestrictionGate() {
     if (accountStatus?.isActive !== false && isLockedScreen) {
       router.replace('/(tabs)' as any);
     }
-  }, [accountStatus?.isActive, currentPathKey, role, router, segments, token]);
+  }, [accountStatus?.isActive, currentPathKey, role, router, segments, token, user, isLoading]);
 
   return null;
 }
