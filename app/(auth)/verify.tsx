@@ -24,7 +24,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { AlertModal } from '../../components/ui';
-import { BASE_URL } from '../../constants/Config';
+import api from '../../services/api';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { useAlertModal, useToast } from '../../hooks';
 
@@ -69,27 +69,18 @@ export default function VerifyScreen() {
 
     setIsVerifying(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/v1/otp/verify-email-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: otp }),
-      });
-      const data = await response.json();
+      await api.post('/otp/verify-email-otp', { email, code: otp });
 
-      if (!response.ok) {
-        throw new Error(data.message || t('verify.invalidCode'));
-      }
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.push({
         pathname: '/(auth)/register-details' as never,
         params: { fullName, email, phone, role, idToken: '' },
       });
     } catch (error: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alertModal.showAlert(
         t('verify.verificationFailed'),
-        error.message || t('verify.invalidCode'),
+        error?.response?.data?.message || error.message || t('verify.invalidCode'),
         undefined,
         'error'
       );
@@ -103,19 +94,10 @@ export default function VerifyScreen() {
     setIsResending(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/api/v1/otp/send-email-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || t('verify.unableResend'));
-      }
+      await api.post('/otp/send-email-otp', { email });
 
       setResendCooldown(30);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       toast.success(t('verify.codeSent'), t('verify.freshCode'));
     } catch (error: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

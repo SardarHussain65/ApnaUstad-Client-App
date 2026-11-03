@@ -383,7 +383,7 @@ export default function JobCreationScreen() {
         if (voiceNoteUri) {
           const filename = voiceNoteUri.split('/').pop() ?? 'job-voice-note.m4a';
           formData.append('images', {
-            uri: Platform.OS === 'ios' ? voiceNoteUri.replace('file://', '') : voiceNoteUri,
+            uri: voiceNoteUri,
             name: filename,
             type: 'audio/m4a',
           } as unknown as Blob);

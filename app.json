@@ -10,7 +10,7 @@
       "url": "https://u.expo.dev/679e09c9-47e0-41e5-9ca3-a60026d0a9df"
     },
     "orientation": "portrait",
-    "icon": "./assets/images/icon.jpeg",
+    "icon": "./assets/images/icon.png",
     "scheme": "apnaustad",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -19,9 +19,11 @@
       "bundleIdentifier": "com.apnaustad.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Allow ApnaUstad to access your photos to provide visual evidence for missions.",
-        "NSCameraUsageDescription": "Allow ApnaUstad to access your camera to capture mission evidence.",
-        "NSMicrophoneUsageDescription": "Allow ApnaUstad to access your microphone for recording mission videos and voice notes."
+        "NSLocationWhenInUseUsageDescription": "Allow ApnaUstad to use your location to connect you with nearby Ustads and show arrival times.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow ApnaUstad to track service location for real-time arrival and job updates.",
+        "NSPhotoLibraryUsageDescription": "Allow ApnaUstad to access your photos to provide visual evidence for service requests.",
+        "NSCameraUsageDescription": "Allow ApnaUstad to access your camera to capture service evidence.",
+        "NSMicrophoneUsageDescription": "Allow ApnaUstad to access your microphone for recording service voice notes."
       }
     },
     "android": {
@@ -29,12 +31,16 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
-        "foregroundImage": "./assets/images/icon.jpeg"
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -71,7 +77,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.jpeg",
+          "icon": "./assets/images/icon.png",
           "color": "#0F172A"
         }
       ],
@@ -80,10 +86,17 @@
       "@react-native-firebase/auth",
       "@react-native-firebase/messaging",
       [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ApnaUstad to track service location for real-time arrival and job updates.",
+          "locationWhenInUsePermission": "Allow ApnaUstad to use your location to connect you with nearby Ustads and show arrival times."
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "Allow ApnaUstad to access your photos to provide visual evidence for missions.",
-          "cameraPermission": "Allow ApnaUstad to access your camera to capture mission evidence."
+          "photosPermission": "Allow ApnaUstad to access your photos to provide visual evidence for service requests.",
+          "cameraPermission": "Allow ApnaUstad to access your camera to capture service evidence."
         }
       ],
       "@maplibre/maplibre-react-native",
@@ -96,6 +109,7 @@
       "reactCompiler": true
     },
     "extra": {
+      "apiUrl": "https://api.apnaustad.app",
       "maptilerApiKey": "o3cm0oM4Yn3L4Nyf1ydh",
       "router": {},
       "eas": {

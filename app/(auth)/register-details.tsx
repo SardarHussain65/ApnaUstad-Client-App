@@ -27,7 +27,7 @@ import {
   ChevronDown, Search, X, Plus, Trash2, ArrowRight, ArrowLeft, ShieldCheck, HelpCircle
 } from 'lucide-react-native';
 import { AppTheme, BorderRadius, Shadows, Spacing, useTheme, useThemeColors, alpha } from '../../constants/Theme';
-import { BASE_URL } from '../../constants/Config';
+import api from '../../services/api';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../../hooks';
 
@@ -146,10 +146,9 @@ export default function RegisterDetailsScreen() {
   const fetchCategories = useCallback(async () => {
     setIsFetchingCategories(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/v1/users/categories`);
-      const data = await response.json();
-      if (data.success) {
-        setCategories(data.data);
+      const response = await api.get('/users/categories');
+      if (response.data?.success) {
+        setCategories(response.data.data);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -249,23 +248,10 @@ export default function RegisterDetailsScreen() {
 
       formData.append(fieldName, { uri, name: filename, type } as any);
 
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method: 'POST',
-        body: formData,
+      const response = await api.post(endpoint.replace(/^\/api\/v1/, ''), formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-
-      if (!response.ok) {
-        let serverMessage = '';
-        try {
-          const errJson = await response.json();
-          serverMessage = errJson?.message || errJson?.error || '';
-        } catch {
-          // ignore JSON parse error
-        }
-        throw new Error(serverMessage || `Failed to upload ${fieldName}`);
-      }
-      const data = await response.json();
-      return data.data.imageUrl as string;
+      return response.data?.data?.imageUrl as string;
     },
   });
 
@@ -286,23 +272,18 @@ export default function RegisterDetailsScreen() {
 
   const registerMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const endpoint = isWorker ? '/api/v1/workers/register' : '/api/v1/users/register';
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        if (errorData.errors && Array.isArray(errorData.errors)) {
+      const endpoint = isWorker ? '/workers/register' : '/users/register';
+      try {
+        const response = await api.post(endpoint, payload);
+        return response.data;
+      } catch (err: any) {
+        const errorData = err?.response?.data;
+        if (errorData?.errors && Array.isArray(errorData.errors)) {
           const detail = errorData.errors.map((e: any) => `${e.field}: ${e.message}`).join('\n');
           throw new Error(detail || 'Validation failed');
         }
-        throw new Error(errorData.message || 'Registration failed');
+        throw new Error(errorData?.message || err.message || 'Registration failed');
       }
-
-      return await response.json();
     },
     onSuccess: (data) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

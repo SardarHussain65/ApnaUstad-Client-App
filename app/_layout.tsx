@@ -12,6 +12,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useRealtimeSync } from '../hooks/useRealtimeSync';
 import { ThemeProvider, useTheme } from "../constants/Theme";
 import { LanguageProvider } from "../context/LanguageContext";
+import { ErrorBoundary } from "../components/common/ErrorBoundary";
 
 
 const shouldRetryRequest = (failureCount: number, error: unknown) => {
@@ -114,11 +115,13 @@ function RootLayoutNav() {
   useRealtimeSync();
 
   return (
-    <IncomingJobProvider>
-      <AccountRestrictionGate />
-      <Stack screenOptions={{ headerShown: false }} />
-      <BeautifulToastConfig />
-    </IncomingJobProvider>
+    <ErrorBoundary>
+      <IncomingJobProvider>
+        <AccountRestrictionGate />
+        <Stack screenOptions={{ headerShown: false }} />
+        <BeautifulToastConfig />
+      </IncomingJobProvider>
+    </ErrorBoundary>
   );
 }
 

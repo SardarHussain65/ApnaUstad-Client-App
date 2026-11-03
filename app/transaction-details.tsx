@@ -564,7 +564,7 @@ export default function TransactionDetailsScreen() {
             logo={false}
             compass={false}
             touchZoom={true}
-            mapStyle={`https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_API_KEY}`}
+            mapStyle={`https://api.maptiler.com/maps/${theme.isDark ? 'dataviz-dark' : 'streets-v2'}/style.json?key=${MAPTILER_API_KEY}`}
             onDidFinishLoadingMap={() => setMapReady(true)}
             onDidFinishLoadingStyle={() => setMapReady(true)}
           >

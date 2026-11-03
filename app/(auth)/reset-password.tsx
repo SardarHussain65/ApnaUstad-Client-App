@@ -24,7 +24,7 @@ import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { AlertModal } from '../../components/ui';
-import { BASE_URL } from '../../constants/Config';
+import api from '../../services/api';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { useAlertModal, useToast } from '../../hooks';
 
@@ -51,22 +51,13 @@ export default function ResetPasswordScreen() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`${BASE_URL}/api/v1/otp/forgot-password/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          code: otp.trim(),
-          newPassword,
-          type: role || 'user',
-        }),
+      const response = await api.post('/otp/forgot-password/reset', {
+        email: email.trim().toLowerCase(),
+        code: otp.trim(),
+        newPassword,
+        type: role || 'user',
       });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || t('resetPassword.invalidCode'));
-      }
-      return data;
+      return response.data;
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

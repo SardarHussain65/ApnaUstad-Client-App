@@ -18,11 +18,12 @@ import { InputField } from '../../components/InputField';
 import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
 import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
+import { AppleSignInButton } from '../../components/auth/AppleSignInButton';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { AlertModal } from '../../components/ui';
-import { BASE_URL } from '../../constants/Config';
+import api from '../../services/api';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useAlertModal } from '../../hooks';
@@ -60,18 +61,9 @@ export default function LoginScreen() {
       const payload = loginType === 'email'
         ? { email: normalizedIdentifier.toLowerCase(), password }
         : { phone: normalizedIdentifier, password };
-      const endpoint = isWorker ? '/api/v1/workers/login' : '/api/v1/users/login';
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-      return response.json();
+      const endpoint = isWorker ? '/workers/login' : '/users/login';
+      const response = await api.post(endpoint, payload);
+      return response.data;
     },
     onSuccess: async (data) => {
       const responseData = data.data || data;
@@ -93,11 +85,12 @@ export default function LoginScreen() {
       await setAuth(token, refreshToken, finalRole, user);
       router.replace('/(tabs)' as never);
     },
-    onError: (error: Error) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    onError: (error: any) => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const msg = error?.response?.data?.message || error.message || t('auth.unableSignIn');
       alertModal.showAlert(
         t('auth.unableSignIn', 'Unable to sign in'),
-        error.message,
+        msg,
         undefined,
         'error'
       );
@@ -242,9 +235,12 @@ export default function LoginScreen() {
               />
             </GlassCard>
 
-            {/* Google Sign-In — clients only */}
+            {/* Social Sign-In (Google & Apple) — clients only */}
             {!isWorker && (
-              <GoogleSignInButton accentColor={accentColor} />
+              <>
+                <GoogleSignInButton accentColor={accentColor} />
+                <AppleSignInButton />
+              </>
             )}
 
             <View style={styles.footer}>
