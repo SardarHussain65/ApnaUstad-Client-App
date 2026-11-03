@@ -54,7 +54,6 @@
     "expo-updates": "~29.0.17",
     "expo-video": "~3.0.16",
     "expo-web-browser": "~15.0.10",
-    "firebase": "^12.11.0",
     "i18next": "^26.3.1",
     "lucide-react-native": "^1.7.0",
     "react": "19.1.0",

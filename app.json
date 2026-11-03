@@ -53,6 +53,14 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableBundleCompression": true,
+            "useLegacyPackaging": true,
+            "networkInspector": false,
+            "extraProguardRules": "-keep class org.maplibre.** { *; }\n-dontwarn org.maplibre.**\n-keep class com.swmansion.rnscreens.** { *; }\n-keep class com.swmansion.gesturehandler.** { *; }\n-keep class com.th3rdwave.safeareacontext.** { *; }\n-keep class com.horcrux.svg.** { *; }\n-keep class com.reactnativecommunity.webview.** { *; }\n-keep class com.google.firebase.** { *; }\n-dontwarn com.google.firebase.**\n-keep class com.google.android.gms.** { *; }\n-dontwarn com.google.android.gms.**\n-keep class com.reactnativegooglesignin.** { *; }\n-keep class expo.modules.** { *; }\n-dontwarn expo.modules.**\n-keep class io.sentry.** { *; }\n-dontwarn io.sentry.**\n-keep class com.reactnativecommunity.asyncstorage.** { *; }\n-dontwarn okio.**\n-dontwarn javax.annotation.**\n-dontwarn org.checkerframework.**"
+          },
           "ios": {
             "useFrameworks": "static",
             "forceStaticLinking": [

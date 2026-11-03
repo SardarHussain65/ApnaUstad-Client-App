@@ -14,6 +14,7 @@ import { ThemeProvider, useTheme } from "../constants/Theme";
 import { LanguageProvider } from "../context/LanguageContext";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { initCrashReporting } from "../services/crashReportingService";
+import * as Updates from 'expo-updates';
 
 initCrashReporting();
 
@@ -131,6 +132,21 @@ function RootLayoutNav() {
 export default function RootLayout() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', onAppStateChange);
+
+    // Silent background check for Over-The-Air (OTA) updates in release builds
+    if (!__DEV__) {
+      Updates.checkForUpdateAsync()
+        .then(async (update) => {
+          if (update.isAvailable) {
+            await Updates.fetchUpdateAsync();
+            console.log('📲 New OTA update downloaded and queued for next launch');
+          }
+        })
+        .catch((err) => {
+          console.log('OTA check bypassed:', err?.message || err);
+        });
+    }
+
     return () => subscription.remove();
   }, []);
 
