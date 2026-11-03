@@ -121,3 +121,7 @@ export {
   type EarningsDataPoint,
   type EarningsSummary,
 } from './useWorkerAnalytics';
+
+// Real-Time Cache Synchronization
+export { useRealtimeSync } from './useRealtimeSync';
+export { useRefreshOnFocus } from './useRefreshOnFocus';

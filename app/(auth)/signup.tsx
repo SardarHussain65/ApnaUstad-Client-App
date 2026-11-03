@@ -18,11 +18,12 @@ import { AuthHeader } from '../../components/auth/AuthHeader';
 import { AuthHero } from '../../components/auth/AuthHero';
 import { AuthProgress } from '../../components/auth/AuthProgress';
 import { GoogleSignInButton } from '../../components/auth/GoogleSignInButton';
+import { AppleSignInButton } from '../../components/auth/AppleSignInButton';
 import { SecurityNote } from '../../components/auth/SecurityNote';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import { AlertModal } from '../../components/ui';
-import { BASE_URL } from '../../constants/Config';
+import api from '../../services/api';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../../constants/Theme';
 import { useAlertModal } from '../../hooks';
 import { useTranslation } from 'react-i18next';
@@ -46,29 +47,20 @@ export default function SignupScreen() {
 
   const checkUserMutation = useMutation({
     mutationFn: async (phone: string) => {
-      const endpoint = isWorker ? '/api/v1/workers/check-worker' : '/api/v1/users/check-user';
-      const checkResponse = await fetch(`${BASE_URL}${endpoint}?phone=${encodeURIComponent(phone)}`);
-      if (!checkResponse.ok) {
-        throw new Error(`Failed to check ${isWorker ? 'specialist' : 'client'} availability`);
-      }
+      const endpoint = isWorker ? '/workers/check-worker' : '/users/check-user';
+      const checkResponse = await api.get(`${endpoint}?phone=${encodeURIComponent(phone)}`);
 
-      const checkData = await checkResponse.json();
-      if (checkData.data?.exists) {
+      if (checkResponse.data?.data?.exists) {
         throw new Error('PHONE_EXISTS');
       }
 
-      const otpResponse = await fetch(`${BASE_URL}/api/v1/otp/send-email-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      if (!otpResponse.ok) {
-        const errorData = await otpResponse.json();
-        if (otpResponse.status === 409) {
+      try {
+        await api.post('/otp/send-email-otp', { email: email.trim().toLowerCase() });
+      } catch (otpErr: any) {
+        if (otpErr?.response?.status === 409) {
           throw new Error('EMAIL_EXISTS');
         }
-        throw new Error(errorData.message || 'Failed to send verification email');
+        throw new Error(otpErr?.response?.data?.message || 'Failed to send verification email');
       }
 
       return { phone };
@@ -219,9 +211,12 @@ export default function SignupScreen() {
               />
             </GlassCard>
 
-            {/* Google Sign-Up — clients only */}
+            {/* Social Sign-Up (Google & Apple) — clients only */}
             {!isWorker && (
-              <GoogleSignInButton accentColor={accentColor} />
+              <>
+                <GoogleSignInButton accentColor={accentColor} />
+                <AppleSignInButton />
+              </>
             )}
 
             <View style={styles.footer}>

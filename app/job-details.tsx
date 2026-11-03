@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -46,12 +46,14 @@ import { GlassCard } from '../components/home/GlassCard';
 import { ConfirmModal } from '../components/ui';
 import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
+import { socketService } from '../services/socketService';
 import {
   useAcceptInstantJobMutation,
   useCancelJobMutation,
   useConfirmModal,
   useJobDetails,
   useWorkerWallet,
+  useRefreshOnFocus,
 } from '../hooks';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
 
@@ -220,7 +222,31 @@ export default function JobDetailsScreen() {
   const resolvedId = params.id || params.bookingId;
   const { role } = useAuth();
   const confirmModal = useConfirmModal();
-  const { data: job, isLoading } = useJobDetails(resolvedId);
+  const { data: job, isLoading, refetch } = useJobDetails(resolvedId);
+
+  // Auto-refresh when job details screen gains focus
+  useRefreshOnFocus(refetch);
+
+  useEffect(() => {
+    if (!resolvedId) return;
+
+    const handleUpdate = (data: any) => {
+      const incomingId = (data?.jobId || data?._id || data?.jobPost?._id)?.toString();
+      if (!incomingId || incomingId === String(resolvedId)) {
+        refetch();
+      }
+    };
+
+    const unsubs = [
+      socketService.on('job:cancelled', handleUpdate),
+      socketService.on('job:status', handleUpdate),
+      socketService.on('job:assigned', handleUpdate),
+      socketService.on('bid:new', handleUpdate),
+      socketService.on('bid:withdrawn', handleUpdate),
+    ];
+
+    return () => unsubs.forEach(u => u());
+  }, [resolvedId, refetch]);
   const { data: wallet } = useWorkerWallet({ enabled: role === 'worker' });
   const isPendingBidPreview = params.mode === 'pending-bid' || !!params.pendingBidId;
 

@@ -33,7 +33,9 @@ import { WorkerVerificationBanner } from './WorkerVerificationBanner';
 import {
   SkeletonBox,
   useShimmerTranslateX,
+  BookingCardSkeleton,
 } from './HomeSkeletonLoader';
+import { RecentBookingCard } from './RecentBookingCard';
 import { Booking } from '../../hooks/queries/useData';
 import { socketService } from '../../services/socketService';
 import { WorkerPendingBidCard } from './WorkerPendingBidCard';
@@ -43,6 +45,7 @@ import {
   useWorkerBids,
   useWithdrawBidMutation,
   useWorkerHomeSummary,
+  useRefreshOnFocus,
   Bid,
 } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
@@ -88,14 +91,6 @@ export function WorkerHome() {
     openIncomingJobModal,
   } = useIncomingJob();
 
-  const activePendingUrgentJobs = useMemo(() => {
-    return dismissedJobs.filter((job) => {
-      if (job.urgency !== 'instant') return false;
-      if (!job.expiresAt) return true;
-      return new Date(job.expiresAt).getTime() > Date.now();
-    });
-  }, [dismissedJobs]);
-
   // ─── React Query Hooks (Each Section Loads Separately & Cached) ───
   const {
     data: homeSummary,
@@ -136,7 +131,7 @@ export function WorkerHome() {
     if (homeSummary?.recentBookings) {
       homeSummary.recentBookings.forEach((b) => {
         if (
-          (b.status === 'accepted' || b.status === 'ongoing') &&
+          (['accepted', 'ongoing'].includes(b.status) || (b.status === 'completed' && b.paymentStatus !== 'paid')) &&
           !list.some((item) => item._id === b._id)
         ) {
           list.push(b);
@@ -148,6 +143,76 @@ export function WorkerHome() {
 
   const hasActiveJobs = activeBookings.length > 0;
   const activeBooking = activeBookings[0] || null;
+
+  // Recent completed/past jobs (excluding any currently active/ongoing job)
+  const recentBookings: Booking[] = useMemo(() => {
+    const list = homeSummary?.recentBookings ?? [];
+    const activeIds = new Set(activeBookings.map((b) => b._id));
+    return list.filter((b) => !activeIds.has(b._id)).slice(0, 2);
+  }, [homeSummary?.recentBookings, activeBookings]);
+
+  // Active Pending Urgent Missions waiting to be accepted
+  const activePendingUrgentJobs = useMemo(() => {
+    const bookedJobPostIds = new Set<string>();
+    const activeOrRecentCategories = new Set<string>();
+
+    activeBookings.forEach((b: any) => {
+      const jId = b.jobPost?._id || b.jobPost;
+      if (jId) bookedJobPostIds.add(String(jId));
+      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+    });
+
+    homeSummary?.recentBookings?.forEach((b: any) => {
+      const jId = b.jobPost?._id || b.jobPost;
+      if (jId) bookedJobPostIds.add(String(jId));
+      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+    });
+
+    const filtered = dismissedJobs.filter((job) => {
+      if (job.urgency !== 'instant') return false;
+      if (job.status && job.status !== 'open') return false;
+
+      const jId = String(job._id || job.id);
+      if (bookedJobPostIds.has(jId)) return false;
+
+      // If this worker already has an active or recent booking for this category
+      if (job.category && activeOrRecentCategories.has(job.category.toLowerCase().trim())) {
+        return false;
+      }
+
+      // Check expiration: instant jobs expire 10-15 minutes after creation or at expiresAt
+      const expiresAt = job.expiresAt || job.signalMeta?.expiresAt;
+      if (expiresAt) {
+        if (new Date(expiresAt).getTime() <= Date.now()) return false;
+      } else if (job.createdAt) {
+        // Fallback: if no expiresAt, instant missions expire after 15 minutes
+        if (Date.now() - new Date(job.createdAt).getTime() > 15 * 60 * 1000) return false;
+      }
+
+      return true;
+    });
+
+    // Sort newest first
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [dismissedJobs, activeBookings, homeSummary?.recentBookings]);
+
+  // Display at most 2 latest urgent jobs on Home screen to avoid screen clutter;
+  // workers can check additional jobs in the "Find Jobs" tab.
+  const displayedUrgentJobs = useMemo(() => {
+    return activePendingUrgentJobs.slice(0, 2);
+  }, [activePendingUrgentJobs]);
+
+  // Whether any actionable/extra cards are already occupying screen space
+  // (urgent missions waiting, ongoing work, or sent proposals/bids)
+  const hasExtraCards = Boolean(
+    activePendingUrgentJobs.length > 0 ||
+    hasActiveJobs ||
+    pendingBids.length > 0
+  );
 
   // ─── Location & Background Sync (Non-blocking) ───────────────────────────────
   const getSavedCoordinates = useCallback((): WorkerCoordinates | null => {
@@ -167,10 +232,19 @@ export function WorkerHome() {
         const currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        return {
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
-        };
+        const lat = currentLocation.coords.latitude;
+        const lng = currentLocation.coords.longitude;
+        const isEmulator =
+          (Math.abs(lat - 37.422) < 0.05 && Math.abs(lng - (-122.084)) < 0.05) ||
+          (Math.abs(lat - 37.33) < 0.05 && Math.abs(lng - (-122.03)) < 0.05);
+        const isPakistan = lat >= 23.0 && lat <= 37.5 && lng >= 60.0 && lng <= 78.5;
+
+        if (isPakistan && !isEmulator) {
+          return {
+            latitude: lat,
+            longitude: lng,
+          };
+        }
       }
     } catch (error) {
       console.warn('Could not read device location, using saved worker location:', error);
@@ -181,12 +255,16 @@ export function WorkerHome() {
   const syncWorkerLocation = useCallback(async (coordinates?: WorkerCoordinates | null) => {
     try {
       if (!user?._id) return;
-      const payload: any = {};
-      if (coordinates) {
-        payload.longitude = coordinates.longitude;
-        payload.latitude = coordinates.latitude;
-      }
-      if (Object.keys(payload).length === 0) return;
+      if (!coordinates) return;
+      const { latitude, longitude } = coordinates;
+      const isEmulator =
+        (Math.abs(latitude - 37.422) < 0.05 && Math.abs(longitude - (-122.084)) < 0.05) ||
+        (Math.abs(latitude - 37.33) < 0.05 && Math.abs(longitude - (-122.03)) < 0.05);
+      const isPakistan = latitude >= 23.0 && latitude <= 37.5 && longitude >= 60.0 && longitude <= 78.5;
+
+      if (!isPakistan || isEmulator) return;
+
+      const payload = { latitude, longitude };
       await api.patch(`/workers/${user._id}`, payload);
     } catch (error) {
       console.error('❌ Error syncing worker location:', error);
@@ -221,11 +299,15 @@ export function WorkerHome() {
     refetchAnalytics();
   }, [refetchSummary, refetchBids, refetchAnalytics]);
 
+  // Auto-refresh when WorkerHome regains focus (switching tabs / returning to home)
+  useRefreshOnFocus(refreshWorkerActivity);
+
   useEffect(() => {
     if (!token) return;
     const events = [
+      'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
       'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn',
-      'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled',
+      'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled', 'booking:paid'
     ];
     const unsubs = events.map((event) => socketService.on(event, refreshWorkerActivity));
     return () => unsubs.forEach((u) => u());
@@ -341,22 +423,35 @@ export function WorkerHome() {
                   {t('home.worker.urgentMissionWaiting', 'Urgent Job Waiting')}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.sectionBadge,
-                  {
-                    backgroundColor: alpha(colors.error, 0.12),
-                    borderColor: alpha(colors.error, 0.3),
-                  },
-                ]}
-              >
-                <Text style={[styles.sectionMeta, { color: colors.error }]}>
-                  {t('home.worker.readyToAccept', 'READY TO ACCEPT')}
-                </Text>
-              </View>
+              {activePendingUrgentJobs.length > 2 ? (
+                <TouchableOpacity
+                  style={styles.seeAllRow}
+                  onPress={() => router.push('/(tabs)/jobs' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.seeAll, { color: colors.error }]}>
+                    {t('common.seeAll', 'SEE ALL')} ({activePendingUrgentJobs.length})
+                  </Text>
+                  <ChevronRight size={13} color={colors.error} />
+                </TouchableOpacity>
+              ) : (
+                <View
+                  style={[
+                    styles.sectionBadge,
+                    {
+                      backgroundColor: alpha(colors.error, 0.12),
+                      borderColor: alpha(colors.error, 0.3),
+                    },
+                  ]}
+                >
+                  <Text style={[styles.sectionMeta, { color: colors.error }]}>
+                    {t('home.worker.readyToAccept', 'READY TO ACCEPT')}
+                  </Text>
+                </View>
+              )}
             </View>
 
-            {activePendingUrgentJobs.map((job) => {
+            {displayedUrgentJobs.map((job) => {
               const amount = job.amount || job.budget || job.signalMeta?.amount || 0;
               return (
                 <GlassCard
@@ -481,6 +576,30 @@ export function WorkerHome() {
                 </GlassCard>
               );
             })}
+
+            {activePendingUrgentJobs.length > 2 && (
+              <TouchableOpacity
+                style={[
+                  styles.moreUrgentJobsBanner,
+                  {
+                    borderColor: alpha(colors.error, 0.28),
+                    backgroundColor: alpha(colors.error, 0.08),
+                  },
+                ]}
+                onPress={() => router.push('/(tabs)/jobs' as any)}
+                activeOpacity={0.75}
+              >
+                <Zap size={14} color={colors.error} />
+                <Text style={[styles.moreUrgentJobsText, { color: colors.error }]}>
+                  {t(
+                    'home.worker.moreUrgentAvailable',
+                    '+{{count}} more urgent jobs waiting • Check Find Jobs tab',
+                    { count: activePendingUrgentJobs.length - 2 }
+                  )}
+                </Text>
+                <ChevronRight size={14} color={colors.error} />
+              </TouchableOpacity>
+            )}
           </Animated.View>
         )}
 
@@ -506,6 +625,8 @@ export function WorkerHome() {
             <View style={styles.agendaList}>
               {activeBookings.map((booking) => {
                 const isOngoing = booking.status === 'ongoing';
+                const isPaymentPending = booking.status === 'completed' && booking.paymentStatus !== 'paid';
+                const accentColor = isPaymentPending ? colors.orange : isOngoing ? colors.success : colors.cyan;
                 const customerName =
                   booking.customer?.fullName ||
                   booking.cardMeta?.counterParty?.fullName ||
@@ -534,13 +655,13 @@ export function WorkerHome() {
                     intensity={35}
                     padding={16}
                     hasGlow
-                    glowColor={isOngoing ? colors.success : colors.cyan}
+                    glowColor={accentColor}
                     style={[
                       styles.heroCard,
                       {
-                        borderColor: alpha(isOngoing ? colors.success : colors.cyan, 0.35),
+                        borderColor: alpha(accentColor, 0.35),
                         borderLeftWidth: 3.5,
-                        borderLeftColor: isOngoing ? colors.success : colors.cyan,
+                        borderLeftColor: accentColor,
                         marginBottom: 12,
                       },
                     ]}
@@ -551,30 +672,26 @@ export function WorkerHome() {
                         style={[
                           styles.heroStatusPill,
                           {
-                            backgroundColor: alpha(
-                              isOngoing ? colors.success : colors.cyan,
-                              0.12
-                            ),
-                            borderColor: alpha(
-                              isOngoing ? colors.success : colors.cyan,
-                              0.3
-                            ),
+                            backgroundColor: alpha(accentColor, 0.12),
+                            borderColor: alpha(accentColor, 0.3),
                           },
                         ]}
                       >
                         <View
                           style={[
                             styles.pulseDot,
-                            { backgroundColor: isOngoing ? colors.success : colors.cyan },
+                            { backgroundColor: accentColor },
                           ]}
                         />
                         <Text
                           style={[
                             styles.heroStatusText,
-                            { color: isOngoing ? colors.success : colors.cyan },
+                            { color: accentColor },
                           ]}
                         >
-                          {isOngoing
+                          {isPaymentPending
+                            ? t('bookingStatus.awaitingPayment.title', 'AWAITING CASH PAYMENT')
+                            : isOngoing
                             ? t('bookingStatus.ongoing.title', 'WORK IN PROGRESS')
                             : t('bookingStatus.accepted.title', 'BOOKED / ASSIGNED')}
                         </Text>
@@ -713,7 +830,7 @@ export function WorkerHome() {
                         style={[
                           styles.heroCtaBtn,
                           {
-                            backgroundColor: isOngoing ? colors.success : colors.cyan,
+                            backgroundColor: accentColor,
                           },
                         ]}
                         onPress={() =>
@@ -725,7 +842,9 @@ export function WorkerHome() {
                         activeOpacity={0.82}
                       >
                         <Text style={styles.heroCtaBtnText}>
-                          {t('home.worker.continueJob', 'Track & Continue Job')}
+                          {isPaymentPending
+                            ? t('home.worker.collectPaymentBtn', 'Collect Cash Payment')
+                            : t('home.worker.continueJob', 'Track & Continue Job')}
                         </Text>
                         <ArrowRight size={15} color="#001014" strokeWidth={2.5} />
                       </TouchableOpacity>
@@ -851,33 +970,82 @@ export function WorkerHome() {
           </Animated.View>
         ) : null}
 
-        {/* ── Section 3: Clean Job History Shortcut ── */}
-        <TouchableOpacity
-          style={[
-            styles.historyLinkCard,
-            {
-              borderColor: theme.colors.border.subtle,
-              backgroundColor: alpha(theme.colors.surface.card, 0.35),
-            },
-          ]}
-          onPress={() => router.push('/(tabs)/bookings')}
-          activeOpacity={0.7}
-        >
-          <View style={styles.historyLinkRow}>
-            <View style={[styles.historyIconWrap, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
-              <ShieldCheck size={20} color={colors.cyan} />
+        {/* ── Section 3: Recent Jobs (shown only when idle with no extra cards) OR History Shortcut ── */}
+        {!hasExtraCards && summaryLoading && !homeSummary ? (
+          <View style={styles.recentSection}>
+            <View style={styles.recentSectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {t('home.worker.recentJobs', 'Recent Jobs')}
+                </Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
+                  {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.historyLinkTitle, { color: theme.colors.text.primary }]}>
-                {t('home.worker.viewJobHistory', 'Completed & Past Jobs')}
-              </Text>
-              <Text style={[styles.historyLinkSub, { color: theme.colors.text.muted }]}>
-                {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={theme.colors.text.muted} />
+            <BookingCardSkeleton translateX={translateX} />
+            <BookingCardSkeleton translateX={translateX} />
           </View>
-        </TouchableOpacity>
+        ) : !hasExtraCards && recentBookings.length > 0 ? (
+          <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.recentSection}>
+            <View style={styles.recentSectionHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
+                  {t('home.worker.recentJobs', 'Recent Jobs')}
+                </Text>
+                <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                  {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/bookings')}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.seeAllBtn}
+              >
+                <Text style={[styles.viewAll, { color: colors.cyan }]}>
+                  {t('home.client.seeAll', 'SEE ALL')}
+                </Text>
+                <ChevronRight size={12} color={colors.cyan} strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
+
+            {recentBookings.map((booking) => (
+              <RecentBookingCard
+                key={booking._id}
+                booking={booking}
+                onPress={() => handleBookingDetails(booking)}
+              />
+            ))}
+          </Animated.View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.historyLinkCard,
+              {
+                borderColor: theme.colors.border.subtle,
+                backgroundColor: alpha(theme.colors.surface.card, 0.35),
+              },
+            ]}
+            onPress={() => router.push('/(tabs)/bookings')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.historyLinkRow}>
+              <View style={[styles.historyIconWrap, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
+                <ShieldCheck size={20} color={colors.cyan} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.historyLinkTitle, { color: theme.colors.text.primary }]}>
+                  {t('home.worker.viewJobHistory', 'Completed & Past Jobs')}
+                </Text>
+                <Text style={[styles.historyLinkSub, { color: theme.colors.text.muted }]}>
+                  {t('home.worker.viewHistoryInBookings', 'Access your completed bookings, client reviews & receipts')}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={theme.colors.text.muted} />
+            </View>
+          </TouchableOpacity>
+        )}
 
 
         <View style={{ height: 120 }} />
@@ -992,6 +1160,22 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   walletInsightsLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  moreUrgentJobsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  moreUrgentJobsText: {
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1189,5 +1373,31 @@ const styles = StyleSheet.create({
   historyLinkSub: {
     fontSize: 11,
     lineHeight: 15,
+  },
+  recentSection: {
+    marginTop: Spacing.xl,
+  },
+  recentSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.l,
+    marginBottom: Spacing.m,
+  },
+  sectionSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  viewAll: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

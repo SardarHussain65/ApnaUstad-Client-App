@@ -383,7 +383,7 @@ export default function JobCreationScreen() {
         if (voiceNoteUri) {
           const filename = voiceNoteUri.split('/').pop() ?? 'job-voice-note.m4a';
           formData.append('images', {
-            uri: Platform.OS === 'ios' ? voiceNoteUri.replace('file://', '') : voiceNoteUri,
+            uri: voiceNoteUri,
             name: filename,
             type: 'audio/m4a',
           } as unknown as Blob);
@@ -419,11 +419,7 @@ export default function JobCreationScreen() {
           closeConfirm();
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           const newId = (response as any)?._id || createdJobId;
-          if (isInstant) {
-            router.replace({ pathname: '/finding-worker', params: { jobId: newId } });
-          } else {
-            router.replace({ pathname: '/bids-list', params: { jobId: newId } });
-          }
+          router.replace({ pathname: '/finding-worker', params: { jobId: newId } });
         },
         onError: (err: Error) => {
           setConfirmLoading(false);

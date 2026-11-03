@@ -18,11 +18,15 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { alpha, useTheme, useThemeColors } from '../../constants/Theme';
 import { X, CheckCircle2, AlertTriangle, Info, HelpCircle } from 'lucide-react-native';
 import { GlassCard } from '../home/GlassCard';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const IS_SMALL_DEVICE = SCREEN_WIDTH < 380;
 
 interface BeautifulModalProps extends Omit<ModalProps, 'visible' | 'transparent' | 'animationType'> {
   visible: boolean;
@@ -65,11 +69,11 @@ export function BeautifulModal({
 
   useEffect(() => {
     if (visible) {
-      scale.value = withSpring(1, { damping: 10, mass: 1, stiffness: 100 });
-      opacity.value = withSpring(1, { damping: 12, mass: 1, stiffness: 100 });
+      scale.value = withTiming(1, { duration: 220 });
+      opacity.value = withTiming(1, { duration: 180 });
     } else {
-      scale.value = withSpring(0.8);
-      opacity.value = withSpring(0);
+      scale.value = withTiming(0.92, { duration: 160 });
+      opacity.value = withTiming(0, { duration: 140 });
     }
   }, [visible, scale, opacity]);
 
@@ -182,12 +186,14 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const theme = useTheme();
   const resolvedConfirmColor = confirmColor ?? theme.colors.brand.primary;
+  const isConfirmLong = (confirmText?.length ?? 0) > 10;
+
   return (
     <BeautifulModal
       visible={visible}
       onClose={onCancel}
       title={title}
-      height={380}
+      height={IS_SMALL_DEVICE ? 390 : 380}
       glowColor={resolvedConfirmColor}
       icon={<HelpCircle color={resolvedConfirmColor} size={32} />}
     >
@@ -197,8 +203,8 @@ export function ConfirmModal({
         <View style={styles.confirmButtons}>
           <TouchableOpacity
             style={[
-              styles.confirmBtn,
               styles.cancelBtn,
+              isConfirmLong && styles.cancelBtnCompact,
               {
                 backgroundColor: theme.colors.surface.subtle,
                 borderColor: theme.colors.border.subtle,
@@ -206,17 +212,35 @@ export function ConfirmModal({
             ]}
             onPress={onCancel}
             disabled={isLoading}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.cancelBtnText, { color: theme.colors.text.muted }]}>{cancelText.toUpperCase()}</Text>
+            <Text
+              style={[styles.cancelBtnText, { color: theme.colors.text.muted }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {cancelText.toUpperCase()}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.confirmBtn, { backgroundColor: resolvedConfirmColor, borderColor: resolvedConfirmColor }]}
+            style={[
+              styles.confirmBtn,
+              isConfirmLong && styles.confirmBtnExpanded,
+              { backgroundColor: resolvedConfirmColor, borderColor: resolvedConfirmColor },
+            ]}
             onPress={onConfirm}
             disabled={isLoading}
+            activeOpacity={0.85}
           >
             <LinearGradient colors={[resolvedConfirmColor, resolvedConfirmColor]} style={styles.solidBtnGradient}>
-              <Text style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}>
+              <Text
+                style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+              >
                 {isLoading ? '...' : confirmText.toUpperCase()}
               </Text>
             </LinearGradient>
@@ -277,10 +301,18 @@ export function AlertModal({
         <TouchableOpacity
           style={[styles.alertBtn, { backgroundColor: getColor(), borderColor: getColor() }]}
           onPress={onDismiss}
+          activeOpacity={0.85}
         >
-           <LinearGradient colors={[getColor(), getColor()]} style={styles.solidBtnGradient}>
-              <Text style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}>{buttonText.toUpperCase()}</Text>
-            </LinearGradient>
+          <LinearGradient colors={[getColor(), getColor()]} style={styles.solidBtnGradient}>
+            <Text
+              style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {buttonText.toUpperCase()}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </BeautifulModal>
@@ -295,8 +327,9 @@ const styles = StyleSheet.create({
   },
   backdropTouchable: { ...StyleSheet.absoluteFillObject },
   modalContainer: {
-    width: '88%',
-    borderRadius: 32,
+    width: IS_SMALL_DEVICE ? '92%' : '88%',
+    maxWidth: 420,
+    borderRadius: 28,
     zIndex: 1000,
     borderWidth: 1,
     shadowOffset: { width: 0, height: 20 },
@@ -310,56 +343,109 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
-    borderRadius: 32,
+    borderRadius: 28,
   },
   topAccentBar: {
     height: 4, width: '100%', position: 'absolute', top: 0, zIndex: 2,
   },
   contentInner: {
-    flex: 1, padding: 24, paddingTop: 55,
+    flex: 1,
+    padding: IS_SMALL_DEVICE ? 18 : 24,
+    paddingTop: 52,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 20, zIndex: 10, height: 30,
+    marginBottom: 16, zIndex: 10, height: 30,
   },
   modalTitle: {
     fontSize: 14, fontWeight: '900',
-    letterSpacing: 2, textAlign: 'center',
+    letterSpacing: 1.5, textAlign: 'center',
   },
   closeBtn: {
-    position: 'absolute', right: -10, top: -5,
+    position: 'absolute', right: -6, top: -5,
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center', zIndex: 20,
   },
   modalBody: {
-    flex: 1, justifyContent: 'center',
+    flex: 1,
   },
   modalBodyContent: {
-    alignItems: 'center', width: '100%',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   floatingIconBadge: {
     position: 'absolute', top: -45, alignSelf: 'center', zIndex: 100,
   },
   iconBadgeInner: {
-    width: 90, height: 90, borderRadius: 45,
+    width: 86, height: 86, borderRadius: 43,
     borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
     shadowOffset: { width: 0, height: 10 },
     shadowRadius: 15, elevation: 20,
   },
   modalMessage: {
-    fontSize: 16, lineHeight: 24,
-    textAlign: 'center', marginBottom: 40, fontWeight: '600',
+    fontSize: 15, lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: IS_SMALL_DEVICE ? 24 : 32,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  confirmBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  confirmBtnExpanded: {
+    flex: 1.35,
+  },
+  solidBtnGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  confirmButtons: { flexDirection: 'row', gap: 12, width: '100%' },
-  confirmBtn: { flex: 1, height: 56, borderRadius: 20, overflow: 'hidden' },
-  solidBtnGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  solidBtnText: { fontSize: 13, fontWeight: '900', letterSpacing: 1 },
+  solidBtnText: {
+    fontSize: 12.5,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    lineHeight: 16,
+    includeFontPadding: false,
+  },
   cancelBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
     borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
-  cancelBtnText: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5 },
-  alertBtn: { width: '100%', height: 58, borderRadius: 22, overflow: 'hidden' },
+  cancelBtnCompact: {
+    flex: 0.75,
+    maxWidth: 110,
+    minWidth: 76,
+  },
+  cancelBtnText: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+  alertBtn: {
+    width: '100%',
+    height: 54,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
 });

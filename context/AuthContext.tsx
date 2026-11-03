@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
 import { getPushToken } from '../services/notificationService';
 import { BASE_URL } from '../constants/Config';
+import { setUserContext, clearUserContext } from '../services/crashReportingService';
 
 export type UserRole = 'client' | 'worker' | null;
 
@@ -54,6 +55,7 @@ interface AuthContextType {
   updateUser: (user: any) => Promise<void>;
   updateAccountStatus: (status: AccountStatus) => Promise<void>;
   refreshAccountStatus: () => Promise<AccountStatus | null>;
+  refreshUserProfile: () => Promise<any>;
   logout: () => Promise<void>;
 }
 
@@ -76,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // without going through AsyncStorage (which may already be cleared).
   const tokenRef = useRef<string | null>(null);
   const roleRef = useRef<UserRole>(null);
+  const userRef = useRef<UserProfile | WorkerProfile | null>(null);
   const lastRefreshedRef = useRef<number>(0);
   const accountStatusRef = useRef<AccountStatus | null>(null);
 
@@ -85,6 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     roleRef.current = role;
   }, [role]);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
   useEffect(() => {
     accountStatusRef.current = accountStatus;
   }, [accountStatus]);
@@ -149,7 +155,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           Authorization: `Bearer ${currentToken}`,
         },
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        // If token expired, invalid, or user not found -> automatically logout
+        if (response.status === 401 || response.status === 404 || response.status === 403) {
+          console.warn(`[AuthContext] Status check failed (${response.status}), user or token not found. Logging out.`);
+          await logout();
+        }
+        return null;
+      }
       const payload = await response.json();
       const status = buildAccountStatus(payload.data || payload);
       await updateAccountStatus(status);
@@ -159,6 +172,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
   }, [updateAccountStatus]);
+
+  const refreshUserProfile = useCallback(async () => {
+    const currentToken = tokenRef.current;
+    const currentRole = roleRef.current;
+    const currentUser = userRef.current;
+    if (!currentToken || !currentRole || !currentUser?._id) return null;
+
+    try {
+      const endpoint = currentRole === 'worker' ? `/workers/${currentUser._id}` : `/users/${currentUser._id}`;
+      const response = await fetch(`${BASE_URL}/api/v1${endpoint}`, {
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+        },
+      });
+      if (response.ok) {
+        const payload = await response.json();
+        const freshUser = payload.data || payload;
+        if (freshUser && freshUser._id) {
+          setUserState(freshUser);
+          setAccountStatusState(buildAccountStatus(freshUser));
+          await AsyncStorage.setItem('user_data', JSON.stringify(freshUser));
+          return freshUser;
+        }
+      }
+    } catch (error) {
+      console.warn('Could not refresh user profile:', error);
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
     const loadAuth = async () => {
@@ -170,17 +212,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           AsyncStorage.getItem('user_data')
         ]);
 
-        if (savedRole) setRoleState(savedRole as UserRole);
-        if (savedToken) {
-          setTokenState(savedToken);
-          socketService.connect(savedToken);
+        // If token or user or role is not found -> automatically clean up storage and logout
+        if (!savedToken || !savedUser || !savedRole) {
+          if (savedToken || savedUser || savedRole) {
+            console.log('[AuthContext] Incomplete auth state detected (token or user not found). Automatically logging out.');
+            await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+          }
+          setRoleState(null);
+          setTokenState(null);
+          setRefreshTokenState(null);
+          setUserState(null);
+          setAccountStatusState(null);
+          return;
         }
+
+        let parsedUser: any = null;
+        try {
+          parsedUser = JSON.parse(savedUser);
+        } catch (jsonErr) {
+          console.error('[AuthContext] Failed to parse saved user JSON:', jsonErr);
+        }
+
+        if (!parsedUser || !parsedUser._id) {
+          console.log('[AuthContext] User data invalid or corrupt. Automatically logging out.');
+          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+          setRoleState(null);
+          setTokenState(null);
+          setRefreshTokenState(null);
+          setUserState(null);
+          setAccountStatusState(null);
+          return;
+        }
+
+        setRoleState(savedRole as UserRole);
+        setTokenState(savedToken);
+        socketService.connect(savedToken);
         if (savedRefreshToken) setRefreshTokenState(savedRefreshToken);
-        if (savedUser) {
-          const parsedUser = JSON.parse(savedUser);
-          setUserState(parsedUser);
-          setAccountStatusState(buildAccountStatus(parsedUser));
-        }
+        setUserState(parsedUser);
+        setAccountStatusState(buildAccountStatus(parsedUser));
+        setUserContext({ id: parsedUser._id, email: parsedUser.email, role: savedRole as string });
       } catch (error) {
         console.error('Error loading auth state:', error);
       } finally {
@@ -215,9 +285,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!token || !role) return;
-    console.log('[AuthContext Debug] useEffect [token, role] triggered. token:', token ? 'exists' : 'null', 'role:', role);
     refreshAccountStatus();
-  }, [token, role]);
+    refreshUserProfile();
+  }, [token, role, refreshAccountStatus, refreshUserProfile]);
+
+  useEffect(() => {
+    if (!token) return;
+    const unsubVerified = socketService.on('worker:verified', () => {
+      refreshUserProfile();
+    });
+    const unsubUpdated = socketService.on('worker:updated', () => {
+      refreshUserProfile();
+    });
+    return () => {
+      unsubVerified();
+      unsubUpdated();
+    };
+  }, [token, refreshUserProfile]);
 
   const appStateRef = useRef(AppState.currentState);
 
@@ -236,6 +320,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         debounceTimer = setTimeout(() => {
           if (AppState.currentState === 'active') {
             refreshAccountStatus();
+            refreshUserProfile();
           }
         }, 500);
       }
@@ -245,7 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (debounceTimer) clearTimeout(debounceTimer);
       subscription.remove();
     };
-  }, [refreshAccountStatus]);
+  }, [refreshAccountStatus, refreshUserProfile]);
 
   const setAuth = async (token: string, refreshToken: string, role: UserRole, user: any) => {
     try {
@@ -280,6 +365,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRoleState(role);
       setUserState(user);
       setAccountStatusState(user ? buildAccountStatus(user) : null);
+      setUserContext({ id: user?._id, email: user?.email, role: role || undefined });
 
       socketService.connect(token);
       console.log('Auth state saved successfully');
@@ -338,6 +424,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRoleState(null);
       setUserState(null);
       setAccountStatusState(null);
+      clearUserContext();
       socketService.disconnect();
       await Promise.all([
         AsyncStorage.removeItem('user_token'),
@@ -345,6 +432,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem('user_role'),
         AsyncStorage.removeItem('user_data')
       ]);
+
+      // Navigate to role-selection so the user is never left on a ghost screen
+      try {
+        const { router } = require('expo-router');
+        router.replace('/role-selection');
+      } catch (navError) {
+        console.warn('Navigation on logout:', navError);
+      }
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
@@ -353,7 +448,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ role, user, token, refreshToken, isLoading, accountStatus, setAuth, setRole: setRoleState, updateUser, updateAccountStatus, refreshAccountStatus, logout }}>
+    <AuthContext.Provider value={{ role, user, token, refreshToken, isLoading, accountStatus, setAuth, setRole: setRoleState, updateUser, updateAccountStatus, refreshAccountStatus, refreshUserProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );

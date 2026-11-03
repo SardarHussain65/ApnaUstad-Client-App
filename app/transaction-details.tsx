@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import Animated, {
   FadeInDown,
+  FadeOut,
   SlideInDown,
   useAnimatedStyle,
   useSharedValue,
@@ -36,6 +37,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   Clock3,
   CreditCard,
   MapPin,
@@ -43,6 +45,7 @@ import {
   Navigation,
   Phone,
   Scale,
+  ShieldCheck,
   Star,
   UserRound,
   Zap,
@@ -51,12 +54,16 @@ import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@mapl
 
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
+import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../services/backgroundLocationService';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeyFactory';
 import {
   useAlertModal,
+  useConfirmModal,
   useBookingDetails,
   useUpdateBookingStatusMutation,
   usePayBookingMutation,
-  useCreateReviewMutation,
+  useRefreshOnFocus,
 } from '../hooks';
 import { MAPTILER_API_KEY } from '../constants/Config';
 import {
@@ -65,8 +72,10 @@ import {
   getRouteFromOSRM,
   formatDistanceKm,
 } from '../utils/mapUtils';
-import { AlertModal } from '../components/ui/BeautifulModal';
+import { AlertModal, ConfirmModal } from '../components/ui/BeautifulModal';
 import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
+import { SafetyShieldModal } from '../components/safety/SafetyShieldModal';
+import { ReviewModal } from '../components/review/ReviewModal';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
 import {
   alpha,
@@ -127,11 +136,12 @@ export default function TransactionDetailsScreen() {
   const isWorker = role === 'worker';
 
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
-  const [selectedRating, setSelectedRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [showAutoAssignedModal, setShowAutoAssignedModal] = useState(autoAssigned === 'true');
   const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
   const bypassBeforeRemoveRef = useRef(false);
 
   // Map state
@@ -144,12 +154,6 @@ export default function TransactionDetailsScreen() {
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
 
   useEffect(() => {
-    if (autoAssigned === 'true') {
-      router.setParams({ autoAssigned: undefined } as any);
-    }
-  }, [autoAssigned]);
-
-  useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (bypassBeforeRemoveRef.current) return;
       e.preventDefault();
@@ -160,14 +164,32 @@ export default function TransactionDetailsScreen() {
   }, [navigation, router]);
 
   const { data: booking, isLoading, refetch } = useBookingDetails(id);
+  const queryClient = useQueryClient();
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateBookingStatusMutation();
   const { mutate: payBooking, isPending: isPaying } = usePayBookingMutation();
-  const { mutate: createReview, isPending: isCreatingReview } = useCreateReviewMutation();
+
+  // Auto-refresh when TransactionDetails screen regains focus
+  useRefreshOnFocus(refetch);
 
   useEffect(() => {
-    const unsub = socketService.on('booking:status', () => refetch());
-    return () => unsub();
-  }, [refetch]);
+    const handleUpdate = (data: any) => {
+      const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+      if (!incomingId || incomingId === String(id)) {
+        refetch();
+      }
+    };
+
+    const events = [
+      'booking:status',
+      'booking:accepted',
+      'booking:ongoing',
+      'booking:completed',
+      'booking:cancelled',
+      'booking:paid'
+    ];
+    const unsubs = events.map(event => socketService.on(event, handleUpdate));
+    return () => unsubs.forEach(u => u());
+  }, [id, refetch]);
 
   const meta = booking?.cardMeta;
   const status = booking?.status || 'accepted';
@@ -176,7 +198,8 @@ export default function TransactionDetailsScreen() {
     disputeMeta?.hasDispute && ['open', 'under_review'].includes(disputeMeta.disputeStatus || '')
   );
   const canRaiseDispute = disputeMeta?.canRaiseDispute === true;
-  const isJobEnded = status === 'completed' || status === 'cancelled';
+  const isPaid = booking?.paymentStatus === 'paid';
+  const isJobEnded = (status === 'completed' && isPaid) || status === 'cancelled';
   const showDisputeAction = hasActiveDispute || (canRaiseDispute && !isJobEnded);
   const isCommunicationLocked = isJobEnded;
 
@@ -193,7 +216,6 @@ export default function TransactionDetailsScreen() {
 
   const amountValue = Number(meta?.financial?.amount ?? (isWorker ? booking?.workerEarning : booking?.totalAmount) ?? initialAmount ?? 0);
   const amountText = meta?.financial?.amountText || formatCurrency(amountValue);
-  const isPaid = booking?.paymentStatus === 'paid';
   const isInstant = booking?.bookingType === 'instant';
 
   const serviceTitle = meta?.title || booking?.category || t('transactionDetails.jobDetails', 'Service Booking');
@@ -204,16 +226,26 @@ export default function TransactionDetailsScreen() {
   const rawTimeLabel = meta?.schedule?.timeLabel || booking?.scheduledTime || 'ASAP';
   const timeLabel = rawTimeLabel === 'ASAP' ? t('transactionDetails.asap', 'ASAP') : rawTimeLabel;
 
+  const isValidPakistanCoord = useCallback((lat?: number | null, lng?: number | null): boolean => {
+    if (lat == null || lng == null) return false;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    const isEmulator =
+      (Math.abs(lat - 37.422) < 0.05 && Math.abs(lng - (-122.084)) < 0.05) ||
+      (Math.abs(lat - 37.33) < 0.05 && Math.abs(lng - (-122.03)) < 0.05);
+    if (isEmulator) return false;
+    return lat >= 23.0 && lat <= 37.5 && lng >= 60.0 && lng <= 78.5;
+  }, []);
+
   // Destination Location (Customer / Service address)
   const destinationLocation = useMemo<LocationType>(() => {
-    const coords = booking?.location?.coordinates;
+    const coords = booking?.location?.coordinates || (booking?.customer as any)?.location?.coordinates;
     const lat = Number(coords?.[1] ?? (booking?.location as any)?.latitude);
     const lng = Number(coords?.[0] ?? (booking?.location as any)?.longitude);
-    if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+    if (isValidPakistanCoord(lat, lng)) {
       return { latitude: lat, longitude: lng };
     }
     return { latitude: 33.6430, longitude: 73.0733 }; // Islamabad/Rawalpindi fallback
-  }, [booking?.location]);
+  }, [booking?.location, booking?.customer, isValidPakistanCoord]);
 
   // Clean Address
   const rawAddress = meta?.location?.address || booking?.address || '';
@@ -227,12 +259,16 @@ export default function TransactionDetailsScreen() {
     return cleaned || rawAddress;
   }, [rawAddress, t]);
 
-  // Live Worker Location GPS Tracking & Sockets
+  // Live Worker Location GPS Tracking & Sockets (only when en-route, i.e. status === 'accepted')
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
     let isMounted = true;
 
-    if (isWorker && status !== 'completed' && status !== 'cancelled') {
+    if (isWorker && status === 'accepted') {
+      if (id) {
+        void startBackgroundLocationTracking(id as string);
+      }
+
       (async () => {
         const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
         if (permStatus !== 'granted' || !isMounted) return;
@@ -241,13 +277,15 @@ export default function TransactionDetailsScreen() {
           const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
           if (isMounted) {
             const loc = { latitude: current.coords.latitude, longitude: current.coords.longitude };
-            setWorkerLocation(loc);
-            if (id) {
-              socketService.emit('worker:location', {
-                bookingId: id,
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-              });
+            if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
+              setWorkerLocation(loc);
+              if (id) {
+                socketService.emit('worker:location', {
+                  bookingId: id,
+                  latitude: loc.latitude,
+                  longitude: loc.longitude,
+                });
+              }
             }
           }
 
@@ -256,13 +294,15 @@ export default function TransactionDetailsScreen() {
             (newPos) => {
               if (!isMounted) return;
               const loc = { latitude: newPos.coords.latitude, longitude: newPos.coords.longitude };
-              setWorkerLocation(loc);
-              if (id) {
-                socketService.emit('worker:location', {
-                  bookingId: id,
-                  latitude: loc.latitude,
-                  longitude: loc.longitude,
-                });
+              if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
+                setWorkerLocation(loc);
+                if (id) {
+                  socketService.emit('worker:location', {
+                    bookingId: id,
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                  });
+                }
               }
             }
           );
@@ -275,26 +315,29 @@ export default function TransactionDetailsScreen() {
     return () => {
       isMounted = false;
       if (subscription) subscription.remove();
+      if (isWorker) {
+        void stopBackgroundLocationTracking();
+      }
     };
-  }, [isWorker, status, id]);
+  }, [isWorker, status, id, isValidPakistanCoord]);
 
   // Client listens to socket for worker location updates
   useEffect(() => {
-    if (isWorker || status === 'completed' || status === 'cancelled') return;
+    if (isWorker || status === 'ongoing' || status === 'completed' || status === 'cancelled') return;
 
     // Check if worker location already exists in booking
     const w = booking?.worker;
-    if (w && typeof w === 'object' && (w as any).location?.coordinates) {
-      const coords = (w as any).location.coordinates;
+    const coords = (w as any)?.location?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
       const lat = Number(coords[1]);
       const lng = Number(coords[0]);
-      if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+      if (isValidPakistanCoord(lat, lng)) {
         setWorkerLocation({ latitude: lat, longitude: lng });
       }
     }
 
     const unsub = socketService.on('worker:location', (data: any) => {
-      if (data && Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) {
+      if (data && isValidPakistanCoord(data.latitude, data.longitude)) {
         setWorkerLocation({
           latitude: Number(data.latitude),
           longitude: Number(data.longitude),
@@ -305,19 +348,36 @@ export default function TransactionDetailsScreen() {
     return () => {
       unsub();
     };
-  }, [isWorker, status, booking?.worker]);
+  }, [isWorker, status, booking?.worker, isValidPakistanCoord]);
 
-  // Fallback worker position if not yet reporting
-  const workerMarkerLocation = useMemo<LocationType>(() => {
-    if (workerLocation && Number.isFinite(workerLocation.latitude) && Number.isFinite(workerLocation.longitude)) {
+  // Worker live or profile location (Exact coordinates, no fake offsets)
+  const workerMarkerLocation = useMemo<LocationType | null>(() => {
+    if (workerLocation && isValidPakistanCoord(workerLocation.latitude, workerLocation.longitude)) {
       return workerLocation;
     }
-    // Subtle realistic offset from destination
-    return {
-      latitude: destinationLocation.latitude + 0.009,
-      longitude: destinationLocation.longitude + 0.012,
-    };
-  }, [workerLocation, destinationLocation]);
+    const w = booking?.worker;
+    const coords = (w as any)?.location?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const lat = Number(coords[1]);
+      const lng = Number(coords[0]);
+      if (isValidPakistanCoord(lat, lng)) {
+        return { latitude: lat, longitude: lng };
+      }
+    }
+    const cpCoords = (meta?.counterParty as any)?.location?.coordinates;
+    if (Array.isArray(cpCoords) && cpCoords.length >= 2) {
+      const lat = Number(cpCoords[1]);
+      const lng = Number(cpCoords[0]);
+      if (isValidPakistanCoord(lat, lng)) {
+        return { latitude: lat, longitude: lng };
+      }
+    }
+    return null;
+  }, [workerLocation, booking?.worker, meta?.counterParty, isValidPakistanCoord]);
+
+  // Worker has arrived at customer workplace when status is 'ongoing' or 'completed'
+  const isWorkerArrived = status === 'ongoing' || status === 'completed';
+  const showMapSection = !isWorkerArrived && status !== 'cancelled';
 
   // Route calculation
   const drawRouteBetween = useCallback(async (from: LocationType, to: LocationType) => {
@@ -353,9 +413,15 @@ export default function TransactionDetailsScreen() {
   }, [mapReady]);
 
   useEffect(() => {
-    if (!mapReady) return;
-    drawRouteBetween(workerMarkerLocation, destinationLocation);
-  }, [mapReady, workerMarkerLocation, destinationLocation, drawRouteBetween]);
+    if (!mapReady || !showMapSection) return;
+    if (workerMarkerLocation) {
+      drawRouteBetween(workerMarkerLocation, destinationLocation);
+    } else {
+      setRouteCoords([]);
+      setRouteDistance(null);
+      setRouteETA(null);
+    }
+  }, [mapReady, showMapSection, workerMarkerLocation, destinationLocation, drawRouteBetween]);
 
   const routeGeoJSON = useMemo(() => ({
     type: 'Feature',
@@ -370,6 +436,7 @@ export default function TransactionDetailsScreen() {
   const etaText = useMemo(() => {
     if (status === 'completed') return t('bookingStatus.completed.title', 'Job Completed');
     if (status === 'ongoing') return t('bookingStatus.ongoing.title', 'Work in progress');
+    if (!workerMarkerLocation) return t('jobTracking.locating', 'Locating Ustad...');
     if (isLoadingRoute) return t('jobTracking.updating', 'Calculating ETA...');
     if (routeETA && routeDistance) {
       return `${routeETA} min away • ${routeDistance}`;
@@ -378,7 +445,7 @@ export default function TransactionDetailsScreen() {
       return `${routeDistance} away`;
     }
     return t('jobTracking.liveBadge', 'Live Tracking');
-  }, [status, isLoadingRoute, routeETA, routeDistance, t]);
+  }, [status, workerMarkerLocation, isLoadingRoute, routeETA, routeDistance, t]);
 
   // Status headline
   const statusHeadline = useMemo(() => {
@@ -391,6 +458,11 @@ export default function TransactionDetailsScreen() {
       return t('transactionDetails.workInProgress', 'Work in progress');
     }
     if (status === 'completed') {
+      if (!isPaid) {
+        return isWorker
+          ? t('transactionDetails.workDoneAwaitingPayment', 'Work completed — Awaiting Cash')
+          : t('transactionDetails.workDonePayCash', 'Work completed — Please Pay Cash');
+      }
       return t('transactionDetails.workCompleted', 'Work completed');
     }
     if (status === 'cancelled') {
@@ -460,12 +532,33 @@ export default function TransactionDetailsScreen() {
         <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
           {t('transactionDetails.bookingNotFound', 'Booking not found')}
         </Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
-        >
-          <Text style={styles.emptyButtonText}>{t('transactionDetails.goBack', 'Go Back')}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+          {!!id && (
+            <TouchableOpacity
+              onPress={() => refetch()}
+              style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
+            >
+              <Text style={styles.emptyButtonText}>{t('common.retry', 'Try Again')}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/bookings' as any);
+              }
+            }}
+            style={[
+              styles.emptyButton,
+              !!id && { backgroundColor: theme.colors.surface.card, borderWidth: 1, borderColor: theme.colors.border.subtle }
+            ]}
+          >
+            <Text style={[styles.emptyButtonText, !!id && { color: theme.colors.text.primary }]}>
+              {t('transactionDetails.goBack', 'Go Back')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -476,76 +569,161 @@ export default function TransactionDetailsScreen() {
     <View style={[styles.root, { backgroundColor: theme.isDark ? '#080C16' : theme.colors.background.screen }]}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* ──────────────── Upper Section: Live Map ──────────────── */}
-      <View style={[styles.mapContainer, { height: mapHeight }]}>
-        <Map
-          style={StyleSheet.absoluteFill}
-          logo={false}
-          compass={false}
-          touchZoom={true}
-          mapStyle={`https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_API_KEY}`}
-          onDidFinishLoadingMap={() => setMapReady(true)}
-          onDidFinishLoadingStyle={() => setMapReady(true)}
-        >
-          <Camera
-            ref={cameraRef}
-            zoom={14}
-            center={[destinationLocation.longitude, destinationLocation.latitude]}
-          />
+      {/* ──────────────── Upper Section: Live Map (shown only while en-route / accepted) ──────────────── */}
+      {showMapSection ? (
+        <View style={[styles.mapContainer, { height: mapHeight }]}>
+          <Map
+            style={StyleSheet.absoluteFill}
+            logo={false}
+            compass={false}
+            touchZoom={true}
+            mapStyle={`https://api.maptiler.com/maps/${theme.isDark ? 'dataviz-dark' : 'streets-v2'}/style.json?key=${MAPTILER_API_KEY}`}
+            onDidFinishLoadingMap={() => setMapReady(true)}
+            onDidFinishLoadingStyle={() => setMapReady(true)}
+          >
+            <Camera
+              ref={cameraRef}
+              zoom={14}
+              center={[destinationLocation.longitude, destinationLocation.latitude]}
+            />
 
-          {routeCoords.length > 0 && (
-            <GeoJSONSource id="routeSource" data={routeGeoJSON as any}>
-              <Layer
-                id="routeGlow"
-                type="line"
-                style={{
-                  lineColor: '#00E5FF',
-                  lineWidth: 10,
-                  lineOpacity: 0.22,
-                  lineCap: 'round',
-                  lineJoin: 'round',
+            {routeCoords.length > 0 && (
+              <GeoJSONSource id="routeSource" data={routeGeoJSON as any}>
+                <Layer
+                  id="routeGlow"
+                  type="line"
+                  style={{
+                    lineColor: '#00E5FF',
+                    lineWidth: 10,
+                    lineOpacity: 0.22,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+                <Layer
+                  id="routeLine"
+                  type="line"
+                  style={{
+                    lineColor: '#00E5FF',
+                    lineWidth: 3.5,
+                    lineOpacity: 0.95,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              </GeoJSONSource>
+            )}
+
+            {/* Customer / Service Destination Marker (Orange) */}
+            <Marker id="destination" lngLat={[destinationLocation.longitude, destinationLocation.latitude]}>
+              <View style={styles.destinationMarkerOuter}>
+                <View style={styles.destinationMarkerInner} />
+              </View>
+            </Marker>
+
+            {/* Worker Marker (Cyan) */}
+            {workerMarkerLocation && (
+              <Marker id="worker" lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}>
+                <View style={styles.workerMarkerOuter}>
+                  <View style={styles.workerMarkerInner} />
+                </View>
+              </Marker>
+            )}
+          </Map>
+
+          {/* Top Header Overlay Controls */}
+          <View style={[styles.mapTopControls, { top: insets.top + 8 }]}>
+            <TouchableOpacity
+              style={styles.circleButton}
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+            >
+              <ChevronLeft size={22} color="#FFFFFF" strokeWidth={2.4} />
+            </TouchableOpacity>
+
+            <View style={styles.mapTopRightControls}>
+              <TouchableOpacity
+                style={[styles.circleButton, { backgroundColor: alpha('#00F5FF', 0.18), borderWidth: 1, borderColor: '#00F5FF' }]}
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowSafetyModal(true);
                 }}
-              />
-              <Layer
-                id="routeLine"
-                type="line"
-                style={{
-                  lineColor: '#00E5FF',
-                  lineWidth: 3.5,
-                  lineOpacity: 0.95,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-            </GeoJSONSource>
-          )}
+                activeOpacity={0.8}
+              >
+                <ShieldCheck size={18} color="#00F5FF" strokeWidth={2.4} />
+              </TouchableOpacity>
 
-          {/* Customer / Service Destination Marker (Orange) */}
-          <Marker id="destination" lngLat={[destinationLocation.longitude, destinationLocation.latitude]}>
-            <View style={styles.destinationMarkerOuter}>
-              <View style={styles.destinationMarkerInner} />
+              {showDisputeAction && (
+                <TouchableOpacity
+                  style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (disputeMeta?.disputeId) {
+                      router.push({ pathname: '/dispute-room' as any, params: { id: disputeMeta.disputeId } });
+                    } else {
+                      setShowDisputeModal(true);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Scale size={18} color="#FFFFFF" strokeWidth={2.4} />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.circleButton}
+                onPress={openExternalMaps}
+                activeOpacity={0.8}
+              >
+                <Navigation size={17} color="#00E5FF" strokeWidth={2.4} />
+              </TouchableOpacity>
             </View>
-          </Marker>
+          </View>
 
-          {/* Worker Marker (Cyan) */}
-          <Marker id="worker" lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}>
-            <View style={styles.workerMarkerOuter}>
-              <View style={styles.workerMarkerInner} />
-            </View>
-          </Marker>
-        </Map>
-
-        {/* Top Header Overlay Controls */}
-        <View style={[styles.mapTopControls, { top: insets.top + 8 }]}>
+          {/* Floating ETA & Distance Badge */}
+          <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.floatingEtaPill}>
+            <View style={styles.pulsingDot} />
+            <Text style={styles.floatingEtaText}>{etaText}</Text>
+          </Animated.View>
+        </View>
+      ) : (
+        /* Top Navigation Header when map is removed (worker reached workplace) */
+        <View style={[styles.standardHeader, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
-            style={styles.circleButton}
+            style={[
+              styles.circleButton,
+              { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderWidth: 1, borderColor: alpha(theme.colors.border.subtle, 0.5) }
+            ]}
             onPress={() => router.back()}
             activeOpacity={0.8}
           >
-            <ChevronLeft size={22} color="#FFFFFF" strokeWidth={2.4} />
+            <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.4} />
           </TouchableOpacity>
 
-          <View style={styles.mapTopRightControls}>
+          <View style={styles.standardHeaderContent}>
+            <Text style={[styles.standardHeaderTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+              {serviceTitle}
+            </Text>
+            <Text style={[styles.standardHeaderSubtitle, { color: theme.colors.text.muted }]} numberOfLines={1}>
+              {statusHeadline}
+            </Text>
+          </View>
+
+          <View style={styles.standardHeaderRight}>
+            <TouchableOpacity
+              style={[
+                styles.circleButton,
+                { backgroundColor: alpha('#00F5FF', 0.15), borderWidth: 1, borderColor: '#00F5FF' }
+              ]}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowSafetyModal(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <ShieldCheck size={18} color="#00F5FF" strokeWidth={2.4} />
+            </TouchableOpacity>
+
             {showDisputeAction && (
               <TouchableOpacity
                 style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
@@ -564,34 +742,32 @@ export default function TransactionDetailsScreen() {
             )}
 
             <TouchableOpacity
-              style={styles.circleButton}
+              style={[
+                styles.circleButton,
+                { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderWidth: 1, borderColor: alpha(theme.colors.border.subtle, 0.5) }
+              ]}
               onPress={openExternalMaps}
               activeOpacity={0.8}
             >
-              <Navigation size={17} color="#00E5FF" strokeWidth={2.4} />
+              <Navigation size={17} color={colors.cyan} strokeWidth={2.4} />
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Floating ETA & Distance Badge */}
-        <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.floatingEtaPill}>
-          <View style={styles.pulsingDot} />
-          <Text style={styles.floatingEtaText}>{etaText}</Text>
-        </Animated.View>
-      </View>
+      )}
 
       {/* ──────────────── Lower Section: Interactive Bottom Sheet ──────────────── */}
       <View
         style={[
           styles.bottomSheet,
+          !showMapSection && styles.bottomSheetFull,
           {
             backgroundColor: theme.isDark ? '#0C101E' : theme.colors.surface.card,
             borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
           },
         ]}
       >
-        {/* Sheet Drag Indicator */}
-        <View style={styles.sheetDragBar} />
+        {/* Sheet Drag Indicator (shown only when map is visible above) */}
+        {showMapSection && <View style={styles.sheetDragBar} />}
 
         {/* Status Title & Urgency Tag */}
         <View style={styles.sheetHeader}>
@@ -836,7 +1012,21 @@ export default function TransactionDetailsScreen() {
                   icon={Zap}
                   label={t('transactionDetails.startJob', 'Start Job')}
                   loading={isUpdating}
-                  onPress={() => updateStatus({ bookingId: id as string, status: 'ongoing' })}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    confirmModal.showConfirm(
+                      t('transactionDetails.confirmStartTitle', 'Start Service?'),
+                      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
+                      () => {
+                        confirmModal.closeConfirm();
+                        updateStatus({ bookingId: id as string, status: 'ongoing' });
+                      },
+                      undefined,
+                      t('transactionDetails.startJob', 'Start Job'),
+                      t('common.cancel', 'Cancel'),
+                      colors.cyan
+                    );
+                  }}
                 />
               )}
 
@@ -846,7 +1036,21 @@ export default function TransactionDetailsScreen() {
                   icon={CheckCircle2}
                   label={t('transactionDetails.completeJob', 'Complete Job')}
                   loading={isUpdating}
-                  onPress={() => updateStatus({ bookingId: id as string, status: 'completed' })}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    confirmModal.showConfirm(
+                      t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
+                      t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
+                      () => {
+                        confirmModal.closeConfirm();
+                        updateStatus({ bookingId: id as string, status: 'completed' });
+                      },
+                      undefined,
+                      t('transactionDetails.completeJob', 'Complete Job'),
+                      t('common.cancel', 'Cancel'),
+                      colors.success
+                    );
+                  }}
                 />
               )}
             </View>
@@ -861,35 +1065,51 @@ export default function TransactionDetailsScreen() {
                 label={t('transactionDetails.confirmCash', 'Confirm Cash Payment')}
                 loading={isPaying}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  payBooking(
-                    { bookingId: id as string, paymentMethod: 'cash' },
-                    {
-                      onSuccess: () => {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        refetch();
-                        setShowPaymentSuccess(true);
-                      },
-                      onError: (error: any) => {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                        const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-                        alertModal.showAlert(
-                          t('transactionDetails.paymentBlocked', 'Payment paused'),
-                          msg,
-                          undefined,
-                          'error',
-                          t('common.ok', 'OK')
-                        );
-                      },
-                    }
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  confirmModal.showConfirm(
+                    t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
+                    t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
+                      amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
+                    }),
+                    () => {
+                      confirmModal.closeConfirm();
+                      payBooking(
+                        { bookingId: id as string, paymentMethod: 'cash' },
+                        {
+                          onSuccess: () => {
+                            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+                            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+                            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+                            refetch();
+                            setShowReviewModal(true);
+                          },
+                          onError: (error: any) => {
+                            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                            const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+                            alertModal.showAlert(
+                              t('transactionDetails.paymentBlocked', 'Payment paused'),
+                              msg,
+                              undefined,
+                              'error',
+                              t('common.ok', 'OK')
+                            );
+                          },
+                        }
+                      );
+                    },
+                    undefined,
+                    t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
+                    t('common.cancel', 'Cancel'),
+                    colors.success
                   );
                 }}
               />
             </View>
           )}
 
-          {/* Client Star Rating & Review Widget */}
-          {!isWorker && status === 'completed' && (
+          {/* Client Feedback Notice / Rate Action */}
+          {!isWorker && status === 'completed' && isPaid && (
             <View style={styles.reviewSection}>
               {booking.isReviewed ? (
                 <View style={[styles.reviewNotice, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.3) }]}>
@@ -899,102 +1119,29 @@ export default function TransactionDetailsScreen() {
                   </Text>
                 </View>
               ) : (
-                <View style={[styles.reviewCard, { borderColor: alpha(theme.colors.text.primary, 0.08) }]}>
-                  <Text style={[styles.reviewTitle, { color: theme.colors.text.primary }]}>
-                    {t('transactionDetails.ratePartner', `Rate ${partnerName}`, { name: partnerName })}
-                  </Text>
-                  <Text style={[styles.reviewSubtitle, { color: theme.colors.text.muted }]}>
-                    {t('transactionDetails.reviewSubtitle', 'A quick review helps maintain quality on Apna Ustad.')}
-                  </Text>
-
-                  {/* 5-Star Row */}
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((starNum) => {
-                      const isActive = starNum <= selectedRating;
-                      return (
-                        <TouchableOpacity
-                          key={starNum}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setSelectedRating(starNum);
-                          }}
-                          activeOpacity={0.7}
-                          style={styles.starTouch}
-                        >
-                          <Star
-                            size={28}
-                            color={isActive ? '#FFD700' : 'rgba(255,255,255,0.2)'}
-                            fill={isActive ? '#FFD700' : 'transparent'}
-                          />
-                        </TouchableOpacity>
-                      );
-                    })}
+                <TouchableOpacity
+                  style={[
+                    styles.rateUstadActionCard,
+                    {
+                      borderColor: alpha(colors.yellow, 0.35),
+                      backgroundColor: alpha(colors.yellow, 0.08),
+                    },
+                  ]}
+                  onPress={() => setShowReviewModal(true)}
+                  activeOpacity={0.82}
+                >
+                  <View style={styles.rateUstadActionLeft}>
+                    <Star size={18} color="#FFD700" fill="#FFD700" />
+                    <Text style={[styles.rateUstadActionTitle, { color: theme.colors.text.primary }]}>
+                      {t('review.rateYourUstad', 'Rate Your Ustad')}
+                    </Text>
                   </View>
-
-                  {/* Comment Input */}
-                  <TextInput
-                    style={[
-                      styles.reviewInput,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : theme.colors.surface.subtle,
-                        borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
-                        color: theme.colors.text.primary,
-                      },
-                    ]}
-                    placeholder={t('transactionDetails.commentPlaceholder', 'Write a comment about their work... (optional)')}
-                    placeholderTextColor={theme.colors.text.muted}
-                    value={reviewComment}
-                    onChangeText={setReviewComment}
-                    multiline
-                    numberOfLines={2}
-                  />
-
-                  {/* Submit Review */}
-                  <TouchableOpacity
-                    style={[
-                      styles.reviewSubmitBtn,
-                      (selectedRating === 0 || isCreatingReview) && styles.buttonDisabled,
-                    ]}
-                    disabled={selectedRating === 0 || isCreatingReview}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      createReview(
-                        {
-                          booking: id as string,
-                          worker: workerId as string,
-                          rating: selectedRating,
-                          comment: reviewComment.trim() || undefined,
-                        },
-                        {
-                          onSuccess: () => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            Toast.show({
-                              type: 'success',
-                              text1: t('review.successTitle', 'Review Submitted'),
-                              text2: t('review.successDesc', 'Thank you for your feedback!'),
-                            });
-                            refetch();
-                          },
-                          onError: (err: any) => {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                            Toast.show({
-                              type: 'error',
-                              text1: t('review.failedTitle', 'Failed to Submit Review'),
-                              text2: err.response?.data?.message || t('common.tryAgain', 'Please try again.'),
-                            });
-                          },
-                        }
-                      );
-                    }}
-                    activeOpacity={0.82}
-                  >
-                    {isCreatingReview ? (
-                      <ActivityIndicator size="small" color="#001014" />
-                    ) : (
-                      <Text style={styles.reviewSubmitText}>{t('transactionDetails.submitReview', 'Submit Review')}</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                  {isRTL ? (
+                    <ChevronLeft size={16} color={theme.colors.text.muted} />
+                  ) : (
+                    <ChevronRight size={16} color={theme.colors.text.muted} />
+                  )}
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -1016,6 +1163,31 @@ export default function TransactionDetailsScreen() {
       </View>
 
       {/* ──────────────── Modals ──────────────── */}
+      <ReviewModal
+        visible={showReviewModal}
+        bookingId={id as string}
+        workerId={workerId as string}
+        workerName={partnerName}
+        workerImage={partnerImage}
+        category={serviceTitle}
+        onClose={() => setShowReviewModal(false)}
+        onSkip={() => {
+          setShowReviewModal(false);
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+          router.replace('/(tabs)' as any);
+        }}
+        onSuccess={() => {
+          setShowReviewModal(false);
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+          refetch();
+          router.replace('/(tabs)' as any);
+        }}
+      />
+
       <RaiseDisputeModal
         visible={showDisputeModal}
         onClose={() => setShowDisputeModal(false)}
@@ -1045,6 +1217,29 @@ export default function TransactionDetailsScreen() {
         type={alertModal.type}
       />
 
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.closeConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmColor={confirmModal.confirmColor}
+        isLoading={isUpdating || isPaying}
+      />
+
+      <SafetyShieldModal
+        visible={showSafetyModal}
+        onClose={() => setShowSafetyModal(false)}
+        bookingId={id as string}
+        partnerName={partnerName}
+        partnerCategory={partnerCategory}
+        isPartnerVerified={true}
+        address={cleanAddress}
+        isWorker={isWorker}
+      />
+
       <Modal
         visible={showAutoAssignedModal}
         transparent
@@ -1055,7 +1250,8 @@ export default function TransactionDetailsScreen() {
           <BlurView intensity={45} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
           <View style={styles.successModalContainer}>
             <Animated.View
-              entering={SlideInDown.springify().damping(15)}
+              entering={FadeInDown.duration(260)}
+              exiting={FadeOut.duration(160)}
               style={[
                 styles.successCard,
                 {
@@ -1249,6 +1445,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
+  },
+  standardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  standardHeaderContent: {
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  standardHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  standardHeaderSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  standardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bottomSheetFull: {
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
   },
   floatingEtaPill: {
     position: 'absolute',
@@ -1584,6 +1815,24 @@ const styles = StyleSheet.create({
   reviewNoticeText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  rateUstadActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.2,
+  },
+  rateUstadActionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  rateUstadActionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
   },
   reviewCard: {
     padding: 14,

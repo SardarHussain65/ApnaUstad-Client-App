@@ -33,13 +33,14 @@ import {
   Zap,
   CheckCircle2,
   Clock,
+  Banknote,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import { useCategories, useClientHomeSummary, useMyJobPosts, type Booking, type JobPost } from '../../hooks';
+import { useCategories, useClientHomeSummary, useMyJobPosts, useRefreshOnFocus, type Booking, type JobPost } from '../../hooks';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
@@ -215,6 +216,9 @@ export function ClientHome() {
     }
   }, [refetchCategories, refetchHomeSummary, refetchJobs]);
 
+  // Auto-refresh when ClientHome regains focus (switching tabs / returning to home)
+  useRefreshOnFocus(handleRefresh);
+
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const filteredCategories = useMemo(() => {
@@ -223,21 +227,75 @@ export function ClientHome() {
     return categories.filter(cat => cat.name.toLowerCase().includes(q));
   }, [categories, searchQuery]);
 
-  // Active Booking (assigned Ustad on the way or ongoing work)
+  // Active Booking (assigned Ustad on the way, ongoing work, or work completed awaiting cash payment)
   const activeBooking = useMemo(() => {
     if (homeSummary?.activeBooking) return homeSummary.activeBooking;
     const recent = homeSummary?.recentBookings ?? [];
-    return recent.find(b => ['accepted', 'ongoing'].includes(b.status)) || null;
+    return (
+      recent.find(b =>
+        ['accepted', 'ongoing'].includes(b.status) ||
+        (b.status === 'completed' && b.paymentStatus !== 'paid')
+      ) || null
+    );
   }, [homeSummary]);
 
-  // Active Custom Job Post (open or reviewing)
-  const activeMissions = useMemo<JobPost[]>(
-    () =>
-      jobPosts
-        .filter(job => ['open', 'reviewing'].includes(job.status))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [jobPosts]
+  const isPaymentDue = Boolean(
+    activeBooking &&
+    activeBooking.status === 'completed' &&
+    activeBooking.paymentStatus !== 'paid'
   );
+
+  const dueAmount = useMemo(() => {
+    if (!activeBooking) return 0;
+    return Number(
+      (activeBooking.cardMeta?.financial as any)?.cashDue ??
+      activeBooking.cardMeta?.financial?.amount ??
+      activeBooking.totalAmount ??
+      0
+    );
+  }, [activeBooking]);
+
+  // Active Custom Job Post (open or reviewing without an active/accepted booking)
+  const activeMissions = useMemo<JobPost[]>(() => {
+    const recent = homeSummary?.recentBookings ?? [];
+    const bookedJobPostIds = new Set<string>();
+    const activeOrRecentCategories = new Set<string>();
+
+    recent.forEach((b: any) => {
+      if (b.jobPost) bookedJobPostIds.add(String(b.jobPost?._id || b.jobPost));
+      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+    });
+
+    if (activeBooking) {
+      if ((activeBooking as any).jobPost) {
+        bookedJobPostIds.add(String((activeBooking as any).jobPost?._id || (activeBooking as any).jobPost));
+      }
+      if (activeBooking.category) {
+        activeOrRecentCategories.add(activeBooking.category.toLowerCase().trim());
+      }
+    }
+
+    return jobPosts
+      .filter((job: any) => {
+        // Must be open or reviewing
+        if (!['open', 'reviewing'].includes(job.status)) return false;
+
+        // If it already has an accepted bid or booking linked, it is not searching
+        if (job.acceptedBid || job.hasAcceptedBid || job.cardMeta?.bidSummary?.hasAcceptedBid) return false;
+        if (job.bookingId || job.detailMeta?.bookingId) return false;
+
+        // If a booking explicitly references this job post
+        if (bookedJobPostIds.has(String(job._id))) return false;
+
+        // If there's an ongoing or recently completed booking matching this category
+        if (job.category && activeOrRecentCategories.has(job.category.toLowerCase().trim())) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [jobPosts, homeSummary?.recentBookings, activeBooking]);
   const activeSearchJob = activeMissions[0] || null;
   const proposalCount = activeSearchJob?.pendingBidCount ?? activeSearchJob?.bidCount ?? 0;
 
@@ -329,14 +387,34 @@ export function ClientHome() {
                 intensity={35}
                 padding={18}
                 hasGlow
-                glowColor={colors.success}
-                style={[styles.heroCard, { borderColor: alpha(colors.success, 0.45) }]}
+                glowColor={isPaymentDue ? colors.orange : colors.success}
+                style={[
+                  styles.heroCard,
+                  { borderColor: alpha(isPaymentDue ? colors.orange : colors.success, 0.45) }
+                ]}
               >
                 <View style={styles.heroTopRow}>
-                  <View style={[styles.heroStatusPill, { backgroundColor: alpha(colors.success, 0.14) }]}>
-                    <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
-                    <Text style={[styles.heroStatusText, { color: colors.success }]}>
-                      {t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
+                  <View
+                    style={[
+                      styles.heroStatusPill,
+                      { backgroundColor: alpha(isPaymentDue ? colors.orange : colors.success, 0.14) }
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.pulseDot,
+                        { backgroundColor: isPaymentDue ? colors.orange : colors.success }
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.heroStatusText,
+                        { color: isPaymentDue ? colors.orange : colors.success }
+                      ]}
+                    >
+                      {isPaymentDue
+                        ? t('home.client.paymentDueBadge', 'WORK DONE • CASH PAYMENT DUE')
+                        : t('home.client.ustadActive', 'USTAD ON THE WAY / IN PROGRESS')}
                     </Text>
                   </View>
                   <Text style={[styles.heroTimeText, { color: theme.colors.text.muted }]}>
@@ -363,13 +441,22 @@ export function ClientHome() {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.heroCtaBtn, { backgroundColor: colors.success }]}
+                  style={[
+                    styles.heroCtaBtn,
+                    { backgroundColor: isPaymentDue ? colors.orange : colors.success }
+                  ]}
                   onPress={() => router.push({ pathname: '/transaction-details', params: { id: activeBooking._id } })}
                   activeOpacity={0.84}
                 >
-                  <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  {isPaymentDue ? (
+                    <Banknote size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  ) : (
+                    <MapPin size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  )}
                   <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
-                    {t('home.client.trackUstadBtn', 'Track on Map & View Status')}
+                    {isPaymentDue
+                      ? t('home.client.payCashBtn', { amount: dueAmount.toLocaleString(), defaultValue: `Pay Cash to Ustad (Rs. ${dueAmount.toLocaleString()})` })
+                      : t('home.client.trackUstadBtn', 'Track on Map & View Status')}
                   </Text>
                   <ArrowRight size={16} color="#000" strokeWidth={2.5} />
                 </TouchableOpacity>

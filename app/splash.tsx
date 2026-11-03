@@ -38,49 +38,49 @@ export default function SplashScreen() {
   const loadingWidth = useSharedValue(0);
 
   useEffect(() => {
-    // 1. Logo Entrance - High Impact
-    logoOpacity.value = withDelay(300, withTiming(1, { duration: 1000 }));
+    // 1. Logo Entrance - Snappy & High Impact
+    logoOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
     logoScale.value = withDelay(
-      300,
+      100,
       withSpring(1, { 
-        damping: 12, 
-        stiffness: 60,
-        mass: 1,
+        damping: 14, 
+        stiffness: 90,
+        mass: 0.8,
       } as any)
     );
 
     // 2. Floating Idle 
     logoTranslateY.value = withDelay(
-      1500,
+      500,
       withRepeat(
-        withTiming(-12, { duration: 2500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-8, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
         -1,
         true
       )
     );
 
     // 3. Tagline Entrance
-    taglineOpacity.value = withDelay(1600, withTiming(1, { duration: 1200 }));
+    taglineOpacity.value = withDelay(350, withTiming(1, { duration: 450 }));
     taglineTranslateY.value = withDelay(
-      1600,
-      withSpring(0, { damping: 15, stiffness: 80 })
+      350,
+      withSpring(0, { damping: 15, stiffness: 100 })
     );
 
-    // 4. Pulsing Cosmic Glow
-    glowOpacity.value = withDelay(800, withTiming(0.6, { duration: 2000 }));
+    // 4. Pulsing Glow
+    glowOpacity.value = withDelay(200, withTiming(0.6, { duration: 600 }));
     glowScale.value = withDelay(
-      800,
+      200,
       withRepeat(
-        withTiming(1.5, { duration: 3500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.4, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       )
     );
 
-    // 5. Loading Progress
-    loadingWidth.value = withTiming(100, { duration: 4000 });
+    // 5. Loading Progress (Quick 1.2s)
+    loadingWidth.value = withTiming(100, { duration: 1200 });
 
-    // 6. Navigation Logic
+    // 6. Navigation Logic (Quick 1.4s transition)
     const timeout = setTimeout(async () => {
       const onboarded = await AsyncStorage.getItem('onboarding_completed');
       if (onboarded === 'true') {
@@ -88,7 +88,7 @@ export default function SplashScreen() {
       } else {
         router.replace('/onboarding');
       }
-    }, 5000);
+    }, 1400);
 
     return () => clearTimeout(timeout);
   }, []);

@@ -62,20 +62,25 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
   const colors = useThemeColors();
   const typography = useThemeTypography();
   const meta = booking.cardMeta;
+  const isPaymentPending = (booking.status === 'completed' && booking.paymentStatus !== 'paid') || Boolean((meta as any)?.isPaymentPending);
   const baseStatus = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const rawStatusColor = (meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string;
+  const rawStatusColor = isPaymentPending
+    ? (meta?.statusInfo?.accentColor || colors.orange || '#F59E0B')
+    : ((meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string);
   const statusColor = getAccessibleColor(rawStatusColor, theme.isDark);
-  const StatusIcon = baseStatus.Icon;
+  const StatusIcon = isPaymentPending ? Clock : baseStatus.Icon;
   const isInstant = (meta?.missionKind || booking.bookingType) === 'instant';
 
   const personName =
     meta?.counterParty?.fullName ||
+    booking.customer?.fullName ||
     booking.worker?.fullName ||
     (booking.worker ? t('common.ustad', 'Ustad') : t('common.client', 'Customer'));
 
   const avatarUrl =
     meta?.primaryImageUrl ||
     meta?.counterParty?.profileImage ||
+    booking.customer?.profileImage ||
     booking.worker?.profileImage ||
     '';
 
@@ -99,7 +104,7 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
 
   const amountText =
     meta?.financial?.amountText ||
-    `Rs. ${Number(meta?.financial?.amount ?? booking.totalAmount ?? 0).toLocaleString()}`;
+    `Rs. ${Number(meta?.financial?.amount ?? booking.workerEarning ?? booking.totalAmount ?? 0).toLocaleString()}`;
 
   const gradientColors: [string, string, string] = [
     alpha(statusColor, theme.isDark ? 0.16 : 0.05),
@@ -154,7 +159,9 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
         >
           <StatusIcon size={11} color={statusColor} strokeWidth={2.5} />
           <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-            {t(`bookingStatus.${booking.status}.label`, meta?.statusInfo?.label || baseStatus.label)}
+            {isPaymentPending
+              ? t('bookingStatus.paymentDue.label', meta?.statusInfo?.label || 'Payment Due')
+              : t(`bookingStatus.${booking.status}.label`, meta?.statusInfo?.label || baseStatus.label)}
           </Text>
         </View>
       </View>

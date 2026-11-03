@@ -78,6 +78,10 @@ api.interceptors.response.use(
            isRefreshing = false;
            await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
            DeviceEventEmitter.emit('auth:logout');
+           try {
+             const { router } = require('expo-router');
+             router.replace('/role-selection');
+           } catch {}
            return Promise.reject(error);
         }
 
@@ -121,6 +125,10 @@ api.interceptors.response.use(
 
         // Dispatch logout event for AuthContext to react
         DeviceEventEmitter.emit('auth:logout');
+        try {
+          const { router } = require('expo-router');
+          router.replace('/role-selection');
+        } catch {}
       }
     }
 

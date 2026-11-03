@@ -32,7 +32,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 
-import { Spacing, useTheme, useThemeColors, useThemeTypography } from '../constants/Theme';
+import {
+  Spacing,
+  alpha,
+  getAccessibleColor,
+  isLightColor,
+  useTheme,
+  useThemeColors,
+  useThemeTypography,
+} from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { SkeletonCard, WorkerDetailsModal } from '../components/ui';
@@ -65,6 +73,22 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
   const ratingNum = worker.rating ?? 5.0;
 
   const [imageError, setImageError] = React.useState(false);
+
+  // Accessible color for text, icons, and borders on light card surfaces
+  const accessibleAccent = getAccessibleColor(themeColor, theme.isDark);
+
+  // Contrast colors for text ON the deploy button (which is filled with themeColor gradient)
+  const isBtnLight = isLightColor(themeColor);
+  const btnTextColor = isBtnLight ? '#0A0A1F' : '#FFFFFF';
+  const btnLabelColor = isBtnLight ? 'rgba(10, 10, 31, 0.65)' : 'rgba(255, 255, 255, 0.8)';
+  const btnDividerColor = isBtnLight ? 'rgba(10, 10, 31, 0.15)' : 'rgba(255, 255, 255, 0.2)';
+
+  // Star & rating color: amber in light mode, gold in dark mode
+  const starColor = theme.isDark ? '#FFD700' : '#D97706';
+
+  // Availability status color (high contrast green/red)
+  const statusSuccessColor = theme.isDark ? '#00E5A0' : theme.colors.status.success;
+  const statusBusyColor = theme.isDark ? '#FF4C6A' : theme.colors.status.error;
 
   // ─── LEARNING: encodeURIComponent ─────────────────────────────────────────
   // Converts special chars in a name (spaces → %20, & → %26) so the URL is
@@ -103,14 +127,14 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
       <View style={[styles.workerCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
         {/* ── Top gradient strip ─────────────────────────────────────────── */}
         <LinearGradient
-          colors={[themeColor + '22', 'transparent']}
+          colors={[alpha(accessibleAccent, 0.12), 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.cardTopGradient}
         />
 
         {/* ── LEFT STRIPE — category color accent ─────────────────────── */}
-        <View style={[styles.leftStripe, { backgroundColor: themeColor }]} />
+        <View style={[styles.leftStripe, { backgroundColor: accessibleAccent }]} />
 
         {/* ── CARD INNER CONTENT ───────────────────────────────────────── */}
         <TouchableOpacity
@@ -124,7 +148,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
 
             {/* Avatar with status ring */}
             <View style={styles.avatarContainer}>
-              <View style={[styles.avatarRing, { borderColor: themeColor + '60' }]}>
+              <View style={[styles.avatarRing, { borderColor: alpha(accessibleAccent, 0.4) }]}>
                 <Image
                   source={{ uri: avatarUri }}
                   style={styles.avatar}
@@ -139,9 +163,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
                 style={[
                   styles.availabilityDot,
                   {
-                    backgroundColor: worker.isAvailable
-                      ? '#00E5A0'   // neon green = online
-                      : '#FF4C6A', // red = offline
+                    backgroundColor: worker.isAvailable ? statusSuccessColor : statusBusyColor,
                     borderColor: theme.id === 'light' ? '#FFFFFF' : '#0a0a1a',
                   },
                 ]}
@@ -155,7 +177,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
                   {worker.fullName}
                 </Text>
                 {worker.isVerified && (
-                  <BadgeCheck size={16} color={themeColor} fill={themeColor + '30'} />
+                  <BadgeCheck size={16} color={accessibleAccent} fill={alpha(accessibleAccent, 0.2)} />
                 )}
                 {isFavorite && (
                   <Heart size={14} color="#FF4D8D" fill="#FF4D8D" style={{ marginLeft: 'auto' }} />
@@ -163,10 +185,19 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
               </View>
 
               <View style={styles.metaRow}>
-                <View style={[styles.metaChip, { backgroundColor: theme.colors.surface.subtle }]}>
-                  <Briefcase size={9} color={themeColor} />
+                <View
+                  style={[
+                    styles.metaChip,
+                    {
+                      backgroundColor: theme.isDark ? theme.colors.surface.subtle : alpha(accessibleAccent, 0.08),
+                      borderColor: theme.isDark ? 'transparent' : alpha(accessibleAccent, 0.22),
+                      borderWidth: theme.isDark ? 0 : 1,
+                    },
+                  ]}
+                >
+                  <Briefcase size={9} color={accessibleAccent} />
                   {/* ─── LEARNING: toUpperCase() for consistent visual style */}
-                  <Text style={[styles.metaChipText, { color: themeColor }]}>
+                  <Text style={[styles.metaChipText, { color: accessibleAccent }]}>
                     {worker.category.toUpperCase()}
                   </Text>
                 </View>
@@ -188,11 +219,11 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
                   <Star
                     key={i}
                     size={11}
-                    color="#FFD700"
-                    fill={type === 'full' ? '#FFD700' : type === 'half' ? '#FFD70080' : 'transparent'}
+                    color={starColor}
+                    fill={type === 'full' ? starColor : type === 'half' ? starColor + '80' : 'transparent'}
                   />
                 ))}
-                <Text style={styles.ratingText}>{ratingStr}</Text>
+                <Text style={[styles.ratingText, { color: starColor }]}>{ratingStr}</Text>
               </View>
             </View>
           </View>
@@ -200,20 +231,20 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
           {/* ── ROW 2: Stats Bar ────────────────────────────────────────── */}
           <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
             <View style={styles.statItem}>
-              <TrendingUp size={12} color={themeColor} />
+              <TrendingUp size={12} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.jobsLabel')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
-              <Award size={12} color={themeColor} />
+              <Award size={12} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalReviews ?? 0}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.reviews')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
             <View style={styles.statItem}>
-              <Zap size={12} color={themeColor} />
-              <Text style={[styles.statValue, { color: worker.isAvailable ? '#00E5A0' : '#FF4C6A' }]}>
+              <Zap size={12} color={accessibleAccent} />
+              <Text style={[styles.statValue, { color: worker.isAvailable ? statusSuccessColor : statusBusyColor }]}>
                 {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
               </Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('common.status')}</Text>
@@ -228,8 +259,17 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
           {(worker.skills?.length ?? 0) > 0 && (
             <View style={styles.skillsRow}>
               {worker.skills?.slice(0, 3).map((skill) => (
-                <View key={skill} style={[styles.skillPill, { borderColor: themeColor + '35', backgroundColor: theme.colors.surface.subtle }]}>
-                  <Text style={[styles.skillText, { color: themeColor }]}>#{skill}</Text>
+                <View
+                  key={skill}
+                  style={[
+                    styles.skillPill,
+                    {
+                      borderColor: theme.isDark ? themeColor + '35' : alpha(accessibleAccent, 0.25),
+                      backgroundColor: theme.isDark ? theme.colors.surface.subtle : alpha(accessibleAccent, 0.08),
+                    },
+                  ]}
+                >
+                  <Text style={[styles.skillText, { color: accessibleAccent }]}>#{skill}</Text>
                 </View>
               ))}
               {(worker.skills?.length ?? 0) > 3 && (
@@ -254,25 +294,33 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
               feels polished for prominent CTAs.
           ──────────────────────────────────────────────────────────────────── */}
           <TouchableOpacity
-            style={styles.deployBtn}
+            style={[
+              styles.deployBtn,
+              !theme.isDark && isBtnLight && {
+                borderWidth: 1,
+                borderColor: alpha(accessibleAccent, 0.3),
+              },
+            ]}
             onPress={() => onHire(worker)}
             activeOpacity={0.78}
           >
             <LinearGradient
-              colors={[themeColor, themeColor + 'CC']}
+              colors={[themeColor, themeColor + 'E6']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.deployBtnGradient}
             >
               <View style={styles.deployBtnLeft}>
-                <Text style={[styles.deployRateLabel, { color: theme.id === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)' }]}>{t('wallet.totalEarnings')}</Text>
-                <Text style={[styles.deployRateValue, { color: theme.id === 'light' ? '#FFFFFF' : '#050510' }]}>
+                <Text style={[styles.deployRateLabel, { color: btnLabelColor }]}>
+                  {t('wallet.totalEarnings')}
+                </Text>
+                <Text style={[styles.deployRateValue, { color: btnTextColor }]}>
                   Rs. {worker.totalEarnings ?? '0'}
                 </Text>
               </View>
-              <View style={[styles.deployBtnRight, { borderLeftColor: theme.id === 'light' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)' }]}>
-                <Zap size={14} color={theme.id === 'light' ? '#FFFFFF' : '#050510'} fill={theme.id === 'light' ? '#FFFFFF' : '#050510'} />
-                <Text style={[styles.deployBtnText, { color: theme.id === 'light' ? '#FFFFFF' : '#050510' }]}>{t('workerList.hire')}</Text>
+              <View style={[styles.deployBtnRight, { borderLeftColor: btnDividerColor }]}>
+                <Zap size={14} color={btnTextColor} fill={btnTextColor} />
+                <Text style={[styles.deployBtnText, { color: btnTextColor }]}>{t('workerList.hire')}</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -310,6 +358,7 @@ export default function WorkerListScreen() {
 
   const category = params.category || params.title || '';
   const themeColor = params.color || colors.cyan;
+  const accessibleThemeColor = getAccessibleColor(themeColor, theme.isDark);
 
   const [search, setSearch] = useState('');
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
@@ -451,8 +500,8 @@ export default function WorkerListScreen() {
                   : t('workerList.noWorkersCategory')}
               </Text>
               {search ? (
-                <TouchableOpacity style={[styles.clearBtn, { borderColor: themeColor, backgroundColor: theme.colors.surface.subtle }]} onPress={() => setSearch('')}>
-                  <Text style={[styles.clearBtnText, { color: themeColor }]}>{t('workerList.clearSearch')}</Text>
+                <TouchableOpacity style={[styles.clearBtn, { borderColor: accessibleThemeColor, backgroundColor: theme.colors.surface.subtle }]} onPress={() => setSearch('')}>
+                  <Text style={[styles.clearBtnText, { color: accessibleThemeColor }]}>{t('workerList.clearSearch')}</Text>
                 </TouchableOpacity>
               ) : null}
             </Animated.View>

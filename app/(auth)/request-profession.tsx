@@ -24,7 +24,7 @@ import {
   Camera, ShieldCheck, Clock, ArrowRight, Building
 } from 'lucide-react-native';
 import { BorderRadius, Shadows, useTheme, useThemeColors, alpha } from '../../constants/Theme';
-import { BASE_URL } from '../../constants/Config';
+import api from '../../services/api';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../../hooks';
 
@@ -132,23 +132,10 @@ export default function RequestProfessionScreen() {
 
       formData.append(fieldName, { uri, name: filename, type } as any);
 
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
-        method: 'POST',
-        body: formData,
+      const response = await api.post(endpoint.replace(/^\/api\/v1/, ''), formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-
-      if (!response.ok) {
-        let serverMessage = '';
-        try {
-          const errJson = await response.json();
-          serverMessage = errJson?.message || errJson?.error || '';
-        } catch {
-          // ignore JSON parse error
-        }
-        throw new Error(serverMessage || `Failed to upload ${fieldName}`);
-      }
-      const data = await response.json();
-      return data.data.imageUrl as string;
+      return response.data?.data?.imageUrl as string;
     },
   });
 
@@ -294,20 +281,15 @@ export default function RequestProfessionScreen() {
         certificates: uploadedCertificates,
       };
 
-      const response = await fetch(`${BASE_URL}/api/v1/workers/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors && Array.isArray(result.errors)) {
+      try {
+        await api.post('/workers/register', payload);
+      } catch (err: any) {
+        const result = err?.response?.data;
+        if (result?.errors && Array.isArray(result.errors)) {
           const detail = result.errors.map((e: any) => `${e.field}: ${e.message}`).join('\n');
           throw new Error(detail || 'Registration failed');
         }
-        throw new Error(result.message || 'Registration failed');
+        throw new Error(result?.message || err.message || 'Registration failed');
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

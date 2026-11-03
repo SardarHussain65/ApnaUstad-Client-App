@@ -46,7 +46,7 @@ export default function OnboardingScreen() {
       title: t('onboarding.slide1.title'),
       description: t('onboarding.slide1.description'),
       benefit: t('onboarding.slide1.benefit'),
-      image: require('../assets/images/onboarding1.png'),
+      image: require('../assets/images/onboarding1.webp'),
       accent: colors.cyan,
     },
     {
@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
       title: t('onboarding.slide2.title'),
       description: t('onboarding.slide2.description'),
       benefit: t('onboarding.slide2.benefit'),
-      image: require('../assets/images/onboarding2.png'),
+      image: require('../assets/images/onboarding2.webp'),
       accent: colors.worker,
     },
     {
@@ -64,7 +64,7 @@ export default function OnboardingScreen() {
       title: t('onboarding.slide3.title'),
       description: t('onboarding.slide3.description'),
       benefit: t('onboarding.slide3.benefit'),
-      image: require('../assets/images/onboarding3.png'),
+      image: require('../assets/images/onboarding3.webp'),
       accent: colors.success,
     },
   ];

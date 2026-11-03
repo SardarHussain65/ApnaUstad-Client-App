@@ -1,3 +1,5 @@
+import { MAPTILER_API_KEY } from '../constants/Config';
+
 export type Location = {
   latitude: number;
   longitude: number;
@@ -30,14 +32,44 @@ export type RouteResult = {
   durationSeconds: number;
 };
 
+/**
+ * Fetches turn-by-turn driving route between two points.
+ * Tries the SLA-backed MapTiler Navigation API first; falls back to OSRM if unreachable.
+ */
 export async function getRouteFromOSRM(
   start: Location,
   end: Location
 ): Promise<RouteResult | null> {
+  const coordsQuery = `${start.longitude},${start.latitude};${end.longitude},${end.latitude}`;
+
+  // 1. Try MapTiler Directions API (High availability, no rate-limiting)
+  if (MAPTILER_API_KEY) {
+    try {
+      const maptilerUrl = `https://api.maptiler.com/navigation/v1/driving/${coordsQuery}.json?key=${MAPTILER_API_KEY}&geometries=geojson&overview=full`;
+      const response = await fetch(maptilerUrl);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.routes && data.routes[0]) {
+          const route = data.routes[0];
+          const coords: [number, number][] = route.geometry.coordinates.map(
+            ([lng, lat]: [number, number]) => [lat, lng]
+          );
+          return {
+            coords,
+            distanceMeters: route.distance,
+            durationSeconds: route.duration,
+          };
+        }
+      }
+    } catch (maptilerError) {
+      console.warn('MapTiler routing fallback triggered:', maptilerError);
+    }
+  }
+
+  // 2. Fallback to public OSRM server if MapTiler fails
   try {
-    const response = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson`
-    );
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordsQuery}?overview=full&geometries=geojson`;
+    const response = await fetch(osrmUrl);
     const data = await response.json();
     if (data.routes && data.routes[0]) {
       const route = data.routes[0];
@@ -50,11 +82,20 @@ export async function getRouteFromOSRM(
         durationSeconds: route.duration,
       };
     }
-    return null;
-  } catch (error) {
-    console.error('OSRM routing error:', error);
-    return null;
+  } catch (osrmError) {
+    console.error('OSRM routing error:', osrmError);
   }
+
+  // 3. Fallback: Straight line distance estimate if network routing fails
+  const dist = calculateDistance(start, end);
+  return {
+    coords: [
+      [start.latitude, start.longitude],
+      [end.latitude, end.longitude],
+    ],
+    distanceMeters: dist,
+    durationSeconds: Math.round((dist / 1000 / 30) * 3600),
+  };
 }
 
 export function formatDistanceKm(meters: number): string {

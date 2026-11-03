@@ -111,25 +111,33 @@ export const getPushToken = async (): Promise<string | null> => {
   try {
     let token: string | null = null;
 
-    if (Platform.OS === 'android') {
-      // Get FCM token for Android
-      token = await messaging().getToken();
-    } else if (Platform.OS === 'ios') {
-      // Get APNs token for iOS
-      const apnsToken = await messaging().getAPNSToken();
+    if (Platform.OS === 'ios') {
+      // 1. On iOS, wait for APNs device registration before requesting the FCM token
+      let apnsToken = await messaging().getAPNSToken();
       if (!apnsToken) {
-        console.warn('Failed to get APNS token');
+        // Retry shortly in case APNs registration is still settling
+        for (let retry = 0; retry < 3; retry++) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          apnsToken = await messaging().getAPNSToken();
+          if (apnsToken) break;
+        }
+      }
+
+      if (!apnsToken) {
+        console.warn('⚠️ Could not obtain APNs token on iOS');
         return null;
       }
-      token = apnsToken;
     }
 
+    // 2. Both iOS and Android require the FCM registration token to send via Firebase Admin SDK
+    token = await messaging().getToken();
+
     if (!token) {
-      console.warn('Failed to get push token');
+      console.warn('Failed to get FCM push token');
       return null;
     }
 
-    console.log('Push Token:', token);
+    console.log('✅ FCM Push Token obtained successfully:', token);
     return token;
   } catch (error) {
     console.error('Error getting push token:', error);

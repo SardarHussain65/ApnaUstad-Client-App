@@ -3,22 +3,46 @@ import { BASE_URL } from '../constants/Config';
 
 class SocketService {
   private socket: Socket | null = null;
+  private currentToken: string | null = null;
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
 
   connect(token: string) {
-    if (this.socket?.connected) return;
+    if (this.socket && this.socket.connected && this.currentToken === token) {
+      return;
+    }
+
+    // Clean up old socket if token changed or disconnected instance exists
+    if (this.socket) {
+      try {
+        this.socket.disconnect();
+      } catch (e) {}
+      this.socket = null;
+    }
+
+    this.currentToken = token;
 
     this.socket = io(BASE_URL, {
       auth: { token },
-      transports: ['websocket'], // Ensure websocket for better mobile stability
+      transports: ['websocket', 'polling'], // Fallback gracefully if websocket blocked
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
     this.socket.on('connect', () => {
       console.log('🔌 Socket connected:', this.socket?.id);
+      this.notify('socket:connected', { socketId: this.socket?.id });
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('🔌 Socket disconnected');
+    this.socket.on('disconnect', (reason) => {
+      console.log('🔌 Socket disconnected:', reason);
+      this.notify('socket:disconnected', { reason });
+    });
+
+    this.socket.io.on('reconnect', (attempt) => {
+      console.log('🔌 Socket reconnected after attempt:', attempt);
+      this.notify('socket:reconnected', { attempt });
     });
 
     this.socket.on('error', (error) => {
@@ -27,12 +51,13 @@ class SocketService {
 
     // Register all common event forwarders
     const events = [
-      'job:new', 'bid:new', 'bid:submitted', 'bid:withdrawn', 'job:assigned', 
-      'bid:won', 'bid:lost', 'booking:new', 
-      'booking:status', 'booking:accepted', 
+      'job:new', 'job:cancelled', 'job:status', 'job:assigned', 'job:auto_assigned', 'job:created',
+      'bid:new', 'bid:submitted', 'bid:withdrawn', 'bid:won', 'bid:lost', 
+      'booking:new', 'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
-      'booking:cancelled', 'booking:paid', 'chat:receive',
-      'worker:location', 'notification:new'
+      'booking:cancelled', 'booking:paid', 
+      'chat:receive', 'worker:location', 'notification:new',
+      'worker:verified', 'worker:updated', 'user:updated'
     ];
 
     events.forEach(event => {
@@ -47,7 +72,12 @@ class SocketService {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
+      this.currentToken = null;
     }
+  }
+
+  isConnected(): boolean {
+    return Boolean(this.socket?.connected);
   }
 
   on(event: string, callback: (data: any) => void) {
@@ -63,7 +93,13 @@ class SocketService {
   }
 
   private notify(event: string, data: any) {
-    this.listeners.get(event)?.forEach(callback => callback(data));
+    this.listeners.get(event)?.forEach(callback => {
+      try {
+        callback(data);
+      } catch (err) {
+        console.error(`Error in listener for event [${event}]:`, err);
+      }
+    });
   }
 
   emit(event: string, data: any) {

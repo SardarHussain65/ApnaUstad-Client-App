@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import { CheckCircle2, ShieldCheck, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { alpha, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { GlassCard } from './GlassCard';
@@ -29,7 +29,7 @@ export function JobAssignedSuccessModal({ visible, booking, onClose, onContinue 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.overlay, { backgroundColor: theme.colors.modal.backdrop }]}>
-        <Animated.View entering={ZoomIn.duration(500)} style={styles.container}>
+        <Animated.View entering={FadeInDown.duration(260)} exiting={FadeOut.duration(160)} style={styles.container}>
           <GlassCard
             intensity={50}
             style={[styles.card, { borderColor: theme.isDark ? 'rgba(0, 255, 127, 0.3)' : 'rgba(0, 168, 107, 0.25)' }]}

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../constants/Theme';
 import { ClientHome } from '../../components/home/ClientHome';
@@ -7,7 +8,14 @@ import { WorkerHome } from '../../components/home/WorkerHome';
 
 export default function HomeTab() {
   const theme = useTheme();
-  const { role, isLoading } = useAuth();
+  const { role, token, user, isLoading, logout } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && (!token || !user || !role)) {
+      console.warn('[HomeTab] Missing token or user, triggering logout');
+      void logout();
+    }
+  }, [isLoading, token, user, role, logout]);
 
   if (isLoading) {
     return (
@@ -17,11 +25,15 @@ export default function HomeTab() {
     );
   }
 
+  // If token or user or role is not found, automatically redirect to role-selection
+  if (!token || !user || !role) {
+    return <Redirect href={"/role-selection" as any} />;
+  }
+
   if (role === 'worker') {
     return <WorkerHome />;
   }
 
-  // Default to ClientHome or handle null role (should redirect to role selection)
   return <ClientHome />;
 }
 

@@ -1,53 +1,23 @@
 import React, { useEffect } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import Toast from 'react-native-toast-message';
 import { useAuth } from '../../context/AuthContext';
 import { CustomTabBar } from '../../components/navigation/TabBar';
-import { socketService } from '../../services/socketService';
 
 export default function TabLayout() {
-  const { role } = useAuth();
+  const { role, token, user, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!role) return;
+    if (!role || !token || !user) {
+      console.warn('[TabLayout] Missing token or user, logging out');
+      void logout();
+      router.replace('/role-selection' as any);
+      return;
+    }
 
-    // job:new is handled globally by IncomingJobProvider — no duplicate listener here.
-
-    const unsubBidWon = socketService.on('bid:won', (data) => {
-      if (role === 'worker') {
-        Toast.show({
-          type: 'success',
-          text1: 'Booking Confirmed! ✅',
-          text2: `The client hired you for ${data.jobPost?.category}!`,
-        });
-        router.push({
-          pathname: '/transaction-details',
-          params: { id: data.booking?._id }
-        });
-      }
-    });
-
-    // Global Client Handlers
-    const unsubJobAssigned = socketService.on('job:assigned', (data) => {
-      if (role === 'client') {
-        Toast.show({
-          type: 'success',
-          text1: 'Ustad Found! ✅',
-          text2: `An Ustad has accepted your ${data.jobPost?.category} request.`,
-        });
-        router.push({
-          pathname: '/transaction-details',
-          params: { id: data.booking?._id }
-        });
-      }
-    });
-
-    return () => {
-      unsubBidWon();
-      unsubJobAssigned();
-    };
-  }, [role]);
+    // Global real-time events (job:new, bid:won, booking:accepted)
+    // are safely handled by IncomingJobProvider and their respective screens.
+  }, [role, token, user]);
 
   return (
     <Tabs

@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Animated, {
@@ -136,6 +137,7 @@ export function IncomingJobModal({
   acceptingJobId,
 }: IncomingJobModalProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -184,7 +186,7 @@ export function IncomingJobModal({
             decelerationRate="fast"
           >
             {jobs.map((job, index) => (
-              <View key={job._id} style={styles.jobPage}>
+              <View key={job._id} style={[styles.jobPage, { width: screenWidth }]}>
                 <JobDecisionCard
                   job={job}
                   totalJobs={jobs.length}
@@ -245,6 +247,7 @@ function JobDecisionCard({
   colors: ReturnType<typeof useThemeColors>;
   shadows: ReturnType<typeof useThemeShadows>;
 }) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { t } = useTranslation();
   const signal = job.signalMeta || {};
   const isInstant = job.urgency === 'instant';
@@ -259,6 +262,16 @@ function JobDecisionCard({
   const [counterPrice, setCounterPrice] = useState('');
   const [submittingCounter, setSubmittingCounter] = useState(false);
   const [activeCounterPrice, setActiveCounterPrice] = useState<number | null>(null);
+
+  // Responsive device width helpers for button sizing
+  const isSmallDevice = screenWidth < 380;
+  const isVerySmallDevice = screenWidth < 345;
+  const isCompactDevice = screenWidth < 410;
+  const hasThreeActions = isInstant && !showCounterInput;
+
+  const btnHeight = isSmallDevice ? 46 : 48;
+  const secondaryIconSize = isSmallDevice ? 14 : 16;
+  const primaryIconSize = isSmallDevice ? 15 : 18;
 
   useEffect(() => {
     let isMounted = true;
@@ -375,7 +388,16 @@ function JobDecisionCard({
 
   return (
     // Clean, smooth subtle entrance animation without bouncy springiness
-    <Animated.View entering={FadeInDown.duration(260)} style={styles.cardFrame}>
+    <Animated.View
+      entering={FadeInDown.duration(260)}
+      style={[
+        styles.cardFrame,
+        {
+          width: Math.min(screenWidth - 28, 440),
+          maxHeight: Math.min(screenHeight * 0.85, 680),
+        },
+      ]}
+    >
       <View
         style={[
           styles.card,
@@ -685,24 +707,65 @@ function JobDecisionCard({
         </ScrollView>
 
         {/* Clear Action Footer */}
-        <View style={[styles.footer, { backgroundColor: theme.colors.surface.card, borderTopColor: alpha(theme.colors.text.primary, 0.08) }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              backgroundColor: theme.colors.surface.card,
+              borderTopColor: alpha(theme.colors.text.primary, 0.08),
+              paddingHorizontal: isSmallDevice ? 10 : 12,
+              gap: isSmallDevice ? 6 : 8,
+            },
+          ]}
+        >
           {/* Skip / Cancel Button */}
           <TouchableOpacity
-            style={[styles.skipBtn, { borderColor: alpha(theme.colors.text.primary, 0.15) }]}
+            style={[
+              styles.skipBtn,
+              {
+                height: btnHeight,
+                borderColor: alpha(theme.colors.text.primary, 0.15),
+                paddingHorizontal: hasThreeActions ? (isSmallDevice ? 8 : 10) : 14,
+                gap: isSmallDevice ? 3 : 4,
+              },
+            ]}
             onPress={showCounterInput ? () => { setShowCounterInput(false); setCounterPrice(''); } : onReject}
             disabled={isLoading || submittingCounter}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
           >
-            <X size={17} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.4} />
-            <Text style={[styles.skipBtnText, { color: alpha(theme.colors.text.primary, 0.7) }]}>
-              {showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
-            </Text>
+            <X size={isSmallDevice ? 14 : 17} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.4} />
+            {(!hasThreeActions || !isVerySmallDevice) && (
+              <Text
+                style={[
+                  styles.skipBtnText,
+                  {
+                    color: alpha(theme.colors.text.primary, 0.7),
+                    fontSize: isSmallDevice ? 11 : 12,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {/* Quick Counter Toggle Button (if Instant & counter input closed) */}
           {isInstant && !showCounterInput && (
             <TouchableOpacity
-              style={[styles.counterToggleBtn, { borderColor: alpha(accent, 0.35) }]}
+              style={[
+                styles.counterToggleBtn,
+                {
+                  height: btnHeight,
+                  flex: 1,
+                  minWidth: 0,
+                  borderColor: alpha(accent, 0.35),
+                  paddingHorizontal: isSmallDevice ? 6 : 10,
+                  gap: isSmallDevice ? 4 : 5,
+                },
+              ]}
               onPress={() => {
                 setShowCounterInput(true);
                 if (!counterPrice) {
@@ -711,9 +774,22 @@ function JobDecisionCard({
               }}
               disabled={isLoading}
               activeOpacity={0.7}
+              accessibilityRole="button"
             >
-              <CircleDollarSign size={16} color={accent} strokeWidth={2.4} />
-              <Text style={[styles.counterToggleBtnText, { color: accent }]}>
+              <CircleDollarSign size={secondaryIconSize} color={accent} strokeWidth={2.4} style={{ flexShrink: 0 }} />
+              <Text
+                style={[
+                  styles.counterToggleBtnText,
+                  {
+                    color: accent,
+                    fontSize: isSmallDevice ? 11 : 12,
+                  },
+                ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                ellipsizeMode="tail"
+              >
                 {t('incomingJobModal.counterOffer', 'Give My Rate')}
               </Text>
             </TouchableOpacity>
@@ -722,7 +798,14 @@ function JobDecisionCard({
           {/* Primary Action Button: When countering, this is the SINGLE button to send the counter rate. When normal, it's Accept Offer. */}
           {showCounterInput ? (
             <TouchableOpacity
-              style={styles.primaryBtn}
+              style={[
+                styles.primaryBtn,
+                {
+                  height: btnHeight,
+                  flex: 1,
+                  minWidth: 0,
+                },
+              ]}
               onPress={isWalletEligible ? () => handleSubmitCounter() : onWalletPress}
               disabled={submittingCounter || isLoading}
               activeOpacity={0.85}
@@ -731,14 +814,33 @@ function JobDecisionCard({
                 colors={isWalletEligible ? [accent, accentSecondary] : [colors.worker, alpha(colors.worker, 0.85)]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.primaryBtnGradient}
+                style={[
+                  styles.primaryBtnGradient,
+                  {
+                    paddingHorizontal: isSmallDevice ? 8 : 10,
+                    gap: isSmallDevice ? 4 : 6,
+                  },
+                ]}
               >
                 {submittingCounter ? (
                   <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
                 ) : isWalletEligible ? (
                   <>
-                    <Send size={17} color={theme.colors.text.onBrand} strokeWidth={2.5} />
-                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                    <Send size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                    <Text
+                      style={[
+                        styles.primaryBtnText,
+                        {
+                          color: theme.colors.text.onBrand,
+                          fontSize: isSmallDevice ? 11 : isCompactDevice ? 12 : 13,
+                          letterSpacing: isSmallDevice ? 0.1 : 0.2,
+                        },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.75}
+                      ellipsizeMode="tail"
+                    >
                       {t('incomingJobModal.sendMyRateBtn', 'Send Rate: Rs. {{amount}}', {
                         amount: Number(counterPrice || ((activeCounterPrice ?? offerAmount) + 200)).toLocaleString(),
                       })}
@@ -746,8 +848,21 @@ function JobDecisionCard({
                   </>
                 ) : (
                   <>
-                    <WalletCards size={18} color={theme.colors.text.onBrand} strokeWidth={2.6} />
-                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                    <WalletCards size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.4} style={{ flexShrink: 0 }} />
+                    <Text
+                      style={[
+                        styles.primaryBtnText,
+                        {
+                          color: theme.colors.text.onBrand,
+                          fontSize: isSmallDevice ? 11 : isCompactDevice ? 12 : 13,
+                          letterSpacing: isSmallDevice ? 0.1 : 0.2,
+                        },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.75}
+                      ellipsizeMode="tail"
+                    >
                       {t('incomingJobModal.topUpWallet', 'Add Balance')}
                     </Text>
                   </>
@@ -756,7 +871,14 @@ function JobDecisionCard({
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={styles.primaryBtn}
+              style={[
+                styles.primaryBtn,
+                {
+                  height: btnHeight,
+                  flex: hasThreeActions ? 1.35 : 1,
+                  minWidth: 0,
+                },
+              ]}
               onPress={isWalletEligible ? onAccept : onWalletPress}
               disabled={isLoading}
               activeOpacity={0.85}
@@ -765,14 +887,33 @@ function JobDecisionCard({
                 colors={isWalletEligible ? [accent, accentSecondary] : [colors.worker, alpha(colors.worker, 0.85)]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.primaryBtnGradient}
+                style={[
+                  styles.primaryBtnGradient,
+                  {
+                    paddingHorizontal: hasThreeActions ? (isSmallDevice ? 6 : 8) : 10,
+                    gap: isSmallDevice ? 4 : 6,
+                  },
+                ]}
               >
                 {isLoading ? (
                   <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
                 ) : isWalletEligible ? (
                   <>
-                    <Check size={18} color={theme.colors.text.onBrand} strokeWidth={3} />
-                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                    <Check size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.8} style={{ flexShrink: 0 }} />
+                    <Text
+                      style={[
+                        styles.primaryBtnText,
+                        {
+                          color: theme.colors.text.onBrand,
+                          fontSize: isSmallDevice ? 11 : isCompactDevice ? 12 : 13,
+                          letterSpacing: isSmallDevice ? 0.1 : 0.2,
+                        },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.75}
+                      ellipsizeMode="tail"
+                    >
                       {isInstant
                         ? t('incomingJobModal.acceptOffer', 'Accept Offer')
                         : t('incomingJobModal.continueBid', 'Send Proposal')}
@@ -780,8 +921,21 @@ function JobDecisionCard({
                   </>
                 ) : (
                   <>
-                    <WalletCards size={18} color={theme.colors.text.onBrand} strokeWidth={2.6} />
-                    <Text style={[styles.primaryBtnText, { color: theme.colors.text.onBrand }]}>
+                    <WalletCards size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.4} style={{ flexShrink: 0 }} />
+                    <Text
+                      style={[
+                        styles.primaryBtnText,
+                        {
+                          color: theme.colors.text.onBrand,
+                          fontSize: isSmallDevice ? 11 : isCompactDevice ? 12 : 13,
+                          letterSpacing: isSmallDevice ? 0.1 : 0.2,
+                        },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.75}
+                      ellipsizeMode="tail"
+                    >
                       {t('incomingJobModal.topUpWallet', 'Add Balance')}
                     </Text>
                   </>
@@ -1411,6 +1565,8 @@ const styles = StyleSheet.create({
   counterToggleBtnText: {
     fontSize: 12,
     fontWeight: '900',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   primaryBtn: {
     flex: 1,
@@ -1424,13 +1580,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
   primaryBtnText: {
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   footerNoteRow: {
     paddingHorizontal: 14,

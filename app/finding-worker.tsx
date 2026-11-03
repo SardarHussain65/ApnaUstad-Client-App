@@ -70,6 +70,8 @@ export default function FindingWorkerScreen() {
   const rotation = useSharedValue(0);
 
   const bypassBeforeRemoveRef = useRef(false);
+  const hasRedirectedRef = useRef(false);
+  const assignedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: job, refetch: refetchJob } = useJobDetails(jobId as string, {
     staleTime: 0,
@@ -220,13 +222,19 @@ export default function FindingWorkerScreen() {
   }, [job, isInstant]);
 
   const handleRedirectToBooking = (bookingId: string) => {
-    if (bookingId) {
-      bypassBeforeRemoveRef.current = true;
-      router.replace({
-        pathname: '/transaction-details',
-        params: { id: bookingId, autoAssigned: 'true' }
-      });
+    if (!bookingId || hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
+
+    if (assignedTimerRef.current) {
+      clearTimeout(assignedTimerRef.current);
+      assignedTimerRef.current = null;
     }
+
+    bypassBeforeRemoveRef.current = true;
+    router.replace({
+      pathname: '/transaction-details',
+      params: { id: bookingId, autoAssigned: 'true' }
+    });
   };
 
   useEffect(() => {
@@ -282,12 +290,13 @@ export default function FindingWorkerScreen() {
       });
 
       // Redirect to booking details after a brief delay for UX
-      setTimeout(() => {
-        bypassBeforeRemoveRef.current = true;
-        router.replace({
-          pathname: '/transaction-details',
-          params: { id: data._id }
-        });
+      if (assignedTimerRef.current) {
+        clearTimeout(assignedTimerRef.current);
+      }
+      assignedTimerRef.current = setTimeout(() => {
+        if (data?._id) {
+          handleRedirectToBooking(data._id);
+        }
       }, 1500);
     },
     onError: (err: any) => {
@@ -366,7 +375,15 @@ export default function FindingWorkerScreen() {
 
   useEffect(() => {
     // Socket Listeners
-    const unsubscribeAssigned = socketService.on('job:assigned', (data) => {
+    const unsubscribeAssigned = socketService.on('job:assigned', (data: any) => {
+      const incomingJobId = (data?.jobId || data?.jobPost?._id || data?.jobPost)?.toString();
+      if (incomingJobId && jobId && String(incomingJobId) !== String(jobId)) {
+        return; // Ignore assignments of other jobs
+      }
+
+      const bookingId = (data?.bookingId || data?.booking?._id || data?._id)?.toString();
+      if (!bookingId || hasRedirectedRef.current) return;
+
       setStatus(t('findingWorker.verified'));
       
       Toast.show({
@@ -375,16 +392,20 @@ export default function FindingWorkerScreen() {
         text2: 'Your booking is ready.',
       });
       
-      setTimeout(() => {
-        bypassBeforeRemoveRef.current = true;
-        router.replace({
-          pathname: '/transaction-details',
-          params: { id: data.booking._id }
-        });
+      if (assignedTimerRef.current) {
+        clearTimeout(assignedTimerRef.current);
+      }
+      assignedTimerRef.current = setTimeout(() => {
+        handleRedirectToBooking(bookingId);
       }, 1500);
     });
 
     const unsubscribeAutoAssigned = socketService.on('job:auto_assigned', (data: any) => {
+      const incomingJobId = (data?.jobPost?._id || data?.jobPost || data?.jobId)?.toString();
+      if (incomingJobId && jobId && String(incomingJobId) !== String(jobId)) {
+        return; // Ignore if not for this job
+      }
+
       setStatus('Ustad assigned');
       
       Toast.show({
@@ -393,7 +414,7 @@ export default function FindingWorkerScreen() {
         text2: t('findingWorker.assignedDesc', 'An Ustad has accepted your urgent request.'),
       });
       
-      const bookingId = data._id || data.booking?._id || null;
+      const bookingId = (data?._id || data?.booking?._id || data?.bookingId)?.toString();
       if (bookingId) {
         handleRedirectToBooking(bookingId);
       }
@@ -438,12 +459,30 @@ export default function FindingWorkerScreen() {
       });
     });
 
+    const unsubscribeCancelled = socketService.on('job:cancelled', (data: any) => {
+      const targetId = (data?.jobId || data?._id)?.toString();
+      if (!targetId || targetId === String(jobId)) {
+        Toast.show({
+          type: 'info',
+          text1: t('findingWorker.requestCancelled', 'Request Cancelled'),
+          text2: data?.reason || t('findingWorker.cancelSuccess', 'This service request has been cancelled.'),
+        });
+        bypassBeforeRemoveRef.current = true;
+        router.replace('/(tabs)' as any);
+      }
+    });
+
     return () => {
+      if (assignedTimerRef.current) {
+        clearTimeout(assignedTimerRef.current);
+        assignedTimerRef.current = null;
+      }
       unsubscribeAssigned();
       unsubscribeAutoAssigned();
       unsubscribeSearchExtended();
       unsubscribeBids();
       unsubscribeWithdrawn();
+      unsubscribeCancelled();
     };
   }, [jobId, pulse, rotation, router, t]);
 
@@ -749,8 +788,8 @@ export default function FindingWorkerScreen() {
                 </View>
               </View>
 
-              {/* Instant job indicators - sleek pills preserving essential instant details */}
-              {isInstant && (
+              {/* Job indicators - sleek pills preserving essential details */}
+              {isInstant ? (
                 <View style={styles.instantBadgesRow}>
                   <View style={[
                     styles.instantChip,
@@ -777,9 +816,38 @@ export default function FindingWorkerScreen() {
                     </Text>
                   </View>
                 </View>
+              ) : (
+                <View style={styles.instantBadgesRow}>
+                  {Number(job?.amount ?? job?.budget ?? 0) > 0 && (
+                    <View style={[
+                      styles.instantChip,
+                      {
+                        backgroundColor: theme.isDark ? 'rgba(0,245,255,0.08)' : alpha(colors.brand.primary, 0.08),
+                        borderColor: theme.isDark ? 'rgba(0,245,255,0.22)' : alpha(colors.brand.primary, 0.18),
+                      }
+                    ]}>
+                      <Tag size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                      <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
+                        {t('findingWorker.budget', 'Budget')}: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={[
+                    styles.instantChip,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
+                      borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
+                    }
+                  ]}>
+                    <CalendarDays size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                      {scheduledDateLabel}
+                    </Text>
+                  </View>
+                </View>
               )}
 
-              {isInstant && !!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
+              {!!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
                 <View style={[
                   styles.notifiedContainer,
                   {
@@ -809,7 +877,7 @@ export default function FindingWorkerScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {showBoosterPrompt && (
+          {showBoosterPrompt && isInstant && (
             <Animated.View 
               entering={FadeIn.duration(400)} 
               style={[

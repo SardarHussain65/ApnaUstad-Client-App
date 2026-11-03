@@ -27,12 +27,14 @@ import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Toast from 'react-native-toast-message';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { Skeleton, useShimmerTranslateX } from '../components/ui/Skeleton';
 import { useIsRTL } from '../context/LanguageContext';
 import { socketService } from '../services/socketService';
+import { queryKeys } from '../lib/queryKeyFactory';
 import api from '../services/api';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,6 +110,7 @@ export default function BidsListScreen() {
   const primaryColor = theme.colors.brand?.primary || colors.primary;
   const secondaryColor = theme.colors.brand?.secondary || colors.secondary;
   const shimmerTranslateX = useShimmerTranslateX();
+  const queryClient = useQueryClient();
 
   const [bids, setBids] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -168,6 +171,11 @@ export default function BidsListScreen() {
     setAccepting(bidId);
     try {
       const res = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`, {});
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       router.replace({ pathname: '/transaction-details', params: { id: res.data.data._id } });
     } catch (e: any) {
       console.error('Accept bid error:', e?.response?.data || e.message);
