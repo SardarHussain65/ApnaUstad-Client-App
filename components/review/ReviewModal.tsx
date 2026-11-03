@@ -17,7 +17,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeOut } from 'react-native-reanimated';
 import { CheckCircle2, Star, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -174,7 +174,8 @@ export function ReviewModal({
             style={styles.keyboardContainer}
           >
             <Animated.View
-              entering={SlideInDown.springify().damping(18).stiffness(120)}
+              entering={FadeInDown.duration(260)}
+              exiting={FadeOut.duration(160)}
               style={[
                 styles.modalCard,
                 {

@@ -422,6 +422,12 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
               amount: `Rs. ${required}`,
             }),
           });
+          const allJobsToPreserve = incomingJobsQueueRef.current.some(j => (j._id || j.id) === (job._id || job.id))
+            ? incomingJobsQueueRef.current
+            : [job, ...incomingJobsQueueRef.current];
+          addToDismissed(allJobsToPreserve);
+          incomingJobsQueueRef.current = [];
+          setIncomingJobsQueue([]);
           setShowModal(false);
           router.push('/(tabs)/wallet' as any);
           return;

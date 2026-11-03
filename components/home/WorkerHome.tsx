@@ -168,7 +168,7 @@ export function WorkerHome() {
       if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
     });
 
-    return dismissedJobs.filter((job) => {
+    const filtered = dismissedJobs.filter((job) => {
       if (job.urgency !== 'instant') return false;
       if (job.status && job.status !== 'open') return false;
 
@@ -191,7 +191,20 @@ export function WorkerHome() {
 
       return true;
     });
+
+    // Sort newest first
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
   }, [dismissedJobs, activeBookings, homeSummary?.recentBookings]);
+
+  // Display at most 2 latest urgent jobs on Home screen to avoid screen clutter;
+  // workers can check additional jobs in the "Find Jobs" tab.
+  const displayedUrgentJobs = useMemo(() => {
+    return activePendingUrgentJobs.slice(0, 2);
+  }, [activePendingUrgentJobs]);
 
   // Whether any actionable/extra cards are already occupying screen space
   // (urgent missions waiting, ongoing work, or sent proposals/bids)
@@ -410,22 +423,35 @@ export function WorkerHome() {
                   {t('home.worker.urgentMissionWaiting', 'Urgent Job Waiting')}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.sectionBadge,
-                  {
-                    backgroundColor: alpha(colors.error, 0.12),
-                    borderColor: alpha(colors.error, 0.3),
-                  },
-                ]}
-              >
-                <Text style={[styles.sectionMeta, { color: colors.error }]}>
-                  {t('home.worker.readyToAccept', 'READY TO ACCEPT')}
-                </Text>
-              </View>
+              {activePendingUrgentJobs.length > 2 ? (
+                <TouchableOpacity
+                  style={styles.seeAllRow}
+                  onPress={() => router.push('/(tabs)/jobs' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.seeAll, { color: colors.error }]}>
+                    {t('common.seeAll', 'SEE ALL')} ({activePendingUrgentJobs.length})
+                  </Text>
+                  <ChevronRight size={13} color={colors.error} />
+                </TouchableOpacity>
+              ) : (
+                <View
+                  style={[
+                    styles.sectionBadge,
+                    {
+                      backgroundColor: alpha(colors.error, 0.12),
+                      borderColor: alpha(colors.error, 0.3),
+                    },
+                  ]}
+                >
+                  <Text style={[styles.sectionMeta, { color: colors.error }]}>
+                    {t('home.worker.readyToAccept', 'READY TO ACCEPT')}
+                  </Text>
+                </View>
+              )}
             </View>
 
-            {activePendingUrgentJobs.map((job) => {
+            {displayedUrgentJobs.map((job) => {
               const amount = job.amount || job.budget || job.signalMeta?.amount || 0;
               return (
                 <GlassCard
@@ -550,6 +576,30 @@ export function WorkerHome() {
                 </GlassCard>
               );
             })}
+
+            {activePendingUrgentJobs.length > 2 && (
+              <TouchableOpacity
+                style={[
+                  styles.moreUrgentJobsBanner,
+                  {
+                    borderColor: alpha(colors.error, 0.28),
+                    backgroundColor: alpha(colors.error, 0.08),
+                  },
+                ]}
+                onPress={() => router.push('/(tabs)/jobs' as any)}
+                activeOpacity={0.75}
+              >
+                <Zap size={14} color={colors.error} />
+                <Text style={[styles.moreUrgentJobsText, { color: colors.error }]}>
+                  {t(
+                    'home.worker.moreUrgentAvailable',
+                    '+{{count}} more urgent jobs waiting • Check Find Jobs tab',
+                    { count: activePendingUrgentJobs.length - 2 }
+                  )}
+                </Text>
+                <ChevronRight size={14} color={colors.error} />
+              </TouchableOpacity>
+            )}
           </Animated.View>
         )}
 
@@ -1110,6 +1160,22 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   walletInsightsLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  moreUrgentJobsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  moreUrgentJobsText: {
     fontSize: 12,
     fontWeight: '700',
   },

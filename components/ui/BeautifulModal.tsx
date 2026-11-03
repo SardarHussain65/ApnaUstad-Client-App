@@ -18,6 +18,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { alpha, useTheme, useThemeColors } from '../../constants/Theme';
 import { X, CheckCircle2, AlertTriangle, Info, HelpCircle } from 'lucide-react-native';
@@ -68,11 +69,11 @@ export function BeautifulModal({
 
   useEffect(() => {
     if (visible) {
-      scale.value = withSpring(1, { damping: 10, mass: 1, stiffness: 100 });
-      opacity.value = withSpring(1, { damping: 12, mass: 1, stiffness: 100 });
+      scale.value = withTiming(1, { duration: 220 });
+      opacity.value = withTiming(1, { duration: 180 });
     } else {
-      scale.value = withSpring(0.8);
-      opacity.value = withSpring(0);
+      scale.value = withTiming(0.92, { duration: 160 });
+      opacity.value = withTiming(0, { duration: 140 });
     }
   }, [visible, scale, opacity]);
 
@@ -366,10 +367,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', zIndex: 20,
   },
   modalBody: {
-    flex: 1, justifyContent: 'center',
+    flex: 1,
   },
   modalBodyContent: {
-    alignItems: 'center', width: '100%',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   floatingIconBadge: {
     position: 'absolute', top: -45, alignSelf: 'center', zIndex: 100,

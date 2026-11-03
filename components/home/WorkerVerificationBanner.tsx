@@ -9,6 +9,8 @@ import Animated, { FadeInDown, FadeOutUp } from 'react-native-reanimated';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
 import { useIsRTL } from '../../context/LanguageContext';
+import { useRefreshOnFocus } from '../../hooks';
+import { socketService } from '../../services/socketService';
 import api from '../../services/api';
 
 type VerificationStatus = 'loading' | 'verified' | 'pending' | 'rejected' | 'not_submitted';
@@ -23,12 +25,12 @@ export function WorkerVerificationBanner() {
   const router = useRouter();
   const { t } = useTranslation();
   const isRTL = useIsRTL();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const theme = useTheme();
   const colors = useThemeColors();
   const shadows = useThemeShadows();
 
-  const [status, setStatus] = useState<VerificationStatus>('loading');
+  const [status, setStatus] = useState<VerificationStatus>(user?.isVerified ? 'verified' : 'loading');
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
@@ -39,12 +41,15 @@ export function WorkerVerificationBanner() {
 
     try {
       const response = await api.get('/workers/verification/status');
-      const details = response.data?.data as VerificationDetails | null;
+      const details = response.data?.data as (VerificationDetails & { isVerified?: boolean }) | null;
 
       if (!details) {
         setStatus(user?.isVerified ? 'verified' : 'not_submitted');
-      } else if (details.status === 'approved') {
+      } else if (details.status === 'approved' || details.isVerified) {
         setStatus('verified');
+        if (user && !user.isVerified) {
+          void updateUser({ ...user, isVerified: true });
+        }
       } else if (details.status === 'pending') {
         setStatus('pending');
       } else if (details.status === 'rejected') {
@@ -56,14 +61,38 @@ export function WorkerVerificationBanner() {
     } catch (err) {
       setStatus(user?.isVerified ? 'verified' : 'not_submitted');
     }
-  }, [user?.isVerified]);
+  }, [user, updateUser]);
+
+  useRefreshOnFocus(fetchStatus);
 
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
 
+  useEffect(() => {
+    const handleWorkerVerified = (data: any) => {
+      console.log('📡 [WorkerVerificationBanner] Received worker verification event:', data);
+      if (data?.isVerified || data?.status === 'approved') {
+        setStatus('verified');
+        if (user && !user.isVerified) {
+          void updateUser({ ...user, isVerified: true });
+        }
+      } else {
+        fetchStatus();
+      }
+    };
+
+    const unsubVerified = socketService.on('worker:verified', handleWorkerVerified);
+    const unsubUpdated = socketService.on('worker:updated', handleWorkerVerified);
+
+    return () => {
+      unsubVerified();
+      unsubUpdated();
+    };
+  }, [fetchStatus, user, updateUser]);
+
   // If worker is fully verified or status is still initial loading without an unverified user, hide banner
-  if (status === 'verified' || (status === 'loading' && user?.isVerified)) {
+  if (status === 'verified' || user?.isVerified || (status === 'loading' && user?.isVerified)) {
     return null;
   }
 

@@ -68,7 +68,14 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
     };
 
-    // ─── 4. RECONNECTION RE-SYNCHRONIZATION ──────────────────────────────────
+    // ─── 4. WORKER PROFILE & VERIFICATION EVENTS ────────────────────────────
+    const handleWorkerUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.workers.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+    };
+
+    // ─── 5. RECONNECTION RE-SYNCHRONIZATION ──────────────────────────────────
     const handleReconnected = () => {
       console.log('🔄 [RealtimeSync] Socket reconnected — performing silent background sync of active queries');
       queryClient.invalidateQueries({ type: 'active' });
@@ -102,6 +109,10 @@ export function useRealtimeSync(enabled: boolean = true) {
         handleBookingUpdate(data);
       }),
       socketService.on('bid:lost', handleBidUpdate),
+
+      // Worker profile updates
+      socketService.on('worker:verified', handleWorkerUpdate),
+      socketService.on('worker:updated', handleWorkerUpdate),
 
       // Reconnect
       socketService.on('socket:reconnected', handleReconnected),

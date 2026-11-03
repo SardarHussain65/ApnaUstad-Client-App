@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import Animated, {
   FadeInDown,
+  FadeOut,
   SlideInDown,
   useAnimatedStyle,
   useSharedValue,
@@ -1147,7 +1148,8 @@ export default function TransactionDetailsScreen() {
           <BlurView intensity={45} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
           <View style={styles.successModalContainer}>
             <Animated.View
-              entering={SlideInDown.springify().damping(15)}
+              entering={FadeInDown.duration(260)}
+              exiting={FadeOut.duration(160)}
               style={[
                 styles.successCard,
                 {

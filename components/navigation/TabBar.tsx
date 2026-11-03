@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
 import Animated, {
@@ -14,13 +14,13 @@ import { Home, ClipboardList, Wallet, User, Compass } from 'lucide-react-native'
 import { useTheme } from '../../constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
-const TAB_BAR_WIDTH = width - 40;
+import { useIsRTL } from '../../context/LanguageContext';
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const isRTL = useIsRTL();
+  const { width: screenWidth } = useWindowDimensions();
 
   const visibleRoutes = state.routes.filter((route) => {
     const opts = descriptors[route.key]?.options as any;
@@ -28,20 +28,30 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   });
 
   const numTabs = visibleRoutes.length || 4;
-  const tabWidth = TAB_BAR_WIDTH / numTabs;
+  const tabBarWidth = screenWidth - 40;
+  const tabWidth = tabBarWidth / numTabs;
   const activeRoute = state.routes[state.index];
   const activeVisibleIndex = visibleRoutes.findIndex((r) => r.key === activeRoute?.key);
 
-  const translateX = useSharedValue(Math.max(0, activeVisibleIndex) * tabWidth);
+  const INDICATOR_WIDTH = Math.min(tabWidth - 8, 44);
+  const INDICATOR_HEIGHT = 36;
+  const indicatorOffset = (tabWidth - INDICATOR_WIDTH) / 2;
+
+  const getTargetX = (index: number) => {
+    const safeIndex = Math.max(0, index);
+    const visualIndex = isRTL ? numTabs - 1 - safeIndex : safeIndex;
+    return visualIndex * tabWidth + indicatorOffset;
+  };
+
+  const translateX = useSharedValue(getTargetX(activeVisibleIndex));
 
   useEffect(() => {
-    const targetIndex = activeVisibleIndex >= 0 ? activeVisibleIndex : 0;
-    translateX.value = withSpring(targetIndex * tabWidth, {
+    translateX.value = withSpring(getTargetX(activeVisibleIndex), {
       damping: 20,
       stiffness: 150,
       mass: 0.8
     });
-  }, [activeVisibleIndex, tabWidth]);
+  }, [activeVisibleIndex, tabWidth, isRTL]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -81,12 +91,14 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         tint={theme.blurTint}
         style={styles.blurContainer}
       >
-        {/* Active Indicator (Glowing Pill) */}
+        {/* Active Indicator on Icon (Glowing Pill around the active tab's icon) */}
         <Animated.View
           style={[
             styles.activeIndicator,
             {
-              width: tabWidth - 12,
+              width: INDICATOR_WIDTH,
+              height: INDICATOR_HEIGHT,
+              borderRadius: INDICATOR_HEIGHT / 2,
               backgroundColor: theme.colors.tabBar.activeBackground,
               borderColor: theme.colors.tabBar.activeBorder,
             },
@@ -132,21 +144,19 @@ function TabItem({
   const prog = useSharedValue(isFocused ? 1 : 0);
 
   useEffect(() => {
-    prog.value = withTiming(isFocused ? 1 : 0, { duration: 250 });
+    prog.value = withTiming(isFocused ? 1 : 0, { duration: 220 });
   }, [isFocused]);
 
   const animatedIconStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ scale: withSpring(isFocused ? 1.1 : 1, { damping: 10 }) }],
-      // Note: Reanimated v3 doesn't support color interpolation directly in styles for line-based icons 
-      // as easily as specialized SVG components, so we will pass color to the icon component itself.
+      transform: [{ scale: withSpring(isFocused ? 1.12 : 1, { damping: 12 }) }],
     };
   });
 
   const animatedTextStyle = useAnimatedStyle(() => {
     return {
       opacity: prog.value,
-      transform: [{ translateY: withSpring(isFocused ? 0 : 5, { damping: 12 }) }],
+      transform: [{ translateY: withSpring(isFocused ? 0 : 4, { damping: 14 }) }],
       color: interpolateColor(prog.value, [0, 1], [inactiveColor, activeColor])
     };
   });
@@ -174,7 +184,6 @@ function TabItem({
     }
   }
 
-  // We manually handle color transition for the icon component since it's not a native property reanimated interpolates on non-SVG components directly
   const iconColor = isFocused ? activeColor : inactiveColor;
 
   return (
@@ -182,13 +191,17 @@ function TabItem({
       onPress={onPress}
       style={styles.tabItem}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isFocused }}
     >
-      <Animated.View style={[styles.iconContainer, animatedIconStyle]}>
-        <Icon color={iconColor} />
-        <Animated.Text style={[styles.tabLabel, animatedTextStyle]}>
+      <View style={styles.tabInner}>
+        <Animated.View style={[styles.iconWrapper, animatedIconStyle]}>
+          <Icon color={iconColor} />
+        </Animated.View>
+        <Animated.Text style={[styles.tabLabel, animatedTextStyle]} numberOfLines={1}>
           {getLabel()}
         </Animated.Text>
-      </Animated.View>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -220,9 +233,8 @@ const styles = StyleSheet.create({
   },
   activeIndicator: {
     position: 'absolute',
-    height: 52,
-    borderRadius: 26,
-    left: 6,
+    top: 8,
+    left: 0,
     borderWidth: 1.5,
   },
   tabItem: {
@@ -231,15 +243,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconContainer: {
-    flexDirection: 'column',
+  tabInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  iconWrapper: {
+    width: 44,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: '800',
     marginTop: 2,
+    textAlign: 'center',
   }
 });

@@ -306,8 +306,12 @@ export default function IdentityVerificationScreen() {
               <View style={[styles.cardInfo, { borderColor: theme.colors.border.subtle }]}>
                 <LinearGradient colors={[alpha(theme.colors.status.success, 0.08), 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <View style={styles.infoRow}>
-                  <Text style={[styles.infoLbl, { color: theme.colors.text.muted }]}>{t('identityVerification.verifiedCnic')}</Text>
-                  <Text style={[styles.infoVal, { color: theme.colors.text.primary }]}>{cnicNumber}</Text>
+                  <Text style={[styles.infoLbl, { color: theme.colors.text.muted }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {t('identityVerification.verifiedCnic')}
+                  </Text>
+                  <Text style={[styles.infoVal, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {cnicNumber}
+                  </Text>
                 </View>
               </View>
             </Animated.View>
@@ -323,8 +327,12 @@ export default function IdentityVerificationScreen() {
               <View style={[styles.cardInfo, { borderColor: theme.colors.border.subtle }]}>
                 <LinearGradient colors={[alpha(theme.colors.status.warning, 0.08), 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]} />
                 <View style={styles.infoRow}>
-                  <Text style={[styles.infoLbl, { color: theme.colors.text.muted }]}>{t('identityVerification.pendingCnic')}</Text>
-                  <Text style={[styles.infoVal, { color: theme.colors.text.primary }]}>{cnicNumber}</Text>
+                  <Text style={[styles.infoLbl, { color: theme.colors.text.muted }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {t('identityVerification.pendingCnic')}
+                  </Text>
+                  <Text style={[styles.infoVal, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {cnicNumber}
+                  </Text>
                 </View>
               </View>
             </Animated.View>
@@ -564,10 +572,35 @@ const styles = StyleSheet.create({
   pulseAnim: { transform: [{ scale: 1 }] },
   statusTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginBottom: 8 },
   statusDesc: { fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 20, marginBottom: 24, paddingHorizontal: 10 },
-  cardInfo: { width: '100%', padding: 14, borderRadius: 14, borderWidth: 1, position: 'relative' },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoLbl: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  infoVal: { fontSize: 15, fontWeight: '700', letterSpacing: 0.8 },
+  cardInfo: {
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoRow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    width: '100%',
+  },
+  infoLbl: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    textAlign: 'center',
+  },
+  infoVal: {
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textAlign: 'center',
+  },
 
   // Rejection details
   rejectionCard: {

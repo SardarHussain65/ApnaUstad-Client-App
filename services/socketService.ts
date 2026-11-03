@@ -56,7 +56,8 @@ class SocketService {
       'booking:new', 'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
       'booking:cancelled', 'booking:paid', 
-      'chat:receive', 'worker:location', 'notification:new'
+      'chat:receive', 'worker:location', 'notification:new',
+      'worker:verified', 'worker:updated', 'user:updated'
     ];
 
     events.forEach(event => {

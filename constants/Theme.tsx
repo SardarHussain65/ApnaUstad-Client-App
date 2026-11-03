@@ -195,14 +195,25 @@ export function alpha(color: string, opacity: number | string): string {
   }
 
   if (/^#[0-9a-fA-F]{8}$/.test(color)) {
-    return `${color.slice(0, 7)}${opacityHex}`;
+    const existingAlpha = parseInt(color.slice(7, 9), 16) / 255;
+    const finalAlpha = Math.round(existingAlpha * numericOpacity * 255)
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase();
+    return `${color.slice(0, 7)}${finalAlpha}`;
   }
 
   const rgbMatch = color.match(/^rgba?\(([^)]+)\)$/);
   if (rgbMatch) {
     const parts = rgbMatch[1].split(',').map(part => part.trim());
-    if (parts.length >= 3) {
+    if (parts.length === 3) {
       return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${numericOpacity.toFixed(3)})`;
+    }
+    if (parts.length >= 4) {
+      const existingAlpha = Number(parts[3]);
+      const safeExisting = Number.isFinite(existingAlpha) ? existingAlpha : 1;
+      const finalAlpha = Math.max(0, Math.min(1, safeExisting * numericOpacity));
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${finalAlpha.toFixed(3)})`;
     }
   }
 
