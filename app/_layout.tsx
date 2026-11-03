@@ -13,6 +13,9 @@ import { useRealtimeSync } from '../hooks/useRealtimeSync';
 import { ThemeProvider, useTheme } from "../constants/Theme";
 import { LanguageProvider } from "../context/LanguageContext";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
+import { initCrashReporting } from "../services/crashReportingService";
+
+initCrashReporting();
 
 
 const shouldRetryRequest = (failureCount: number, error: unknown) => {

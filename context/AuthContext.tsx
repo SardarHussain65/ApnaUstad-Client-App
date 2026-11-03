@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
 import { getPushToken } from '../services/notificationService';
 import { BASE_URL } from '../constants/Config';
+import { setUserContext, clearUserContext } from '../services/crashReportingService';
 
 export type UserRole = 'client' | 'worker' | null;
 
@@ -249,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (savedRefreshToken) setRefreshTokenState(savedRefreshToken);
         setUserState(parsedUser);
         setAccountStatusState(buildAccountStatus(parsedUser));
+        setUserContext({ id: parsedUser._id, email: parsedUser.email, role: savedRole as string });
       } catch (error) {
         console.error('Error loading auth state:', error);
       } finally {
@@ -363,6 +365,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRoleState(role);
       setUserState(user);
       setAccountStatusState(user ? buildAccountStatus(user) : null);
+      setUserContext({ id: user?._id, email: user?.email, role: role || undefined });
 
       socketService.connect(token);
       console.log('Auth state saved successfully');
@@ -421,6 +424,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRoleState(null);
       setUserState(null);
       setAccountStatusState(null);
+      clearUserContext();
       socketService.disconnect();
       await Promise.all([
         AsyncStorage.removeItem('user_token'),

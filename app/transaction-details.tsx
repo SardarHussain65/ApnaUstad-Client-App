@@ -45,6 +45,7 @@ import {
   Navigation,
   Phone,
   Scale,
+  ShieldCheck,
   Star,
   UserRound,
   Zap,
@@ -53,10 +54,12 @@ import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@mapl
 
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
+import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../services/backgroundLocationService';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeyFactory';
 import {
   useAlertModal,
+  useConfirmModal,
   useBookingDetails,
   useUpdateBookingStatusMutation,
   usePayBookingMutation,
@@ -69,8 +72,9 @@ import {
   getRouteFromOSRM,
   formatDistanceKm,
 } from '../utils/mapUtils';
-import { AlertModal } from '../components/ui/BeautifulModal';
+import { AlertModal, ConfirmModal } from '../components/ui/BeautifulModal';
 import { RaiseDisputeModal } from '../components/disputes/RaiseDisputeModal';
+import { SafetyShieldModal } from '../components/safety/SafetyShieldModal';
 import { ReviewModal } from '../components/review/ReviewModal';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
 import {
@@ -134,8 +138,10 @@ export default function TransactionDetailsScreen() {
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [showAutoAssignedModal, setShowAutoAssignedModal] = useState(autoAssigned === 'true');
   const alertModal = useAlertModal();
+  const confirmModal = useConfirmModal();
   const bypassBeforeRemoveRef = useRef(false);
 
   // Map state
@@ -259,6 +265,10 @@ export default function TransactionDetailsScreen() {
     let isMounted = true;
 
     if (isWorker && status === 'accepted') {
+      if (id) {
+        void startBackgroundLocationTracking(id as string);
+      }
+
       (async () => {
         const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
         if (permStatus !== 'granted' || !isMounted) return;
@@ -305,6 +315,9 @@ export default function TransactionDetailsScreen() {
     return () => {
       isMounted = false;
       if (subscription) subscription.remove();
+      if (isWorker) {
+        void stopBackgroundLocationTracking();
+      }
     };
   }, [isWorker, status, id, isValidPakistanCoord]);
 
@@ -629,11 +642,22 @@ export default function TransactionDetailsScreen() {
             </TouchableOpacity>
 
             <View style={styles.mapTopRightControls}>
+              <TouchableOpacity
+                style={[styles.circleButton, { backgroundColor: alpha('#00F5FF', 0.18), borderWidth: 1, borderColor: '#00F5FF' }]}
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowSafetyModal(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <ShieldCheck size={18} color="#00F5FF" strokeWidth={2.4} />
+              </TouchableOpacity>
+
               {showDisputeAction && (
                 <TouchableOpacity
                   style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     if (disputeMeta?.disputeId) {
                       router.push({ pathname: '/dispute-room' as any, params: { id: disputeMeta.disputeId } });
                     } else {
@@ -686,6 +710,20 @@ export default function TransactionDetailsScreen() {
           </View>
 
           <View style={styles.standardHeaderRight}>
+            <TouchableOpacity
+              style={[
+                styles.circleButton,
+                { backgroundColor: alpha('#00F5FF', 0.15), borderWidth: 1, borderColor: '#00F5FF' }
+              ]}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowSafetyModal(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <ShieldCheck size={18} color="#00F5FF" strokeWidth={2.4} />
+            </TouchableOpacity>
+
             {showDisputeAction && (
               <TouchableOpacity
                 style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
@@ -974,7 +1012,21 @@ export default function TransactionDetailsScreen() {
                   icon={Zap}
                   label={t('transactionDetails.startJob', 'Start Job')}
                   loading={isUpdating}
-                  onPress={() => updateStatus({ bookingId: id as string, status: 'ongoing' })}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    confirmModal.showConfirm(
+                      t('transactionDetails.confirmStartTitle', 'Start Service?'),
+                      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
+                      () => {
+                        confirmModal.closeConfirm();
+                        updateStatus({ bookingId: id as string, status: 'ongoing' });
+                      },
+                      undefined,
+                      t('transactionDetails.startJob', 'Start Job'),
+                      t('common.cancel', 'Cancel'),
+                      colors.cyan
+                    );
+                  }}
                 />
               )}
 
@@ -984,7 +1036,21 @@ export default function TransactionDetailsScreen() {
                   icon={CheckCircle2}
                   label={t('transactionDetails.completeJob', 'Complete Job')}
                   loading={isUpdating}
-                  onPress={() => updateStatus({ bookingId: id as string, status: 'completed' })}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    confirmModal.showConfirm(
+                      t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
+                      t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
+                      () => {
+                        confirmModal.closeConfirm();
+                        updateStatus({ bookingId: id as string, status: 'completed' });
+                      },
+                      undefined,
+                      t('transactionDetails.completeJob', 'Complete Job'),
+                      t('common.cancel', 'Cancel'),
+                      colors.success
+                    );
+                  }}
                 />
               )}
             </View>
@@ -999,30 +1065,43 @@ export default function TransactionDetailsScreen() {
                 label={t('transactionDetails.confirmCash', 'Confirm Cash Payment')}
                 loading={isPaying}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  payBooking(
-                    { bookingId: id as string, paymentMethod: 'cash' },
-                    {
-                      onSuccess: () => {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
-                        queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
-                        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-                        refetch();
-                        setShowReviewModal(true);
-                      },
-                      onError: (error: any) => {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                        const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-                        alertModal.showAlert(
-                          t('transactionDetails.paymentBlocked', 'Payment paused'),
-                          msg,
-                          undefined,
-                          'error',
-                          t('common.ok', 'OK')
-                        );
-                      },
-                    }
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  confirmModal.showConfirm(
+                    t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
+                    t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
+                      amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
+                    }),
+                    () => {
+                      confirmModal.closeConfirm();
+                      payBooking(
+                        { bookingId: id as string, paymentMethod: 'cash' },
+                        {
+                          onSuccess: () => {
+                            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+                            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+                            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+                            refetch();
+                            setShowReviewModal(true);
+                          },
+                          onError: (error: any) => {
+                            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                            const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+                            alertModal.showAlert(
+                              t('transactionDetails.paymentBlocked', 'Payment paused'),
+                              msg,
+                              undefined,
+                              'error',
+                              t('common.ok', 'OK')
+                            );
+                          },
+                        }
+                      );
+                    },
+                    undefined,
+                    t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
+                    t('common.cancel', 'Cancel'),
+                    colors.success
                   );
                 }}
               />
@@ -1136,6 +1215,29 @@ export default function TransactionDetailsScreen() {
         message={alertModal.message}
         buttonText={alertModal.buttonText}
         type={alertModal.type}
+      />
+
+      <ConfirmModal
+        visible={confirmModal.visible}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={confirmModal.closeConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        confirmColor={confirmModal.confirmColor}
+        isLoading={isUpdating || isPaying}
+      />
+
+      <SafetyShieldModal
+        visible={showSafetyModal}
+        onClose={() => setShowSafetyModal(false)}
+        bookingId={id as string}
+        partnerName={partnerName}
+        partnerCategory={partnerCategory}
+        isPartnerVerified={true}
+        address={cleanAddress}
+        isWorker={isWorker}
       />
 
       <Modal

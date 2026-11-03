@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import { AlertTriangle, RefreshCw } from 'lucide-react-native';
+import { captureException } from '../../services/crashReportingService';
 
 interface Props {
   children: ReactNode;
@@ -24,6 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught application error in ErrorBoundary:', error, errorInfo);
+    captureException(error, errorInfo as unknown as Record<string, any>);
   }
 
   private handleReset = () => {

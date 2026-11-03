@@ -27,7 +27,7 @@ export function BackgroundWrapper({ children, blur = 0 }: BackgroundWrapperProps
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background.app }]}>
       <ImageBackground
-        source={require('../../assets/images/cosmic_bg.png')}
+        source={require('../../assets/images/cosmic_bg.webp')}
         style={styles.imageBg}
         resizeMode="cover"
       >
