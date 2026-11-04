@@ -185,8 +185,13 @@ export function ConfirmModal({
   isLoading = false,
 }: ConfirmModalProps) {
   const theme = useTheme();
+  const colors = useThemeColors();
   const resolvedConfirmColor = confirmColor ?? theme.colors.brand.primary;
   const isConfirmLong = (confirmText?.length ?? 0) > 10;
+  const confirmTextColor =
+    resolvedConfirmColor === colors.error || resolvedConfirmColor === colors.success
+      ? '#FFFFFF'
+      : theme.colors.button.primaryText;
 
   return (
     <BeautifulModal
@@ -236,7 +241,7 @@ export function ConfirmModal({
           >
             <LinearGradient colors={[resolvedConfirmColor, resolvedConfirmColor]} style={styles.solidBtnGradient}>
               <Text
-                style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}
+                style={[styles.solidBtnText, { color: confirmTextColor }]}
                 numberOfLines={2}
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
@@ -279,6 +284,13 @@ export function AlertModal({
     }
   };
 
+  const getButtonTextColor = () => {
+    if (type === 'error' || type === 'success') {
+      return '#FFFFFF';
+    }
+    return theme.id === 'light' ? '#FFFFFF' : '#001014';
+  };
+
   const getIcon = () => {
     switch (type) {
       case 'success': return <CheckCircle2 color={getColor()} size={32} />;
@@ -286,6 +298,12 @@ export function AlertModal({
       default: return <Info color={getColor()} size={32} />;
     }
   };
+
+  const safeButtonText = (
+    buttonText && typeof buttonText === 'string' && buttonText.trim().length > 0
+      ? buttonText
+      : 'OK'
+  ).toUpperCase();
 
   return (
     <BeautifulModal
@@ -305,12 +323,12 @@ export function AlertModal({
         >
           <LinearGradient colors={[getColor(), getColor()]} style={styles.solidBtnGradient}>
             <Text
-              style={[styles.solidBtnText, { color: theme.colors.button.primaryText }]}
+              style={[styles.solidBtnText, { color: getButtonTextColor() }]}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.8}
             >
-              {buttonText.toUpperCase()}
+              {safeButtonText}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -409,17 +427,18 @@ const styles = StyleSheet.create({
   },
   solidBtnGradient: {
     flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     paddingVertical: 4,
   },
   solidBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     letterSpacing: 0.5,
     textAlign: 'center',
-    includeFontPadding: false,
+    width: '100%',
   },
   cancelBtn: {
     flex: 1,
@@ -436,10 +455,11 @@ const styles = StyleSheet.create({
     minWidth: 76,
   },
   cancelBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0.8,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
     textAlign: 'center',
+    width: '100%',
   },
   alertBtn: {
     width: '100%',
