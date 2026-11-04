@@ -72,9 +72,10 @@ interface CategoryCardProps {
   cat: CategoryItem;
   index: number;
   onPress: (cat: CategoryItem) => void;
+  animate?: boolean;
 }
 
-const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => {
+const CategoryCard = React.memo(({ cat, index, onPress, animate = true }: CategoryCardProps) => {
   const theme = useTheme();
   const Icon = getIconForCategory(cat);
   const gradient: [string, string] = cat.color
@@ -91,30 +92,42 @@ const CategoryCard = React.memo(({ cat, index, onPress }: CategoryCardProps) => 
 
   const iconColor = theme.colors.text.primary;
 
+  const card = (
+    <GlassCard
+      style={[
+        styles.categoryItem,
+        {
+          borderColor: cardBorderColor,
+        }
+      ]}
+      contentStyle={styles.categoryItemContent}
+      onPress={() => onPress(cat)}
+      gradient={gradient}
+      padding={0}
+    >
+      <View style={[styles.categoryIconBox, { backgroundColor: iconBgColor }]}>
+        <Icon size={22} color={iconColor} strokeWidth={2} />
+      </View>
+      <Text style={[styles.categoryTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
+        {cat.name}
+      </Text>
+    </GlassCard>
+  );
+
+  if (!animate) {
+    return (
+      <View style={styles.categoryCardWrapper}>
+        {card}
+      </View>
+    );
+  }
+
   return (
     <Animated.View
       entering={FadeInDown.delay(index * 40).duration(350)}
       style={styles.categoryCardWrapper}
     >
-      <GlassCard
-        style={[
-          styles.categoryItem,
-          {
-            borderColor: cardBorderColor,
-          }
-        ]}
-        contentStyle={styles.categoryItemContent}
-        onPress={() => onPress(cat)}
-        gradient={gradient}
-        padding={0}
-      >
-        <View style={[styles.categoryIconBox, { backgroundColor: iconBgColor }]}>
-          <Icon size={22} color={iconColor} strokeWidth={2} />
-        </View>
-        <Text style={[styles.categoryTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
-          {cat.name}
-        </Text>
-      </GlassCard>
+      {card}
     </Animated.View>
   );
 });
@@ -223,8 +236,11 @@ export function ClientHome() {
 
   const filteredCategories = useMemo(() => {
     if (!searchQuery.trim()) return categories;
-    const q = searchQuery.toLowerCase();
-    return categories.filter(cat => cat.name.toLowerCase().includes(q));
+    const q = searchQuery.toLowerCase().trim();
+    return categories.filter(cat =>
+      cat.name.toLowerCase().includes(q) ||
+      Boolean(cat.description && cat.description.toLowerCase().includes(q))
+    );
   }, [categories, searchQuery]);
 
   // Active Booking (assigned Ustad on the way, ongoing work, or work completed awaiting cash payment)
@@ -361,6 +377,8 @@ export function ClientHome() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         contentContainerStyle={[
           styles.scrollContent,
           { paddingTop: insets.top },
@@ -590,6 +608,7 @@ export function ClientHome() {
                     cat={cat}
                     index={index}
                     onPress={handleCategoryPress}
+                    animate={!searchQuery.trim()}
                   />
                 ))
               ) : (

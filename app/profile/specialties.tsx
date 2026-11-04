@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -178,18 +178,35 @@ export default function SpecialtiesScreen() {
   const alertModal = useAlertModal();
   const confirmModal = useConfirmModal();
 
-  const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const isLoadingRef = useRef(false);
+  const hasLoadedRef = useRef(false);
+
+  const load = useCallback(async (mode: 'initial' | 'refresh' | 'silent' = 'initial') => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+
+    if (mode === 'initial') {
+      setLoading(true);
+    } else if (mode === 'refresh') {
+      setRefreshing(true);
+    }
+
     try {
+      const currentUser = userRef.current;
       const [specialtyResponse, categoryResponse, walletResponse, workerProfileResponse] = await Promise.all([
         api.get('/workers/specialties'),
         api.get('/users/categories'),
         api.get('/wallet/my-wallet'),
-        user?._id ? api.get(`/workers/${user._id}`).catch(() => null) : Promise.resolve(null),
+        currentUser?._id ? api.get(`/workers/${currentUser._id}`).catch(() => null) : Promise.resolve(null),
       ]);
       const specialtyData = specialtyResponse.data.data || {};
       const walletData: WalletSnapshot = walletResponse.data.data || {};
-      const workerData = workerProfileResponse?.data?.data || user || {};
+      const workerData = workerProfileResponse?.data?.data || currentUser || {};
       setWorkerCertificates(Array.isArray(workerData?.certificates) ? workerData.certificates : []);
       setData({
         specialties: specialtyData.specialties || [],
@@ -201,16 +218,31 @@ export default function SpecialtiesScreen() {
       setCategories(categoryResponse.data.data || []);
       setWalletAvailableBalance(Math.max(0, Number(walletData.availableBalance ?? walletData.balance ?? 0)));
     } catch (error) {
-      toast.error(t('specialties.loadError'), getErrorMessage(error));
+      if (mode !== 'silent') {
+        toast.error(t('specialties.loadError'), getErrorMessage(error));
+      }
     } finally {
+      isLoadingRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
-  }, [t, user]);
+  }, [t, toast]);
 
-  useFocusEffect(useCallback(() => {
-    load();
-  }, [load]));
+  const loadRef = useRef(load);
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        loadRef.current('initial');
+      } else {
+        loadRef.current('silent');
+      }
+    }, [])
+  );
 
   const specialties = useMemo(
     () => [...data.specialties].sort((left, right) => left.priority - right.priority),
@@ -236,7 +268,7 @@ export default function SpecialtiesScreen() {
     setWorkingKey(key);
     try {
       await action();
-      await load(true);
+      await load('refresh');
       alertModal.showAlert(
         t('specialties.done'),
         successMessage,
@@ -605,7 +637,7 @@ export default function SpecialtiesScreen() {
 
         <ScrollView
           contentContainerStyle={[styles.content, { paddingTop: 4, paddingBottom: Math.max(insets.bottom + 40, 60) }]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.cyan} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('refresh')} tintColor={colors.cyan} />}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >

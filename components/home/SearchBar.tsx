@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { alpha, Spacing, BorderRadius, useTheme, useThemeTypography } from '../../constants/Theme';
-import { BlurView } from 'expo-blur';
 import { useIsRTL } from '../../context/LanguageContext';
 
 interface SearchBarProps {
@@ -12,103 +11,96 @@ interface SearchBarProps {
   variant?: 'header' | 'section';
 }
 
-export function SearchBar({
+export const SearchBar = React.memo(function SearchBar({
   value,
   onChangeText,
   placeholder = 'Search services...',
-  variant = 'section'
+  variant = 'section',
 }: SearchBarProps) {
   const theme = useTheme();
   const typography = useThemeTypography();
   const isRTL = useIsRTL();
+  const [isFocused, setIsFocused] = useState(false);
 
-  if (variant === 'header') {
-    // Header version - compact
-    return (
-      <View style={styles.headerContainer}>
-        <BlurView
-          intensity={theme.id === 'current' ? 10 : 6}
-          tint={theme.blurTint}
-          style={[
-            styles.headerInner,
-            {
-              borderColor: theme.colors.border.subtle,
-              backgroundColor: theme.colors.surface.subtle,
-            },
-          ]}
-        >
-          <Search size={18} color={theme.colors.text.muted} strokeWidth={1.5} />
-          <TextInput
-            style={[
-              styles.headerInput,
-              {
-                color: theme.colors.input.text,
-                textAlign: isRTL ? 'right' : 'left',
-                writingDirection: isRTL ? 'rtl' : 'ltr',
-              },
-            ]}
-            placeholder={placeholder}
-            placeholderTextColor={theme.colors.input.placeholder}
-            value={value}
-            onChangeText={onChangeText}
-            selectionColor={theme.colors.brand.primary}
-            textAlignVertical="center"
-          />
-          {value.length > 0 && (
-            <TouchableOpacity onPress={() => onChangeText('')} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-              <X size={16} color={theme.colors.text.muted} strokeWidth={2} />
-            </TouchableOpacity>
-          )}
-        </BlurView>
-      </View>
-    );
-  }
+  const isDark = theme.isDark;
+  const activeCyan = theme.colors.brand.primary || '#00F5FF';
 
-  // Section version - better styling
+  // High-contrast visible card background so search bar is crystal clear on dark starry wallpapers
+  const containerBg = isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.96)';
+  const borderColor = isFocused
+    ? activeCyan
+    : isDark
+    ? 'rgba(0, 245, 255, 0.38)'
+    : 'rgba(0, 0, 0, 0.16)';
+  const placeholderColor = isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(15, 23, 42, 0.55)';
+  const textColor = isDark ? '#FFFFFF' : '#0F172A';
+
+  const isHeader = variant === 'header';
+
   return (
-    <View style={styles.container}>
-      <BlurView
-        intensity={theme.id === 'current' ? 15 : 6}
-        tint={theme.blurTint}
+    <View style={isHeader ? styles.headerContainer : styles.container}>
+      <View
         style={[
-          styles.searchInner,
+          isHeader ? styles.headerInner : styles.searchInner,
           {
-            borderColor: alpha(theme.colors.brand.primary, 0.2),
-            backgroundColor: alpha(theme.colors.brand.primary, theme.id === 'current' ? 0.05 : 0.06),
+            borderColor,
+            backgroundColor: containerBg,
+            borderWidth: isFocused ? 1.5 : 1.2,
           },
+          isFocused && styles.focusedGlow,
         ]}
       >
-        <Search size={19} color={theme.colors.brand.primary} strokeWidth={2} />
+        <View style={[styles.iconContainer, isRTL ? { marginLeft: 10, marginRight: 0 } : { marginRight: 10 }]}>
+          <Search
+            size={isHeader ? 18 : 20}
+            color={isFocused ? activeCyan : isDark ? 'rgba(0, 245, 255, 0.9)' : activeCyan}
+            strokeWidth={2.2}
+          />
+        </View>
+
         <TextInput
           style={[
-            styles.input,
+            isHeader ? styles.headerInput : styles.input,
             {
-              color: theme.colors.input.text,
+              color: textColor,
               textAlign: isRTL ? 'right' : 'left',
               writingDirection: isRTL ? 'rtl' : 'ltr',
             },
           ]}
           placeholder={placeholder}
-          placeholderTextColor={theme.colors.input.placeholder}
+          placeholderTextColor={placeholderColor}
           value={value}
           onChangeText={onChangeText}
-          selectionColor={theme.colors.brand.primary}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          selectionColor={activeCyan}
           textAlignVertical="center"
+          autoCorrect={false}
+          spellCheck={false}
+          autoCapitalize="none"
+          returnKeyType="search"
         />
+
         {value.length > 0 && (
-          <TouchableOpacity onPress={() => onChangeText('')} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-            <X size={18} color={theme.colors.brand.primary} strokeWidth={2} />
+          <TouchableOpacity
+            onPress={() => onChangeText('')}
+            hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
+            style={[styles.clearBtn, isRTL ? { marginRight: 8, marginLeft: 0 } : { marginLeft: 8 }]}
+            activeOpacity={0.7}
+          >
+            <View style={styles.clearBadge}>
+              <X size={14} color="#000" strokeWidth={3} />
+            </View>
           </TouchableOpacity>
         )}
-      </BlurView>
+      </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   headerContainer: {
     marginBottom: Spacing.l,
-    overflow: 'hidden',
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.l,
   },
@@ -117,35 +109,59 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.m,
     paddingVertical: Spacing.s,
-    borderWidth: 1,
     borderRadius: BorderRadius.full,
   },
   headerInput: {
     flex: 1,
     marginHorizontal: Spacing.s,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '500',
     paddingVertical: 0,
   },
   container: {
     marginBottom: Spacing.l,
     marginHorizontal: Spacing.l,
-    overflow: 'hidden',
     borderRadius: BorderRadius.lg,
+    shadowColor: '#00F5FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    elevation: 3,
   },
   searchInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    height: 48,
-    borderWidth: 1,
+    paddingHorizontal: 15,
+    height: 50,
     borderRadius: BorderRadius.lg,
+  },
+  focusedGlow: {
+    shadowColor: '#00F5FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
-    marginHorizontal: 8,
-    fontSize: 13.5,
-    fontWeight: '500',
+    fontSize: 14.5,
+    fontWeight: '600',
     paddingVertical: 0,
+  },
+  clearBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#00F5FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

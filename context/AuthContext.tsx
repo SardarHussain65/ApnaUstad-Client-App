@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AppState, DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const roleRef = useRef<UserRole>(null);
   const userRef = useRef<UserProfile | WorkerProfile | null>(null);
   const lastRefreshedRef = useRef<number>(0);
+  const lastProfileRefreshedRef = useRef<number>(0);
   const accountStatusRef = useRef<AccountStatus | null>(null);
 
   useEffect(() => {
@@ -168,13 +169,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const currentUser = userRef.current;
     if (!currentToken || !currentRole || !currentUser?._id) return null;
 
+    // Rate-limit network requests to once every 15 seconds to prevent runaway backend call loops
+    const now = Date.now();
+    if (now - lastProfileRefreshedRef.current < 15000) {
+      return currentUser;
+    }
+    lastProfileRefreshedRef.current = now;
+
     try {
       const endpoint = currentRole === 'worker' ? `/workers/${currentUser._id}` : `/users/${currentUser._id}`;
       const response = await api.get(endpoint);
       const payload = response.data;
       const freshUser = payload.data || payload;
       if (freshUser && freshUser._id) {
-        setUserState(freshUser);
+        setUserState((prev) => {
+          if (prev && JSON.stringify(prev) === JSON.stringify(freshUser)) {
+            return prev;
+          }
+          return freshUser;
+        });
         setAccountStatusState(buildAccountStatus(freshUser));
         await AsyncStorage.setItem('user_data', JSON.stringify(freshUser));
         return freshUser;
@@ -444,8 +457,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const authContextValue = useMemo(() => ({
+    role,
+    user,
+    token,
+    refreshToken,
+    isLoading,
+    accountStatus,
+    setAuth,
+    setRole: setRoleState,
+    updateUser,
+    updateAccountStatus,
+    refreshAccountStatus,
+    refreshUserProfile,
+    logout,
+  }), [role, user, token, refreshToken, isLoading, accountStatus, refreshAccountStatus, refreshUserProfile]);
+
   return (
-    <AuthContext.Provider value={{ role, user, token, refreshToken, isLoading, accountStatus, setAuth, setRole: setRoleState, updateUser, updateAccountStatus, refreshAccountStatus, refreshUserProfile, logout }}>
+    <AuthContext.Provider value={authContextValue}>
       {children}
     </AuthContext.Provider>
   );
