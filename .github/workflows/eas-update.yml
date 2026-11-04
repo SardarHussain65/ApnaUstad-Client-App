@@ -42,24 +42,26 @@ jobs:
       # -------------------------------------------------------------
       # Mode A: Full Android APK Build
       # Triggers if:
-      # 1. Commit message contains '[build]' or 'build'
-      # 2. Or manually chosen as 'build' in GitHub Actions tab
+      # 1. Commit message contains '[build]' or '[apk]' or 'build-apk'
+      # 2. Or manually chosen as 'build' in GitHub Actions workflow_dispatch
       # -------------------------------------------------------------
       - name: 📱 Build Android Preview APK
         if: |
           github.event.inputs.action == 'build' ||
           contains(github.event.head_commit.message, '[build]') ||
-          contains(github.event.head_commit.message, 'build')
+          contains(github.event.head_commit.message, '[apk]') ||
+          contains(github.event.head_commit.message, 'build-apk')
         run: eas build --profile preview --platform android --non-interactive
 
       # -------------------------------------------------------------
       # Mode B: Fast Over-The-Air (OTA) Update (Default for all normal commits)
-      # Triggers if NOT a build request
+      # Triggers if NOT a full build request
       # -------------------------------------------------------------
       - name: 🚀 Publish Over-The-Air (OTA) Update
         if: |
           github.event.inputs.action == 'update' ||
           (!contains(github.event.head_commit.message, '[build]') &&
-           !contains(github.event.head_commit.message, 'build') &&
+           !contains(github.event.head_commit.message, '[apk]') &&
+           !contains(github.event.head_commit.message, 'build-apk') &&
            github.event.inputs.action == '')
         run: eas update --auto
