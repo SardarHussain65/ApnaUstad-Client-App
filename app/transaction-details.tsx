@@ -40,6 +40,7 @@ import {
   ChevronRight,
   Clock3,
   CreditCard,
+  FileText,
   MapPin,
   MessageCircle,
   Navigation,
@@ -385,8 +386,8 @@ export default function TransactionDetailsScreen() {
   }, [workerLocation, booking?.worker, meta?.counterParty, isValidPakistanCoord]);
 
   // Worker has arrived at customer workplace when status is 'ongoing' or 'completed'
-  const isWorkerArrived = status === 'ongoing' || status === 'completed';
-  const showMapSection = !isWorkerArrived && status !== 'cancelled';
+  const isWorkerArrived = status === 'ongoing' || status === 'completed' || (status as string) === 'started' || (status as string) === 'in_progress';
+  const showMapSection = !isWorkerArrived && status !== 'cancelled' && status !== 'pending';
 
   // Route calculation
   const drawRouteBetween = useCallback(async (from: LocationType, to: LocationType) => {
@@ -585,6 +586,467 @@ export default function TransactionDetailsScreen() {
 
   const mapHeight = Math.round(windowHeight * 0.40);
 
+  const isDone = status === 'completed';
+  const isDark = theme.isDark;
+  const cardBg = isDark ? '#0C101E' : '#FFFFFF';
+  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.14)';
+  const metaDividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
+
+  const handleStartJob = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    confirmModal.showConfirm(
+      t('transactionDetails.confirmStartTitle', 'Start Service?'),
+      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
+      () => {
+        confirmModal.closeConfirm();
+        updateStatus(
+          { bookingId: id as string, status: 'ongoing' },
+          {
+            onSuccess: () => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              refetch();
+            },
+            onError: (error: any) => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
+              alertModal.showAlert(
+                t('common.error', 'Error'),
+                msg,
+                undefined,
+                'error',
+                t('common.ok', 'OK')
+              );
+            },
+          }
+        );
+      },
+      undefined,
+      t('transactionDetails.startJob', 'Start Job'),
+      t('common.cancel', 'Cancel'),
+      colors.cyan
+    );
+  }, [confirmModal, t, updateStatus, id, refetch, alertModal, colors.cyan]);
+
+  const handleCompleteJob = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    confirmModal.showConfirm(
+      t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
+      t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
+      () => {
+        confirmModal.closeConfirm();
+        updateStatus(
+          { bookingId: id as string, status: 'completed' },
+          {
+            onSuccess: () => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              refetch();
+            },
+            onError: (error: any) => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const msg = error?.response?.data?.message || t('transactionDetails.completeJobFailed', 'Could not complete job. Please check your connection and try again.');
+              alertModal.showAlert(
+                t('common.error', 'Error'),
+                msg,
+                undefined,
+                'error',
+                t('common.ok', 'OK')
+              );
+            },
+          }
+        );
+      },
+      undefined,
+      t('transactionDetails.completeJob', 'Complete Job'),
+      t('common.cancel', 'Cancel'),
+      colors.success
+    );
+  }, [confirmModal, t, updateStatus, id, refetch, alertModal, colors.success]);
+
+  const handleConfirmCashPayment = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    confirmModal.showConfirm(
+      t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
+      t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
+        amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
+      }),
+      () => {
+        confirmModal.closeConfirm();
+        payBooking(
+          { bookingId: id as string, paymentMethod: 'cash' },
+          {
+            onSuccess: () => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+              queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+              refetch();
+              setShowReviewModal(true);
+            },
+            onError: (error: any) => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+              alertModal.showAlert(
+                t('transactionDetails.paymentBlocked', 'Payment paused'),
+                msg,
+                undefined,
+                'error',
+                t('common.ok', 'OK')
+              );
+            },
+          }
+        );
+      },
+      undefined,
+      t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
+      t('common.cancel', 'Cancel'),
+      colors.success
+    );
+  }, [confirmModal, t, booking, payBooking, id, queryClient, refetch, alertModal, colors.success]);
+
+  const renderCards = () => (
+    <View style={styles.cardsWrap}>
+      {/* ── 1. Status & Timeline Stepper Card ── */}
+      <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        <View style={styles.cardHeaderRow}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={[styles.cardHeaderTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
+              {statusHeadline}
+            </Text>
+            <Text style={[styles.cardHeaderSub, { color: theme.colors.text.muted }]}>
+              {isDone
+                ? t('transactionDetails.jobCompletedSub', 'Work finished & verified')
+                : isWorkerArrived
+                ? t('transactionDetails.workInProgressSub', 'Ustad is actively working on site')
+                : t('transactionDetails.enRouteSub', 'Ustad is heading to your location')}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.urgencyTag,
+              {
+                backgroundColor: isInstant ? alpha(colors.worker, 0.12) : alpha(colors.cyan, 0.10),
+                borderColor: isInstant ? alpha(colors.worker, 0.35) : alpha(colors.cyan, 0.3),
+              },
+            ]}
+          >
+            <Zap size={11} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.5} />
+            <Text
+              style={[
+                styles.urgencyTagText,
+                { color: isInstant ? colors.worker : colors.cyan },
+              ]}
+            >
+              {isInstant ? t('home.worker.instant', 'Urgent') : t('transactionDetails.scheduled', 'Scheduled')}
+            </Text>
+          </View>
+        </View>
+
+        {/* 4-Step Progress Stepper */}
+        <View style={styles.stepperContainer}>
+          {STEPS.map((step, idx) => {
+            const isCompleted = isDone ? true : idx < visibleStepIndex;
+            const isCurrent = isDone ? false : idx === visibleStepIndex;
+            const isFuture = isDone ? false : idx > visibleStepIndex;
+
+            return (
+              <React.Fragment key={step.value}>
+                <View style={styles.stepItem}>
+                  <View
+                    style={[
+                      styles.stepNode,
+                      isCompleted && styles.stepNodeCompleted,
+                      isCurrent && styles.stepNodeCurrent,
+                      isFuture && [styles.stepNodeFuture, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(15,23,42,0.18)' }],
+                    ]}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 size={13} color="#001014" strokeWidth={3} />
+                    ) : isCurrent ? (
+                      <View style={styles.stepCurrentCore} />
+                    ) : (
+                      <View style={[styles.stepFutureCore, { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(15,23,42,0.18)' }]} />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      (isCompleted || isCurrent) ? styles.stepLabelActive : [styles.stepLabelDim, { color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(15,23,42,0.5)' }],
+                    ]}
+                  >
+                    {step.label}
+                  </Text>
+                </View>
+
+                {idx < STEPS.length - 1 && (
+                  <View
+                    style={[
+                      styles.stepLine,
+                      (isDone || idx < visibleStepIndex) ? styles.stepLineActive : [styles.stepLineDim, { backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.12)' }],
+                    ]}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── 2. Assigned Partner Profile Card (Ustad / Client) ── */}
+      <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        <View style={styles.partnerCardRow}>
+          <View style={styles.partnerInfo}>
+            <View style={[styles.avatarShell, { borderColor: isDark ? alpha(colors.cyan, 0.35) : 'rgba(15, 23, 42, 0.16)' }]}>
+              {partnerImage ? (
+                <Image source={{ uri: partnerImage }} style={styles.avatarImage} />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
+                  <Text style={[styles.avatarInitials, { color: colors.cyan }]}>
+                    {initialsFor(partnerName)}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.partnerDetails}>
+              <Text style={[styles.partnerNameText, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                {partnerName}
+              </Text>
+              <Text style={[styles.partnerSubText, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                {isWorker
+                  ? cleanAddress
+                  : `${partnerCategory}${partnerExperience > 0 ? ` • ${partnerExperience} yrs exp` : ''}`}
+              </Text>
+            </View>
+          </View>
+
+          {/* Direct Chat & Call Buttons */}
+          <View style={styles.partnerActions}>
+            <TouchableOpacity
+              style={[
+                styles.actionCircleButton,
+                styles.chatCircle,
+                (isCommunicationLocked || !partnerProfileId) && styles.buttonDisabled,
+              ]}
+              onPress={navigateToChat}
+              disabled={isCommunicationLocked || !partnerProfileId}
+              activeOpacity={0.8}
+            >
+              <MessageCircle size={18} color="#00E5FF" strokeWidth={2.4} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionCircleButton,
+                styles.callCircle,
+                (isCommunicationLocked || !partnerPhone) && styles.buttonDisabled,
+              ]}
+              onPress={callPartner}
+              disabled={isCommunicationLocked || !partnerPhone}
+              activeOpacity={0.8}
+            >
+              <Phone size={18} color="#001014" strokeWidth={2.4} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 3. Agreed Price & Payment Status Card ── */}
+      <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        <View style={styles.priceStrip}>
+          <View>
+            <Text style={[styles.priceStripLabel, { color: theme.colors.text.muted }]}>
+              {isWorker ? t('transactionDetails.yourEarning', 'Your Earning') : t('jobAssignedModal.agreedPrice', 'Agreed Rate')}
+            </Text>
+            <Text style={[styles.priceStripAmount, { color: theme.colors.text.primary }]}>
+              {amountText}
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.paymentStatusBadge,
+              {
+                backgroundColor: isPaid ? alpha(colors.success, 0.12) : alpha(colors.worker, 0.12),
+                borderColor: isPaid ? alpha(colors.success, 0.35) : alpha(colors.worker, 0.35),
+              },
+            ]}
+          >
+            <CreditCard size={14} color={isPaid ? colors.success : colors.worker} strokeWidth={2.4} />
+            <Text
+              style={[
+                styles.paymentStatusText,
+                { color: isPaid ? colors.success : colors.worker },
+              ]}
+            >
+              {isPaid ? t('transactionDetails.paid', 'Cash Paid') : t('transactionDetails.cashPending', 'Cash to Pay')}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 4. Schedule & Service Location Card ── */}
+      <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        <View style={styles.metaRow}>
+          <View style={[styles.metaIconWrap, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
+            <CalendarDays size={16} color={colors.cyan} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.metaRowLabel, { color: theme.colors.text.muted }]}>
+              {t('transactionDetails.scheduledTimeLabel', 'SCHEDULE')}
+            </Text>
+            <Text style={[styles.metaRowValue, { color: theme.colors.text.primary }]}>
+              {dateLabel} • {timeLabel}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.metaDivider, { backgroundColor: metaDividerColor }]} />
+
+        <View style={styles.metaRow}>
+          <View style={[styles.metaIconWrap, { backgroundColor: alpha(colors.worker, 0.12) }]}>
+            <MapPin size={16} color={colors.worker} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.metaRowLabel, { color: theme.colors.text.muted }]}>
+              {t('transactionDetails.serviceLocationLabel', 'SERVICE ADDRESS')}
+            </Text>
+            <Text style={[styles.metaRowValue, { color: theme.colors.text.primary }]} numberOfLines={2}>
+              {cleanAddress}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 5. Work Details & Evidence Media (if present) ── */}
+      {Boolean(serviceDescription && serviceDescription.trim()) && (
+        <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+          <View style={styles.noteHeaderRow}>
+            <FileText size={15} color={colors.cyan} strokeWidth={2.2} />
+            <Text style={[styles.noteTitle, { color: theme.colors.text.muted }]}>
+              {t('transactionDetails.serviceDescription', 'WORK DETAILS')}
+            </Text>
+          </View>
+          <Text style={[styles.noteText, { color: theme.colors.text.primary }]}>
+            {serviceDescription}
+          </Text>
+
+          {photosAndVideos.length > 0 && (
+            <View style={styles.galleryWrapper}>
+              <Text style={[styles.galleryTitle, { color: theme.colors.text.muted }]}>
+                {t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}
+              </Text>
+              <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} />
+            </View>
+          )}
+
+          {voiceBriefs.length > 0 && (
+            <View style={styles.galleryWrapper}>
+              <Text style={[styles.galleryTitle, { color: theme.colors.text.muted }]}>
+                {t('transactionDetails.voiceBrief', 'VOICE MEMO')}
+              </Text>
+              <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} />
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ── 6. Contextual Primary Actions / Rating ── */}
+      {isWorker && status !== 'completed' && status !== 'cancelled' && (
+        <View style={styles.actionContainer}>
+          {status === 'accepted' && (
+            <ActionButton
+              color={colors.cyan}
+              icon={Zap}
+              label={t('transactionDetails.startJob', 'Start Job')}
+              loading={isUpdating}
+              onPress={handleStartJob}
+            />
+          )}
+
+          {status === 'ongoing' && (
+            <ActionButton
+              color={colors.success}
+              icon={CheckCircle2}
+              label={t('transactionDetails.completeJob', 'Complete Job')}
+              loading={isUpdating}
+              onPress={handleCompleteJob}
+            />
+          )}
+        </View>
+      )}
+
+      {!isWorker && status === 'completed' && !isPaid && !hasActiveDispute && (
+        <View style={styles.actionContainer}>
+          <ActionButton
+            color={colors.success}
+            icon={CheckCircle2}
+            label={t('transactionDetails.confirmCash', 'Confirm Cash Payment')}
+            loading={isPaying}
+            onPress={handleConfirmCashPayment}
+          />
+        </View>
+      )}
+
+      {!isWorker && status === 'completed' && isPaid && (
+        <View style={styles.reviewSection}>
+          {booking?.isReviewed ? (
+            <View style={[styles.reviewNotice, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.3) }]}>
+              <CheckCircle2 size={16} color={colors.success} />
+              <Text style={[styles.reviewNoticeText, { color: colors.success }]}>
+                {t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.rateUstadActionCard,
+                {
+                  borderColor: alpha(colors.yellow, isDark ? 0.35 : 0.45),
+                  backgroundColor: alpha(colors.yellow, isDark ? 0.08 : 0.10),
+                },
+              ]}
+              onPress={() => setShowReviewModal(true)}
+              activeOpacity={0.82}
+            >
+              <View style={styles.rateUstadActionLeft}>
+                <View style={styles.starCircle}>
+                  <Star size={20} color="#FFD700" fill="#FFD700" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rateUstadActionTitle, { color: theme.colors.text.primary }]}>
+                    {t('review.rateYourUstad', 'Rate Your Ustad')}
+                  </Text>
+                  <Text style={[styles.rateUstadActionSub, { color: theme.colors.text.muted }]}>
+                    {t('review.rateYourUstadSub', 'Share your review & rate the service')}
+                  </Text>
+                </View>
+              </View>
+              {isRTL ? (
+                <ChevronLeft size={18} color={theme.colors.text.muted} />
+              ) : (
+                <ChevronRight size={18} color={theme.colors.text.muted} />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {canRaiseDispute && !isJobEnded && !hasActiveDispute && (
+        <TouchableOpacity
+          style={styles.disputeLink}
+          onPress={() => setShowDisputeModal(true)}
+          activeOpacity={0.7}
+        >
+          <Scale size={13} color={theme.colors.text.muted} strokeWidth={2} />
+          <Text style={[styles.disputeLinkText, { color: theme.colors.text.muted }]}>
+            {t('transactionDetails.raiseDisputeLink', 'Have an issue with this job? Tap to raise dispute')}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.root, { backgroundColor: theme.isDark ? '#080C16' : theme.colors.background.screen }]}>
       <StatusBar style={theme.isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
@@ -764,461 +1226,55 @@ export default function TransactionDetailsScreen() {
             <TouchableOpacity
               style={[
                 styles.circleButton,
-                { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderWidth: 1, borderColor: alpha(theme.colors.border.subtle, 0.5) }
+                {
+                  backgroundColor: isDark ? alpha(theme.colors.surface.card, 0.9) : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: isDark ? alpha(theme.colors.border.subtle, 0.5) : 'rgba(15, 23, 42, 0.18)',
+                  opacity: 0.35,
+                }
               ]}
-              onPress={openExternalMaps}
-              activeOpacity={0.8}
+              disabled={true}
+              activeOpacity={1}
             >
-              <Navigation size={17} color={colors.cyan} strokeWidth={2.4} />
+              <Navigation size={17} color={theme.colors.text.dim} strokeWidth={2.4} />
             </TouchableOpacity>
           </View>
         </View>
       )}
 
-      {/* ──────────────── Lower Section: Interactive Bottom Sheet ──────────────── */}
-      <View
-        style={[
-          styles.bottomSheet,
-          !showMapSection && styles.bottomSheetFull,
-          {
-            backgroundColor: theme.isDark ? '#0C101E' : theme.colors.surface.card,
-            borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
-          },
-        ]}
-      >
-        {/* Sheet Drag Indicator (shown only when map is visible above) */}
-        {showMapSection && <View style={styles.sheetDragBar} />}
-
-        {/* Status Title & Urgency Tag */}
-        <View style={styles.sheetHeader}>
-          <Text
-            style={[styles.statusHeadline, typography.threeD, { color: theme.colors.text.primary }]}
-            numberOfLines={1}
-          >
-            {statusHeadline}
-          </Text>
-
-          <View
-            style={[
-              styles.urgencyTag,
-              {
-                backgroundColor: isInstant ? alpha(colors.worker, 0.14) : alpha(colors.cyan, 0.12),
-                borderColor: isInstant ? alpha(colors.worker, 0.35) : alpha(colors.cyan, 0.3),
-              },
+      {/* ──────────────── Main Content Area ──────────────── */}
+      {showMapSection ? (
+        <View
+          style={[
+            styles.bottomSheet,
+            {
+              backgroundColor: isDark ? '#0C101E' : '#F8FAFC',
+              borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15, 23, 42, 0.12)',
+            },
+          ]}
+        >
+          <View style={styles.sheetDragBar} />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: insets.bottom + 28 },
             ]}
           >
-            <Zap size={11} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.5} />
-            <Text
-              style={[
-                styles.urgencyTagText,
-                { color: isInstant ? colors.worker : colors.cyan },
-              ]}
-            >
-              {isInstant ? t('home.worker.instant', 'Urgent') : t('transactionDetails.scheduled', 'Scheduled')}
-            </Text>
-          </View>
+            {renderCards()}
+          </ScrollView>
         </View>
-
-        {/* 4-Step Progress Stepper */}
-        <View style={styles.stepperContainer}>
-          {STEPS.map((step, idx) => {
-            const isCompleted = idx < visibleStepIndex;
-            const isCurrent = idx === visibleStepIndex;
-            const isFuture = idx > visibleStepIndex;
-
-            return (
-              <React.Fragment key={step.value}>
-                <View style={styles.stepItem}>
-                  <View
-                    style={[
-                      styles.stepNode,
-                      isCompleted && styles.stepNodeCompleted,
-                      isCurrent && styles.stepNodeCurrent,
-                      isFuture && styles.stepNodeFuture,
-                    ]}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 size={12} color="#001014" strokeWidth={3} />
-                    ) : isCurrent ? (
-                      <View style={styles.stepCurrentCore} />
-                    ) : (
-                      <View style={styles.stepFutureCore} />
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.stepLabel,
-                      (isCompleted || isCurrent) ? styles.stepLabelActive : styles.stepLabelDim,
-                    ]}
-                  >
-                    {step.label}
-                  </Text>
-                </View>
-
-                {idx < STEPS.length - 1 && (
-                  <View
-                    style={[
-                      styles.stepLine,
-                      idx < visibleStepIndex ? styles.stepLineActive : styles.stepLineDim,
-                    ]}
-                  />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </View>
-
-        {/* Partner Profile Row with Action Buttons */}
-        <View style={[styles.partnerRow, { borderColor: alpha(theme.colors.text.primary, 0.08) }]}>
-          <View style={styles.partnerInfo}>
-            <View style={styles.avatarShell}>
-              {partnerImage ? (
-                <Image source={{ uri: partnerImage }} style={styles.avatarImage} />
-              ) : (
-                <View style={[styles.avatarFallback, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
-                  <Text style={[styles.avatarInitials, { color: colors.cyan }]}>
-                    {initialsFor(partnerName)}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.partnerDetails}>
-              <Text style={[styles.partnerNameText, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                {partnerName}
-              </Text>
-              <Text style={[styles.partnerSubText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                {isWorker
-                  ? cleanAddress
-                  : `${partnerCategory}${partnerExperience > 0 ? ` • ${partnerExperience} yrs exp` : ''}`}
-              </Text>
-            </View>
-          </View>
-
-          {/* Direct Chat & Call Buttons */}
-          <View style={styles.partnerActions}>
-            <TouchableOpacity
-              style={[
-                styles.actionCircleButton,
-                styles.chatCircle,
-                (isCommunicationLocked || !partnerProfileId) && styles.buttonDisabled,
-              ]}
-              onPress={navigateToChat}
-              disabled={isCommunicationLocked || !partnerProfileId}
-              activeOpacity={0.8}
-            >
-              <MessageCircle size={18} color="#00E5FF" strokeWidth={2.4} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.actionCircleButton,
-                styles.callCircle,
-                (isCommunicationLocked || !partnerPhone) && styles.buttonDisabled,
-              ]}
-              onPress={callPartner}
-              disabled={isCommunicationLocked || !partnerPhone}
-              activeOpacity={0.8}
-            >
-              <Phone size={18} color="#001014" strokeWidth={2.4} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Scrollable Summary Details */}
+      ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 24 },
+            styles.fullScrollContent,
+            { paddingBottom: insets.bottom + 28 },
           ]}
         >
-          {/* Price & Payment Badge */}
-          <View
-            style={[
-              styles.priceStrip,
-              {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.035)' : theme.colors.surface.subtle,
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.06)' : theme.colors.border.subtle,
-              },
-            ]}
-          >
-            <View>
-              <Text style={[styles.priceStripLabel, { color: theme.colors.text.muted }]}>
-                {isWorker ? t('transactionDetails.yourEarning', 'Your Earning') : t('jobAssignedModal.agreedPrice', 'Agreed Price')}
-              </Text>
-              <Text style={[styles.priceStripAmount, { color: theme.colors.text.primary }]}>
-                {amountText}
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.paymentStatusBadge,
-                {
-                  backgroundColor: isPaid ? alpha(colors.success, 0.12) : alpha(colors.worker, 0.12),
-                  borderColor: isPaid ? alpha(colors.success, 0.3) : alpha(colors.worker, 0.3),
-                },
-              ]}
-            >
-              <CreditCard size={13} color={isPaid ? colors.success : colors.worker} strokeWidth={2.4} />
-              <Text
-                style={[
-                  styles.paymentStatusText,
-                  { color: isPaid ? colors.success : colors.worker },
-                ]}
-              >
-                {isPaid ? t('transactionDetails.paid', 'Paid') : t('transactionDetails.cashPending', 'Cash to Pay')}
-              </Text>
-            </View>
-          </View>
-
-          {/* Schedule & Location Quick Bar */}
-          <View style={styles.quickBar}>
-            <View style={styles.quickBarItem}>
-              <CalendarDays size={13} color={colors.cyan} strokeWidth={2.2} />
-              <Text style={[styles.quickBarText, { color: theme.colors.text.secondary }]}>
-                {dateLabel} • {timeLabel}
-              </Text>
-            </View>
-            <View style={styles.quickBarDivider} />
-            <View style={styles.quickBarItem}>
-              <MapPin size={13} color={colors.worker} strokeWidth={2.2} />
-              <Text style={[styles.quickBarText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
-                {cleanAddress}
-              </Text>
-            </View>
-          </View>
-
-          {/* Service Description Note (if provided) */}
-          {Boolean(serviceDescription && serviceDescription.trim()) && (
-            <View style={[styles.noteBox, { borderColor: alpha(theme.colors.text.primary, 0.08) }]}>
-              <Text style={[styles.noteTitle, { color: theme.colors.text.muted }]}>
-                {t('transactionDetails.serviceDescription', 'What needs fixing')}
-              </Text>
-              <Text style={[styles.noteText, { color: theme.colors.text.primary }]}>
-                {serviceDescription}
-              </Text>
-            </View>
-          )}
-
-          {/* Evidence Audio/Video Galleries */}
-          {photosAndVideos.length > 0 && (
-            <View style={styles.galleryWrapper}>
-              <Text style={[styles.noteTitle, { color: theme.colors.text.muted, marginBottom: 8 }]}>
-                {t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}
-              </Text>
-              <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} />
-            </View>
-          )}
-
-          {voiceBriefs.length > 0 && (
-            <View style={styles.galleryWrapper}>
-              <Text style={[styles.noteTitle, { color: theme.colors.text.muted, marginBottom: 8 }]}>
-                {t('transactionDetails.voiceBrief', 'VOICE MEMO')}
-              </Text>
-              <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} />
-            </View>
-          )}
-
-          {/* ──────────────── Primary Contextual Actions ──────────────── */}
-
-          {/* Worker Controls */}
-          {isWorker && status !== 'completed' && status !== 'cancelled' && (
-            <View style={styles.actionContainer}>
-              {status === 'accepted' && (
-                <ActionButton
-                  color={colors.cyan}
-                  icon={Zap}
-                  label={t('transactionDetails.startJob', 'Start Job')}
-                  loading={isUpdating}
-                  onPress={() => {
-                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    confirmModal.showConfirm(
-                      t('transactionDetails.confirmStartTitle', 'Start Service?'),
-                      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
-                      () => {
-                        confirmModal.closeConfirm();
-                        updateStatus(
-                          { bookingId: id as string, status: 'ongoing' },
-                          {
-                            onSuccess: () => {
-                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                              refetch();
-                            },
-                            onError: (error: any) => {
-                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                              const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
-                              alertModal.showAlert(
-                                t('common.error', 'Error'),
-                                msg,
-                                undefined,
-                                'error',
-                                t('common.ok', 'OK')
-                              );
-                            },
-                          }
-                        );
-                      },
-                      undefined,
-                      t('transactionDetails.startJob', 'Start Job'),
-                      t('common.cancel', 'Cancel'),
-                      colors.cyan
-                    );
-                  }}
-                />
-              )}
-
-              {status === 'ongoing' && (
-                <ActionButton
-                  color={colors.success}
-                  icon={CheckCircle2}
-                  label={t('transactionDetails.completeJob', 'Complete Job')}
-                  loading={isUpdating}
-                  onPress={() => {
-                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    confirmModal.showConfirm(
-                      t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
-                      t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
-                      () => {
-                        confirmModal.closeConfirm();
-                        updateStatus(
-                          { bookingId: id as string, status: 'completed' },
-                          {
-                            onSuccess: () => {
-                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                              refetch();
-                            },
-                            onError: (error: any) => {
-                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                              const msg = error?.response?.data?.message || t('transactionDetails.completeJobFailed', 'Could not complete job. Please check your connection and try again.');
-                              alertModal.showAlert(
-                                t('common.error', 'Error'),
-                                msg,
-                                undefined,
-                                'error',
-                                t('common.ok', 'OK')
-                              );
-                            },
-                          }
-                        );
-                      },
-                      undefined,
-                      t('transactionDetails.completeJob', 'Complete Job'),
-                      t('common.cancel', 'Cancel'),
-                      colors.success
-                    );
-                  }}
-                />
-              )}
-            </View>
-          )}
-
-          {/* Client Settlement (Cash Payment Confirmation) */}
-          {!isWorker && status === 'completed' && !isPaid && !hasActiveDispute && (
-            <View style={styles.actionContainer}>
-              <ActionButton
-                color={colors.success}
-                icon={CheckCircle2}
-                label={t('transactionDetails.confirmCash', 'Confirm Cash Payment')}
-                loading={isPaying}
-                onPress={() => {
-                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  confirmModal.showConfirm(
-                    t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
-                    t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
-                      amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
-                    }),
-                    () => {
-                      confirmModal.closeConfirm();
-                      payBooking(
-                        { bookingId: id as string, paymentMethod: 'cash' },
-                        {
-                          onSuccess: () => {
-                            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
-                            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
-                            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-                            refetch();
-                            setShowReviewModal(true);
-                          },
-                          onError: (error: any) => {
-                            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                            const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-                            alertModal.showAlert(
-                              t('transactionDetails.paymentBlocked', 'Payment paused'),
-                              msg,
-                              undefined,
-                              'error',
-                              t('common.ok', 'OK')
-                            );
-                          },
-                        }
-                      );
-                    },
-                    undefined,
-                    t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
-                    t('common.cancel', 'Cancel'),
-                    colors.success
-                  );
-                }}
-              />
-            </View>
-          )}
-
-          {/* Client Feedback Notice / Rate Action */}
-          {!isWorker && status === 'completed' && isPaid && (
-            <View style={styles.reviewSection}>
-              {booking.isReviewed ? (
-                <View style={[styles.reviewNotice, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.3) }]}>
-                  <CheckCircle2 size={16} color={colors.success} />
-                  <Text style={[styles.reviewNoticeText, { color: colors.success }]}>
-                    {t('transactionDetails.feedbackRecorded', 'Your feedback has been recorded for this job.')}
-                  </Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.rateUstadActionCard,
-                    {
-                      borderColor: alpha(colors.yellow, 0.35),
-                      backgroundColor: alpha(colors.yellow, 0.08),
-                    },
-                  ]}
-                  onPress={() => setShowReviewModal(true)}
-                  activeOpacity={0.82}
-                >
-                  <View style={styles.rateUstadActionLeft}>
-                    <Star size={18} color="#FFD700" fill="#FFD700" />
-                    <Text style={[styles.rateUstadActionTitle, { color: theme.colors.text.primary }]}>
-                      {t('review.rateYourUstad', 'Rate Your Ustad')}
-                    </Text>
-                  </View>
-                  {isRTL ? (
-                    <ChevronLeft size={16} color={theme.colors.text.muted} />
-                  ) : (
-                    <ChevronRight size={16} color={theme.colors.text.muted} />
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {/* Discreet Dispute Help Link */}
-          {canRaiseDispute && !isJobEnded && !hasActiveDispute && (
-            <TouchableOpacity
-              style={styles.disputeLink}
-              onPress={() => setShowDisputeModal(true)}
-              activeOpacity={0.7}
-            >
-              <Scale size={13} color={theme.colors.text.muted} strokeWidth={2} />
-              <Text style={[styles.disputeLinkText, { color: theme.colors.text.muted }]}>
-                {t('transactionDetails.raiseDisputeLink', 'Have an issue with this job? Tap to raise dispute')}
-              </Text>
-            </TouchableOpacity>
-          )}
+          {renderCards()}
         </ScrollView>
-      </View>
+      )}
 
       {/* ──────────────── Modals ──────────────── */}
       <ReviewModal
@@ -1531,6 +1587,85 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  cardsWrap: {
+    gap: 12,
+  },
+  fullScrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  cardSection: {
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  cardHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  cardHeaderSub: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  partnerCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 2,
+  },
+  metaIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaRowLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  metaRowValue: {
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
+  metaDivider: {
+    height: 1,
+    marginVertical: 10,
+  },
+  noteHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  galleryTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 8,
+    marginTop: 10,
+  },
   bottomSheetFull: {
     marginTop: 0,
     borderTopLeftRadius: 0,
@@ -1760,11 +1895,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    marginBottom: 10,
   },
   priceStripLabel: {
     fontSize: 9,
@@ -1878,19 +2008,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: BorderRadius.lg,
+    padding: 16,
+    borderRadius: 18,
     borderWidth: 1.2,
+    marginBottom: 14,
   },
   rateUstadActionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 14,
+    flex: 1,
+  },
+  starCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 215, 0, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   rateUstadActionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
+  },
+  rateUstadActionSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
   reviewCard: {
     padding: 14,
