@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, DeviceEventEmitter } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../services/api';
 import { socketService } from '../services/socketService';
 import { getPushToken } from '../services/notificationService';
 import { BASE_URL } from '../constants/Config';
@@ -150,25 +151,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const endpoint = currentRole === 'worker' ? '/workers/me/status' : '/users/me/status';
-      const response = await fetch(`${BASE_URL}/api/v1${endpoint}`, {
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-        },
-      });
-      if (!response.ok) {
-        // If token expired, invalid, or user not found -> automatically logout
-        if (response.status === 401 || response.status === 404 || response.status === 403) {
-          console.warn(`[AuthContext] Status check failed (${response.status}), user or token not found. Logging out.`);
-          await logout();
-        }
-        return null;
-      }
-      const payload = await response.json();
+      const response = await api.get(endpoint);
+      const payload = response.data;
       const status = buildAccountStatus(payload.data || payload);
       await updateAccountStatus(status);
       return status;
-    } catch (error) {
-      console.warn('Could not refresh account status:', error);
+    } catch (error: any) {
+      console.warn('[AuthContext] Could not refresh account status:', error?.message);
       return null;
     }
   }, [updateAccountStatus]);
@@ -181,23 +170,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const endpoint = currentRole === 'worker' ? `/workers/${currentUser._id}` : `/users/${currentUser._id}`;
-      const response = await fetch(`${BASE_URL}/api/v1${endpoint}`, {
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-        },
-      });
-      if (response.ok) {
-        const payload = await response.json();
-        const freshUser = payload.data || payload;
-        if (freshUser && freshUser._id) {
-          setUserState(freshUser);
-          setAccountStatusState(buildAccountStatus(freshUser));
-          await AsyncStorage.setItem('user_data', JSON.stringify(freshUser));
-          return freshUser;
-        }
+      const response = await api.get(endpoint);
+      const payload = response.data;
+      const freshUser = payload.data || payload;
+      if (freshUser && freshUser._id) {
+        setUserState(freshUser);
+        setAccountStatusState(buildAccountStatus(freshUser));
+        await AsyncStorage.setItem('user_data', JSON.stringify(freshUser));
+        return freshUser;
       }
-    } catch (error) {
-      console.warn('Could not refresh user profile:', error);
+    } catch (error: any) {
+      console.warn('[AuthContext] Could not refresh user profile:', error?.message);
     }
     return null;
   }, []);
@@ -266,6 +249,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // If logout() is already running, the interceptor's emit must not restart it.
       if (isLoggingOutRef.current) return;
       logout();
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('auth:token-refreshed', ({ token: newToken, refreshToken: newRefresh }) => {
+      console.log('🔄 [AuthContext] Updating token from background refresh');
+      setTokenState(newToken);
+      tokenRef.current = newToken;
+      if (newRefresh) {
+        setRefreshTokenState(newRefresh);
+      }
+      socketService.connect(newToken);
     });
 
     return () => subscription.remove();

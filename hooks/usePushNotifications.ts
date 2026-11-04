@@ -166,7 +166,7 @@ const handleNotificationTap = async (
 
         case 'general':
         default:
-          router.push('/(tabs)/index');
+          router.push('/(tabs)');
           break;
       }
     } else if (userRole === 'worker') {
@@ -236,7 +236,7 @@ const handleNotificationTap = async (
 
         case 'general':
         default:
-          router.push('/(tabs)/index');
+          router.push('/(tabs)');
           break;
       }
     }
@@ -256,7 +256,7 @@ const handleNotificationTap = async (
   } catch (error) {
     console.error('❌ Error handling notification tap:', error);
     // Fallback: go to home screen
-    router.push('/(tabs)/index');
+    router.push('/(tabs)');
   }
 };
 

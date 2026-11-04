@@ -18,6 +18,10 @@ import * as Updates from 'expo-updates';
 
 initCrashReporting();
 
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 
 const shouldRetryRequest = (failureCount: number, error: unknown) => {
   const response = (error as any)?.response;
@@ -87,7 +91,8 @@ function AccountRestrictionGate() {
       root === 'splash' ||
       root === 'onboarding' ||
       root === 'role-selection' ||
-      root === 'theme-language';
+      root === 'theme-language' ||
+      root === '+not-found';
 
     // If on a protected route but token or user is missing -> automatically redirect to role-selection
     if (!isPublicScreen && (!token || !user || !role)) {
@@ -122,7 +127,15 @@ function RootLayoutNav() {
     <ErrorBoundary>
       <IncomingJobProvider>
         <AccountRestrictionGate />
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="splash" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="role-selection" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+        </Stack>
         <BeautifulToastConfig />
       </IncomingJobProvider>
     </ErrorBoundary>

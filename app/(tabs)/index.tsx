@@ -8,14 +8,7 @@ import { WorkerHome } from '../../components/home/WorkerHome';
 
 export default function HomeTab() {
   const theme = useTheme();
-  const { role, token, user, isLoading, logout } = useAuth();
-
-  useEffect(() => {
-    if (!isLoading && (!token || !user || !role)) {
-      console.warn('[HomeTab] Missing token or user, triggering logout');
-      void logout();
-    }
-  }, [isLoading, token, user, role, logout]);
+  const { role, token, user, isLoading } = useAuth();
 
   if (isLoading) {
     return (

@@ -4,20 +4,22 @@ import { useAuth } from '../../context/AuthContext';
 import { CustomTabBar } from '../../components/navigation/TabBar';
 
 export default function TabLayout() {
-  const { role, token, user, logout } = useAuth();
+  const { role, token, user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Never trigger redirection or logout while auth state is still restoring from AsyncStorage
+    if (isLoading) return;
+
     if (!role || !token || !user) {
-      console.warn('[TabLayout] Missing token or user, logging out');
-      void logout();
+      console.warn('[TabLayout] Missing credentials on protected tab layout, redirecting to /role-selection');
       router.replace('/role-selection' as any);
       return;
     }
 
     // Global real-time events (job:new, bid:won, booking:accepted)
     // are safely handled by IncomingJobProvider and their respective screens.
-  }, [role, token, user]);
+  }, [role, token, user, isLoading, router]);
 
   return (
     <Tabs

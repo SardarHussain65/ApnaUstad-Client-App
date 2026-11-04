@@ -101,9 +101,15 @@ api.interceptors.response.use(
           console.log('Token refreshed successfully!');
           const { token: newAccessToken, refreshToken: newRefreshToken } = response.data.data || response.data;
 
-          // Save new tokens
+          // Save new tokens to storage
           await AsyncStorage.setItem('user_token', newAccessToken);
           await AsyncStorage.setItem('refresh_token', newRefreshToken);
+
+          // Notify AuthContext so in-memory token state and socket stay in sync
+          DeviceEventEmitter.emit('auth:token-refreshed', {
+            token: newAccessToken,
+            refreshToken: newRefreshToken,
+          });
 
           // Update header
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -119,16 +125,24 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         isRefreshing = false;
 
-        // Refresh failed, logout user
-        console.log('Token refresh failed:', refreshError?.message);
-        await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+        const status = refreshError?.response?.status;
+        console.warn('Token refresh error:', refreshError?.message, 'Status:', status);
 
-        // Dispatch logout event for AuthContext to react
-        DeviceEventEmitter.emit('auth:logout');
-        try {
-          const { router } = require('expo-router');
-          router.replace('/role-selection');
-        } catch {}
+        // Only wipe credentials and force logout if the server explicitly rejected the refresh token (401/403)
+        // If it's a network glitch, timeout, or server 5xx, do NOT log out the user!
+        if (status === 401 || status === 403) {
+          console.warn('Refresh token is invalid or expired. Logging out.');
+          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+
+          // Dispatch logout event for AuthContext to react
+          DeviceEventEmitter.emit('auth:logout');
+          try {
+            const { router } = require('expo-router');
+            router.replace('/role-selection');
+          } catch {}
+        } else {
+          console.warn('Network or server error during token refresh. Keeping user session intact.');
+        }
       }
     }
 
