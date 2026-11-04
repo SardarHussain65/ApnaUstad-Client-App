@@ -4,7 +4,8 @@ import { AppState, AppStateStatus, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import '../i18n';
-import { QueryClient, QueryClientProvider, DefaultOptions, focusManager } from "@tanstack/react-query";
+import { QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { queryClient } from "../lib/queryClient";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
@@ -23,38 +24,12 @@ export const unstable_settings = {
 };
 
 
-const shouldRetryRequest = (failureCount: number, error: unknown) => {
-  const response = (error as any)?.response;
-  if (response?.status === 423 && response?.data?.code === 'ACCOUNT_DEACTIVATED') {
-    return false;
-  }
-  return failureCount < 1;
-};
-
 // Bind React Native AppState to TanStack Query focus manager for auto-revalidation
 function onAppStateChange(status: AppStateStatus) {
   if (Platform.OS !== 'web') {
     focusManager.setFocused(status === 'active');
   }
 }
-
-// React Query default configuration - 20s staleTime allows instantaneous navigation while auto-refreshing background data
-const queryConfig: DefaultOptions = {
-  queries: {
-    staleTime: 1000 * 20, // 20 seconds
-    gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    retry: shouldRetryRequest,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  },
-  mutations: {
-    retry: shouldRetryRequest,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  },
-};
-
-const queryClient = new QueryClient({ defaultOptions: queryConfig });
 
 function ThemeSystemChrome() {
   const theme = useTheme();

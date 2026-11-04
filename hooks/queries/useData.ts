@@ -1,6 +1,7 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import api from '../../services/api';
 import { queryKeys } from '../../lib/queryKeyFactory';
+import { useAuth } from '../../context/AuthContext';
 
 // Types
 interface Category {

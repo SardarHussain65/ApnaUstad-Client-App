@@ -109,7 +109,14 @@ export {
 // UI Hooks
 export { useToast } from './useToast';
 export { useModal, useConfirmModal, useAlertModal, useBottomSheet } from './useUIModals';
-export { useUserLocation, type UserLocation } from './useUserLocation';
+export {
+  useUserLocation,
+  getCachedUserLocation,
+  setCachedUserLocation,
+  formatAddress,
+  extractCityFromAddress,
+  type UserLocation,
+} from './useUserLocation';
 
 // Query Key Factory
 export { queryKeys } from '../lib/queryKeyFactory';

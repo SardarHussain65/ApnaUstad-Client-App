@@ -6,6 +6,8 @@ import { socketService } from '../services/socketService';
 import { getPushToken } from '../services/notificationService';
 import { BASE_URL } from '../constants/Config';
 import { setUserContext, clearUserContext } from '../services/crashReportingService';
+import { clearAppQueryCache } from '../lib/queryClient';
+import { stopBackgroundLocationTracking } from '../services/backgroundLocationService';
 
 export type UserRole = 'client' | 'worker' | null;
 
@@ -212,7 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!savedToken || !savedUser || !savedRole) {
           if (savedToken || savedUser || savedRole) {
             console.log('[AuthContext] Incomplete auth state detected (token or user not found). Automatically logging out.');
-            await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+            await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data', 'active_enroute_booking_id']);
+            await clearAppQueryCache();
           }
           setRoleState(null);
           setTokenState(null);
@@ -231,7 +234,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!parsedUser || !parsedUser._id) {
           console.log('[AuthContext] User data invalid or corrupt. Automatically logging out.');
-          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data', 'active_enroute_booking_id']);
+          await clearAppQueryCache();
           setRoleState(null);
           setTokenState(null);
           setRefreshTokenState(null);
@@ -352,6 +356,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Invalid refresh token');
       }
 
+      // Purge any stale queries from previous account before establishing new session
+      await clearAppQueryCache();
+
       // ⚠️  IMPORTANT: Write to AsyncStorage FIRST before updating React state.
       // The usePushNotifications hook's effect fires synchronously when state changes.
       // Its API call uses an interceptor that reads the token from AsyncStorage.
@@ -429,6 +436,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Stop any background location updates for active missions
+      await stopBackgroundLocationTracking().catch(() => {});
+
+      // Completely purge in-memory React Query cache so previous account data (such as
+      // recent jobs, home summary, bookings, and wallet) is never displayed when another account logs in.
+      await clearAppQueryCache();
+
       setTokenState(null);
       setRefreshTokenState(null);
       setRoleState(null);
@@ -440,7 +454,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem('user_token'),
         AsyncStorage.removeItem('refresh_token'),
         AsyncStorage.removeItem('user_role'),
-        AsyncStorage.removeItem('user_data')
+        AsyncStorage.removeItem('user_data'),
+        AsyncStorage.removeItem('active_enroute_booking_id'),
       ]);
 
       // Navigate to role-selection so the user is never left on a ghost screen

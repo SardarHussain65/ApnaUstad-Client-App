@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
 import * as Location from 'expo-location';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -252,6 +252,8 @@ export function WorkerHome() {
     return getSavedCoordinates();
   }, [getSavedCoordinates]);
 
+  const lastSyncedLocationRef = React.useRef<{ latitude: number; longitude: number; time: number } | null>(null);
+
   const syncWorkerLocation = useCallback(async (coordinates?: WorkerCoordinates | null) => {
     try {
       if (!user?._id) return;
@@ -263,6 +265,17 @@ export function WorkerHome() {
       const isPakistan = latitude >= 23.0 && latitude <= 37.5 && longitude >= 60.0 && longitude <= 78.5;
 
       if (!isPakistan || isEmulator) return;
+
+      // Rate limit location updates: skip if moved less than ~50m and synced within 60s
+      if (lastSyncedLocationRef.current) {
+        const timeDiff = Date.now() - lastSyncedLocationRef.current.time;
+        const latDiff = Math.abs(latitude - lastSyncedLocationRef.current.latitude);
+        const lngDiff = Math.abs(longitude - lastSyncedLocationRef.current.longitude);
+        if (latDiff < 0.0005 && lngDiff < 0.0005 && timeDiff < 60000) {
+          return;
+        }
+      }
+      lastSyncedLocationRef.current = { latitude, longitude, time: Date.now() };
 
       const payload = { latitude, longitude };
       await api.patch(`/workers/${user._id}`, payload);
@@ -299,6 +312,9 @@ export function WorkerHome() {
     refetchAnalytics();
   }, [refetchSummary, refetchBids, refetchAnalytics]);
 
+  const refreshWorkerActivityRef = useRef(refreshWorkerActivity);
+  refreshWorkerActivityRef.current = refreshWorkerActivity;
+
   // Auto-refresh when WorkerHome regains focus (switching tabs / returning to home)
   useRefreshOnFocus(refreshWorkerActivity);
 
@@ -308,8 +324,8 @@ export function WorkerHome() {
     const debouncedRefresh = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        refreshWorkerActivity();
-      }, 600);
+        refreshWorkerActivityRef.current?.();
+      }, 800);
     };
     const events = [
       'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
@@ -321,7 +337,7 @@ export function WorkerHome() {
       if (timer) clearTimeout(timer);
       unsubs.forEach((u) => u());
     };
-  }, [token, refreshWorkerActivity]);
+  }, [token]);
 
   // ─── Booking Handlers ─────────────────────────────────────────────────────────
   const handleBookingDetails = useCallback((booking: Booking) => {

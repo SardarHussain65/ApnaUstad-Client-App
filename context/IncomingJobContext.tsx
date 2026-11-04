@@ -72,6 +72,18 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   const isJobTypeEnabled = useCallback((job: any) =>
     job?.urgency === 'instant' ? instantOnlineRef.current : scheduledOnlineRef.current, []);
 
+  // Flush all active job queues, dismissed lists, and modals when switching or logging out accounts
+  useEffect(() => {
+    setIncomingJobsQueue([]);
+    incomingJobsQueueRef.current = [];
+    setDismissedJobs([]);
+    setShowModal(false);
+    setPaidBooking(null);
+    setShowPaidModal(false);
+    setAssignedBooking(null);
+    setShowAssignedModal(false);
+  }, [user?._id]);
+
   useEffect(() => {
     if (role !== 'worker' || !workerId) {
       instantOnlineRef.current = false;

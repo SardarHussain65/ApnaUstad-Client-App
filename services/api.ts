@@ -27,6 +27,7 @@ api.interceptors.request.use(
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
+let last429ToastTime = 0;
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -49,10 +50,10 @@ api.interceptors.response.use(
     // If the error is 401 and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
       console.log('--- 401 Unauthorized detected ---');
-      
+
       if (isRefreshing) {
         console.log('Refresh already in progress, queuing request');
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
           originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -70,19 +71,19 @@ api.interceptors.response.use(
         const role = await AsyncStorage.getItem('user_role');
 
         if (!refreshToken || refreshToken.trim() === '') {
-           console.log('No refresh token found in storage, cannot refresh', { 
-             hasToken: !!refreshToken, 
-             role,
-             originalError: error.message 
-           });
-           isRefreshing = false;
-           await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
-           DeviceEventEmitter.emit('auth:logout');
-           try {
-             const { router } = require('expo-router');
-             router.replace('/role-selection');
-           } catch {}
-           return Promise.reject(error);
+          console.log('No refresh token found in storage, cannot refresh', {
+            hasToken: !!refreshToken,
+            role,
+            originalError: error.message
+          });
+          isRefreshing = false;
+          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+          DeviceEventEmitter.emit('auth:logout');
+          try {
+            const { router } = require('expo-router');
+            router.replace('/role-selection');
+          } catch { }
+          return Promise.reject(error);
         }
 
         console.log(`Refreshing token for role: ${role}...`);
@@ -113,7 +114,7 @@ api.interceptors.response.use(
 
           // Update header
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          
+
           processQueue(null, newAccessToken);
           isRefreshing = false;
 
@@ -139,7 +140,7 @@ api.interceptors.response.use(
           try {
             const { router } = require('expo-router');
             router.replace('/role-selection');
-          } catch {}
+          } catch { }
         } else {
           console.warn('Network or server error during token refresh. Keeping user session intact.');
         }
@@ -179,15 +180,19 @@ api.interceptors.response.use(
 
     if (error.response?.status === 429) {
       console.warn('--- 429 Rate Limit detected ---');
-      try {
-        const Toast = require('react-native-toast-message').default;
-        Toast.show({
-          type: 'error',
-          text1: 'Too Many Requests',
-          text2: error.response?.data?.message || 'Please wait a moment before trying again.',
-          visibilityTime: 4000,
-        });
-      } catch {}
+      const now = Date.now();
+      if (now - last429ToastTime > 6000) {
+        last429ToastTime = now;
+        try {
+          const Toast = require('react-native-toast-message').default;
+          Toast.show({
+            type: 'error',
+            text1: 'Too Many Requests',
+            text2: error.response?.data?.message || 'Please wait a moment before trying again.',
+            visibilityTime: 4000,
+          });
+        } catch { }
+      }
     }
 
     // Network / Offline Error and Timeout handling
@@ -196,12 +201,12 @@ api.interceptors.response.use(
       try {
         const Toast = require('react-native-toast-message').default;
         const isTimeout = error.code === 'ECONNABORTED';
-        
+
         Toast.show({
           type: 'error',
           text1: isTimeout ? 'Request Timeout' : 'Connection Failed',
-          text2: isTimeout 
-            ? 'The server took too long to respond. Please retry.' 
+          text2: isTimeout
+            ? 'The server took too long to respond. Please retry.'
             : 'Please check your internet connection and try again.',
           visibilityTime: 4000,
         });

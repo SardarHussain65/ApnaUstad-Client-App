@@ -10,11 +10,26 @@ export interface UserLocation {
   longitude?: number;
 }
 
+let cachedUserLocation: UserLocation | null = null;
+
+export function getCachedUserLocation(): UserLocation | null {
+  return cachedUserLocation;
+}
+
+export function setCachedUserLocation(loc: UserLocation | null) {
+  cachedUserLocation = loc;
+}
+
 export function useUserLocation() {
   const { user } = useAuth();
-  const [location, setLocation] = useState<UserLocation | null>(null);
+  const [location, setLocation] = useState<UserLocation | null>(() => cachedUserLocation);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const updateLocation = (next: UserLocation) => {
+    cachedUserLocation = next;
+    setLocation(next);
+  };
 
   useEffect(() => {
     const getUserLocation = async () => {
@@ -64,7 +79,7 @@ export function useUserLocation() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setError('Location permission denied');
-          setLocation(await fallbackLocation());
+          updateLocation(await fallbackLocation());
           return;
         }
 
@@ -77,7 +92,7 @@ export function useUserLocation() {
 
         if (reverseGeocode && reverseGeocode.length > 0) {
           const geo = reverseGeocode[0];
-          setLocation({
+          updateLocation({
             city: geo.city || 'Unknown',
             country: geo.country || 'Pakistan',
             address: formatAddress(geo) || `${geo.city || 'Current Location'}, ${geo.country || 'Pakistan'}`,
@@ -85,7 +100,7 @@ export function useUserLocation() {
             longitude,
           });
         } else {
-          setLocation({
+          updateLocation({
             city: 'Unknown',
             country: 'Pakistan',
             latitude,
@@ -96,7 +111,7 @@ export function useUserLocation() {
         console.error('Error getting user location:', err);
         setError(err instanceof Error ? err.message : 'Failed to get location');
         if (user?.address) {
-          setLocation({
+          updateLocation({
             city: extractCityFromAddress(user.address),
             country: 'Pakistan',
             address: user.address,
@@ -104,7 +119,7 @@ export function useUserLocation() {
             longitude: user.location?.coordinates?.[0],
           });
         } else {
-          setLocation({
+          updateLocation({
             city: 'Your Location',
             country: 'Pakistan',
           });
@@ -121,17 +136,29 @@ export function useUserLocation() {
 }
 
 // Helper function to extract city from address string
-function extractCityFromAddress(address: string): string {
+export function extractCityFromAddress(address: string): string {
   // If address contains a comma, take the part after the last comma
   const parts = address.split(',').map(p => p.trim());
   return parts[parts.length - 1] || address;
 }
 
-function formatAddress(geo: Location.LocationGeocodedAddress): string {
-  return [
+export function formatAddress(geo: Location.LocationGeocodedAddress): string {
+  const parts = [
     geo.name,
     geo.street,
-    geo.district,
+    geo.district || (geo.subregion && geo.subregion !== geo.city ? geo.subregion : null),
     geo.city,
-  ].filter(Boolean).join(', ');
+  ].filter(Boolean) as string[];
+
+  const seen = new Set<string>();
+  const uniqueParts = parts.filter((part) => {
+    const trimmed = String(part).trim();
+    if (!trimmed) return false;
+    const lower = trimmed.toLowerCase();
+    if (seen.has(lower)) return false;
+    seen.add(lower);
+    return true;
+  });
+
+  return uniqueParts.join(', ');
 }

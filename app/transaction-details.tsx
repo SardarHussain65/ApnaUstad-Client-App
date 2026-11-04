@@ -5,7 +5,6 @@ import {
   Linking,
   Modal,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import Animated, {
   FadeInDown,
   FadeOut,
@@ -164,6 +164,8 @@ export default function TransactionDetailsScreen() {
   }, [navigation, router]);
 
   const { data: booking, isLoading, refetch } = useBookingDetails(id);
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
   const queryClient = useQueryClient();
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateBookingStatusMutation();
   const { mutate: payBooking, isPending: isPaying } = usePayBookingMutation();
@@ -172,10 +174,14 @@ export default function TransactionDetailsScreen() {
   useRefreshOnFocus(refetch);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const handleUpdate = (data: any) => {
       const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
       if (!incomingId || incomingId === String(id)) {
-        refetch();
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          refetchRef.current();
+        }, 500);
       }
     };
 
@@ -188,8 +194,11 @@ export default function TransactionDetailsScreen() {
       'booking:paid'
     ];
     const unsubs = events.map(event => socketService.on(event, handleUpdate));
-    return () => unsubs.forEach(u => u());
-  }, [id, refetch]);
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubs.forEach(u => u());
+    };
+  }, [id]);
 
   const meta = booking?.cardMeta;
   const status = booking?.status || 'accepted';
@@ -412,16 +421,27 @@ export default function TransactionDetailsScreen() {
     }
   }, [mapReady]);
 
+  const lastDrawnCoordRef = useRef<LocationType | null>(null);
+
   useEffect(() => {
     if (!mapReady || !showMapSection) return;
     if (workerMarkerLocation) {
+      if (lastDrawnCoordRef.current) {
+        const movedMeters = calculateDistance(lastDrawnCoordRef.current, workerMarkerLocation);
+        // If worker has moved less than 25 meters, skip expensive route recalculation
+        if (movedMeters < 25 && routeCoords.length > 0) {
+          return;
+        }
+      }
+      lastDrawnCoordRef.current = workerMarkerLocation;
       drawRouteBetween(workerMarkerLocation, destinationLocation);
     } else {
+      lastDrawnCoordRef.current = null;
       setRouteCoords([]);
       setRouteDistance(null);
       setRouteETA(null);
     }
-  }, [mapReady, showMapSection, workerMarkerLocation, destinationLocation, drawRouteBetween]);
+  }, [mapReady, showMapSection, workerMarkerLocation, destinationLocation, drawRouteBetween, routeCoords.length]);
 
   const routeGeoJSON = useMemo(() => ({
     type: 'Feature',
@@ -516,7 +536,7 @@ export default function TransactionDetailsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.colors.background.screen }]}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar style={theme.isDark ? 'light' : 'dark'} />
         <ActivityIndicator color={colors.cyan} size="large" />
         <Text style={[styles.loadingText, { color: theme.colors.text.muted }]}>
           {t('transactionDetails.loadingDetails', 'Loading booking details...')}
@@ -528,7 +548,7 @@ export default function TransactionDetailsScreen() {
   if (!booking) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.colors.background.screen }]}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar style={theme.isDark ? 'light' : 'dark'} />
         <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>
           {t('transactionDetails.bookingNotFound', 'Booking not found')}
         </Text>
@@ -567,7 +587,7 @@ export default function TransactionDetailsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.isDark ? '#080C16' : theme.colors.background.screen }]}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
 
       {/* ──────────────── Upper Section: Live Map (shown only while en-route / accepted) ──────────────── */}
       {showMapSection ? (

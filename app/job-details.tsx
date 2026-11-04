@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -223,6 +223,8 @@ export default function JobDetailsScreen() {
   const { role } = useAuth();
   const confirmModal = useConfirmModal();
   const { data: job, isLoading, refetch } = useJobDetails(resolvedId);
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
 
   // Auto-refresh when job details screen gains focus
   useRefreshOnFocus(refetch);
@@ -233,7 +235,7 @@ export default function JobDetailsScreen() {
     const handleUpdate = (data: any) => {
       const incomingId = (data?.jobId || data?._id || data?.jobPost?._id)?.toString();
       if (!incomingId || incomingId === String(resolvedId)) {
-        refetch();
+        refetchRef.current();
       }
     };
 
@@ -246,7 +248,7 @@ export default function JobDetailsScreen() {
     ];
 
     return () => unsubs.forEach(u => u());
-  }, [resolvedId, refetch]);
+  }, [resolvedId]);
   const { data: wallet } = useWorkerWallet({ enabled: role === 'worker' });
   const isPendingBidPreview = params.mode === 'pending-bid' || !!params.pendingBidId;
 

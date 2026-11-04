@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
@@ -121,10 +121,21 @@ export default function BookingsTab() {
     ]);
   }, [isWorker, refetchBookings, refetchJobs]);
 
+  const handleRefreshRef = useRef(handleRefresh);
+  handleRefreshRef.current = handleRefresh;
+
   // Auto-refresh when Bookings tab gains focus
   useRefreshOnFocus(handleRefresh);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedRefresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        handleRefreshRef.current?.();
+      }, 800);
+    };
+
     // Listen for real-time socket updates
     const events = [
       'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing',
@@ -132,12 +143,13 @@ export default function BookingsTab() {
       'job:new', 'job:cancelled', 'job:status', 'job:assigned', 'job:auto_assigned',
       'bid:new', 'bid:won', 'bid:lost', 'bid:withdrawn'
     ];
-    const unsubs = events.map(event => socketService.on(event, () => handleRefresh()));
+    const unsubs = events.map(event => socketService.on(event, debouncedRefresh));
 
     return () => {
+      if (timer) clearTimeout(timer);
       unsubs.forEach(u => u());
     };
-  }, [handleRefresh]);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {

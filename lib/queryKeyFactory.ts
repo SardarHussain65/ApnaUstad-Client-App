@@ -23,19 +23,19 @@ export const queryKeys = {
   bookings: {
     all: ['bookings'] as const,
     list: () => [...queryKeys.bookings.all, 'list'] as const,
-    myBookings: () => [...queryKeys.bookings.all, 'my-bookings'] as const,
-    homeSummary: () => [...queryKeys.bookings.all, 'home-summary'] as const,
-    workerHomeSummary: () => [...queryKeys.bookings.all, 'worker-home-summary'] as const,
+    myBookings: (userId?: string) => userId ? ([...queryKeys.bookings.all, 'my-bookings', userId] as const) : ([...queryKeys.bookings.all, 'my-bookings'] as const),
+    homeSummary: (userId?: string) => userId ? ([...queryKeys.bookings.all, 'home-summary', userId] as const) : ([...queryKeys.bookings.all, 'home-summary'] as const),
+    workerHomeSummary: (workerId?: string) => workerId ? ([...queryKeys.bookings.all, 'worker-home-summary', workerId] as const) : ([...queryKeys.bookings.all, 'worker-home-summary'] as const),
     detail: (id: string) => [...queryKeys.bookings.all, 'detail', id] as const,
-    byWorker: () => [...queryKeys.bookings.all, 'worker-bookings'] as const,
-    earningsAnalytics: () => [...queryKeys.bookings.all, 'earnings-analytics'] as const,
+    byWorker: (workerId?: string) => workerId ? ([...queryKeys.bookings.all, 'worker-bookings', workerId] as const) : ([...queryKeys.bookings.all, 'worker-bookings'] as const),
+    earningsAnalytics: (workerId?: string) => workerId ? ([...queryKeys.bookings.all, 'earnings-analytics', workerId] as const) : ([...queryKeys.bookings.all, 'earnings-analytics'] as const),
   },
 
   // Jobs
   jobs: {
     all: ['jobs'] as const,
     list: () => [...queryKeys.jobs.all, 'list'] as const,
-    myPosts: () => [...queryKeys.jobs.all, 'my-posts'] as const,
+    myPosts: (userId?: string) => userId ? ([...queryKeys.jobs.all, 'my-posts', userId] as const) : ([...queryKeys.jobs.all, 'my-posts'] as const),
     detail: (id: string) => [...queryKeys.jobs.all, 'detail', id] as const,
     nearby: (lng?: number, lat?: number) => [...queryKeys.jobs.all, 'nearby', { lng, lat }] as const,
   },
@@ -44,7 +44,7 @@ export const queryKeys = {
   bids: {
     all: ['bids'] as const,
     byJob: (jobId: string) => [...queryKeys.bids.all, 'job', jobId] as const,
-    byWorker: () => [...queryKeys.bids.all, 'worker'] as const,
+    byWorker: (workerId?: string) => workerId ? ([...queryKeys.bids.all, 'worker', workerId] as const) : ([...queryKeys.bids.all, 'worker'] as const),
   },
 
   // Reviews
@@ -56,7 +56,7 @@ export const queryKeys = {
   // Notifications
   notifications: {
     all: ['notifications'] as const,
-    list: () => [...queryKeys.notifications.all, 'list'] as const,
+    list: (userId?: string) => userId ? ([...queryKeys.notifications.all, 'list', userId] as const) : ([...queryKeys.notifications.all, 'list'] as const),
   },
 
   // Messages/Chat
@@ -68,7 +68,7 @@ export const queryKeys = {
   // User Profile
   profile: {
     all: ['profile'] as const,
-    current: () => [...queryKeys.profile.all, 'current'] as const,
+    current: (userId?: string) => userId ? ([...queryKeys.profile.all, 'current', userId] as const) : ([...queryKeys.profile.all, 'current'] as const),
   },
 
   // Favorite Workers
@@ -80,15 +80,15 @@ export const queryKeys = {
   // Preferences
   preferences: {
     all: ['preferences'] as const,
-    current: () => [...queryKeys.preferences.all, 'current'] as const,
+    current: (userId?: string) => userId ? ([...queryKeys.preferences.all, 'current', userId] as const) : ([...queryKeys.preferences.all, 'current'] as const),
   },
 
   // Wallet/Transactions
   wallet: {
     all: ['wallet'] as const,
-    balance: () => [...queryKeys.wallet.all, 'balance'] as const,
-    transactions: () => [...queryKeys.wallet.all, 'transactions'] as const,
-    topUps: () => [...queryKeys.wallet.all, 'top-ups'] as const,
+    balance: (workerId?: string) => workerId ? ([...queryKeys.wallet.all, 'balance', workerId] as const) : ([...queryKeys.wallet.all, 'balance'] as const),
+    transactions: (workerId?: string) => workerId ? ([...queryKeys.wallet.all, 'transactions', workerId] as const) : ([...queryKeys.wallet.all, 'transactions'] as const),
+    topUps: (workerId?: string) => workerId ? ([...queryKeys.wallet.all, 'top-ups', workerId] as const) : ([...queryKeys.wallet.all, 'top-ups'] as const),
     paymentMethods: () => [...queryKeys.wallet.all, 'payment-methods'] as const,
   },
 
@@ -102,7 +102,7 @@ export const queryKeys = {
 
   disputes: {
     all: ['disputes'] as const,
-    my: () => [...queryKeys.disputes.all, 'my'] as const,
+    my: (userId?: string) => userId ? ([...queryKeys.disputes.all, 'my', userId] as const) : ([...queryKeys.disputes.all, 'my'] as const),
     byBooking: (bookingId: string) => [...queryKeys.disputes.all, 'booking', bookingId] as const,
     detail: (id: string) => [...queryKeys.disputes.all, 'detail', id] as const,
     messages: (id: string) => [...queryKeys.disputes.all, 'messages', id] as const,

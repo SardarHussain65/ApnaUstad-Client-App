@@ -78,9 +78,16 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
     };
 
-    // ─── 5. RECONNECTION RE-SYNCHRONIZATION (DEBOUNCED) ──────────────────────
+    // ─── 5. RECONNECTION RE-SYNCHRONIZATION (DEBOUNCED & RATE-LIMITED) ──────
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastReconnectSyncTime = 0;
     const handleReconnected = () => {
+      const now = Date.now();
+      // Rate limit full active query sync to at most once every 15 seconds
+      if (now - lastReconnectSyncTime < 15000) {
+        return;
+      }
+      lastReconnectSyncTime = now;
       console.log('🔄 [RealtimeSync] Socket reconnected — scheduling silent background sync of active queries');
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(() => {

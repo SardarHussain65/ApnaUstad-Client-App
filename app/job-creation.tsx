@@ -48,7 +48,16 @@ import { useIsRTL } from '../context/LanguageContext';
 
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { AlertModal, ConfirmModal } from '../components/ui';
-import { useConfirmModal, useCreateJobMutation, useToast, useUploadJobImagesMutation } from '../hooks';
+import {
+  useConfirmModal,
+  useCreateJobMutation,
+  useToast,
+  useUploadJobImagesMutation,
+  useUserLocation,
+  getCachedUserLocation,
+  setCachedUserLocation,
+  formatAddress,
+} from '../hooks';
 import { useTheme, alpha } from '../constants/Theme';
 import { useJobCreationPalette } from '../components/job-creation/shared';
 import { SchedulePickerModal } from '../components/job-creation/SchedulePickerModal';
@@ -83,12 +92,6 @@ const CATEGORY_TRANSLATIONS_UR: Record<string, string> = {
   'internet & networking': 'انٹرنیٹ اور نیٹ ورکنگ',
   'computer & mobile repair': 'کمپیوٹر اور موبائل مرمت',
   'solar panel services': 'سولر پینل سروسز',
-};
-
-const formatCleanAddress = (rawAddress: string) => {
-  if (!rawAddress) return '';
-  const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
-  return cleaned || rawAddress;
 };
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
@@ -148,12 +151,27 @@ export default function JobCreationScreen() {
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
 
   // Location state
-  const [address, setAddress] = useState<string>('Detecting location...');
-  const [latitude, setLatitude] = useState<number>(33.6927);
-  const [longitude, setLongitude] = useState<number>(73.0743);
+  const initialCachedLoc = getCachedUserLocation();
+  const [address, setAddress] = useState<string>(initialCachedLoc?.address || 'Detecting location...');
+  const [latitude, setLatitude] = useState<number>(initialCachedLoc?.latitude || 33.6927);
+  const [longitude, setLongitude] = useState<number>(initialCachedLoc?.longitude || 73.0743);
   const [isGettingLocation, setIsGettingLocation] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
-  const [tempAddressInput, setTempAddressInput] = useState<string>('');
+  const [tempAddressInput, setTempAddressInput] = useState<string>(initialCachedLoc?.address || '');
+
+  const { location: liveUserLocation } = useUserLocation();
+
+  // Keep location in sync when live location resolves
+  useEffect(() => {
+    if (liveUserLocation?.address && (!address || address === 'Detecting location...')) {
+      setAddress(liveUserLocation.address);
+      setTempAddressInput(liveUserLocation.address);
+      if (liveUserLocation.latitude && liveUserLocation.longitude) {
+        setLatitude(liveUserLocation.latitude);
+        setLongitude(liveUserLocation.longitude);
+      }
+    }
+  }, [liveUserLocation]);
 
   // Scheduled date & time state
   const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'custom'>('tomorrow');
@@ -233,14 +251,16 @@ export default function JobCreationScreen() {
       const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
       if (results.length > 0) {
         const geo = results[0];
-        const name = geo.name && geo.name !== geo.city ? geo.name : null;
-        const street = geo.street ? geo.street : null;
-        const area = name || street;
-        const city = geo.city ?? geo.subregion ?? '';
-        const resolved = area ? `${area}, ${city}` : city;
-        const clean = formatCleanAddress(resolved);
-        setAddress(clean);
-        setTempAddressInput(clean);
+        const formatted = formatAddress(geo) || geo.city || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        setAddress(formatted);
+        setTempAddressInput(formatted);
+        setCachedUserLocation({
+          city: geo.city || 'Unknown',
+          country: geo.country || 'Pakistan',
+          address: formatted,
+          latitude: lat,
+          longitude: lng,
+        });
       }
       if (!silent) success('Location Updated', 'Position updated to your current location.');
     } catch (e) {
@@ -252,9 +272,11 @@ export default function JobCreationScreen() {
     }
   }, [showError, success]);
 
-  // Run location fetch ONLY ONCE on mount
+  // Run location fetch on mount if cached location is not ready
   useEffect(() => {
-    void handleGetLiveLocation(true);
+    if (!initialCachedLoc?.address) {
+      void handleGetLiveLocation(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -614,8 +636,8 @@ export default function JobCreationScreen() {
                 </View>
 
                 <View style={styles.locationDetails}>
-                  <Text style={[styles.locationAddressText, { color: palette.textPrimary }]} numberOfLines={1}>
-                    {formatCleanAddress(address) || t('jobCreation.updatingLocation', 'Detecting location...')}
+                  <Text style={[styles.locationAddressText, { color: palette.textPrimary }]} numberOfLines={2} ellipsizeMode="tail">
+                    {address || t('jobCreation.updatingLocation', 'Detecting location...')}
                   </Text>
                   <Text style={[styles.locationSubText, { color: palette.textSecondary }]}>
                     {t('jobCreation.serviceLocationSub', 'Service location')}
@@ -915,7 +937,12 @@ export default function JobCreationScreen() {
                   style={[styles.modalSaveBtn, { backgroundColor: activeColor }]}
                   onPress={() => {
                     if (tempAddressInput.trim()) {
-                      setAddress(tempAddressInput.trim());
+                      const trimmed = tempAddressInput.trim();
+                      setAddress(trimmed);
+                      const cached = getCachedUserLocation();
+                      if (cached) {
+                        setCachedUserLocation({ ...cached, address: trimmed });
+                      }
                     }
                     setShowLocationModal(false);
                   }}

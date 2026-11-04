@@ -6,6 +6,7 @@ import api from './api';
 
 export const BACKGROUND_LOCATION_TASK = 'apna-ustad-enroute-location';
 const ACTIVE_BOOKING_KEY = 'active_enroute_booking_id';
+let lastHttpLocationSyncTime = 0;
 
 // Define background task at module root level
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
@@ -25,24 +26,28 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
         const activeBookingId = await AsyncStorage.getItem(ACTIVE_BOOKING_KEY);
         if (!activeBookingId) return;
 
-        // 1. Emit via active socket
+        // 1. Emit via active socket if connected
         if (socketService.isConnected()) {
           socketService.emit('worker:location', {
             bookingId: activeBookingId,
             latitude,
             longitude,
           });
-        }
-
-        // 2. Fallback to HTTP API if socket disconnected in background
-        const savedUser = await AsyncStorage.getItem('user_data');
-        if (savedUser) {
-          const userObj = JSON.parse(savedUser);
-          if (userObj?._id) {
-            await api.put(`/workers/${userObj._id}/location`, {
-              latitude,
-              longitude,
-            }).catch(() => {});
+        } else {
+          // 2. Fallback to HTTP API ONLY when socket is disconnected in background (throttled)
+          const now = Date.now();
+          if (now - lastHttpLocationSyncTime > 30000) {
+            lastHttpLocationSyncTime = now;
+            const savedUser = await AsyncStorage.getItem('user_data');
+            if (savedUser) {
+              const userObj = JSON.parse(savedUser);
+              if (userObj?._id) {
+                await api.put(`/workers/${userObj._id}/location`, {
+                  latitude,
+                  longitude,
+                }).catch(() => {});
+              }
+            }
           }
         }
       } catch (err) {

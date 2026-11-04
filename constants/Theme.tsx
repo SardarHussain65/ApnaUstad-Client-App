@@ -612,9 +612,11 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+let memoryCachedThemeId: ThemeId | null = null;
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeId, setThemeIdState] = useState<ThemeId>('current');
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [themeId, setThemeIdState] = useState<ThemeId>(memoryCachedThemeId || 'current');
+  const [isHydrated, setIsHydrated] = useState(Boolean(memoryCachedThemeId));
 
   useEffect(() => {
     let isMounted = true;
@@ -622,6 +624,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(THEME_STORAGE_KEY)
       .then((storedThemeId) => {
         if (isMounted && isThemeId(storedThemeId)) {
+          memoryCachedThemeId = storedThemeId;
           setThemeIdState(storedThemeId);
         }
       })
@@ -638,6 +641,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setThemeId = useCallback(async (nextThemeId: ThemeId) => {
+    memoryCachedThemeId = nextThemeId;
     setThemeIdState(nextThemeId);
     await AsyncStorage.setItem(THEME_STORAGE_KEY, nextThemeId);
   }, []);
