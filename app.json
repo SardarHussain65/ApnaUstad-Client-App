@@ -32,7 +32,8 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/adaptive-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -46,7 +47,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/icon.jpeg"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       [
@@ -74,7 +75,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.jpeg",
+          "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0F172A",
