@@ -117,8 +117,8 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
       style={[
         styles.card,
         {
-          borderColor: theme.isDark ? alpha(statusColor, 0.22) : theme.colors.border.subtle,
-          backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.85) : theme.colors.surface.card,
+          borderColor: theme.isDark ? alpha(statusColor, 0.22) : 'rgba(15, 23, 42, 0.18)',
+          backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.85) : '#FFFFFF',
         },
       ]}
       onPress={onPress}

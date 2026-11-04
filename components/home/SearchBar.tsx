@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Search, X } from 'lucide-react-native';
-import { alpha, Spacing, BorderRadius, useTheme, useThemeTypography } from '../../constants/Theme';
+import { Spacing, BorderRadius, useTheme } from '../../constants/Theme';
 import { useIsRTL } from '../../context/LanguageContext';
 
 interface SearchBarProps {
@@ -18,78 +18,97 @@ export const SearchBar = React.memo(function SearchBar({
   variant = 'section',
 }: SearchBarProps) {
   const theme = useTheme();
-  const typography = useThemeTypography();
   const isRTL = useIsRTL();
-  const [isFocused, setIsFocused] = useState(false);
+  const [localText, setLocalText] = useState(value);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Keep local text in sync if parent clears or changes value externally
+  useEffect(() => {
+    setLocalText(value);
+  }, [value]);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
+
+  const handleChangeText = useCallback(
+    (text: string) => {
+      setLocalText(text);
+
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+
+      // 120ms debounce prevents parent re-renders from interrupting native typing
+      debounceTimer.current = setTimeout(() => {
+        onChangeText(text);
+      }, 120);
+    },
+    [onChangeText]
+  );
+
+  const handleClear = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setLocalText('');
+    onChangeText('');
+  }, [onChangeText]);
+
+  // Clean theme styling
   const isDark = theme.isDark;
-  const activeCyan = theme.colors.brand.primary || '#00F5FF';
-
-  // High-contrast visible card background so search bar is crystal clear on dark starry wallpapers
-  const containerBg = isDark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.96)';
-  const borderColor = isFocused
-    ? activeCyan
-    : isDark
-    ? 'rgba(0, 245, 255, 0.38)'
-    : 'rgba(0, 0, 0, 0.16)';
-  const placeholderColor = isDark ? 'rgba(255, 255, 255, 0.65)' : 'rgba(15, 23, 42, 0.55)';
-  const textColor = isDark ? '#FFFFFF' : '#0F172A';
-
   const isHeader = variant === 'header';
+
+  const containerBg = isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.98)';
+  const borderColor = isDark ? 'rgba(0, 245, 255, 0.35)' : 'rgba(0, 0, 0, 0.14)';
+  const textColor = isDark ? '#FFFFFF' : '#0F172A';
+  const placeholderColor = isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(15, 23, 42, 0.45)';
+  const iconColor = isDark ? '#00F5FF' : theme.colors.brand.primary;
 
   return (
     <View style={isHeader ? styles.headerContainer : styles.container}>
       <View
         style={[
-          isHeader ? styles.headerInner : styles.searchInner,
+          styles.inner,
           {
-            borderColor,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
             backgroundColor: containerBg,
-            borderWidth: isFocused ? 1.5 : 1.2,
+            borderColor,
           },
-          isFocused && styles.focusedGlow,
         ]}
       >
-        <View style={[styles.iconContainer, isRTL ? { marginLeft: 10, marginRight: 0 } : { marginRight: 10 }]}>
-          <Search
-            size={isHeader ? 18 : 20}
-            color={isFocused ? activeCyan : isDark ? 'rgba(0, 245, 255, 0.9)' : activeCyan}
-            strokeWidth={2.2}
-          />
-        </View>
+        <Search size={18} color={iconColor} strokeWidth={2.2} />
 
         <TextInput
           style={[
-            isHeader ? styles.headerInput : styles.input,
+            styles.input,
             {
               color: textColor,
               textAlign: isRTL ? 'right' : 'left',
-              writingDirection: isRTL ? 'rtl' : 'ltr',
             },
           ]}
           placeholder={placeholder}
           placeholderTextColor={placeholderColor}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          selectionColor={activeCyan}
-          textAlignVertical="center"
-          autoCorrect={false}
-          spellCheck={false}
-          autoCapitalize="none"
+          value={localText}
+          onChangeText={handleChangeText}
           returnKeyType="search"
+          selectionColor={iconColor}
         />
 
-        {value.length > 0 && (
+        {localText.length > 0 && (
           <TouchableOpacity
-            onPress={() => onChangeText('')}
+            onPress={handleClear}
             hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
-            style={[styles.clearBtn, isRTL ? { marginRight: 8, marginLeft: 0 } : { marginLeft: 8 }]}
+            style={styles.clearBtn}
             activeOpacity={0.7}
           >
             <View style={styles.clearBadge}>
-              <X size={14} color="#000" strokeWidth={3} />
+              <X size={12} color="#000" strokeWidth={2.5} />
             </View>
           </TouchableOpacity>
         )}
@@ -101,58 +120,29 @@ export const SearchBar = React.memo(function SearchBar({
 const styles = StyleSheet.create({
   headerContainer: {
     marginBottom: Spacing.l,
-    borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.l,
-  },
-  headerInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.m,
-    paddingVertical: Spacing.s,
-    borderRadius: BorderRadius.full,
-  },
-  headerInput: {
-    flex: 1,
-    marginHorizontal: Spacing.s,
-    fontSize: 14,
-    fontWeight: '500',
-    paddingVertical: 0,
   },
   container: {
     marginBottom: Spacing.l,
     marginHorizontal: Spacing.l,
-    borderRadius: BorderRadius.lg,
-    shadowColor: '#00F5FF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  searchInner: {
-    flexDirection: 'row',
+  inner: {
     alignItems: 'center',
-    paddingHorizontal: 15,
-    height: 50,
+    paddingHorizontal: 14,
+    height: 48,
     borderRadius: BorderRadius.lg,
-  },
-  focusedGlow: {
-    shadowColor: '#00F5FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1.2,
   },
   input: {
     flex: 1,
-    fontSize: 14.5,
-    fontWeight: '600',
-    paddingVertical: 0,
+    height: '100%',
+    fontSize: 15,
+    fontWeight: '500',
+    paddingHorizontal: 10,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 0,
   },
   clearBtn: {
+    padding: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

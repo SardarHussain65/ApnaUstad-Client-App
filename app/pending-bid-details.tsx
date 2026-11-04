@@ -60,8 +60,8 @@ const createStyles = (theme: AppTheme) => {
   const RED = theme.legacy.error;
   const PURPLE = theme.legacy.purple;
 
-  const surfaceBg = theme.colors.surface.card;
-  const borderCol = theme.colors.border.subtle;
+  const surfaceBg = isDark ? theme.colors.surface.card : '#FFFFFF';
+  const borderCol = isDark ? theme.colors.border.subtle : 'rgba(15, 23, 42, 0.16)';
   const textPrimary = theme.colors.text.primary;
   const textSecondary = theme.colors.text.secondary;
   const textMuted = theme.colors.text.muted;

@@ -96,9 +96,17 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
 
   const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 
+  const cardBorderColor = theme.isDark
+    ? alpha(accentColor, 0.32)
+    : 'rgba(15, 23, 42, 0.20)';
+
+  const cardBg = theme.isDark
+    ? alpha(theme.colors.background.screen, 0.92)
+    : '#FFFFFF';
+
   const gradientColors: [string, string, string] = [
-    alpha(accentColor, theme.isDark ? 0.16 : 0.05),
-    alpha(theme.colors.background.screen, theme.isDark ? 0.92 : 0.98),
+    alpha(accentColor, theme.isDark ? 0.16 : 0.04),
+    cardBg,
     alpha(theme.colors.brand.primary, theme.isDark ? 0.07 : 0.02),
   ];
 
@@ -110,12 +118,12 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
         style={[
           styles.card,
           {
-            borderColor: theme.isDark ? alpha(accentColor, 0.28) : theme.colors.border.subtle,
+            borderColor: cardBorderColor,
             borderLeftColor: accentColor,
-            borderLeftWidth: 3.5,
-            backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.92) : theme.colors.surface.card,
+            borderLeftWidth: 4,
+            backgroundColor: cardBg,
           },
-          shadows.bevel,
+          shadows.card,
         ]}
       >
         <LinearGradient
@@ -163,7 +171,7 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
         {/* ── Row 2: Customer Identity & Schedule ── */}
         <View style={styles.middleRow}>
           <View style={styles.customerGroup}>
-            <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(accentColor, 0.35) : theme.colors.border.subtle }]}>
+            <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(accentColor, 0.35) : 'rgba(15, 23, 42, 0.18)' }]}>
               {clientAvatar ? (
                 <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
               ) : (
@@ -209,7 +217,7 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
         )}
 
         {/* ── Row 3 / Footer: Clean Location (left) & Quoted Rate + Action (right) ── */}
-        <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, 0.07) }]}>
+        <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, theme.isDark ? 0.07 : 0.12) }]}>
           <View style={styles.locationGroup}>
             <MapPin size={12} color={theme.colors.text.muted} strokeWidth={2.2} />
             <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>

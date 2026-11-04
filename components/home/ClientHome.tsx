@@ -457,7 +457,6 @@ export function ClientHome() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
         contentContainerStyle={[
           styles.scrollContent,
           { paddingTop: insets.top },

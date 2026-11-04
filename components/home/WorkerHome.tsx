@@ -1057,8 +1057,8 @@ export function WorkerHome() {
             style={[
               styles.historyLinkCard,
               {
-                borderColor: theme.colors.border.subtle,
-                backgroundColor: alpha(theme.colors.surface.card, 0.35),
+                borderColor: theme.isDark ? theme.colors.border.subtle : 'rgba(15, 23, 42, 0.16)',
+                backgroundColor: theme.isDark ? alpha(theme.colors.surface.card, 0.35) : '#FFFFFF',
               },
             ]}
             onPress={() => router.push('/(tabs)/bookings')}
