@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import api from '../../services/api';
 import { queryKeys } from '../../lib/queryKeyFactory';
+import { useAuth } from '../../context/AuthContext';
 
 export interface WorkerWallet {
   _id: string;
@@ -124,9 +125,11 @@ const createTopUpRequest = async (formData: FormData): Promise<WalletTopUpReques
 };
 
 export function useWorkerWallet(options?: Omit<UseQueryOptions<WorkerWallet, Error>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<WorkerWallet, Error>({
-    queryKey: queryKeys.wallet.balance(),
+    queryKey: queryKeys.wallet.balance(user?._id),
     queryFn: fetchWorkerWallet,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
@@ -136,9 +139,11 @@ export function useWalletTransactions(
   limit = 10,
   options?: Omit<UseQueryOptions<TransactionsResponse, Error>, 'queryKey' | 'queryFn'>
 ) {
+  const { user, token } = useAuth();
   return useQuery<TransactionsResponse, Error>({
-    queryKey: [...queryKeys.wallet.transactions(), page, limit],
+    queryKey: [...queryKeys.wallet.transactions(user?._id), page, limit],
     queryFn: () => fetchWalletTransactions(page, limit),
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
@@ -156,9 +161,11 @@ export function useWalletTopUps(
   limit = 20,
   options?: Omit<UseQueryOptions<TopUpsResponse, Error>, 'queryKey' | 'queryFn'>
 ) {
+  const { user, token } = useAuth();
   return useQuery<TopUpsResponse, Error>({
-    queryKey: [...queryKeys.wallet.topUps(), page, limit],
+    queryKey: [...queryKeys.wallet.topUps(user?._id), page, limit],
     queryFn: () => fetchTopUps(page, limit),
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }

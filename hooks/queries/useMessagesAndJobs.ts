@@ -1,6 +1,7 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import api from '../../services/api';
 import { queryKeys } from '../../lib/queryKeyFactory';
+import { useAuth } from '../../context/AuthContext';
 
 // Types
 export interface Message {
@@ -310,11 +311,13 @@ export function useBidsByJob(jobId: string | undefined, options?: Omit<UseQueryO
 }
 
 export function useWorkerBids(options?: Omit<UseQueryOptions<Bid[]>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<Bid[]>({
-    queryKey: queryKeys.bids.byWorker(),
+    queryKey: queryKeys.bids.byWorker(user?._id),
     queryFn: fetchWorkerBids,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }

@@ -1,5 +1,6 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export interface UserWallet {
   _id: string;
@@ -51,7 +52,10 @@ const fetchUserWallet = async (page = 1, limit = 10): Promise<UserWalletResponse
 
 export const userWalletKeys = {
   all: ['userWallet'] as const,
-  details: (page: number, limit: number) => [...userWalletKeys.all, 'details', page, limit] as const,
+  details: (userId?: string, page = 1, limit = 10) =>
+    userId
+      ? ([...userWalletKeys.all, 'details', userId, page, limit] as const)
+      : ([...userWalletKeys.all, 'details', page, limit] as const),
 };
 
 export function useUserWallet(
@@ -59,9 +63,11 @@ export function useUserWallet(
   limit = 10,
   options?: Omit<UseQueryOptions<UserWalletResponse, Error>, 'queryKey' | 'queryFn'>
 ) {
+  const { user, token } = useAuth();
   return useQuery<UserWalletResponse, Error>({
-    queryKey: userWalletKeys.details(page, limit),
+    queryKey: userWalletKeys.details(user?._id, page, limit),
     queryFn: () => fetchUserWallet(page, limit),
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }

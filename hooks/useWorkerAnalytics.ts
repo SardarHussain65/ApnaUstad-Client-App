@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import { queryKeys } from '../lib/queryKeyFactory';
+import { useAuth } from '../context/AuthContext';
 
 export interface EarningsDataPoint {
   label: string;
@@ -44,10 +45,12 @@ async function fetchWorkerAnalytics(): Promise<WorkerAnalyticsData> {
 }
 
 export function useWorkerAnalytics() {
+  const { user, token } = useAuth();
   return useQuery<WorkerAnalyticsData>({
-    queryKey: queryKeys.bookings.earningsAnalytics(),
+    queryKey: queryKeys.bookings.earningsAnalytics(user?._id),
     queryFn: fetchWorkerAnalytics,
-    staleTime: 5 * 60 * 1000,  // 5 minutes
-    gcTime: 30 * 60 * 1000,    // 30 minutes cache
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
+    enabled: Boolean(token && user?._id),
   });
 }

@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import api from '../../services/api';
 import { queryKeys } from '../../lib/queryKeyFactory';
+import { useAuth } from '../../context/AuthContext';
 
 export type DisputeReason =
   | 'incomplete_work'
@@ -159,10 +160,13 @@ export function useMyDisputes(
   scope: DisputeScope = 'all',
   options?: Omit<UseQueryOptions<DisputeRecord[]>, 'queryKey' | 'queryFn'>
 ) {
+  const { user, token } = useAuth();
   return useQuery<DisputeRecord[]>({
-    queryKey: [...queryKeys.disputes.my(), scope],
+    queryKey: [...queryKeys.disputes.my(user?._id), scope],
     queryFn: () => fetchMyDisputes(scope),
     staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }

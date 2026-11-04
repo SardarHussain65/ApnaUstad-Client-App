@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import {
   ChevronRight,
+  ChevronUp,
   Search,
   MapPin,
   ArrowRight,
@@ -34,6 +35,7 @@ import {
   CheckCircle2,
   Clock,
   Banknote,
+  LayoutGrid,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -132,6 +134,71 @@ const CategoryCard = React.memo(({ cat, index, onPress, animate = true }: Catego
   );
 });
 CategoryCard.displayName = 'CategoryCard';
+
+// ─── ViewAllCard ──────────────────────────────────────────────────────────────
+
+interface ViewAllCardProps {
+  remainingCount: number;
+  index: number;
+  onPress: () => void;
+  animate?: boolean;
+}
+
+const ViewAllCard = React.memo(({ remainingCount, index, onPress, animate = true }: ViewAllCardProps) => {
+  const theme = useTheme();
+  const colors = useThemeColors();
+  const { t } = useTranslation();
+
+  const cyanAccent = colors.cyan;
+  const gradient: [string, string] = [cyanAccent, `${cyanAccent}40`];
+  const cardBorderColor = alpha(cyanAccent, theme.isDark ? 0.45 : 0.35);
+  const iconBgColor = alpha(cyanAccent, theme.isDark ? 0.22 : 0.16);
+
+  const card = (
+    <GlassCard
+      style={[
+        styles.categoryItem,
+        {
+          borderColor: cardBorderColor,
+        }
+      ]}
+      contentStyle={styles.categoryItemContent}
+      onPress={onPress}
+      gradient={gradient}
+      padding={0}
+      hasGlow
+      glowColor={cyanAccent}
+    >
+      <View style={[styles.categoryIconBox, { backgroundColor: iconBgColor }]}>
+        <LayoutGrid size={22} color={cyanAccent} strokeWidth={2.2} />
+      </View>
+      <Text style={[styles.categoryTitle, { color: cyanAccent }]} numberOfLines={1}>
+        {t('home.client.viewAll', 'VIEW ALL')}
+      </Text>
+      <Text style={[styles.viewAllCardCount, { color: theme.colors.text.muted }]} numberOfLines={1}>
+        {`+${remainingCount} more`}
+      </Text>
+    </GlassCard>
+  );
+
+  if (!animate) {
+    return (
+      <View style={styles.categoryCardWrapper}>
+        {card}
+      </View>
+    );
+  }
+
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(index * 40).duration(350)}
+      style={styles.categoryCardWrapper}
+    >
+      {card}
+    </Animated.View>
+  );
+});
+ViewAllCard.displayName = 'ViewAllCard';
 
 // ─── EmptyServiceState ────────────────────────────────────────────────────────
 
@@ -331,10 +398,22 @@ export function ClientHome() {
   const hasBottomActivity = recentBookings.length > 0;
   const baseCategoryLimit = hasBottomActivity ? INITIAL_CATEGORY_LIMIT : 9;
 
+  const shouldShowViewAllCard = useMemo(() => {
+    if (searchQuery.trim() || showAllServices) return false;
+    return filteredCategories.length > baseCategoryLimit;
+  }, [searchQuery, showAllServices, filteredCategories.length, baseCategoryLimit]);
+
   const displayedCategories = useMemo(() => {
     if (searchQuery.trim() || showAllServices) return filteredCategories;
+    if (shouldShowViewAllCard) {
+      return filteredCategories.slice(0, baseCategoryLimit - 1);
+    }
     return filteredCategories.slice(0, baseCategoryLimit);
-  }, [filteredCategories, showAllServices, searchQuery, baseCategoryLimit]);
+  }, [filteredCategories, showAllServices, searchQuery, baseCategoryLimit, shouldShowViewAllCard]);
+
+  const remainingCategoryCount = useMemo(() => {
+    return Math.max(0, filteredCategories.length - (baseCategoryLimit - 1));
+  }, [filteredCategories.length, baseCategoryLimit]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -577,17 +656,6 @@ export function ClientHome() {
                 {t('home.client.whatHelp', 'What work do you need done?')}
               </Text>
             </View>
-
-            {!searchQuery && categories.length > baseCategoryLimit && (
-              <TouchableOpacity
-                onPress={handleToggleServices}
-                hitSlop={styles.hitSlop}
-              >
-                <Text style={[styles.viewAll, { color: colors.cyan }]}>
-                  {showAllServices ? t('home.client.showLess', 'SHOW LESS') : t('home.client.viewAll', 'VIEW ALL')}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           <SearchBar
@@ -600,19 +668,50 @@ export function ClientHome() {
           {categoriesLoading && !isRefreshing ? (
             <CategoriesSkeleton translateX={translateX} numColumns={numColumns} />
           ) : (
-            <View style={styles.categoriesGrid}>
-              {displayedCategories.length > 0 ? (
-                displayedCategories.map((cat, index) => (
-                  <CategoryCard
-                    key={cat._id}
-                    cat={cat}
-                    index={index}
-                    onPress={handleCategoryPress}
-                    animate={!searchQuery.trim()}
-                  />
-                ))
-              ) : (
-                <EmptyServiceState isSearching={!!searchQuery.trim()} />
+            <View>
+              <View style={styles.categoriesGrid}>
+                {displayedCategories.length > 0 ? (
+                  <>
+                    {displayedCategories.map((cat, index) => (
+                      <CategoryCard
+                        key={cat._id}
+                        cat={cat}
+                        index={index}
+                        onPress={handleCategoryPress}
+                        animate={!searchQuery.trim()}
+                      />
+                    ))}
+                    {shouldShowViewAllCard && (
+                      <ViewAllCard
+                        remainingCount={remainingCategoryCount}
+                        index={displayedCategories.length}
+                        onPress={handleToggleServices}
+                        animate={!searchQuery.trim()}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <EmptyServiceState isSearching={!!searchQuery.trim()} />
+                )}
+              </View>
+
+              {showAllServices && !searchQuery.trim() && filteredCategories.length > baseCategoryLimit && (
+                <TouchableOpacity
+                  style={[
+                    styles.showLessButton,
+                    {
+                      borderColor: alpha(colors.cyan, 0.35),
+                      backgroundColor: theme.isDark ? 'rgba(0, 240, 255, 0.08)' : 'rgba(0, 180, 200, 0.08)',
+                    }
+                  ]}
+                  onPress={handleToggleServices}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.showLessText, { color: colors.cyan }]}>
+                    {t('home.client.showLess', 'SHOW LESS')}
+                  </Text>
+                  <ChevronUp size={15} color={colors.cyan} strokeWidth={2.5} />
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -836,6 +935,29 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     lineHeight: 14,
+  },
+  viewAllCardCount: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  showLessButton: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 20,
+    marginTop: 14,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+  },
+  showLessText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
   // ── Empty state (no categories / no search results)

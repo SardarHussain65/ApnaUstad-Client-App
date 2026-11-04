@@ -632,41 +632,49 @@ export function useAllWorkers(category?: string, search?: string, options?: Omit
 }
 
 export function useBookings(options?: Omit<UseQueryOptions<Booking[]>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<Booking[]>({
-    queryKey: queryKeys.bookings.list(),
+    queryKey: queryKeys.bookings.myBookings(user?._id),
     queryFn: fetchBookings,
     staleTime: 1000 * 60 * 2, // 2 minutes - more frequent updates
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
 
 export function useMyBookings(options?: Omit<UseQueryOptions<Booking[]>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<Booking[]>({
-    queryKey: queryKeys.bookings.myBookings(),
+    queryKey: queryKeys.bookings.myBookings(user?._id),
     queryFn: fetchMyBookings,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
 
 export function useClientHomeSummary(options?: Omit<UseQueryOptions<ClientHomeSummary>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<ClientHomeSummary>({
-    queryKey: queryKeys.bookings.homeSummary(),
+    queryKey: queryKeys.bookings.homeSummary(user?._id),
     queryFn: fetchClientHomeSummary,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
 
 export function useWorkerHomeSummary(options?: Omit<UseQueryOptions<WorkerHomeSummary>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<WorkerHomeSummary>({
-    queryKey: queryKeys.bookings.workerHomeSummary(),
+    queryKey: queryKeys.bookings.workerHomeSummary(user?._id),
     queryFn: fetchWorkerHomeSummary,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
@@ -682,21 +690,25 @@ export function useMissedJobs(options?: Omit<UseQueryOptions<any[]>, 'queryKey' 
 }
 
 export function useWorkerBookings(options?: Omit<UseQueryOptions<Booking[]>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<Booking[]>({
-    queryKey: queryKeys.bookings.byWorker(),
+    queryKey: queryKeys.bookings.byWorker(user?._id),
     queryFn: fetchWorkerBookings,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
 
 export function useMyJobPosts(options?: Omit<UseQueryOptions<JobPost[]>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<JobPost[]>({
-    queryKey: queryKeys.jobs.myPosts(),
+    queryKey: queryKeys.jobs.myPosts(user?._id),
     queryFn: fetchMyJobPosts,
     staleTime: 0,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
@@ -724,31 +736,37 @@ export function useWorkerReviews(workerId: string | undefined, options?: Omit<Us
 }
 
 export function useNotifications(options?: Omit<UseQueryOptions<NotificationsResponse>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<NotificationsResponse>({
-    queryKey: queryKeys.notifications.list(),
+    queryKey: queryKeys.notifications.list(user?._id),
     queryFn: fetchNotifications,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
 
 export function usePreferences(options?: Omit<UseQueryOptions<UserPreferences>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<UserPreferences>({
-    queryKey: queryKeys.preferences.current(),
+    queryKey: queryKeys.preferences.current(user?._id),
     queryFn: fetchPreferences,
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
 
 export function useMyPayments(options?: Omit<UseQueryOptions<PaymentsResponse>, 'queryKey' | 'queryFn'>) {
+  const { user, token } = useAuth();
   return useQuery<PaymentsResponse>({
-    queryKey: queryKeys.wallet.transactions(),
+    queryKey: queryKeys.wallet.transactions(user?._id),
     queryFn: fetchMyPayments,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
+    enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
     ...options,
   });
 }
