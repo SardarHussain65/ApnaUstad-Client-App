@@ -1,4 +1,4 @@
-name: EAS Android APK Build & Update
+name: EAS Mobile Workflow
 
 on:
   push:
@@ -9,15 +9,15 @@ on:
       action:
         description: 'Choose action to run'
         required: true
-        default: 'build'
+        default: 'update'
         type: choice
         options:
-          - build
           - update
+          - build
 
 jobs:
   eas:
-    name: EAS Build / Update
+    name: EAS Publish / Build
     runs-on: ubuntu-latest
     steps:
       - name: 🏗 Checkout Repository
@@ -39,10 +39,27 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install
 
+      # -------------------------------------------------------------
+      # Mode A: Full Android APK Build
+      # Triggers if:
+      # 1. Commit message contains '[build]' or 'build'
+      # 2. Or manually chosen as 'build' in GitHub Actions tab
+      # -------------------------------------------------------------
       - name: 📱 Build Android Preview APK
-        if: github.event.inputs.action == 'build' || github.event.inputs.action == '' || github.event_name == 'push'
+        if: |
+          github.event.inputs.action == 'build' ||
+          contains(github.event.head_commit.message, '[build]') ||
+          contains(github.event.head_commit.message, 'build')
         run: eas build --profile preview --platform android --non-interactive
 
+      # -------------------------------------------------------------
+      # Mode B: Fast Over-The-Air (OTA) Update (Default for all normal commits)
+      # Triggers if NOT a build request
+      # -------------------------------------------------------------
       - name: 🚀 Publish Over-The-Air (OTA) Update
-        if: github.event.inputs.action == 'update'
+        if: |
+          github.event.inputs.action == 'update' ||
+          (!contains(github.event.head_commit.message, '[build]') &&
+           !contains(github.event.head_commit.message, 'build') &&
+           github.event.inputs.action == '')
         run: eas update --auto
