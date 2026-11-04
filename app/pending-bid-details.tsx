@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,16 +23,20 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  CircleDollarSign,
   Clock3,
   Eye,
   FileText,
   Hourglass,
   Image as ImageIcon,
   MapPin,
+  Pencil,
   Radio,
+  Send,
   ShieldCheck,
   Trash2,
   UserRound,
+  X,
   Zap,
 } from 'lucide-react-native';
 
@@ -40,6 +48,9 @@ import { useConfirmModal, useJobDetails, useToast, useWorkerBids } from '../hook
 import { useWithdrawBidMutation } from '../hooks/mutations/useMutations';
 import { useAuth } from '../context/AuthContext';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
+import api from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeyFactory';
 
 const createStyles = (theme: AppTheme) => {
   const isDark = theme.isDark;
@@ -582,52 +593,230 @@ const createStyles = (theme: AppTheme) => {
       right: 0,
       bottom: 0,
       paddingHorizontal: Spacing.m,
-      paddingTop: 24,
+      paddingTop: 20,
     },
-    withdrawButton: {
-      minHeight: 66,
+    dockActionsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 11,
+      gap: 10,
+    },
+    updateOfferBtn: {
+      flex: 1.5,
+      height: 52,
+      borderRadius: BorderRadius.l,
+      overflow: 'hidden',
+      shadowColor: ORANGE,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 10,
+      elevation: 5,
+    },
+    updateOfferGradient: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: 12,
+    },
+    updateOfferText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+      letterSpacing: 0.2,
+    },
+    withdrawButton: {
+      flex: 1,
+      height: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
       overflow: 'hidden',
       borderRadius: BorderRadius.l,
       borderWidth: 1,
       borderColor: alpha(RED, 0.34),
       backgroundColor: isDark ? 'rgba(28,8,18,0.96)' : '#FFF5F5',
-      paddingHorizontal: 14,
-      shadowColor: RED,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.2,
-      shadowRadius: 16,
-      elevation: 6,
+      paddingHorizontal: 10,
     },
     buttonDisabled: {
       opacity: 0.64,
     },
-    withdrawIcon: {
-      width: 40,
-      height: 40,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 13,
-      backgroundColor: alpha(RED, 0.08),
-      borderWidth: 1,
-      borderColor: alpha(RED, 0.25),
-    },
-    withdrawCopy: {
-      flex: 1,
-    },
     withdrawTitle: {
       color: RED,
-      fontSize: 14,
-      fontWeight: '900',
+      fontSize: 12,
+      fontWeight: '800',
       textTransform: 'uppercase',
     },
-    withdrawSubtitle: {
-      color: alpha(RED, 0.65),
+    // Update Rate Modal Styles
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.72)',
+      justifyContent: 'flex-end',
+    },
+    modalKeyboardWrap: {
+      width: '100%',
+    },
+    modalCard: {
+      borderTopLeftRadius: BorderRadius.xl,
+      borderTopRightRadius: BorderRadius.xl,
+      borderTopWidth: 1,
+      padding: Spacing.l,
+      paddingBottom: Spacing.xl,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    modalHeaderIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalTitle: {
+      fontSize: 17,
+      fontWeight: '900',
+    },
+    modalSubtitle: {
+      fontSize: 11,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+    modalCloseBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: alpha(textPrimary, 0.06),
+    },
+    modalCompareRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: BorderRadius.m,
+      padding: 12,
+      marginBottom: 16,
+    },
+    modalCompareCol: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    modalCompareLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    modalCompareVal: {
+      fontSize: 15,
+      fontWeight: '900',
+      marginTop: 3,
+    },
+    modalCompareDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: borderCol,
+    },
+    modalChipsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 14,
+    },
+    modalChip: {
+      flex: 1,
+      paddingVertical: 9,
+      borderRadius: BorderRadius.m,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalChipText: {
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    modalInputWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: BorderRadius.m,
+      borderWidth: 1.5,
+      backgroundColor: alpha(textPrimary, 0.04),
+      paddingHorizontal: 14,
+      height: 52,
+      marginBottom: 12,
+    },
+    modalInputPrefix: {
+      fontSize: 14,
+      fontWeight: '900',
+      marginRight: 10,
+    },
+    modalInput: {
+      flex: 1,
+      fontSize: 18,
+      fontWeight: '900',
+    },
+    modalFeeBreakdown: {
+      paddingHorizontal: 4,
+      marginBottom: 16,
+      gap: 6,
+    },
+    modalFeeRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    modalFeeLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    modalFeeVal: {
       fontSize: 11,
       fontWeight: '700',
-      marginTop: 3,
+    },
+    modalNetLabel: {
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    modalNetVal: {
+      fontSize: 14,
+      fontWeight: '900',
+    },
+    modalFooterBtns: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    modalCancelBtn: {
+      flex: 1,
+      height: 48,
+      borderRadius: BorderRadius.l,
+      borderWidth: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalCancelText: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    modalSubmitBtn: {
+      flex: 2,
+      height: 48,
+      borderRadius: BorderRadius.l,
+      overflow: 'hidden',
+    },
+    modalSubmitGradient: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      paddingHorizontal: 14,
+    },
+    modalSubmitText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
     },
   });
 };
@@ -745,9 +934,64 @@ export default function PendingBidDetailsScreen() {
   const { user } = useAuth();
   const toast = useToast();
   const confirmModal = useConfirmModal();
+  const queryClient = useQueryClient();
   const workerPerson = bid?.worker && typeof bid.worker === 'object' ? bid.worker : null;
 
+  const [showUpdatePriceModal, setShowUpdatePriceModal] = useState(false);
+  const [updatedPrice, setUpdatedPrice] = useState('');
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
+
   const displayJob = job || bidJob;
+  const currentProposedPrice = Number(bid?.proposedPrice || displayJob?.amount || 0);
+
+  const handleOpenUpdateModal = () => {
+    setUpdatedPrice(String(currentProposedPrice));
+    setShowUpdatePriceModal(true);
+  };
+
+  const handleUpdatePriceSubmit = async () => {
+    const finalPrice = Number(updatedPrice);
+    if (!finalPrice || finalPrice <= 0) {
+      toast.error('Invalid Rate', 'Please enter a valid rate amount.');
+      return;
+    }
+    if (!bid?._id) return;
+
+    try {
+      setIsUpdatingPrice(true);
+      const response = await api.patch(`/jobs/bids/${bid._id}`, {
+        proposedPrice: finalPrice,
+      });
+
+      if (response.data?.success) {
+        toast.success(
+          t('pendingBidDetails.priceUpdatedTitle', 'Offer Updated!'),
+          t('pendingBidDetails.priceUpdatedDesc', 'The customer has been notified of your new rate.')
+        );
+        setShowUpdatePriceModal(false);
+        await Promise.allSettled([
+          refetchBids(),
+          queryClient.invalidateQueries({ queryKey: queryKeys.bids.all }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all }),
+        ]);
+      }
+    } catch (err: any) {
+      if (err.response?.status === 402) {
+        toast.error(
+          'Top-Up Required',
+          err.response?.data?.message || 'Please recharge your wallet to maintain required minimum balance.'
+        );
+      } else {
+        toast.error(
+          'Could Not Update Rate',
+          err.response?.data?.message || 'Something went wrong. Please try again.'
+        );
+      }
+    } finally {
+      setIsUpdatingPrice(false);
+    }
+  };
   const meta = bid?.cardMeta;
   const customer = displayJob?.customer && typeof displayJob.customer === 'object' ? displayJob.customer : null;
   const clientMeta = meta?.counterParty || displayJob?.clientMeta || customer;
@@ -1051,7 +1295,29 @@ export default function PendingBidDetailsScreen() {
                   <View style={[styles.proposalIcon, { backgroundColor: alpha(colors.green, 0.10) }]}>
                     <Banknote size={18} color={colors.green} strokeWidth={2.4} />
                   </View>
-                  <Text style={styles.proposalLabel}>{t('pendingBidDetails.yourQuote')}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 2 }}>
+                    <Text style={styles.proposalLabel}>{t('pendingBidDetails.yourQuote')}</Text>
+                    <TouchableOpacity
+                      onPress={handleOpenUpdateModal}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: BorderRadius.full,
+                        backgroundColor: alpha(colors.worker, 0.14),
+                        borderWidth: 1,
+                        borderColor: alpha(colors.worker, 0.3),
+                      }}
+                    >
+                      <Pencil size={10} color={colors.worker} strokeWidth={2.4} />
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: colors.worker }}>
+                        {t('common.edit', 'Edit')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <Text style={[styles.proposalValue, { color: colors.green }]}>{quoteText}</Text>
                 </View>
                 <View style={styles.proposalDivider} />
@@ -1078,30 +1344,208 @@ export default function PendingBidDetailsScreen() {
               colors={['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)']}
               style={StyleSheet.absoluteFill}
             />
-            <TouchableOpacity
-              style={[styles.withdrawButton, isWithdrawing && styles.buttonDisabled]}
-              onPress={handleWithdraw}
-              disabled={isWithdrawing}
-              activeOpacity={0.82}
-            >
-              {isWithdrawing ? (
-                <ActivityIndicator color={colors.error} />
-              ) : (
-                <>
-                  <View style={styles.withdrawIcon}>
-                    <Trash2 size={17} color={colors.error} strokeWidth={2.5} />
-                  </View>
-                  <View style={styles.withdrawCopy}>
-                    <Text style={styles.withdrawTitle}>{t('pendingBidDetails.withdrawProposal')}</Text>
-                    <Text style={styles.withdrawSubtitle}>{t('pendingBidDetails.removeOffer')}</Text>
-                  </View>
-                  <ChevronRight size={18} color={colors.error} strokeWidth={2.6} />
-                </>
-              )}
-            </TouchableOpacity>
+            <View style={styles.dockActionsRow}>
+              {/* Primary Action: Update Offer */}
+              <TouchableOpacity
+                style={styles.updateOfferBtn}
+                onPress={handleOpenUpdateModal}
+                disabled={isWithdrawing}
+                activeOpacity={0.84}
+              >
+                <LinearGradient
+                  colors={[colors.worker, alpha(colors.worker, 0.82)]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.updateOfferGradient}
+                >
+                  <Pencil size={16} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.updateOfferText}>
+                    {t('pendingBidDetails.updateRateBtn', 'Update Rate')}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Secondary Action: Withdraw */}
+              <TouchableOpacity
+                style={[styles.withdrawButton, isWithdrawing && styles.buttonDisabled]}
+                onPress={handleWithdraw}
+                disabled={isWithdrawing}
+                activeOpacity={0.82}
+              >
+                {isWithdrawing ? (
+                  <ActivityIndicator color={colors.error} size="small" />
+                ) : (
+                  <>
+                    <Trash2 size={15} color={colors.error} strokeWidth={2.4} />
+                    <Text style={styles.withdrawTitle}>{t('pendingBidDetails.withdraw', 'Withdraw')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         ) : null}
       </View>
+
+      {/* Update Rate Modal */}
+      <Modal
+        visible={showUpdatePriceModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !isUpdatingPrice && setShowUpdatePriceModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalKeyboardWrap}
+          >
+            <View style={[styles.modalCard, { backgroundColor: theme.colors.surface.card, borderColor: alpha(colors.worker, 0.3) }]}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={[styles.modalHeaderIcon, { backgroundColor: alpha(colors.worker, 0.12) }]}>
+                    <CircleDollarSign size={20} color={colors.worker} strokeWidth={2.4} />
+                  </View>
+                  <View>
+                    <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
+                      {t('pendingBidDetails.updateRateTitle', 'Update Your Rate')}
+                    </Text>
+                    <Text style={[styles.modalSubtitle, { color: theme.colors.text.muted }]}>
+                      {t('pendingBidDetails.updateRateSubtitle', 'Customer will get an instant notification')}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setShowUpdatePriceModal(false)}
+                  disabled={isUpdatingPrice}
+                  style={styles.modalCloseBtn}
+                >
+                  <X size={18} color={theme.colors.text.muted} strokeWidth={2.4} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Current Quoted vs Client Offer */}
+              <View style={[styles.modalCompareRow, { backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
+                <View style={styles.modalCompareCol}>
+                  <Text style={[styles.modalCompareLabel, { color: theme.colors.text.muted }]}>
+                    {t('pendingBidDetails.currentRate', 'Current Rate')}
+                  </Text>
+                  <Text style={[styles.modalCompareVal, { color: colors.worker }]}>
+                    {formatMoney(currentProposedPrice)}
+                  </Text>
+                </View>
+                <View style={styles.modalCompareDivider} />
+                <View style={styles.modalCompareCol}>
+                  <Text style={[styles.modalCompareLabel, { color: theme.colors.text.muted }]}>
+                    {t('pendingBidDetails.clientBudget', 'Client Budget')}
+                  </Text>
+                  <Text style={[styles.modalCompareVal, { color: theme.colors.text.primary }]}>
+                    {formatMoney(displayJob?.amount || (displayJob as any)?.pricing?.clientOffer || 0)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Quick Increment Chips */}
+              <View style={styles.modalChipsRow}>
+                {[200, 500, 1000].map((inc) => {
+                  const targetPrice = currentProposedPrice + inc;
+                  const isSelected = Number(updatedPrice) === targetPrice;
+                  return (
+                    <TouchableOpacity
+                      key={inc}
+                      style={[
+                        styles.modalChip,
+                        {
+                          backgroundColor: isSelected ? colors.worker : alpha(colors.worker, 0.10),
+                          borderColor: isSelected ? colors.worker : alpha(colors.worker, 0.28),
+                        },
+                      ]}
+                      onPress={() => setUpdatedPrice(String(targetPrice))}
+                    >
+                      <Text style={[styles.modalChipText, { color: isSelected ? '#fff' : colors.worker }]}>
+                        +{inc}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Numeric Input */}
+              <View style={[styles.modalInputWrap, { borderColor: alpha(colors.worker, 0.4) }]}>
+                <Text style={[styles.modalInputPrefix, { color: colors.worker }]}>PKR</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: theme.colors.text.primary }]}
+                  value={updatedPrice}
+                  onChangeText={(val) => setUpdatedPrice(val.replace(/[^\d]/g, ''))}
+                  keyboardType="number-pad"
+                  placeholder={String(currentProposedPrice)}
+                  placeholderTextColor={alpha(theme.colors.text.primary, 0.35)}
+                  autoFocus
+                />
+              </View>
+
+              {/* Financial breakdown */}
+              {Number(updatedPrice) > 0 && (
+                <View style={styles.modalFeeBreakdown}>
+                  <View style={styles.modalFeeRow}>
+                    <Text style={[styles.modalFeeLabel, { color: theme.colors.text.muted }]}>
+                      {t('pendingBidDetails.platformFee', 'App Platform Fee (10%):')}
+                    </Text>
+                    <Text style={[styles.modalFeeVal, { color: theme.colors.text.muted }]}>
+                      - Rs. {Math.round(Number(updatedPrice) * 0.1).toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.modalFeeRow}>
+                    <Text style={[styles.modalNetLabel, { color: colors.success }]}>
+                      {t('pendingBidDetails.youKeep', 'You Receive:')}
+                    </Text>
+                    <Text style={[styles.modalNetVal, { color: colors.success }]}>
+                      Rs. {Math.round(Number(updatedPrice) * 0.9).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Modal Actions */}
+              <View style={styles.modalFooterBtns}>
+                <TouchableOpacity
+                  style={[styles.modalCancelBtn, { borderColor: alpha(theme.colors.text.primary, 0.15) }]}
+                  onPress={() => setShowUpdatePriceModal(false)}
+                  disabled={isUpdatingPrice}
+                >
+                  <Text style={[styles.modalCancelText, { color: theme.colors.text.muted }]}>
+                    {t('common.cancel', 'Cancel')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalSubmitBtn, isUpdatingPrice && { opacity: 0.7 }]}
+                  onPress={handleUpdatePriceSubmit}
+                  disabled={isUpdatingPrice}
+                >
+                  <LinearGradient
+                    colors={[colors.worker, alpha(colors.worker, 0.85)]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.modalSubmitGradient}
+                  >
+                    {isUpdatingPrice ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Send size={15} color="#fff" strokeWidth={2.5} />
+                        <Text style={styles.modalSubmitText}>
+                          {t('pendingBidDetails.sendUpdatedRate', 'Send Updated Rate')}
+                        </Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
       <ConfirmModal
         visible={confirmModal.visible}
         onConfirm={confirmModal.onConfirm}

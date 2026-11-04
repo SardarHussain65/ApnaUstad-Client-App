@@ -155,6 +155,13 @@ export function WorkerHome() {
   const activePendingUrgentJobs = useMemo(() => {
     const bookedJobPostIds = new Set<string>();
     const activeOrRecentCategories = new Set<string>();
+    const appliedJobIds = new Set<string>();
+
+    // Exclude jobs where worker has already placed an active proposal/bid (displayed under "Sent Offers")
+    workerBids?.forEach((bid: any) => {
+      const jId = typeof bid.jobPost === 'object' ? bid.jobPost?._id : bid.jobPost;
+      if (jId) appliedJobIds.add(String(jId));
+    });
 
     activeBookings.forEach((b: any) => {
       const jId = b.jobPost?._id || b.jobPost;
@@ -174,6 +181,7 @@ export function WorkerHome() {
 
       const jId = String(job._id || job.id);
       if (bookedJobPostIds.has(jId)) return false;
+      if (appliedJobIds.has(jId)) return false; // Already applied — only shown in Sent Offers
 
       // If this worker already has an active or recent booking for this category
       if (job.category && activeOrRecentCategories.has(job.category.toLowerCase().trim())) {
@@ -198,7 +206,7 @@ export function WorkerHome() {
       const timeB = new Date(b.createdAt || 0).getTime();
       return timeB - timeA;
     });
-  }, [dismissedJobs, activeBookings, homeSummary?.recentBookings]);
+  }, [dismissedJobs, activeBookings, homeSummary?.recentBookings, workerBids]);
 
   // Display at most 2 latest urgent jobs on Home screen to avoid screen clutter;
   // workers can check additional jobs in the "Find Jobs" tab.

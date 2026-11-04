@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   Image,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -61,6 +62,7 @@ interface IncomingJobModalProps {
   jobs: any[];
   onAccept: (job: any) => void;
   onCounterOffer: (job: any) => void;
+  onBidSubmitted?: (job: any) => void;
   onReject: (jobId: string) => void;
   onClose: () => void;
   acceptingJobId?: string | null;
@@ -132,6 +134,7 @@ export function IncomingJobModal({
   jobs,
   onAccept,
   onCounterOffer,
+  onBidSubmitted,
   onReject,
   onClose,
   acceptingJobId,
@@ -155,66 +158,73 @@ export function IncomingJobModal({
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.screen}>
-          {/* Subtle Dim Overlay */}
-          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: alpha(theme.colors.background.screen, 0.88) }]} />
+        <KeyboardAvoidingView
+          style={styles.screen}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+        >
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.screen}>
+            {/* Subtle Dim Overlay */}
+            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: alpha(theme.colors.background.screen, 0.88) }]} />
 
-          {/* Quick Close Button */}
-          <TouchableOpacity
-            style={[
-              styles.closeButton,
-              {
-                backgroundColor: alpha(theme.colors.surface.card, 0.95),
-                borderColor: alpha(colors.border || theme.colors.text.primary, 0.15),
-                top: Math.max(insets.top + 10, 16),
-              },
-            ]}
-            onPress={onClose}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.close', 'Close')}
-          >
-            <X size={20} color={theme.colors.text.primary} strokeWidth={2.4} />
-          </TouchableOpacity>
+            {/* Quick Close Button */}
+            <TouchableOpacity
+              style={[
+                styles.closeButton,
+                {
+                  backgroundColor: alpha(theme.colors.surface.card, 0.95),
+                  borderColor: alpha(colors.border || theme.colors.text.primary, 0.15),
+                  top: Math.max(insets.top + 10, 16),
+                },
+              ]}
+              onPress={onClose}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close', 'Close')}
+            >
+              <X size={20} color={theme.colors.text.primary} strokeWidth={2.4} />
+            </TouchableOpacity>
 
-          <ScrollView
-            horizontal
-            pagingEnabled
-            scrollEnabled={parentScrollEnabled}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.jobPager}
-            decelerationRate="fast"
-          >
-            {jobs.map((job, index) => (
-              <View key={job._id} style={[styles.jobPage, { width: screenWidth }]}>
-                <JobDecisionCard
-                  job={job}
-                  totalJobs={jobs.length}
-                  currentIndex={index + 1}
-                  isLoading={acceptingJobId === job._id}
-                  onAccept={() => onAccept(job)}
-                  onCounterOffer={() => onCounterOffer(job)}
-                  onReject={() => onReject(job._id)}
-                  onWalletPress={handleWalletPress}
-                  onScrollActive={setParentScrollEnabled}
-                  theme={theme}
-                  colors={colors}
-                  shadows={shadows}
-                />
+            <ScrollView
+              horizontal
+              pagingEnabled
+              scrollEnabled={parentScrollEnabled}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.jobPager}
+              decelerationRate="fast"
+            >
+              {jobs.map((job, index) => (
+                <View key={job._id} style={[styles.jobPage, { width: screenWidth }]}>
+                  <JobDecisionCard
+                    job={job}
+                    totalJobs={jobs.length}
+                    currentIndex={index + 1}
+                    isLoading={acceptingJobId === job._id}
+                    onAccept={() => onAccept(job)}
+                    onCounterOffer={() => onCounterOffer(job)}
+                    onBidSubmitted={() => onBidSubmitted ? onBidSubmitted(job) : onReject(job._id)}
+                    onReject={() => onReject(job._id)}
+                    onWalletPress={handleWalletPress}
+                    onScrollActive={setParentScrollEnabled}
+                    theme={theme}
+                    colors={colors}
+                    shadows={shadows}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            {jobs.length > 1 && (
+              <View style={[styles.swipeHint, { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderColor: alpha(colors.cyan, 0.25) }]}>
+                <ChevronLeft size={13} color={colors.cyan} strokeWidth={2.5} />
+                <Text style={[styles.swipeHintText, { color: colors.cyan }]}>
+                  {t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: jobs.length })}
+                </Text>
+                <ChevronRight size={13} color={colors.cyan} strokeWidth={2.5} />
               </View>
-            ))}
-          </ScrollView>
-
-          {jobs.length > 1 && (
-            <View style={[styles.swipeHint, { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderColor: alpha(colors.cyan, 0.25) }]}>
-              <ChevronLeft size={13} color={colors.cyan} strokeWidth={2.5} />
-              <Text style={[styles.swipeHintText, { color: colors.cyan }]}>
-                {t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: jobs.length })}
-              </Text>
-              <ChevronRight size={13} color={colors.cyan} strokeWidth={2.5} />
-            </View>
-          )}
-        </Animated.View>
+            )}
+          </Animated.View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -227,6 +237,7 @@ function JobDecisionCard({
   isLoading,
   onAccept,
   onCounterOffer,
+  onBidSubmitted,
   onReject,
   onWalletPress,
   onScrollActive,
@@ -240,6 +251,7 @@ function JobDecisionCard({
   isLoading: boolean;
   onAccept: () => void;
   onCounterOffer: () => void;
+  onBidSubmitted: () => void;
   onReject: () => void;
   onWalletPress: () => void;
   onScrollActive?: (active: boolean) => void;
@@ -262,6 +274,15 @@ function JobDecisionCard({
   const [counterPrice, setCounterPrice] = useState('');
   const [submittingCounter, setSubmittingCounter] = useState(false);
   const [activeCounterPrice, setActiveCounterPrice] = useState<number | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (showCounterInput) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    }
+  }, [showCounterInput]);
 
   // Responsive device width helpers for button sizing
   const isSmallDevice = screenWidth < 380;
@@ -324,6 +345,7 @@ function JobDecisionCard({
       setCounterPrice('');
       setActiveCounterPrice(finalPrice);
       setShowCounterInput(false);
+      onBidSubmitted();
     } catch (err: any) {
       if (err.response?.status === 402) {
         const required = Number(err.response?.data?.requiredBalance || 500);
@@ -394,7 +416,7 @@ function JobDecisionCard({
         styles.cardFrame,
         {
           width: Math.min(screenWidth - 28, 440),
-          maxHeight: Math.min(screenHeight * 0.85, 680),
+          maxHeight: Math.min(screenHeight * (showCounterInput ? 0.78 : 0.85), 680),
         },
       ]}
     >
@@ -447,9 +469,11 @@ function JobDecisionCard({
 
         {/* Scrollable Content */}
         <ScrollView
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           style={styles.cardScroll}
-          contentContainerStyle={styles.cardContent}
+          contentContainerStyle={[styles.cardContent, { paddingBottom: showCounterInput ? 40 : 14 }]}
         >
           {/* Hero Earnings & Distance Card */}
           <View style={[styles.heroCard, { backgroundColor: alpha(theme.colors.text.primary, 0.03), borderColor: alpha(accent, 0.18) }]}>

@@ -509,6 +509,23 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     });
   }, [addToDismissed, clearDismissedJob, router]);
 
+  const handleBidSubmitted = useCallback((job: any) => {
+    if (!job?._id) return;
+    const targetId = String(job._id);
+    const nextQueue = incomingJobsQueueRef.current.filter(item => String(item._id) !== targetId);
+    incomingJobsQueueRef.current = nextQueue;
+    setIncomingJobsQueue(nextQueue);
+    if (nextQueue.length === 0) setShowModal(false);
+
+    // Ensure it is completely cleared from dismissed list so it will not appear in Urgent Job Waiting
+    clearDismissedJob(targetId);
+
+    // Invalidate queries so Sent Offers updates immediately
+    queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+  }, [clearDismissedJob, queryClient]);
+
   const acceptDismissedJob = useCallback(async (job: any) => {
     if (!job) return;
 
@@ -647,6 +664,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         jobs={incomingJobsQueue.map(job => ({ ...job, hourlyRate: (user as any)?.hourlyRate }))}
         onAccept={handleAcceptJob}
         onCounterOffer={handleCounterOfferJob}
+        onBidSubmitted={handleBidSubmitted}
         onReject={handleRejectJob}
         onClose={handleCloseModal}
         acceptingJobId={acceptingJobId}
