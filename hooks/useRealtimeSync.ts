@@ -28,6 +28,7 @@ export function useRealtimeSync(enabled: boolean = true) {
 
       // Invalidate relevant aggregate collections
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
@@ -55,6 +56,7 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
     };
 
     // ─── 3. BID EVENTS ───────────────────────────────────────────────────────
@@ -73,12 +75,17 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.profile.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.workers.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
     };
 
-    // ─── 5. RECONNECTION RE-SYNCHRONIZATION ──────────────────────────────────
+    // ─── 5. RECONNECTION RE-SYNCHRONIZATION (DEBOUNCED) ──────────────────────
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     const handleReconnected = () => {
-      console.log('🔄 [RealtimeSync] Socket reconnected — performing silent background sync of active queries');
-      queryClient.invalidateQueries({ type: 'active' });
+      console.log('🔄 [RealtimeSync] Socket reconnected — scheduling silent background sync of active queries');
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => {
+        queryClient.invalidateQueries({ type: 'active' });
+      }, 1500);
     };
 
     // Subscriptions
@@ -119,6 +126,7 @@ export function useRealtimeSync(enabled: boolean = true) {
     ];
 
     return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       unsubs.forEach((unsub) => unsub());
     };
   }, [enabled, queryClient]);

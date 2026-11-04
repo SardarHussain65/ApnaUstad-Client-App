@@ -1019,7 +1019,26 @@ export default function TransactionDetailsScreen() {
                       t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
                       () => {
                         confirmModal.closeConfirm();
-                        updateStatus({ bookingId: id as string, status: 'ongoing' });
+                        updateStatus(
+                          { bookingId: id as string, status: 'ongoing' },
+                          {
+                            onSuccess: () => {
+                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              refetch();
+                            },
+                            onError: (error: any) => {
+                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                              const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
+                              alertModal.showAlert(
+                                t('common.error', 'Error'),
+                                msg,
+                                undefined,
+                                'error',
+                                t('common.ok', 'OK')
+                              );
+                            },
+                          }
+                        );
                       },
                       undefined,
                       t('transactionDetails.startJob', 'Start Job'),
@@ -1043,7 +1062,26 @@ export default function TransactionDetailsScreen() {
                       t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
                       () => {
                         confirmModal.closeConfirm();
-                        updateStatus({ bookingId: id as string, status: 'completed' });
+                        updateStatus(
+                          { bookingId: id as string, status: 'completed' },
+                          {
+                            onSuccess: () => {
+                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              refetch();
+                            },
+                            onError: (error: any) => {
+                              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                              const msg = error?.response?.data?.message || t('transactionDetails.completeJobFailed', 'Could not complete job. Please check your connection and try again.');
+                              alertModal.showAlert(
+                                t('common.error', 'Error'),
+                                msg,
+                                undefined,
+                                'error',
+                                t('common.ok', 'OK')
+                              );
+                            },
+                          }
+                        );
                       },
                       undefined,
                       t('transactionDetails.completeJob', 'Complete Job'),

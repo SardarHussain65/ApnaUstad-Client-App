@@ -415,11 +415,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   solidBtnText: {
-    fontSize: 12.5,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
     textAlign: 'center',
-    lineHeight: 16,
     includeFontPadding: false,
   },
   cancelBtn: {

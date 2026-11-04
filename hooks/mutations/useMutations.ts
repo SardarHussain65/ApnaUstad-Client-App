@@ -358,6 +358,7 @@ export function useUpdateBookingStatusMutation(options?: Omit<UseMutationOptions
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
     },
@@ -390,6 +391,7 @@ export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Err
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });

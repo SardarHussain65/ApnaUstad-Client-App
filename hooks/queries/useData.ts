@@ -662,7 +662,7 @@ export function useClientHomeSummary(options?: Omit<UseQueryOptions<ClientHomeSu
 
 export function useWorkerHomeSummary(options?: Omit<UseQueryOptions<WorkerHomeSummary>, 'queryKey' | 'queryFn'>) {
   return useQuery<WorkerHomeSummary>({
-    queryKey: ['bookings', 'worker-home-summary'],
+    queryKey: queryKeys.bookings.workerHomeSummary(),
     queryFn: fetchWorkerHomeSummary,
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,

@@ -304,13 +304,23 @@ export function WorkerHome() {
 
   useEffect(() => {
     if (!token) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedRefresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        refreshWorkerActivity();
+      }, 600);
+    };
     const events = [
       'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
       'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn',
       'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled', 'booking:paid'
     ];
-    const unsubs = events.map((event) => socketService.on(event, refreshWorkerActivity));
-    return () => unsubs.forEach((u) => u());
+    const unsubs = events.map((event) => socketService.on(event, debouncedRefresh));
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsubs.forEach((u) => u());
+    };
   }, [token, refreshWorkerActivity]);
 
   // ─── Booking Handlers ─────────────────────────────────────────────────────────

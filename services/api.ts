@@ -5,7 +5,7 @@ import { BASE_URL } from '../constants/Config';
 
 const api = axios.create({
   baseURL: BASE_URL + '/api/v1',
-  timeout: 15000, // 15 seconds request timeout limit
+  timeout: 30000, // 30 seconds request timeout limit (prevents premature abort on mobile networks)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -177,8 +177,22 @@ api.interceptors.response.use(
       }
     }
 
+    if (error.response?.status === 429) {
+      console.warn('--- 429 Rate Limit detected ---');
+      try {
+        const Toast = require('react-native-toast-message').default;
+        Toast.show({
+          type: 'error',
+          text1: 'Too Many Requests',
+          text2: error.response?.data?.message || 'Please wait a moment before trying again.',
+          visibilityTime: 4000,
+        });
+      } catch {}
+    }
+
     // Network / Offline Error and Timeout handling
-    if (!error.response) {
+    // Ignore canceled requests (e.g. TanStack Query screen unmount, superseded fetches)
+    if (!error.response && !axios.isCancel(error) && error.name !== 'CanceledError') {
       try {
         const Toast = require('react-native-toast-message').default;
         const isTimeout = error.code === 'ECONNABORTED';
