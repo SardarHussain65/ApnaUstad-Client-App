@@ -113,7 +113,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
   });
 
   return (
-    // ─── LEARNING: Animated.View + entering prop ───────────────────────────
+    // ─── LEARNING: Animated.View + entering prop ───────────────────────────//
     // entering={FadeInDown.delay(index * 100)} staggers each card's entrance
     // by 100ms × its position in the list, creating a cascading reveal effect.
     // ──────────────────────────────────────────────────────────────────────────
