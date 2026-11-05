@@ -87,10 +87,17 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
             </View>
 
             <View style={styles.budgetSection}>
-              <View style={[styles.budgetBadge, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.2) }]}>
-                <Banknote size={14} color={colors.success} />
-                <Text style={[styles.budgetText, { color: colors.success }]}>Rs. {job.amount || 0}</Text>
-              </View>
+              {(!job.amount || job.amount === 0 || job.pricingType === 'open') ? (
+                <View style={[styles.budgetBadge, { backgroundColor: alpha(colors.cyan, 0.12), borderColor: alpha(colors.cyan, 0.25) }]}>
+                  <Banknote size={14} color={colors.cyan} />
+                  <Text style={[styles.budgetText, { color: colors.cyan }]}>Open for Offers</Text>
+                </View>
+              ) : (
+                <View style={[styles.budgetBadge, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.2) }]}>
+                  <Banknote size={14} color={colors.success} />
+                  <Text style={[styles.budgetText, { color: colors.success }]}>Rs. {Number(job.amount).toLocaleString()}</Text>
+                </View>
+              )}
             </View>
           </View>
 

@@ -50,9 +50,12 @@ import {
   Star,
   UserRound,
   Zap,
+  AlertTriangle,
+  HelpCircle,
 } from 'lucide-react-native';
 import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 
+import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../services/backgroundLocationService';
@@ -145,6 +148,22 @@ export default function TransactionDetailsScreen() {
   const alertModal = useAlertModal();
   const confirmModal = useConfirmModal();
   const bypassBeforeRemoveRef = useRef(false);
+
+  // Start Work & Price Increase Verification State
+  const [showStartWorkModal, setShowStartWorkModal] = useState(false);
+  const [startWorkStep, setStartWorkStep] = useState<'confirm' | 'price_increase'>('confirm');
+  const [revisedPriceInput, setRevisedPriceInput] = useState('');
+  const [priceIncreaseReason, setPriceIncreaseReason] = useState('');
+  const [isSubmittingPriceIncrease, setIsSubmittingPriceIncrease] = useState(false);
+  const [isSubmittingPriceDecision, setIsSubmittingPriceDecision] = useState(false);
+
+  // Truth Verification Modal State (Completion)
+  const [showTruthModal, setShowTruthModal] = useState(false);
+  const [truthPaidOption, setTruthPaidOption] = useState<'exact' | 'more'>('exact');
+  const [truthDeclaredAmount, setTruthDeclaredAmount] = useState('');
+  const [truthReportExtraDemand, setTruthReportExtraDemand] = useState(false);
+  const [truthFeedback, setTruthFeedback] = useState('');
+  const [isSubmittingTruth, setIsSubmittingTruth] = useState(false);
 
   // Map state
   const cameraRef = useRef<CameraRef>(null);
@@ -543,37 +562,177 @@ export default function TransactionDetailsScreen() {
 
   const handleStartJob = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    confirmModal.showConfirm(
-      t('transactionDetails.confirmStartTitle', 'Start Service?'),
-      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
-      () => {
-        confirmModal.closeConfirm();
-        updateStatus(
-          { bookingId: id as string, status: 'ongoing' },
-          {
-            onSuccess: () => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              refetch();
-            },
-            onError: (error: any) => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
-              alertModal.showAlert(
-                t('common.error', 'Error'),
-                msg,
-                undefined,
-                'error',
-                t('common.ok', 'OK')
-              );
-            },
-          }
-        );
-      },
-      undefined,
-      t('transactionDetails.startJob', 'Start Job'),
-      t('common.cancel', 'Cancel'),
-      colors.cyan
+    setStartWorkStep('confirm');
+    setRevisedPriceInput('');
+    setPriceIncreaseReason('');
+    setShowStartWorkModal(true);
+  };
+
+  const handleConfirmStartWorkAgreed = () => {
+    setShowStartWorkModal(false);
+    updateStatus(
+      { bookingId: id as string, status: 'ongoing' },
+      {
+        onSuccess: () => {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          refetch();
+        },
+        onError: (error: any) => {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
+          alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error', t('common.ok', 'OK'));
+        },
+      }
     );
+  };
+
+  const handleSendPriceIncrease = async () => {
+    const currentPrice = Number(booking?.totalAmount || 0);
+    const newPrice = Number(revisedPriceInput);
+
+    if (!newPrice || newPrice <= currentPrice) {
+      alertModal.showAlert(
+        t('common.error', 'Error'),
+        `New price must be higher than the agreed Rs. ${currentPrice.toLocaleString()}. Ustads cannot reduce agreed prices. If scope was reduced, customer must contact Admin Support.`,
+        undefined,
+        'warning'
+      );
+      return;
+    }
+
+    if (!priceIncreaseReason.trim() || priceIncreaseReason.trim().length < 5) {
+      alertModal.showAlert(
+        t('common.error', 'Error'),
+        'Please enter a detailed reason for the price increase (at least 5 characters).',
+        undefined,
+        'warning'
+      );
+      return;
+    }
+
+    setIsSubmittingPriceIncrease(true);
+    try {
+      await api.post(`/bookings/${id}/request-price-increase`, {
+        revisedPrice: newPrice,
+        reason: priceIncreaseReason.trim(),
+      });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowStartWorkModal(false);
+      Toast.show({
+        type: 'success',
+        text1: 'Price Increase Sent',
+        text2: 'Waiting for customer approval on their phone.',
+      });
+      refetch();
+    } catch (err: any) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const msg = err?.response?.data?.message || 'Failed to submit price increase request.';
+      alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error');
+    } finally {
+      setIsSubmittingPriceIncrease(false);
+    }
+  };
+
+  const handleApprovePriceIncrease = async () => {
+    setIsSubmittingPriceDecision(true);
+    try {
+      await api.post(`/bookings/${id}/respond-price-increase`, { approved: true });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Toast.show({
+        type: 'success',
+        text1: 'Price Approved',
+        text2: 'Updated job amount confirmed.',
+      });
+      refetch();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to approve price increase.';
+      alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error');
+    } finally {
+      setIsSubmittingPriceDecision(false);
+    }
+  };
+
+  const handleDeclinePriceIncrease = async () => {
+    setIsSubmittingPriceDecision(true);
+    try {
+      await api.post(`/bookings/${id}/respond-price-increase`, { approved: false });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Toast.show({
+        type: 'info',
+        text1: 'Price Increase Declined',
+        text2: 'Original agreed price remains.',
+      });
+      refetch();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to decline price increase.';
+      alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error');
+    } finally {
+      setIsSubmittingPriceDecision(false);
+    }
+  };
+
+  const handleOpenTruthModal = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setTruthPaidOption('exact');
+    setTruthDeclaredAmount('');
+    setTruthReportExtraDemand(false);
+    setTruthFeedback('');
+    setShowTruthModal(true);
+  };
+
+  const handleSubmitTruthPayment = async () => {
+    const agreedAmount = Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0);
+    const declared = truthPaidOption === 'more' ? Number(truthDeclaredAmount) : agreedAmount;
+
+    if (truthPaidOption === 'more' && (!declared || declared <= agreedAmount)) {
+      alertModal.showAlert(
+        t('common.error', 'Error'),
+        `Declared amount must be greater than original Rs. ${agreedAmount.toLocaleString()}.`,
+        undefined,
+        'warning'
+      );
+      return;
+    }
+
+    setIsSubmittingTruth(true);
+    try {
+      if (truthPaidOption === 'more' || truthReportExtraDemand) {
+        await api.post(`/bookings/${id}/verify-payment`, {
+          actualAmountPaid: declared,
+          reportExtraDemand: truthReportExtraDemand,
+          feedback: truthFeedback.trim() || undefined,
+        });
+      }
+
+      payBooking(
+        { bookingId: id as string, paymentMethod: 'cash' },
+        {
+          onSuccess: () => {
+            setShowTruthModal(false);
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+            refetch();
+            setShowReviewModal(true);
+          },
+          onError: (error: any) => {
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+            alertModal.showAlert(t('transactionDetails.paymentBlocked', 'Payment paused'), msg, undefined, 'error');
+          },
+        }
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Failed to record truth verification.';
+      alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error');
+    } finally {
+      setIsSubmittingTruth(false);
+    }
+  };
+
+  const handleConfirmCashPayment = () => {
+    handleOpenTruthModal();
   };
 
   const handleCompleteJob = () => {
@@ -593,60 +752,13 @@ export default function TransactionDetailsScreen() {
             onError: (error: any) => {
               void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               const msg = error?.response?.data?.message || t('transactionDetails.completeJobFailed', 'Could not complete job. Please check your connection and try again.');
-              alertModal.showAlert(
-                t('common.error', 'Error'),
-                msg,
-                undefined,
-                'error',
-                t('common.ok', 'OK')
-              );
+              alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error');
             },
           }
         );
       },
       undefined,
       t('transactionDetails.completeJob', 'Complete Job'),
-      t('common.cancel', 'Cancel'),
-      colors.success
-    );
-  };
-
-  const handleConfirmCashPayment = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    confirmModal.showConfirm(
-      t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
-      t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
-        amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
-      }),
-      () => {
-        confirmModal.closeConfirm();
-        payBooking(
-          { bookingId: id as string, paymentMethod: 'cash' },
-          {
-            onSuccess: () => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
-              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
-              queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-              refetch();
-              setShowReviewModal(true);
-            },
-            onError: (error: any) => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-              alertModal.showAlert(
-                t('transactionDetails.paymentBlocked', 'Payment paused'),
-                msg,
-                undefined,
-                'error',
-                t('common.ok', 'OK')
-              );
-            },
-          }
-        );
-      },
-      undefined,
-      t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
       t('common.cancel', 'Cancel'),
       colors.success
     );
@@ -875,6 +987,63 @@ export default function TransactionDetailsScreen() {
           })}
         </View>
       </View>
+
+      {/* ── Customer Price Increase Review Alert Banner ── */}
+      {!isWorker && (booking as any)?.pendingPriceIncrease && (
+        <View style={[styles.cardSection, { backgroundColor: alpha(colors.worker || '#FF9800', isDark ? 0.14 : 0.08), borderColor: colors.worker || '#FF9800', borderWidth: 1.5, marginBottom: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <AlertTriangle size={18} color={colors.worker || '#FF9800'} />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.worker || '#FF9800' }}>
+              {t('transactionDetails.priceIncreaseAlert', 'Price Revision Request from Ustad')}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 13, color: theme.colors.text.primary, lineHeight: 18, marginBottom: 6 }}>
+            {t('transactionDetails.priceIncreaseDesc', 'The Ustad inspected the work on-site and requested to update the price to Rs. {{newPrice}}.', {
+              newPrice: Number((booking as any).pendingPriceIncrease.revisedPrice).toLocaleString(),
+            })}
+          </Text>
+          <View style={{ backgroundColor: alpha(theme.colors.text.primary, 0.05), padding: 8, borderRadius: 8, marginBottom: 10 }}>
+            <Text style={{ fontSize: 12, color: theme.colors.text.secondary }}>
+              {t('common.reason', 'Reason')}: "{(booking as any).pendingPriceIncrease.reason}"
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: colors.success, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+              onPress={handleApprovePriceIncrease}
+              disabled={isSubmittingPriceDecision}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
+                {isSubmittingPriceDecision ? 'Updating...' : t('common.approve', 'Approve New Price')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ flex: 1, borderWidth: 1, borderColor: colors.error, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+              onPress={handleDeclinePriceIncrease}
+              disabled={isSubmittingPriceDecision}
+            >
+              <Text style={{ color: colors.error, fontWeight: '700', fontSize: 13 }}>
+                {t('common.decline', 'Decline')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* ── Worker Price Increase Pending Notice Banner ── */}
+      {isWorker && (booking as any)?.pendingPriceIncrease && (
+        <View style={[styles.cardSection, { backgroundColor: alpha(colors.cyan, 0.08), borderColor: colors.cyan, borderWidth: 1.5, marginBottom: 12 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Clock3 size={18} color={colors.cyan} />
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.cyan }}>
+              Price Increase Pending Approval (Rs. {Number((booking as any).pendingPriceIncrease.revisedPrice).toLocaleString()})
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: theme.colors.text.secondary, marginTop: 4 }}>
+            Waiting for the customer to review and approve the updated price on their phone.
+          </Text>
+        </View>
+      )}
 
       {/* ── 2. Unified Partner & Financial Master Hub ── */}
       <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
@@ -1573,6 +1742,263 @@ export default function TransactionDetailsScreen() {
                 </TouchableOpacity>
               </LinearGradient>
             </Animated.View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Start Work Verification Modal (Worker) ── */}
+      <Modal
+        visible={showStartWorkModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStartWorkModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
+          <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            {startWorkStep === 'confirm' ? (
+              <>
+                <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
+                    <Zap size={28} color={colors.cyan} />
+                  </View>
+                  <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
+                    {t('transactionDetails.confirmStartTitle', 'Confirm Starting Work')}
+                  </Text>
+                  <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
+                    {t('transactionDetails.confirmStartQuestion', 'Are you starting the work with the agreed amount of')}
+                  </Text>
+                  <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 4 }}>
+                    Rs. {Number(booking?.totalAmount || 0).toLocaleString()}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.primaryModalBtn, { backgroundColor: colors.cyan }]}
+                  onPress={handleConfirmStartWorkAgreed}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.primaryModalBtnText}>
+                    {t('transactionDetails.yesStartWork', 'Yes, Start Work (Rs. {{amount}})', { amount: Number(booking?.totalAmount || 0).toLocaleString() })}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.secondaryModalBtn, { borderColor: cardBorder }]}
+                  onPress={() => setStartWorkStep('price_increase')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.secondaryModalBtnText, { color: colors.worker }]}>
+                    {t('transactionDetails.noPriceIncreased', 'No, Price Increased on Site')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ marginTop: 8, padding: 8, alignItems: 'center' }}
+                  onPress={() => setShowStartWorkModal(false)}
+                >
+                  <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.worker, 0.15) }]}>
+                    <AlertTriangle size={28} color={colors.worker} />
+                  </View>
+                  <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
+                    {t('transactionDetails.reportPriceIncrease', 'Report Increased Price')}
+                  </Text>
+                  <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
+                    {t('transactionDetails.reportPriceIncreaseSub', 'If additional tasks or spare parts were required, enter the new price for customer approval.')}
+                  </Text>
+                </View>
+
+                {/* Price input */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
+                  NEW AMOUNT (PKR)
+                </Text>
+                <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
+                  <TextInput
+                    style={{ flex: 1, fontSize: 18, fontWeight: '700', color: theme.colors.text.primary }}
+                    keyboardType="numeric"
+                    placeholder={`Higher than ${Number(booking?.totalAmount || 0).toLocaleString()}`}
+                    placeholderTextColor={theme.colors.text.muted}
+                    value={revisedPriceInput}
+                    onChangeText={setRevisedPriceInput}
+                  />
+                </View>
+
+                {/* Strict validation banner */}
+                {!!revisedPriceInput && Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) && (
+                  <View style={{ backgroundColor: alpha(colors.error, 0.1), padding: 8, borderRadius: 8, marginBottom: 10 }}>
+                    <Text style={{ fontSize: 11, color: colors.error, lineHeight: 15 }}>
+                      ⚠️ Ustads cannot lower agreed prices. Price increases only. If the scope was reduced, customer must contact Admin Support.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Reason input */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4, marginTop: 8 }}>
+                  REASON FOR INCREASE
+                </Text>
+                <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04), minHeight: 60, alignItems: 'flex-start' }]}>
+                  <TextInput
+                    style={{ flex: 1, fontSize: 13, color: theme.colors.text.primary, paddingVertical: 4 }}
+                    placeholder="E.g., Spare parts needed, motor rewiring, extra 2 hours"
+                    placeholderTextColor={theme.colors.text.muted}
+                    multiline
+                    value={priceIncreaseReason}
+                    onChangeText={setPriceIncreaseReason}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryModalBtn,
+                    {
+                      backgroundColor: colors.worker,
+                      marginTop: 14,
+                      opacity: (!revisedPriceInput || Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) || !priceIncreaseReason.trim()) ? 0.5 : 1,
+                    },
+                  ]}
+                  onPress={handleSendPriceIncrease}
+                  disabled={isSubmittingPriceIncrease || !revisedPriceInput || Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) || !priceIncreaseReason.trim()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.primaryModalBtnText}>
+                    {isSubmittingPriceIncrease ? 'Sending...' : t('transactionDetails.sendForApproval', 'Send for Customer Approval')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ marginTop: 10, padding: 6, alignItems: 'center' }}
+                  onPress={() => setStartWorkStep('confirm')}
+                >
+                  <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.back', 'Back')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Truth Verification Modal (Customer at Completion) ── */}
+      <Modal
+        visible={showTruthModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTruthModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
+          <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.success, 0.15) }]}>
+                <ShieldCheck size={28} color={colors.success} />
+              </View>
+              <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
+                {t('transactionDetails.verifyPaymentTitle', 'Confirm Service Payment')}
+              </Text>
+              <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
+                {t('transactionDetails.verifyPaymentAgreedLabel', 'Agreed Bill for this service:')}
+              </Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 2 }}>
+                Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
+              </Text>
+            </View>
+
+            {/* Warranty & Honest policy notice */}
+            <View style={{ backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 10, borderRadius: 10, marginBottom: 12 }}>
+              <Text style={{ fontSize: 12, color: theme.colors.text.primary, lineHeight: 17 }}>
+                🛡️ <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
+              </Text>
+            </View>
+
+            {/* Payment Choice Selection */}
+            <View style={{ gap: 8, marginBottom: 12 }}>
+              <TouchableOpacity
+                style={[
+                  styles.truthOptionBtn,
+                  { borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder, backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.1) : 'transparent' },
+                ]}
+                onPress={() => setTruthPaidOption('exact')}
+                activeOpacity={0.8}
+              >
+                <CheckCircle2 size={18} color={truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted} />
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
+                  I paid the exact agreed Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.truthOptionBtn,
+                  { borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder, backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.1) : 'transparent' },
+                ]}
+                onPress={() => setTruthPaidOption('more')}
+                activeOpacity={0.8}
+              >
+                <Banknote size={18} color={truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted} />
+                <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
+                  I willingly paid more for extra tasks/materials
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {truthPaidOption === 'more' && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
+                  ACTUAL TOTAL CASH PAID (PKR)
+                </Text>
+                <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
+                  <TextInput
+                    style={{ flex: 1, fontSize: 16, fontWeight: '700', color: theme.colors.text.primary }}
+                    keyboardType="numeric"
+                    placeholder="Enter total amount paid"
+                    placeholderTextColor={theme.colors.text.muted}
+                    value={truthDeclaredAmount}
+                    onChangeText={setTruthDeclaredAmount}
+                  />
+                </View>
+
+                {/* Report Extra Demand Toggle */}
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}
+                  onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
+                >
+                  <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
+                    {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
+                  </View>
+                  <Text style={{ fontSize: 12, color: colors.error, fontWeight: '600' }}>
+                    Report: Ustad forced or demanded extra money
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.primaryModalBtn,
+                { backgroundColor: colors.success },
+              ]}
+              onPress={handleSubmitTruthPayment}
+              disabled={isSubmittingTruth}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.primaryModalBtnText}>
+                {isSubmittingTruth ? 'Confirming...' : t('transactionDetails.confirmAndClose', 'Confirm Payment & Complete')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ marginTop: 8, padding: 6, alignItems: 'center' }}
+              onPress={() => setShowTruthModal(false)}
+            >
+              <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -2536,5 +2962,77 @@ const styles = StyleSheet.create({
     color: '#001014',
     fontSize: 14,
     fontWeight: '900',
+  },
+  customModalSheet: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  modalTitleText: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  modalSubtitleText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  primaryModalBtn: {
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  primaryModalBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  secondaryModalBtn: {
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+  },
+  secondaryModalBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalTextInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  truthOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
   },
 });

@@ -146,6 +146,7 @@ export default function JobCreationScreen() {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [urgency, setUrgency] = useState<Urgency>((urgencyParam as Urgency) || 'instant');
   const [description, setDescription] = useState<string>(initialDescription ?? '');
+  const [pricingMode, setPricingMode] = useState<'open' | 'fixed'>('open');
   const [amount, setAmount] = useState<string>('');
   const [selectedMedia, setSelectedMedia] = useState<EvidenceAsset[]>([]);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
@@ -417,7 +418,8 @@ export default function JobCreationScreen() {
         uploadedAudioUrls = response.audioUrls ?? [];
       }
 
-      const clientOffer = amount && Number(amount) > 0 ? parseFloat(amount) : 0;
+      const clientOffer = pricingMode === 'fixed' && amount && Number(amount) > 0 ? parseFloat(amount) : 0;
+      const pricingType = clientOffer > 0 ? 'fixed' : 'open';
 
       const payload = {
         category: categoryName,
@@ -425,6 +427,7 @@ export default function JobCreationScreen() {
         urgency,
         address,
         amount: clientOffer,
+        pricingType,
         imageUrls: uploadedImageUrls,
         videoUrls: uploadedVideoUrls,
         audioUrls: uploadedAudioUrls,
@@ -736,59 +739,116 @@ export default function JobCreationScreen() {
               </View>
             )}
 
-            {/* ── 6. Your Target Budget / Offer ── */}
+            {/* ── 6. Pricing & Budget Option ── */}
             <View style={styles.sectionWrap}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <Text style={[styles.sectionTitle, { color: palette.textPrimary, marginBottom: 0 }]}>
-                  {t('jobCreation.yourBudgetLabel', 'Your Budget (Optional)')}
+                  {t('jobCreation.pricingOptionTitle', 'Pricing & Budget')}
                 </Text>
                 <Text style={{ fontSize: 12, color: activeColor, fontWeight: '700' }}>
-                  {isInstant ? `⚡ ${t('jobCreation.instantBroadcast', 'Instant broadcast')}` : `📋 ${t('jobCreation.openQuotes', 'Open quotes')}`}
+                  {pricingMode === 'open' ? `📋 ${t('jobCreation.openQuotes', 'Open quotes')}` : `💵 ${t('jobCreation.fixedBudget', 'Fixed budget')}`}
                 </Text>
               </View>
-              <Text style={{ fontSize: 12, color: palette.textSecondary, marginBottom: 10 }}>
-                {isInstant
-                  ? t('jobCreation.urgentBudgetSub', 'Set your target price, or leave empty to receive live quotes from nearby Ustads.')
-                  : t('jobCreation.scheduledBudgetSub', 'Specify your budget, or leave empty to get competitive quotes.')}
-              </Text>
 
-              <View style={[styles.budgetInputCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-                <Text style={[styles.budgetCurrencyLabel, { color: palette.textSecondary }]}>PKR</Text>
-                <TextInput
-                  style={[styles.budgetTextInput, { color: palette.textPrimary }]}
-                  placeholder={t('jobCreation.openToOffers', 'Open to offers')}
-                  placeholderTextColor={palette.textMuted}
-                  keyboardType="numeric"
-                  value={amount}
-                  onChangeText={setAmount}
-                />
+              {/* Mode Selector Toggle */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.budgetChipBtn,
+                    {
+                      flex: 1,
+                      backgroundColor: pricingMode === 'open' ? alpha(activeColor, isDark ? 0.22 : 0.14) : inactivePillBg,
+                      borderColor: pricingMode === 'open' ? activeColor : inactivePillBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setPricingMode('open');
+                    setAmount('');
+                    void Haptics.selectionAsync();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.budgetChipText, { color: pricingMode === 'open' ? activeColor : pillTextColor, fontWeight: '700' }]}>
+                    📋 {t('jobCreation.openToOffers', 'Open to offers')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.budgetChipBtn,
+                    {
+                      flex: 1,
+                      backgroundColor: pricingMode === 'fixed' ? alpha(activeColor, isDark ? 0.22 : 0.14) : inactivePillBg,
+                      borderColor: pricingMode === 'fixed' ? activeColor : inactivePillBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setPricingMode('fixed');
+                    if (!amount) setAmount('1000');
+                    void Haptics.selectionAsync();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.budgetChipText, { color: pricingMode === 'fixed' ? activeColor : pillTextColor, fontWeight: '700' }]}>
+                    💵 {t('jobCreation.setSpecificBudget', 'Set Budget')}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.budgetChipsRow}>
-                {['500', '1000', '1500', '2000'].map((amt) => {
-                  const isSelected = amount === amt;
-                  return (
-                    <TouchableOpacity
-                      key={amt}
-                      style={[
-                        styles.budgetChipBtn,
-                        {
-                          backgroundColor: isSelected ? alpha(activeColor, isDark ? 0.2 : 0.14) : inactivePillBg,
-                          borderColor: isSelected ? activeColor : inactivePillBorder,
-                        },
-                      ]}
-                      onPress={() => {
-                        setAmount(isSelected ? '' : amt);
-                        void Haptics.selectionAsync();
-                      }}
-                    >
-                      <Text style={[styles.budgetChipText, { color: isSelected ? activeColor : pillTextColor }, isSelected && { fontWeight: '700' }]}>
-                        Rs. {Number(amt).toLocaleString()}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              {pricingMode === 'open' ? (
+                <View style={[styles.budgetInputCard, { backgroundColor: alpha(palette.cyan || '#00E5FF', 0.08), borderColor: alpha(palette.cyan || '#00E5FF', 0.25), padding: 14 }]}>
+                  <Text style={{ fontSize: 13, color: palette.textPrimary, fontWeight: '600', marginBottom: 4 }}>
+                    ✨ {t('jobCreation.openPriceExplainerTitle', 'Direct Bidding & On-Site Inspection')}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: palette.textSecondary, lineHeight: 17 }}>
+                    {t('jobCreation.openPriceExplainerDesc', 'Ustads will view your requirements and propose their custom rates (daily, hourly, or full job). You decide who to hire.')}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={{ fontSize: 12, color: palette.textSecondary, marginBottom: 10 }}>
+                    {t('jobCreation.scheduledBudgetSub', 'Specify your budget for this work.')}
+                  </Text>
+
+                  <View style={[styles.budgetInputCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                    <Text style={[styles.budgetCurrencyLabel, { color: palette.textSecondary }]}>PKR</Text>
+                    <TextInput
+                      style={[styles.budgetTextInput, { color: palette.textPrimary }]}
+                      placeholder={t('jobCreation.budgetPlaceholder', 'Enter offered amount')}
+                      placeholderTextColor={palette.textMuted}
+                      keyboardType="numeric"
+                      value={amount}
+                      onChangeText={setAmount}
+                    />
+                  </View>
+
+                  <View style={styles.budgetChipsRow}>
+                    {['500', '1000', '1500', '2000'].map((amt) => {
+                      const isSelected = amount === amt;
+                      return (
+                        <TouchableOpacity
+                          key={amt}
+                          style={[
+                            styles.budgetChipBtn,
+                            {
+                              backgroundColor: isSelected ? alpha(activeColor, isDark ? 0.2 : 0.14) : inactivePillBg,
+                              borderColor: isSelected ? activeColor : inactivePillBorder,
+                            },
+                          ]}
+                          onPress={() => {
+                            setAmount(amt);
+                            void Haptics.selectionAsync();
+                          }}
+                        >
+                          <Text style={[styles.budgetChipText, { color: isSelected ? activeColor : pillTextColor }, isSelected && { fontWeight: '700' }]}>
+                            Rs. {Number(amt).toLocaleString()}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
             </View>
 
             {/* ── 6. Photos or Video (Optional) ── */}

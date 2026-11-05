@@ -1050,6 +1050,8 @@ export default function BidSubmissionScreen() {
 
   const [proposedPrice, setProposedPrice] = useState('');
   const [estimatedDays, setEstimatedDays] = useState('');
+  const [rateBasis, setRateBasis] = useState<'total' | 'per_day' | 'per_hour'>('total');
+  const [helperCount, setHelperCount] = useState<number>(0);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1202,6 +1204,8 @@ export default function BidSubmissionScreen() {
       await api.post(`/jobs/${jobId}/bids`, {
         message: message.trim(),
         proposedPrice: parsedPrice,
+        rateBasis,
+        helperCount,
         ...(estimatedDays ? { estimatedDays: Number(estimatedDays) } : {}),
       });
       toast.success(t('bidSubmission.proposalSent', 'Proposal Sent'), t('bidSubmission.proposalSentDesc', 'The client can now review your offer.'));
@@ -1454,6 +1458,51 @@ export default function BidSubmissionScreen() {
                   detail={proposalReady ? t('bidSubmission.readyToSend', 'Ready to send') : t('bidSubmission.quoteRequired', 'Quote required')}
                   color={CYAN}
                 />
+
+                <Text style={styles.formLabel}>RATE BASIS & TEAM</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                  {[
+                    { id: 'total', label: 'Total Job' },
+                    { id: 'per_day', label: 'Per Day (Dihari)' },
+                    { id: 'per_hour', label: 'Per Hour' },
+                  ].map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.quoteSuggestion,
+                        { flex: 1, minHeight: 36, paddingHorizontal: 4 },
+                        rateBasis === item.id && styles.quoteSuggestionSelected,
+                      ]}
+                      onPress={() => setRateBasis(item.id as any)}
+                    >
+                      <Text style={[styles.quoteSuggestionText, rateBasis === item.id && styles.quoteSuggestionTextSelected, { fontSize: 11 }]}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                  {[
+                    { count: 0, label: 'Solo (Just Me)' },
+                    { count: 1, label: '+1 Helper' },
+                    { count: 2, label: '+2 Helpers' },
+                  ].map(h => (
+                    <TouchableOpacity
+                      key={h.count}
+                      style={[
+                        styles.quoteSuggestion,
+                        { flex: 1, minHeight: 32, paddingHorizontal: 4 },
+                        helperCount === h.count && styles.quoteSuggestionSelected,
+                      ]}
+                      onPress={() => setHelperCount(h.count)}
+                    >
+                      <Text style={[styles.quoteSuggestionText, helperCount === h.count && styles.quoteSuggestionTextSelected, { fontSize: 11 }]}>
+                        {h.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
                 <Text style={styles.formLabel}>{t('bidSubmission.quickQuote', 'QUICK QUOTE')}</Text>
                 <View style={styles.quoteSuggestionRow}>
