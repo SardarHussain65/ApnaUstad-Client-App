@@ -1923,9 +1923,11 @@
     "submittedDate": "Sent {{date}}"
   },
   "splash": {
+    "welcome": "WELCOME TO",
+    "appName": "ApnaUstad",
     "tagline": "Trusted Home Services",
-    "expanding": "SKILLED USTADS NEAR YOU",
-    "version": "APNAUSTAD"
+    "expanding": "SKILLED USTADS AT YOUR DOORSTEP",
+    "version": "APNAUSTAD • VERIFIED SERVICES"
   },
   "accountDeactivated": {
     "title": "Account Paused",

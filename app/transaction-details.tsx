@@ -1832,9 +1832,10 @@ export default function TransactionDetailsScreen() {
 
                 {/* Strict validation banner */}
                 {!!revisedPriceInput && Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) && (
-                  <View style={{ backgroundColor: alpha(colors.error, 0.1), padding: 8, borderRadius: 8, marginBottom: 10 }}>
-                    <Text style={{ fontSize: 11, color: colors.error, lineHeight: 15 }}>
-                      ⚠️ Ustads cannot lower agreed prices. Price increases only. If the scope was reduced, customer must contact Admin Support.
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: alpha(colors.error, 0.1), padding: 8, borderRadius: 8, marginBottom: 10 }}>
+                    <AlertTriangle size={13} color={colors.error} />
+                    <Text style={{ flex: 1, fontSize: 11, color: colors.error, lineHeight: 15 }}>
+                      Ustads cannot lower agreed prices. Price increases only. If the scope was reduced, customer must contact Admin Support.
                     </Text>
                   </View>
                 )}
@@ -1910,9 +1911,10 @@ export default function TransactionDetailsScreen() {
             </View>
 
             {/* Warranty & Honest policy notice */}
-            <View style={{ backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 10, borderRadius: 10, marginBottom: 12 }}>
-              <Text style={{ fontSize: 12, color: theme.colors.text.primary, lineHeight: 17 }}>
-                🛡️ <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 10, borderRadius: 10, marginBottom: 12 }}>
+              <ShieldCheck size={16} color={colors.cyan} style={{ marginTop: 2 }} />
+              <Text style={{ flex: 1, fontSize: 12, color: theme.colors.text.primary, lineHeight: 17 }}>
+                <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
               </Text>
             </View>
 

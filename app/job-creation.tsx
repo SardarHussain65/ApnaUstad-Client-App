@@ -146,8 +146,8 @@ export default function JobCreationScreen() {
   // ─── State ──────────────────────────────────────────────────────────────────
   const [urgency, setUrgency] = useState<Urgency>((urgencyParam as Urgency) || 'instant');
   const [description, setDescription] = useState<string>(initialDescription ?? '');
-  const [pricingMode, setPricingMode] = useState<'open' | 'fixed'>('open');
-  const [amount, setAmount] = useState<string>('');
+  const [pricingMode, setPricingMode] = useState<'open' | 'fixed'>('fixed');
+  const [amount, setAmount] = useState<string>('1000');
   const [selectedMedia, setSelectedMedia] = useState<EvidenceAsset[]>([]);
   const [voiceNoteUri, setVoiceNoteUri] = useState<string | null>(null);
 
@@ -360,7 +360,15 @@ export default function JobCreationScreen() {
       return;
     }
 
-    const hasBudget = amount && Number(amount) > 0;
+    if (pricingMode === 'fixed' && (!amount || Number(amount) <= 0)) {
+      showError(
+        t('jobCreation.budgetRequiredTitle', 'Enter Your Budget'),
+        t('jobCreation.budgetRequiredDesc', 'Please enter your budget or select "Open to offers".')
+      );
+      return;
+    }
+
+    const hasBudget = pricingMode === 'fixed' && amount && Number(amount) > 0;
     const priceText = hasBudget ? `Rs. ${Number(amount).toLocaleString()}` : t('jobCreation.openToOffers', 'Open to offers');
     showConfirm(
       isInstant ? t('jobCreation.postUrgentTitle', 'Confirm Urgent Job') : t('jobCreation.postServiceTitle', 'Post Job Request'),
@@ -375,7 +383,7 @@ export default function JobCreationScreen() {
       t('jobCreation.keepEditing', 'Go Back'),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [description, address, isInstant, amount, t]);
+  }, [description, address, isInstant, amount, pricingMode, t]);
 
   const handleConfirmSubmit = useCallback(async () => {
     setConfirmLoading(true);
@@ -741,38 +749,12 @@ export default function JobCreationScreen() {
 
             {/* ── 6. Pricing & Budget Option ── */}
             <View style={styles.sectionWrap}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={[styles.sectionTitle, { color: palette.textPrimary, marginBottom: 0 }]}>
-                  {t('jobCreation.pricingOptionTitle', 'Pricing & Budget')}
-                </Text>
-                <Text style={{ fontSize: 12, color: activeColor, fontWeight: '700' }}>
-                  {pricingMode === 'open' ? `📋 ${t('jobCreation.openQuotes', 'Open quotes')}` : `💵 ${t('jobCreation.fixedBudget', 'Fixed budget')}`}
-                </Text>
-              </View>
+              <Text style={[styles.sectionTitle, { color: palette.textPrimary }]}>
+                {t('jobCreation.pricingOptionTitle', 'Pricing & Budget')}
+              </Text>
 
               {/* Mode Selector Toggle */}
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-                <TouchableOpacity
-                  style={[
-                    styles.budgetChipBtn,
-                    {
-                      flex: 1,
-                      backgroundColor: pricingMode === 'open' ? alpha(activeColor, isDark ? 0.22 : 0.14) : inactivePillBg,
-                      borderColor: pricingMode === 'open' ? activeColor : inactivePillBorder,
-                    },
-                  ]}
-                  onPress={() => {
-                    setPricingMode('open');
-                    setAmount('');
-                    void Haptics.selectionAsync();
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.budgetChipText, { color: pricingMode === 'open' ? activeColor : pillTextColor, fontWeight: '700' }]}>
-                    📋 {t('jobCreation.openToOffers', 'Open to offers')}
-                  </Text>
-                </TouchableOpacity>
-
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: pricingMode === 'fixed' ? 12 : 4 }}>
                 <TouchableOpacity
                   style={[
                     styles.budgetChipBtn,
@@ -790,21 +772,33 @@ export default function JobCreationScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.budgetChipText, { color: pricingMode === 'fixed' ? activeColor : pillTextColor, fontWeight: '700' }]}>
-                    💵 {t('jobCreation.setSpecificBudget', 'Set Budget')}
+                    {t('jobCreation.setSpecificBudget', 'Set Budget')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.budgetChipBtn,
+                    {
+                      flex: 1,
+                      backgroundColor: pricingMode === 'open' ? alpha(activeColor, isDark ? 0.22 : 0.14) : inactivePillBg,
+                      borderColor: pricingMode === 'open' ? activeColor : inactivePillBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    setPricingMode('open');
+                    setAmount('');
+                    void Haptics.selectionAsync();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.budgetChipText, { color: pricingMode === 'open' ? activeColor : pillTextColor, fontWeight: '700' }]}>
+                    {t('jobCreation.openToOffers', 'Open to offers')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {pricingMode === 'open' ? (
-                <View style={[styles.budgetInputCard, { backgroundColor: alpha(palette.cyan || '#00E5FF', 0.08), borderColor: alpha(palette.cyan || '#00E5FF', 0.25), padding: 14 }]}>
-                  <Text style={{ fontSize: 13, color: palette.textPrimary, fontWeight: '600', marginBottom: 4 }}>
-                    ✨ {t('jobCreation.openPriceExplainerTitle', 'Direct Bidding & On-Site Inspection')}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: palette.textSecondary, lineHeight: 17 }}>
-                    {t('jobCreation.openPriceExplainerDesc', 'Ustads will view your requirements and propose their custom rates (daily, hourly, or full job). You decide who to hire.')}
-                  </Text>
-                </View>
-              ) : (
+              {pricingMode === 'fixed' && (
                 <>
                   <Text style={{ fontSize: 12, color: palette.textSecondary, marginBottom: 10 }}>
                     {t('jobCreation.scheduledBudgetSub', 'Specify your budget for this work.')}
@@ -836,7 +830,7 @@ export default function JobCreationScreen() {
                             },
                           ]}
                           onPress={() => {
-                            setAmount(amt);
+                            setAmount(isSelected ? '' : amt);
                             void Haptics.selectionAsync();
                           }}
                         >
