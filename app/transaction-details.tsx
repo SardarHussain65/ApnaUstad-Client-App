@@ -711,18 +711,34 @@ export default function TransactionDetailsScreen() {
   const metaDividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
 
   const renderCards = () => (
-    <View style={styles.flowContainer}>
-      {/* ── 1. Status Headline & Hero (Seamless, No Box) ── */}
-      <View style={styles.heroSection}>
-        <View style={styles.heroBadgeRow}>
+    <View style={styles.cardsWrap}>
+      {/* ── 1. Hero Status & Timeline Card ── */}
+      <View
+        style={[
+          styles.heroCard,
+          {
+            backgroundColor: isDone
+              ? (isDark ? 'rgba(16, 185, 129, 0.08)' : '#F0FDF4')
+              : isWorkerArrived
+              ? (isDark ? 'rgba(14, 165, 233, 0.08)' : '#F0F9FF')
+              : cardBg,
+            borderColor: isDone
+              ? (isDark ? 'rgba(34, 197, 94, 0.32)' : '#86EFAC')
+              : isWorkerArrived
+              ? (isDark ? 'rgba(56, 189, 248, 0.32)' : '#7DD3FC')
+              : cardBorder,
+          },
+        ]}
+      >
+        <View style={styles.heroTopRow}>
           <View
             style={[
-              styles.heroStatusIcon,
+              styles.heroIconBadge,
               {
                 backgroundColor: isDone
-                  ? (isDark ? 'rgba(34, 197, 94, 0.18)' : '#DCFCE7')
+                  ? (isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7')
                   : isWorkerArrived
-                  ? (isDark ? 'rgba(6, 182, 212, 0.18)' : '#E0F2FE')
+                  ? (isDark ? 'rgba(6, 182, 212, 0.22)' : '#E0F2FE')
                   : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'),
               },
             ]}
@@ -736,17 +752,18 @@ export default function TransactionDetailsScreen() {
             )}
           </View>
 
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <View style={styles.heroTitles}>
+            <View style={styles.heroHeadlineRow}>
               <Text
-                style={[styles.heroHeadlineText, typography.threeD, { color: theme.colors.text.primary }]}
+                style={[styles.heroHeadline, typography.threeD, { color: theme.colors.text.primary }]}
                 numberOfLines={1}
               >
                 {statusHeadline}
               </Text>
+
               <View
                 style={[
-                  styles.urgencyTag,
+                  styles.urgencyPill,
                   {
                     backgroundColor: isInstant ? alpha(colors.worker, 0.12) : alpha(colors.cyan, 0.10),
                     borderColor: isInstant ? alpha(colors.worker, 0.35) : alpha(colors.cyan, 0.3),
@@ -756,7 +773,7 @@ export default function TransactionDetailsScreen() {
                 <Zap size={10} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.5} />
                 <Text
                   style={[
-                    styles.urgencyTagText,
+                    styles.urgencyPillText,
                     { color: isInstant ? colors.worker : colors.cyan },
                   ]}
                 >
@@ -775,34 +792,34 @@ export default function TransactionDetailsScreen() {
           </View>
         </View>
 
-        {/* Progress Stepper Line */}
-        <View style={styles.stepperWrap}>
+        {/* 4-Stage Connected Micro-Timeline */}
+        <View style={styles.timelineRow}>
           {STEPS.map((step, idx) => {
             const isCompleted = isDone ? true : idx < visibleStepIndex;
             const isCurrent = isDone ? false : idx === visibleStepIndex;
 
             return (
               <React.Fragment key={step.value}>
-                <View style={styles.stepperItem}>
+                <View style={styles.timelineStep}>
                   <View
                     style={[
-                      styles.stepperDot,
+                      styles.timelineNode,
                       isCompleted && [
-                        styles.stepperDotCompleted,
+                        styles.timelineNodeCompleted,
                         {
                           backgroundColor: isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7',
                           borderColor: colors.success,
                         },
                       ],
                       isCurrent && [
-                        styles.stepperDotCurrent,
+                        styles.timelineNodeCurrent,
                         {
                           backgroundColor: alpha(colors.cyan, 0.15),
                           borderColor: colors.cyan,
                         },
                       ],
                       (!isCompleted && !isCurrent) && [
-                        styles.stepperDotPending,
+                        styles.timelineNodePending,
                         {
                           borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(15, 23, 42, 0.15)',
                         },
@@ -810,13 +827,13 @@ export default function TransactionDetailsScreen() {
                     ]}
                   >
                     {isCompleted ? (
-                      <CheckCircle2 size={12} color={colors.success} strokeWidth={2.8} />
+                      <CheckCircle2 size={13} color={colors.success} strokeWidth={2.8} />
                     ) : isCurrent ? (
-                      <View style={[styles.dotCore, { backgroundColor: colors.cyan }]} />
+                      <View style={[styles.timelineNodeDot, { backgroundColor: colors.cyan }]} />
                     ) : (
                       <View
                         style={[
-                          styles.dotCore,
+                          styles.timelineNodeDot,
                           { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(15, 23, 42, 0.2)' },
                         ]}
                       />
@@ -824,10 +841,10 @@ export default function TransactionDetailsScreen() {
                   </View>
                   <Text
                     style={[
-                      styles.stepperText,
+                      styles.timelineLabel,
                       (isCompleted || isCurrent)
-                        ? [styles.stepperTextActive, { color: theme.colors.text.primary }]
-                        : [styles.stepperTextDim, { color: theme.colors.text.dim }],
+                        ? [styles.timelineLabelActive, { color: theme.colors.text.primary }]
+                        : [styles.timelineLabelDim, { color: theme.colors.text.dim }],
                     ]}
                     numberOfLines={1}
                   >
@@ -838,16 +855,16 @@ export default function TransactionDetailsScreen() {
                 {idx < STEPS.length - 1 && (
                   <View
                     style={[
-                      styles.stepperLine,
+                      styles.timelineConnector,
                       (isDone || idx < visibleStepIndex)
                         ? [
-                            styles.stepperLineActive,
+                            styles.timelineConnectorActive,
                             { backgroundColor: isDone ? colors.success : colors.cyan },
                           ]
                         : [
-                            styles.stepperLineDim,
+                            styles.timelineConnectorDim,
                             {
-                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.10)',
+                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)',
                             },
                           ],
                     ]}
@@ -859,177 +876,190 @@ export default function TransactionDetailsScreen() {
         </View>
       </View>
 
-      {/* Hairline Divider */}
-      <View style={[styles.sectionDivider, { backgroundColor: metaDividerColor }]} />
+      {/* ── 2. Unified Partner & Financial Master Hub ── */}
+      <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        {/* Partner Header Row */}
+        <View style={styles.partnerHubHeader}>
+          <View style={styles.partnerHubLeft}>
+            <View
+              style={[
+                styles.partnerAvatarFrame,
+                { borderColor: isDark ? alpha(colors.cyan, 0.4) : 'rgba(15, 23, 42, 0.14)' },
+              ]}
+            >
+              {partnerImage ? (
+                <Image source={{ uri: partnerImage }} style={styles.partnerAvatarImage} />
+              ) : (
+                <View style={[styles.partnerAvatarFallback, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
+                  <Text style={[styles.partnerAvatarInitials, { color: colors.cyan }]}>
+                    {initialsFor(partnerName)}
+                  </Text>
+                </View>
+              )}
+            </View>
 
-      {/* ── 2. Assigned Partner Profile Row (Seamless, No Box) ── */}
-      <View style={styles.partnerSection}>
-        <View style={styles.partnerLeft}>
+            <View style={styles.partnerHubMeta}>
+              <Text style={[styles.partnerHubName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                {partnerName}
+              </Text>
+              <Text style={[styles.partnerHubCategory, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                {isWorker
+                  ? cleanAddress
+                  : `${partnerCategory}${partnerExperience > 0 ? ` • ${partnerExperience} yrs exp` : ''}`}
+              </Text>
+            </View>
+          </View>
+
+          {/* Contact Action Pills: Call & Chat */}
+          <View style={styles.contactPillsGroup}>
+            <TouchableOpacity
+              style={[
+                styles.contactPillBtn,
+                { backgroundColor: alpha(colors.cyan, 0.12), borderColor: alpha(colors.cyan, 0.28) },
+                (isCommunicationLocked || !partnerProfileId) && styles.buttonDisabled,
+              ]}
+              onPress={navigateToChat}
+              disabled={isCommunicationLocked || !partnerProfileId}
+              activeOpacity={0.8}
+            >
+              <MessageCircle size={15} color={colors.cyan} strokeWidth={2.4} />
+              <Text style={[styles.contactPillText, { color: colors.cyan }]}>
+                {t('common.chat', 'Chat')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.contactPillBtn,
+                { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.28) },
+                (isCommunicationLocked || !partnerPhone) && styles.buttonDisabled,
+              ]}
+              onPress={callPartner}
+              disabled={isCommunicationLocked || !partnerPhone}
+              activeOpacity={0.8}
+            >
+              <Phone size={14} color={colors.success} strokeWidth={2.4} />
+              <Text style={[styles.contactPillText, { color: colors.success }]}>
+                {t('common.call', 'Call')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Clean Hairline Divider */}
+        <View style={[styles.hubDivider, { backgroundColor: metaDividerColor }]} />
+
+        {/* Financial Strip: Agreed Rate & Payment Status */}
+        <View style={styles.hubPaymentRow}>
+          <View>
+            <Text style={[styles.hubPaymentLabel, { color: theme.colors.text.muted }]}>
+              {isWorker
+                ? t('transactionDetails.yourEarning', 'YOUR NET EARNING')
+                : t('jobAssignedModal.agreedPrice', 'TOTAL AGREED RATE')}
+            </Text>
+            <Text style={[styles.hubPaymentAmount, { color: theme.colors.text.primary }]}>
+              {amountText}
+            </Text>
+          </View>
+
           <View
             style={[
-              styles.partnerAvatar,
-              { borderColor: isDark ? alpha(colors.cyan, 0.35) : 'rgba(15, 23, 42, 0.12)' },
+              styles.hubPaymentBadge,
+              {
+                backgroundColor: isPaid ? alpha(colors.success, 0.12) : alpha(colors.worker, 0.12),
+                borderColor: isPaid ? alpha(colors.success, 0.35) : alpha(colors.worker, 0.35),
+              },
             ]}
           >
-            {partnerImage ? (
-              <Image source={{ uri: partnerImage }} style={styles.avatarImg} />
+            {isPaid ? (
+              <CheckCircle2 size={15} color={colors.success} strokeWidth={2.4} />
             ) : (
-              <View style={[styles.avatarFallback, { backgroundColor: alpha(colors.cyan, 0.14) }]}>
-                <Text style={[styles.avatarInitials, { color: colors.cyan }]}>
-                  {initialsFor(partnerName)}
+              <CreditCard size={15} color={colors.worker} strokeWidth={2.4} />
+            )}
+            <Text
+              style={[
+                styles.hubPaymentBadgeText,
+                { color: isPaid ? colors.success : colors.worker },
+              ]}
+            >
+              {isPaid ? t('transactionDetails.paid', 'Cash Paid') : t('transactionDetails.cashPending', 'Cash to Pay')}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 3. Job Specifications & Location Hub ── */}
+      <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+        <View style={styles.sectionHeaderLine}>
+          <BriefcaseBusiness size={16} color={colors.cyan} strokeWidth={2.2} />
+          <Text style={[styles.sectionHeaderTitle, { color: theme.colors.text.primary }]}>
+            {t('transactionDetails.jobSpecifications', 'Job Details')}
+          </Text>
+        </View>
+
+        <View style={styles.specsGrid}>
+          <View style={styles.specTile}>
+            <View style={[styles.specIconWrap, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
+              <CalendarDays size={16} color={colors.cyan} strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.specLabel, { color: theme.colors.text.muted }]}>
+                {t('transactionDetails.scheduledTimeLabel', 'SCHEDULE')}
+              </Text>
+              <Text style={[styles.specValue, { color: theme.colors.text.primary }]}>
+                {dateLabel} • {timeLabel}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.specTile}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}
+              onPress={openExternalMaps}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.specIconWrap, { backgroundColor: alpha(colors.worker, 0.12) }]}>
+                <MapPin size={16} color={colors.worker} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.specLabel, { color: theme.colors.text.muted }]}>
+                  {t('transactionDetails.serviceLocationLabel', 'SERVICE ADDRESS')}
+                </Text>
+                <Text style={[styles.specValue, { color: theme.colors.text.primary }]} numberOfLines={2}>
+                  {cleanAddress}
                 </Text>
               </View>
-            )}
-          </View>
-
-          <View style={styles.partnerInfoWrap}>
-            <Text style={[styles.partnerTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
-              {partnerName}
-            </Text>
-            <Text style={[styles.partnerSubtitle, { color: theme.colors.text.muted }]} numberOfLines={1}>
-              {isWorker
-                ? cleanAddress
-                : `${partnerCategory}${partnerExperience > 0 ? ` • ${partnerExperience} yrs exp` : ''}`}
-            </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.partnerActionsGroup}>
-          <TouchableOpacity
-            style={[
-              styles.actionPillBtn,
-              { backgroundColor: alpha(colors.cyan, 0.12), borderColor: alpha(colors.cyan, 0.25) },
-              (isCommunicationLocked || !partnerProfileId) && styles.buttonDisabled,
-            ]}
-            onPress={navigateToChat}
-            disabled={isCommunicationLocked || !partnerProfileId}
-            activeOpacity={0.8}
-          >
-            <MessageCircle size={15} color={colors.cyan} strokeWidth={2.4} />
-            <Text style={[styles.actionPillLabel, { color: colors.cyan }]}>
-              {t('common.chat', 'Chat')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.actionPillBtn,
-              { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.25) },
-              (isCommunicationLocked || !partnerPhone) && styles.buttonDisabled,
-            ]}
-            onPress={callPartner}
-            disabled={isCommunicationLocked || !partnerPhone}
-            activeOpacity={0.8}
-          >
-            <Phone size={14} color={colors.success} strokeWidth={2.4} />
-            <Text style={[styles.actionPillLabel, { color: colors.success }]}>
-              {t('common.call', 'Call')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Hairline Divider */}
-      <View style={[styles.sectionDivider, { backgroundColor: metaDividerColor }]} />
-
-      {/* ── 3. Price & Payment Status Row (Seamless, No Box) ── */}
-      <View style={styles.paymentRowSection}>
-        <View>
-          <Text style={[styles.paymentMetaLabel, { color: theme.colors.text.muted }]}>
-            {isWorker
-              ? t('transactionDetails.yourEarning', 'YOUR NET EARNING')
-              : t('jobAssignedModal.agreedPrice', 'TOTAL AGREED RATE')}
-          </Text>
-          <Text style={[styles.paymentAmountLarge, { color: theme.colors.text.primary }]}>
-            {amountText}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.paymentBadgePill,
-            {
-              backgroundColor: isPaid ? alpha(colors.success, 0.12) : alpha(colors.worker, 0.12),
-              borderColor: isPaid ? alpha(colors.success, 0.35) : alpha(colors.worker, 0.35),
-            },
-          ]}
-        >
-          {isPaid ? (
-            <CheckCircle2 size={15} color={colors.success} strokeWidth={2.4} />
-          ) : (
-            <CreditCard size={15} color={colors.worker} strokeWidth={2.4} />
-          )}
-          <Text
-            style={[
-              styles.paymentBadgeText,
-              { color: isPaid ? colors.success : colors.worker },
-            ]}
-          >
-            {isPaid ? t('transactionDetails.paid', 'Cash Paid') : t('transactionDetails.cashPending', 'Cash to Pay')}
-          </Text>
-        </View>
-      </View>
-
-      {/* Hairline Divider */}
-      <View style={[styles.sectionDivider, { backgroundColor: metaDividerColor }]} />
-
-      {/* ── 4. Job Specifications (Schedule, Address & Client Brief) ── */}
-      <View style={styles.jobSpecsSection}>
-        <Text style={[styles.sectionSmallHeading, { color: theme.colors.text.muted }]}>
-          {t('transactionDetails.jobSpecifications', 'JOB INFORMATION')}
-        </Text>
-
-        <View style={styles.specItemRow}>
-          <View style={[styles.specIconBadge, { backgroundColor: alpha(colors.cyan, 0.12) }]}>
-            <CalendarDays size={16} color={colors.cyan} strokeWidth={2.2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.specRowLabel, { color: theme.colors.text.muted }]}>
-              {t('transactionDetails.scheduledTimeLabel', 'SCHEDULE')}
-            </Text>
-            <Text style={[styles.specRowValue, { color: theme.colors.text.primary }]}>
-              {dateLabel} • {timeLabel}
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.specItemRow}
-          onPress={openExternalMaps}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.specIconBadge, { backgroundColor: alpha(colors.worker, 0.12) }]}>
-            <MapPin size={16} color={colors.worker} strokeWidth={2.2} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.specRowLabel, { color: theme.colors.text.muted }]}>
-              {t('transactionDetails.serviceLocationLabel', 'SERVICE ADDRESS')}
-            </Text>
-            <Text style={[styles.specRowValue, { color: theme.colors.text.primary }]} numberOfLines={2}>
-              {cleanAddress}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Client's Work Note — Clean quotation styling with left accent border, NO HEAVY BOX! */}
+        {/* Client Problem Brief */}
         {Boolean(serviceDescription && serviceDescription.trim()) && (
-          <View style={[styles.clientQuoteSection, { borderLeftColor: colors.cyan }]}>
-            <View style={styles.clientQuoteHeader}>
-              <FileText size={13} color={colors.cyan} strokeWidth={2.2} />
-              <Text style={[styles.clientQuoteLabel, { color: theme.colors.text.muted }]}>
+          <View
+            style={[
+              styles.noteContainer,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)',
+              },
+            ]}
+          >
+            <View style={styles.noteHeader}>
+              <FileText size={13} color={theme.colors.text.muted} strokeWidth={2.2} />
+              <Text style={[styles.noteHeaderLabel, { color: theme.colors.text.muted }]}>
                 {t('transactionDetails.workInstructions', 'WORK DESCRIPTION / CLIENT NOTE')}
               </Text>
             </View>
-            <Text style={[styles.clientQuoteBody, { color: theme.colors.text.primary }]}>
+            <Text style={[styles.noteBodyText, { color: theme.colors.text.primary }]}>
               {serviceDescription}
             </Text>
           </View>
         )}
 
-        {/* Photos & Videos Gallery */}
+        {/* Photos & Videos */}
         {photosAndVideos.length > 0 && (
-          <View style={styles.mediaWrap}>
-            <Text style={[styles.mediaSectionLabel, { color: theme.colors.text.muted }]}>
+          <View style={styles.galleryBlock}>
+            <Text style={[styles.galleryTitle, { color: theme.colors.text.muted }]}>
               {t('transactionDetails.photosVideos', 'PHOTOS & VIDEOS')}
             </Text>
             <JobEvidenceGallery items={photosAndVideos} isWorker={isWorker} />
@@ -1038,8 +1068,8 @@ export default function TransactionDetailsScreen() {
 
         {/* Voice Memo */}
         {voiceBriefs.length > 0 && (
-          <View style={styles.mediaWrap}>
-            <Text style={[styles.mediaSectionLabel, { color: theme.colors.text.muted }]}>
+          <View style={styles.galleryBlock}>
+            <Text style={[styles.galleryTitle, { color: theme.colors.text.muted }]}>
               {t('transactionDetails.voiceBrief', 'VOICE MEMO')}
             </Text>
             <JobEvidenceGallery items={voiceBriefs} isWorker={isWorker} />
@@ -1047,25 +1077,20 @@ export default function TransactionDetailsScreen() {
         )}
       </View>
 
-      {/* Hairline Divider (for review) */}
+      {/* ── 4. Interactive Review & Rating Hero (For Client) ── */}
       {!isWorker && isDone && isPaid && (
-        <View style={[styles.sectionDivider, { backgroundColor: metaDividerColor }]} />
-      )}
-
-      {/* ── 5. Review & Rating (Client Only When Finished, Seamless No Box) ── */}
-      {!isWorker && isDone && isPaid && (
-        <View style={styles.ratingFlowSection}>
+        <View style={styles.ratingHeroContainer}>
           {booking?.isReviewed ? (
             <View
               style={[
-                styles.reviewRecordedPill,
+                styles.reviewRecordedCard,
                 {
                   backgroundColor: alpha(colors.success, 0.10),
                   borderColor: alpha(colors.success, 0.28),
                 },
               ]}
             >
-              <CheckCircle2 size={18} color={colors.success} strokeWidth={2.4} />
+              <CheckCircle2 size={20} color={colors.success} strokeWidth={2.4} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.reviewRecordedTitle, { color: colors.success }]}>
                   {t('transactionDetails.feedbackRecorded', 'Review Submitted!')}
@@ -1076,28 +1101,40 @@ export default function TransactionDetailsScreen() {
               </View>
             </View>
           ) : (
-            <View style={styles.ratingPromptArea}>
-              <View style={styles.ratingPromptHeader}>
-                <Star size={18} color="#FFD700" fill="#FFD700" />
-                <Text style={[styles.ratingPromptTitle, { color: theme.colors.text.primary }]}>
-                  {t('review.howWasServiceWith', 'How was {{name}}\'s service?', { name: partnerName })}
-                </Text>
+            <View
+              style={[
+                styles.ratingInviteCard,
+                {
+                  backgroundColor: isDark ? '#121829' : '#FFFDF7',
+                  borderColor: isDark ? 'rgba(255, 215, 0, 0.28)' : 'rgba(245, 158, 11, 0.32)',
+                },
+              ]}
+            >
+              <View style={styles.ratingInviteHeader}>
+                <View style={styles.ratingStarIconBadge}>
+                  <Star size={18} color="#FFD700" fill="#FFD700" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.ratingInviteTitle, { color: theme.colors.text.primary }]}>
+                    {t('review.howWasServiceWith', 'How was {{name}}\'s service?', { name: partnerName })}
+                  </Text>
+                  <Text style={[styles.ratingInviteSub, { color: theme.colors.text.muted }]}>
+                    {t('review.tapStarsToRate', 'Tap a star to rate & share your feedback')}
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.ratingPromptSub, { color: theme.colors.text.muted }]}>
-                {t('review.tapStarsToRate', 'Tap a star to rate & share your feedback')}
-              </Text>
 
-              {/* 5 Big Gold Stars directly on page */}
-              <View style={styles.starsDirectRow}>
+              {/* 5 Interactive Golden Stars */}
+              <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity
                     key={star}
-                    style={styles.starDirectTouch}
+                    style={styles.starTouchable}
                     onPress={() => handleQuickRate(star)}
                     activeOpacity={0.7}
                   >
                     <Star
-                      size={36}
+                      size={34}
                       color="#FFD700"
                       fill={star <= interactiveRating ? '#FFD700' : 'transparent'}
                       strokeWidth={1.8}
@@ -1106,18 +1143,19 @@ export default function TransactionDetailsScreen() {
                 ))}
               </View>
 
+              {/* Action Button */}
               <TouchableOpacity
                 style={[
-                  styles.writeReviewDirectBtn,
+                  styles.writeReviewBtn,
                   {
-                    backgroundColor: isDark ? 'rgba(255, 215, 0, 0.12)' : '#FEF3C7',
-                    borderColor: '#F59E0B',
+                    backgroundColor: isDark ? '#1F293D' : '#FEF3C7',
+                    borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#F59E0B',
                   },
                 ]}
                 onPress={() => setShowReviewModal(true)}
                 activeOpacity={0.82}
               >
-                <Text style={[styles.writeReviewDirectText, { color: isDark ? '#FDE68A' : '#92400E' }]}>
+                <Text style={[styles.writeReviewBtnText, { color: isDark ? '#FDE68A' : '#92400E' }]}>
                   {t('review.writeDetailedReview', 'Write Detailed Review')}
                 </Text>
                 <ChevronRight size={15} color={isDark ? '#FDE68A' : '#92400E'} strokeWidth={2.4} />
@@ -1127,7 +1165,7 @@ export default function TransactionDetailsScreen() {
         </View>
       )}
 
-      {/* ── 6. Primary Action Buttons (Worker / Settle Cash) ── */}
+      {/* ── 5. Primary Action Buttons ── */}
       {isWorker && status !== 'completed' && status !== 'cancelled' && (
         <View style={styles.actionContainer}>
           {status === 'accepted' && (
@@ -1721,40 +1759,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  flowContainer: {
+  cardsWrap: {
     width: '100%',
     maxWidth: 580,
     alignSelf: 'center',
-    paddingVertical: 4,
+    gap: 14,
   },
   fullScrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     alignItems: 'center',
   },
-  heroSection: {
+  heroCard: {
     width: '100%',
-    paddingVertical: 8,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  heroBadgeRow: {
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     marginBottom: 16,
   },
-  heroStatusIcon: {
+  heroIconBadge: {
     width: 48,
     height: 48,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroHeadlineText: {
-    fontSize: 19,
+  heroTitles: {
+    flex: 1,
+  },
+  heroHeadlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroHeadline: {
+    fontSize: 18,
     fontWeight: '800',
     flexShrink: 1,
   },
-  urgencyTag: {
+  urgencyPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
@@ -1763,28 +1817,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  urgencyTagText: {
+  urgencyPillText: {
     fontSize: 9.5,
     fontWeight: '800',
   },
   heroSubText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '500',
     marginTop: 3,
   },
-  stepperWrap: {
+  timelineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginTop: 4,
+    paddingHorizontal: 2,
   },
-  stepperItem: {
+  timelineStep: {
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     minWidth: 54,
   },
-  stepperDot: {
+  timelineNode: {
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -1792,256 +1845,289 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepperDotCompleted: {
+  timelineNodeCompleted: {
     borderWidth: 1.5,
   },
-  stepperDotCurrent: {
+  timelineNodeCurrent: {
     borderWidth: 2,
   },
-  stepperDotPending: {
+  timelineNodePending: {
     borderWidth: 1.5,
   },
-  dotCore: {
+  timelineNodeDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
-  stepperText: {
+  timelineLabel: {
     fontSize: 10,
     fontWeight: '700',
   },
-  stepperTextActive: {
+  timelineLabelActive: {
     fontWeight: '800',
   },
-  stepperTextDim: {
+  timelineLabelDim: {
     fontWeight: '500',
   },
-  stepperLine: {
+  timelineConnector: {
     flex: 1,
     height: 2,
-    marginHorizontal: 4,
+    marginHorizontal: 3,
     marginBottom: 16,
     borderRadius: 1,
   },
-  stepperLineActive: {
+  timelineConnectorActive: {
     height: 2,
   },
-  stepperLineDim: {
+  timelineConnectorDim: {
     height: 1.5,
   },
-  sectionDivider: {
-    height: 1,
+  cardSection: {
     width: '100%',
-    marginVertical: 14,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  partnerSection: {
-    width: '100%',
+  partnerHubHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 4,
+    gap: 10,
   },
-  partnerLeft: {
+  partnerHubLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flex: 1,
   },
-  partnerAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
+  partnerAvatarFrame: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     borderWidth: 1.5,
     overflow: 'hidden',
   },
-  avatarImg: {
+  partnerAvatarImage: {
     width: '100%',
     height: '100%',
   },
-  partnerInfoWrap: {
+  partnerAvatarFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  partnerAvatarInitials: {
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  partnerHubMeta: {
     flex: 1,
   },
-  partnerTitle: {
-    fontSize: 17,
+  partnerHubName: {
+    fontSize: 16.5,
     fontWeight: '800',
   },
-  partnerSubtitle: {
-    fontSize: 12.5,
+  partnerHubCategory: {
+    fontSize: 12,
     fontWeight: '500',
     marginTop: 2,
   },
-  partnerActionsGroup: {
+  contactPillsGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  actionPillBtn: {
+  contactPillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 12,
     borderWidth: 1,
   },
-  actionPillLabel: {
+  contactPillText: {
     fontSize: 12,
     fontWeight: '800',
   },
-  paymentRowSection: {
-    width: '100%',
+  hubDivider: {
+    height: 1,
+    marginVertical: 14,
+  },
+  hubPaymentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
   },
-  paymentMetaLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 3,
-  },
-  paymentAmountLarge: {
-    fontSize: 24,
-    fontWeight: '900',
-  },
-  paymentBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  paymentBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  jobSpecsSection: {
-    width: '100%',
-    paddingVertical: 4,
-  },
-  sectionSmallHeading: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-  },
-  specItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 7,
-  },
-  specIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  specRowLabel: {
+  hubPaymentLabel: {
     fontSize: 9.5,
     fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: 2,
   },
-  specRowValue: {
-    fontSize: 13.5,
-    fontWeight: '700',
+  hubPaymentAmount: {
+    fontSize: 22,
+    fontWeight: '900',
   },
-  clientQuoteSection: {
-    borderLeftWidth: 3,
-    paddingLeft: 12,
-    paddingVertical: 6,
-    marginVertical: 10,
-  },
-  clientQuoteHeader: {
+  hubPaymentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  clientQuoteLabel: {
-    fontSize: 9.5,
+  hubPaymentBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  sectionHeaderLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 12,
+  },
+  sectionHeaderTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  specsGrid: {
+    gap: 10,
+    marginBottom: 10,
+  },
+  specTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  specIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  specLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  specValue: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  noteContainer: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginTop: 2,
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 5,
+  },
+  noteHeaderLabel: {
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
-  clientQuoteBody: {
-    fontSize: 13.5,
-    lineHeight: 20,
+  noteBodyText: {
+    fontSize: 13,
+    lineHeight: 19,
     fontWeight: '500',
   },
-  mediaWrap: {
-    marginTop: 12,
+  galleryBlock: {
+    marginTop: 10,
   },
-  mediaSectionLabel: {
+  galleryTitle: {
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
     marginBottom: 8,
   },
-  ratingFlowSection: {
+  ratingHeroContainer: {
     width: '100%',
-    paddingVertical: 6,
+    marginTop: 2,
   },
-  ratingPromptArea: {
-    alignItems: 'center',
-    paddingVertical: 8,
+  ratingInviteCard: {
+    borderRadius: 22,
+    borderWidth: 1.2,
+    padding: 18,
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  ratingPromptHeader: {
+  ratingInviteHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  ratingPromptTitle: {
-    fontSize: 16.5,
-    fontWeight: '800',
-  },
-  ratingPromptSub: {
-    fontSize: 12.5,
-    fontWeight: '500',
+    gap: 12,
     marginBottom: 12,
   },
-  starsDirectRow: {
+  ratingStarIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 215, 0, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingInviteTitle: {
+    fontSize: 15.5,
+    fontWeight: '800',
+  },
+  ratingInviteSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  starsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
-    marginVertical: 6,
+    gap: 14,
+    marginVertical: 8,
   },
-  starDirectTouch: {
+  starTouchable: {
     padding: 4,
   },
-  writeReviewDirectBtn: {
+  writeReviewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 8,
   },
-  writeReviewDirectText: {
+  writeReviewBtnText: {
     fontSize: 13,
     fontWeight: '800',
   },
-  reviewRecordedPill: {
+  reviewRecordedCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1.2,
   },
   reviewRecordedTitle: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '800',
   },
   reviewRecordedSub: {
@@ -2115,6 +2201,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     flexShrink: 1,
+  },
+  urgencyTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  urgencyTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   stepperContainer: {
     flexDirection: 'row',
