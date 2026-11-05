@@ -1,5 +1,6 @@
+import React from 'react';
 import { Redirect } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Image, Text } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
@@ -8,7 +9,16 @@ export default function Index() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0D9488" />
+        <Image 
+          source={require('../assets/images/logo_premium.png')} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <View style={styles.brandRow}>
+          <Text style={styles.brandWhite}>Apna</Text>
+          <Text style={styles.brandGold}>Ustad</Text>
+        </View>
+        <ActivityIndicator size="small" color="#38BDF8" style={styles.spinner} />
       </View>
     );
   }
@@ -28,5 +38,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logo: {
+    width: 140,
+    height: 140,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  brandWhite: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  brandGold: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#FBBF24',
+    letterSpacing: 0.5,
+  },
+  spinner: {
+    marginTop: 20,
   },
 });

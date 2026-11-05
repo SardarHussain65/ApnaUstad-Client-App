@@ -1923,9 +1923,11 @@
     "submittedDate": "{{date}} کو بھیجی"
   },
   "splash": {
+    "welcome": "خوش آمدید",
+    "appName": "اپنا استاد",
     "tagline": "بھروسہ مند گھریلو سروسز",
-    "expanding": "آپ کے قریب ماہر استاد",
-    "version": "اپنا استاد"
+    "expanding": "ماہر استاد آپ کی دہلیز پر",
+    "version": "اپنا استاد • تصدیق شدہ سروسز"
   },
   "accountDeactivated": {
     "title": "اکاؤنٹ روک دیا گیا ہے",

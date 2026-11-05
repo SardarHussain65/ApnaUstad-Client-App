@@ -16,6 +16,9 @@ import { LanguageProvider } from "../context/LanguageContext";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import { initCrashReporting } from "../services/crashReportingService";
 import * as Updates from 'expo-updates';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 initCrashReporting();
 
@@ -120,6 +123,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', onAppStateChange);
+
+    // Dismiss native splash screen smoothly now that root layout is ready
+    SplashScreen.hideAsync().catch(() => {});
 
     // Silent background check for Over-The-Air (OTA) updates in release builds
     if (!__DEV__) {
