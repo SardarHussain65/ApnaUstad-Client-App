@@ -41,6 +41,7 @@ interface ReviewModalProps {
   workerName: string;
   workerImage?: string;
   category?: string;
+  initialRating?: number;
   onClose: () => void;
   onSkip?: () => void;
   onSuccess?: () => void;
@@ -53,6 +54,7 @@ export function ReviewModal({
   workerName,
   workerImage,
   category,
+  initialRating = 5,
   onClose,
   onSkip,
   onSuccess,
@@ -62,9 +64,15 @@ export function ReviewModal({
   const colors = useThemeColors();
   const typography = useThemeTypography();
 
-  const [selectedRating, setSelectedRating] = useState<number>(5);
+  const [selectedRating, setSelectedRating] = useState<number>(initialRating);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (visible && initialRating) {
+      setSelectedRating(initialRating);
+    }
+  }, [visible, initialRating]);
 
   const { mutate: createReview, isPending: isSubmitting } = useCreateReviewMutation();
 
