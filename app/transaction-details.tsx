@@ -534,6 +534,117 @@ export default function TransactionDetailsScreen() {
     Linking.openURL(url);
   };
 
+  const handleStartJob = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    confirmModal.showConfirm(
+      t('transactionDetails.confirmStartTitle', 'Start Service?'),
+      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
+      () => {
+        confirmModal.closeConfirm();
+        updateStatus(
+          { bookingId: id as string, status: 'ongoing' },
+          {
+            onSuccess: () => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              refetch();
+            },
+            onError: (error: any) => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
+              alertModal.showAlert(
+                t('common.error', 'Error'),
+                msg,
+                undefined,
+                'error',
+                t('common.ok', 'OK')
+              );
+            },
+          }
+        );
+      },
+      undefined,
+      t('transactionDetails.startJob', 'Start Job'),
+      t('common.cancel', 'Cancel'),
+      colors.cyan
+    );
+  };
+
+  const handleCompleteJob = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    confirmModal.showConfirm(
+      t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
+      t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
+      () => {
+        confirmModal.closeConfirm();
+        updateStatus(
+          { bookingId: id as string, status: 'completed' },
+          {
+            onSuccess: () => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              refetch();
+            },
+            onError: (error: any) => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const msg = error?.response?.data?.message || t('transactionDetails.completeJobFailed', 'Could not complete job. Please check your connection and try again.');
+              alertModal.showAlert(
+                t('common.error', 'Error'),
+                msg,
+                undefined,
+                'error',
+                t('common.ok', 'OK')
+              );
+            },
+          }
+        );
+      },
+      undefined,
+      t('transactionDetails.completeJob', 'Complete Job'),
+      t('common.cancel', 'Cancel'),
+      colors.success
+    );
+  };
+
+  const handleConfirmCashPayment = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    confirmModal.showConfirm(
+      t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
+      t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
+        amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
+      }),
+      () => {
+        confirmModal.closeConfirm();
+        payBooking(
+          { bookingId: id as string, paymentMethod: 'cash' },
+          {
+            onSuccess: () => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+              queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+              refetch();
+              setShowReviewModal(true);
+            },
+            onError: (error: any) => {
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+              alertModal.showAlert(
+                t('transactionDetails.paymentBlocked', 'Payment paused'),
+                msg,
+                undefined,
+                'error',
+                t('common.ok', 'OK')
+              );
+            },
+          }
+        );
+      },
+      undefined,
+      t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
+      t('common.cancel', 'Cancel'),
+      colors.success
+    );
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.centerContainer, { backgroundColor: theme.colors.background.screen }]}>
@@ -591,117 +702,6 @@ export default function TransactionDetailsScreen() {
   const cardBg = isDark ? '#0C101E' : '#FFFFFF';
   const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.14)';
   const metaDividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
-
-  const handleStartJob = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    confirmModal.showConfirm(
-      t('transactionDetails.confirmStartTitle', 'Start Service?'),
-      t('transactionDetails.confirmStartMsg', 'Please confirm that you have arrived at the client location and are ready to begin work.'),
-      () => {
-        confirmModal.closeConfirm();
-        updateStatus(
-          { bookingId: id as string, status: 'ongoing' },
-          {
-            onSuccess: () => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              refetch();
-            },
-            onError: (error: any) => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              const msg = error?.response?.data?.message || t('transactionDetails.startJobFailed', 'Could not start job. Please check your connection and try again.');
-              alertModal.showAlert(
-                t('common.error', 'Error'),
-                msg,
-                undefined,
-                'error',
-                t('common.ok', 'OK')
-              );
-            },
-          }
-        );
-      },
-      undefined,
-      t('transactionDetails.startJob', 'Start Job'),
-      t('common.cancel', 'Cancel'),
-      colors.cyan
-    );
-  }, [confirmModal, t, updateStatus, id, refetch, alertModal, colors.cyan]);
-
-  const handleCompleteJob = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    confirmModal.showConfirm(
-      t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
-      t('transactionDetails.confirmCompleteMsg', 'Please confirm that all tasks are finished and verified with the client. The client will be prompted to settle payment.'),
-      () => {
-        confirmModal.closeConfirm();
-        updateStatus(
-          { bookingId: id as string, status: 'completed' },
-          {
-            onSuccess: () => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              refetch();
-            },
-            onError: (error: any) => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              const msg = error?.response?.data?.message || t('transactionDetails.completeJobFailed', 'Could not complete job. Please check your connection and try again.');
-              alertModal.showAlert(
-                t('common.error', 'Error'),
-                msg,
-                undefined,
-                'error',
-                t('common.ok', 'OK')
-              );
-            },
-          }
-        );
-      },
-      undefined,
-      t('transactionDetails.completeJob', 'Complete Job'),
-      t('common.cancel', 'Cancel'),
-      colors.success
-    );
-  }, [confirmModal, t, updateStatus, id, refetch, alertModal, colors.success]);
-
-  const handleConfirmCashPayment = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    confirmModal.showConfirm(
-      t('transactionDetails.confirmCashTitle', 'Confirm Cash Payment?'),
-      t('transactionDetails.confirmCashMsg', 'Did you pay {{amount}} in cash to the Ustad? Tap confirm to close this booking.', {
-        amount: formatCurrency((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0),
-      }),
-      () => {
-        confirmModal.closeConfirm();
-        payBooking(
-          { bookingId: id as string, paymentMethod: 'cash' },
-          {
-            onSuccess: () => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
-              queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
-              queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-              refetch();
-              setShowReviewModal(true);
-            },
-            onError: (error: any) => {
-              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-              alertModal.showAlert(
-                t('transactionDetails.paymentBlocked', 'Payment paused'),
-                msg,
-                undefined,
-                'error',
-                t('common.ok', 'OK')
-              );
-            },
-          }
-        );
-      },
-      undefined,
-      t('transactionDetails.confirmCash', 'Confirm Cash Payment'),
-      t('common.cancel', 'Cancel'),
-      colors.success
-    );
-  }, [confirmModal, t, booking, payBooking, id, queryClient, refetch, alertModal, colors.success]);
 
   const renderCards = () => (
     <View style={styles.cardsWrap}>
