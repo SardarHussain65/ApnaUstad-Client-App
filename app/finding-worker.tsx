@@ -23,6 +23,8 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAcceptBidMutation, useCancelJobMutation, useRejectBidMutation } from '../hooks/mutations/useMutations';
 import { useBidsByJob, useJobDetails } from '../hooks/queries/useMessagesAndJobs';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../lib/queryKeyFactory';
 import api from '../services/api';
 import Toast from 'react-native-toast-message';
 import { addAlpha } from '../utils/colorUtils';
@@ -46,6 +48,7 @@ const formatElapsedTime = (seconds: number) => {
 export default function FindingWorkerScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const isRTL = useIsRTL();
   const { jobId } = useLocalSearchParams<{ jobId: string }>();
@@ -262,6 +265,11 @@ export default function FindingWorkerScreen() {
 
       // Prevent infinite loop during replacement navigation
       bypassBeforeRemoveRef.current = true;
+
+      // Invalidate queries so Home screen immediately reflects active job
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
 
       // Redirect to home screen directly
       router.replace('/(tabs)' as any);
@@ -604,6 +612,9 @@ export default function FindingWorkerScreen() {
 
   const handleBackHome = () => {
     bypassBeforeRemoveRef.current = true;
+    queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
     router.replace('/(tabs)' as any);
   };
 

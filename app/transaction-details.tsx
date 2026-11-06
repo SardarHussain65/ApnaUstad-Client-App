@@ -55,6 +55,9 @@ import {
   Zap,
   AlertTriangle,
   HelpCircle,
+  Check,
+  X,
+  Pencil,
 } from 'lucide-react-native';
 import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 
@@ -1241,18 +1244,69 @@ export default function TransactionDetailsScreen() {
               <Text style={{ fontSize: 12, color: theme.colors.text.secondary, marginBottom: 10 }}>
                 Please choose how you wish to proceed:
               </Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'column', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.worker,
+                      paddingVertical: 11,
+                      paddingHorizontal: 8,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                    onPress={() => {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      setStartWorkStep('price_increase');
+                      setRevisedPriceInput('');
+                      setPriceIncreaseReason('');
+                      setShowStartWorkModal(true);
+                    }}
+                    activeOpacity={0.82}
+                  >
+                    <Pencil size={14} color="#FFFFFF" strokeWidth={2.4} />
+                    <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>
+                      Propose New Rate
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.cyan,
+                      paddingVertical: 11,
+                      paddingHorizontal: 8,
+                      borderRadius: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                    }}
+                    onPress={handleConfirmStartWorkAgreed}
+                    activeOpacity={0.82}
+                  >
+                    <CheckCircle2 size={14} color="#001014" strokeWidth={2.4} />
+                    <Text style={{ color: '#001014', fontWeight: '800', fontSize: 12 }} numberOfLines={1}>
+                      Proceed at Rs. {Number(booking.totalAmount).toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity
-                  style={{ flex: 1.2, backgroundColor: colors.cyan, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
-                  onPress={handleConfirmStartWorkAgreed}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ color: '#001014', fontWeight: '800', fontSize: 12 }}>
-                    Proceed at Rs. {Number(booking.totalAmount).toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{ flex: 1, borderWidth: 1, borderColor: colors.error, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: alpha(colors.error, 0.45),
+                    backgroundColor: alpha(colors.error, 0.08),
+                    paddingVertical: 9,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
                   onPress={() => {
                     confirmModal.showConfirm(
                       'Cancel Booking?',
@@ -1276,8 +1330,9 @@ export default function TransactionDetailsScreen() {
                   }}
                   activeOpacity={0.8}
                 >
+                  <X size={14} color={colors.error} strokeWidth={2.4} />
                   <Text style={{ color: colors.error, fontWeight: '700', fontSize: 12 }}>
-                    Cancel Job
+                    Cancel Job (Price Disagreement)
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1985,11 +2040,21 @@ export default function TransactionDetailsScreen() {
           <View style={styles.modalBackdrop}>
             <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
             <ScrollView
+              style={styles.modalScrollView}
               contentContainerStyle={styles.modalScrollContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                {/* Top-Right Dismiss 'X' Button */}
+                <TouchableOpacity
+                  style={[styles.modalTopCloseBtn, { backgroundColor: alpha(theme.colors.text.primary, 0.08) }]}
+                  onPress={() => setShowStartWorkModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <X size={18} color={theme.colors.text.secondary} />
+                </TouchableOpacity>
+
                 {startWorkStep === 'confirm' ? (
                   <>
                     <View style={{ alignItems: 'center', marginBottom: 16 }}>
@@ -2107,12 +2172,21 @@ export default function TransactionDetailsScreen() {
                       </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={{ marginTop: 10, padding: 6, alignItems: 'center' }}
-                      onPress={() => setStartWorkStep('confirm')}
-                    >
-                      <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.back', 'Back')}</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 10 }}>
+                      <TouchableOpacity
+                        style={{ padding: 6 }}
+                        onPress={() => setStartWorkStep('confirm')}
+                      >
+                        <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.back', 'Back')}</Text>
+                      </TouchableOpacity>
+                      <View style={{ width: 1, height: 12, backgroundColor: alpha(theme.colors.text.muted, 0.3) }} />
+                      <TouchableOpacity
+                        style={{ padding: 6 }}
+                        onPress={() => setShowStartWorkModal(false)}
+                      >
+                        <Text style={{ fontSize: 13, color: colors.error }}>{t('common.close', 'Close')}</Text>
+                      </TouchableOpacity>
+                    </View>
                   </>
                 )}
               </View>
@@ -2136,32 +2210,52 @@ export default function TransactionDetailsScreen() {
           <View style={styles.modalBackdrop}>
             <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
             <ScrollView
+              style={styles.modalScrollView}
               contentContainerStyle={styles.modalScrollContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                {/* Top Close Button */}
+                <TouchableOpacity
+                  style={[styles.modalTopCloseBtn, { backgroundColor: alpha(theme.colors.text.primary, 0.07) }]}
+                  onPress={() => setShowTruthModal(false)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <X size={18} color={theme.colors.text.secondary} strokeWidth={2.4} />
+                </TouchableOpacity>
+
+                {/* Header Section */}
                 <View style={{ alignItems: 'center', marginBottom: 14 }}>
-                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.success, 0.15) }]}>
-                    <ShieldCheck size={30} color={colors.success} />
+                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.success, 0.14) }]}>
+                    <ShieldCheck size={28} color={colors.success} strokeWidth={2.4} />
                   </View>
                   <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
                     {t('transactionDetails.verifyPaymentTitle', 'Confirm Service Payment')}
                   </Text>
-                  <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
-                    {t('transactionDetails.verifyPaymentAgreedLabel', 'Agreed Bill for this service:')}
-                  </Text>
-                  <Text style={{ fontSize: 26, fontWeight: '800', color: colors.success, marginTop: 4 }}>
-                    Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
-                  </Text>
+
+                  {/* Bill Callout Badge */}
+                  <View style={[styles.agreedBillBox, { backgroundColor: alpha(colors.success, 0.08), borderColor: alpha(colors.success, 0.22) }]}>
+                    <Text style={[styles.agreedBillLabel, { color: theme.colors.text.secondary }]}>
+                      {t('transactionDetails.verifyPaymentAgreedLabel', 'Agreed Bill for this service:')}
+                    </Text>
+                    <Text style={[styles.agreedBillAmount, { color: colors.success }]}>
+                      Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Warranty & Honest policy notice */}
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 12, borderRadius: 12, marginBottom: 14 }}>
+                <View style={[styles.warrantyBox, { backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.22) }]}>
                   <ShieldCheck size={18} color={colors.cyan} style={{ marginTop: 2 }} />
-                  <Text style={{ flex: 1, fontSize: 12.5, color: theme.colors.text.primary, lineHeight: 18 }}>
-                    <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.warrantyTitle, { color: colors.cyan }]}>
+                      15-Day Free Rework Warranty
+                    </Text>
+                    <Text style={[styles.warrantyBody, { color: theme.colors.text.secondary }]}>
+                      Your warranty only protects the exact amount declared here. The Ustad has no right to demand unapproved off-platform cash.
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Payment Choice Selection */}
@@ -2169,41 +2263,67 @@ export default function TransactionDetailsScreen() {
                   <TouchableOpacity
                     style={[
                       styles.truthOptionBtn,
-                      { borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder, backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.12) : 'transparent' },
+                      {
+                        borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder,
+                        backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.12) : alpha(theme.colors.text.primary, 0.02),
+                      },
                     ]}
                     onPress={() => setTruthPaidOption('exact')}
                     activeOpacity={0.8}
                   >
-                    <CheckCircle2 size={20} color={truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted} />
-                    <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '600', color: theme.colors.text.primary, lineHeight: 18 }}>
-                      I paid the exact agreed Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
-                    </Text>
+                    <View style={[
+                      styles.radioCircle,
+                      { borderColor: truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted }
+                    ]}>
+                      {truthPaidOption === 'exact' && <View style={[styles.radioCircleInner, { backgroundColor: colors.success }]} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.truthOptionTitle, { color: theme.colors.text.primary }]}>
+                        I paid the exact agreed Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
+                      </Text>
+                      <Text style={[styles.truthOptionSub, { color: theme.colors.text.muted }]}>
+                        Standard completion with full cash handed over
+                      </Text>
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[
                       styles.truthOptionBtn,
-                      { borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder, backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.12) : 'transparent' },
+                      {
+                        borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder,
+                        backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.12) : alpha(theme.colors.text.primary, 0.02),
+                      },
                     ]}
                     onPress={() => setTruthPaidOption('more')}
                     activeOpacity={0.8}
                   >
-                    <Banknote size={20} color={truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted} />
-                    <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '600', color: theme.colors.text.primary, lineHeight: 18 }}>
-                      I willingly paid more for extra tasks/materials
-                    </Text>
+                    <View style={[
+                      styles.radioCircle,
+                      { borderColor: truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted }
+                    ]}>
+                      {truthPaidOption === 'more' && <View style={[styles.radioCircleInner, { backgroundColor: colors.worker }]} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.truthOptionTitle, { color: theme.colors.text.primary }]}>
+                        I willingly paid more for extra tasks/materials
+                      </Text>
+                      <Text style={[styles.truthOptionSub, { color: theme.colors.text.muted }]}>
+                        Additional agreed work or spare parts bought on-site
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
 
                 {truthPaidOption === 'more' && (
                   <View style={{ marginBottom: 14 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 6 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', letterSpacing: 0.5, color: theme.colors.text.secondary, marginBottom: 6 }}>
                       ACTUAL TOTAL CASH PAID (PKR)
                     </Text>
                     <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
                       <TextInput
-                        style={{ flex: 1, fontSize: 17, fontWeight: '700', color: theme.colors.text.primary, paddingVertical: 4 }}
+                        style={{ flex: 1, fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, paddingVertical: 4 }}
                         keyboardType="numeric"
                         placeholder="Enter total amount paid"
                         placeholderTextColor={theme.colors.text.muted}
@@ -2214,18 +2334,35 @@ export default function TransactionDetailsScreen() {
                   </View>
                 )}
 
-                {/* Report Extra Demand Toggle (Available in both exact & more options) */}
+                {/* Report Extra Demand Toggle */}
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, paddingVertical: 4, paddingHorizontal: 2 }}
+                  style={[
+                    styles.reportDemandCard,
+                    {
+                      borderColor: truthReportExtraDemand ? alpha(colors.error, 0.55) : alpha(cardBorder, 0.7),
+                      backgroundColor: truthReportExtraDemand ? alpha(colors.error, 0.08) : 'transparent',
+                    }
+                  ]}
                   onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
                   activeOpacity={0.8}
                 >
-                  <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
-                    {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
+                  <View style={[
+                    styles.reportCheckbox,
+                    {
+                      borderColor: truthReportExtraDemand ? colors.error : theme.colors.text.muted,
+                      backgroundColor: truthReportExtraDemand ? colors.error : 'transparent',
+                    }
+                  ]}>
+                    {truthReportExtraDemand && <Check size={12} color="#fff" strokeWidth={3} />}
                   </View>
-                  <Text style={{ flex: 1, fontSize: 13, color: colors.error, fontWeight: '600', lineHeight: 18 }}>
-                    Report: Ustad demanded or pressured for extra cash
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.reportDemandTitle, { color: colors.error }]}>
+                      Report: Ustad demanded or pressured for extra cash
+                    </Text>
+                    <Text style={[styles.reportDemandSub, { color: theme.colors.text.muted }]}>
+                      Flags this booking for platform review without delaying completion
+                    </Text>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -2235,18 +2372,25 @@ export default function TransactionDetailsScreen() {
                   ]}
                   onPress={handleSubmitTruthPayment}
                   disabled={isSubmittingTruth}
-                  activeOpacity={0.8}
+                  activeOpacity={0.85}
                 >
-                  <Text style={styles.primaryModalBtnText}>
-                    {isSubmittingTruth ? 'Confirming...' : t('transactionDetails.confirmAndClose', 'Confirm Payment & Complete')}
-                  </Text>
+                  {isSubmittingTruth ? (
+                    <ActivityIndicator color="#000" size="small" />
+                  ) : (
+                    <Text style={[styles.primaryModalBtnText, { color: '#001014', fontWeight: '900' }]}>
+                      {t('transactionDetails.confirmAndClose', 'Confirm Payment & Complete')}
+                    </Text>
+                  )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{ marginTop: 10, padding: 8, alignItems: 'center' }}
+                  style={{ marginTop: 10, paddingVertical: 6, alignItems: 'center' }}
                   onPress={() => setShowTruthModal(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
+                  <Text style={{ fontSize: 13.5, fontWeight: '600', color: theme.colors.text.muted }}>
+                    {t('common.cancel', 'Cancel')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -3110,14 +3254,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 24,
+  },
+  modalScrollView: {
+    width: '100%',
+    flex: 1,
   },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
     width: '100%',
   },
   successModalContainer: {
@@ -3166,35 +3313,83 @@ const styles = StyleSheet.create({
   },
   customModalSheet: {
     width: '100%',
-    maxWidth: 440,
-    borderRadius: 24,
+    maxWidth: 430,
+    alignSelf: 'center',
+    borderRadius: 26,
     borderWidth: 1,
     paddingHorizontal: 20,
     paddingVertical: 22,
+    position: 'relative',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 14,
+  },
+  modalTopCloseBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    zIndex: 10,
+    padding: 6,
+    borderRadius: 20,
   },
   modalIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   modalTitleText: {
     fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   modalSubtitleText: {
-    fontSize: 13.5,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 19,
+    lineHeight: 18,
+  },
+  agreedBillBox: {
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 10,
+  },
+  agreedBillLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  agreedBillAmount: {
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+  warrantyBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+  },
+  warrantyTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  warrantyBody: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: '500',
   },
   primaryModalBtn: {
     paddingVertical: 14,
@@ -3236,7 +3431,58 @@ const styles = StyleSheet.create({
     gap: 12,
     borderWidth: 1.5,
     borderRadius: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
     paddingHorizontal: 14,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircleInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  truthOptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  truthOptionSub: {
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 1,
+  },
+  reportDemandCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  reportCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportDemandTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+  reportDemandSub: {
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 1,
   },
 });

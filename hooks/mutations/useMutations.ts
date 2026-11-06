@@ -291,8 +291,10 @@ export function useCreateJobMutation(options?: Omit<UseMutationOptions<JobRespon
   return useMutation<JobResponse, Error, JobCreationPayload>({
     mutationFn: createJob,
     onSuccess: (data) => {
-      // Invalidate all jobs queries (list, myPosts, nearby, detail) to refresh list
+      // Invalidate all jobs queries (list, myPosts, nearby, detail) and home summary to refresh list
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
     },
     ...options,
   });

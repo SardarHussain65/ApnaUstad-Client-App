@@ -117,7 +117,9 @@ export function useRealtimeSync(enabled: boolean = true) {
       // Bid updates
       socketService.on('bid:new', handleBidUpdate),
       socketService.on('bid:submitted', handleBidUpdate),
+      socketService.on('bid:updated', handleBidUpdate),
       socketService.on('bid:withdrawn', handleBidUpdate),
+      socketService.on('bid:rejected', handleBidUpdate),
       socketService.on('bid:won', (data) => {
         handleBidUpdate(data);
         handleBookingUpdate(data);
