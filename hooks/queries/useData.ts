@@ -38,6 +38,18 @@ export interface Worker {
   totalEarnings?: number;
   totalReviews?: number;
   skills?: string[];
+  specialties?: Array<{
+    _id?: string;
+    categoryId?: { _id: string; name: string; icon?: string; color?: string; isActive?: boolean } | string;
+    priority?: number;
+    skills?: string[];
+    hourlyRate?: number;
+    experience?: number;
+    bio?: string;
+    isActive?: boolean;
+    approvalStatus?: string;
+    subscriptionStatus?: string;
+  }>;
   city?: string;
   address?: string;
   matchedSpecialtyProfile?: {
@@ -532,6 +544,11 @@ const fetchWorkerReviews = async (workerId: string): Promise<Review[]> => {
   return response.data.data || [];
 };
 
+const fetchWorkerSpecialties = async (): Promise<any> => {
+  const response = await api.get('/workers/specialties');
+  return response.data.data || { specialties: [] };
+};
+
 const fetchNotifications = async (): Promise<NotificationsResponse> => {
   const response = await api.get('/notifications/my-notifications', {
     params: { limit: 50 },
@@ -607,6 +624,16 @@ export function useWorker(
     staleTime: 1000 * 60 * 10, // 10 minutes
     gcTime: 1000 * 60 * 30,
     ...options,
+  });
+}
+
+export function useWorkerSpecialties(enabled = true) {
+  const { user, token, role } = useAuth();
+  return useQuery({
+    queryKey: ['worker', 'specialties', user?._id],
+    queryFn: fetchWorkerSpecialties,
+    enabled: Boolean(token && user?._id && role === 'worker' && enabled),
+    staleTime: 1000 * 60 * 5,
   });
 }
 

@@ -26,6 +26,8 @@ import {
   Layers3,
   Heart,
   Scale,
+  Briefcase,
+  Wrench,
 } from 'lucide-react-native';
 import Animated, {
   FadeInDown,
@@ -41,7 +43,7 @@ import { alpha, Shadows, useTheme, useThemeColors, useThemeTypography, getAccess
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMyBookings, useWorkerBookings, useWorker, useUpdateProfileMutation } from '../../hooks';
+import { useMyBookings, useWorkerBookings, useWorker, useUpdateProfileMutation, useCategories, useWorkerSpecialties } from '../../hooks';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { BlurView } from 'expo-blur';
 import api from '../../services/api';
@@ -126,11 +128,12 @@ function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing:
 }
 
 // ─── Menu Item ─────────────────────────────────────────────────────────────────
-function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { icon: any; label: string; sublabel?: string; delay: number; accent: string; onPress?: () => void }) {
+function MenuItem({ icon: Icon, label, sublabel, badge, delay, accent, onPress }: { icon: any; label: string; sublabel?: string; badge?: string; delay: number; accent: string; onPress?: () => void }) {
   const theme = useTheme();
   const isRTL = useIsRTL();
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const accessibleAccent = getAccessibleColor(accent, theme.isDark);
   return (
     <Animated.View entering={FadeInRight.delay(delay).springify()} style={anim}>
       <Pressable
@@ -142,16 +145,21 @@ function MenuItem({ icon: Icon, label, sublabel, delay, accent, onPress }: { ico
         {Platform.OS === 'ios'
           ? <BlurView intensity={theme.id === 'current' ? 16 : 8} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
           : <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface.card }]} />}
-        <View style={[styles.menuAccentBar, { backgroundColor: getAccessibleColor(accent, theme.isDark) }]} />
+        <View style={[styles.menuAccentBar, { backgroundColor: accessibleAccent }]} />
         <View style={styles.menuLeft}>
-          <View style={[styles.menuIconBox, { backgroundColor: `${getAccessibleColor(accent, theme.isDark)}18`, borderColor: `${getAccessibleColor(accent, theme.isDark)}30` }]}>
-            <Icon size={17} color={getAccessibleColor(accent, theme.isDark)} strokeWidth={2.2} />
+          <View style={[styles.menuIconBox, { backgroundColor: `${accessibleAccent}18`, borderColor: `${accessibleAccent}30` }]}>
+            <Icon size={17} color={accessibleAccent} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: theme.colors.text.primary }]}>{label}</Text>
-            {sublabel ? <Text style={[styles.menuSub, { color: theme.colors.text.muted }]}>{sublabel}</Text> : null}
+            {sublabel ? <Text style={[styles.menuSub, { color: theme.colors.text.muted }]} numberOfLines={1}>{sublabel}</Text> : null}
           </View>
         </View>
+        {badge ? (
+          <View style={[styles.menuBadgePill, { backgroundColor: `${accessibleAccent}18`, borderColor: `${accessibleAccent}35` }]}>
+            <Text style={[styles.menuBadgeText, { color: accessibleAccent }]}>{badge}</Text>
+          </View>
+        ) : null}
         {isRTL ? (
           <ChevronLeft size={15} color={theme.colors.text.dim} />
         ) : (
@@ -180,7 +188,50 @@ export default function ProfileTab() {
   const bookings = bookingsQuery.data || [];
 
   const { data: workerProfile } = useWorker(role === 'worker' ? user?._id : undefined);
+  const { data: specialtiesData } = useWorkerSpecialties(isWorker);
+  const { data: allCategories = [] } = useCategories();
   const { mutateAsync: updateProfile } = useUpdateProfileMutation();
+
+  const workerServices = React.useMemo(() => {
+    if (!isWorker) return [];
+    const list: { name: string; isPrimary: boolean; status?: string; isActive?: boolean }[] = [];
+    const seen = new Set<string>();
+
+    // 1. Primary category from workerProfile or user
+    const primary = (workerProfile?.category || (user as any)?.category || '').trim();
+    if (primary) {
+      list.push({ name: primary, isPrimary: true, isActive: true, status: 'approved' });
+      seen.add(primary.toLowerCase());
+    }
+
+    // 2. Additional specialties
+    const rawSpecialties = specialtiesData?.specialties || (workerProfile as any)?.specialties || (user as any)?.specialties || [];
+    if (Array.isArray(rawSpecialties)) {
+      for (const s of rawSpecialties) {
+        let name = '';
+        if (s.categoryId && typeof s.categoryId === 'object' && s.categoryId.name) {
+          name = String(s.categoryId.name).trim();
+        } else if (typeof s.categoryId === 'string' && s.categoryId) {
+          const found = (allCategories as any[]).find((c: any) => c._id === s.categoryId);
+          name = found?.name ? found.name.trim() : (!s.categoryId.match(/^[0-9a-fA-F]{24}$/) ? s.categoryId.trim() : '');
+        }
+
+        if (!name) continue;
+        const lower = name.toLowerCase();
+        if (seen.has(lower)) continue;
+
+        seen.add(lower);
+        list.push({
+          name,
+          isPrimary: s.priority === 1 && list.length === 0,
+          status: s.approvalStatus,
+          isActive: s.isActive !== false,
+        });
+      }
+    }
+
+    return list;
+  }, [isWorker, workerProfile, user, specialtiesData, allCategories]);
 
   const [verificationStatus, setVerificationStatus] = useState<string>('Verify identity');
 
@@ -329,6 +380,50 @@ export default function ProfileTab() {
                 <Text style={[styles.rolePillText, { color: theme.colors.button.primaryText }]}>{isWorker ? t('profile.eliteUstad') : t('profile.platinumClient')}</Text>
               </LinearGradient>
             </View>
+
+            {isWorker && workerServices.length > 0 && (
+              <Animated.View
+                entering={FadeInUp.delay(220).springify()}
+                style={styles.servicesRow}
+              >
+                {workerServices.map((svc, idx) => {
+                  const isPrimary = svc.isPrimary;
+                  const chipAccent = isPrimary
+                    ? theme.colors.brand.primary
+                    : (theme.colors.brand.secondary || '#FF8C00');
+                  const chipAccessible = getAccessibleColor(chipAccent, theme.isDark);
+                  return (
+                    <TouchableOpacity
+                      key={svc.name + idx}
+                      activeOpacity={0.75}
+                      style={[
+                        styles.serviceChip,
+                        {
+                          backgroundColor: alpha(chipAccessible, theme.isDark ? 0.12 : 0.08),
+                          borderColor: alpha(chipAccessible, theme.isDark ? 0.35 : 0.25),
+                        },
+                      ]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push('/profile/specialties' as any);
+                      }}
+                    >
+                      {isPrimary ? (
+                        <Briefcase size={11} color={chipAccessible} strokeWidth={2.5} />
+                      ) : (
+                        <Wrench size={10} color={chipAccessible} strokeWidth={2.2} />
+                      )}
+                      <Text style={[styles.serviceChipText, { color: chipAccessible }]}>
+                        {svc.name}
+                      </Text>
+                      {svc.status === 'pending' && (
+                        <View style={[styles.serviceDot, { backgroundColor: theme.colors.status.warning }]} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
+            )}
           </Animated.View>
         </Animated.View>
 
@@ -356,7 +451,19 @@ export default function ProfileTab() {
             <Text style={[styles.sectionLabel, { color: theme.colors.text.dim }]}>{t('profile.account')}</Text>
             <MenuItem icon={User} label={t('profile.personalInfo')} sublabel={t('profile.personalInfoSub')} delay={640} accent="#00F5FF" onPress={() => router.push('/profile/personal-info')} />
             {isWorker && (
-              <MenuItem icon={Layers3} label={t('profile.skills')} sublabel={t('profile.skillsSub')} delay={655} accent="#FF8C00" onPress={() => router.push('/profile/specialties' as any)} />
+              <MenuItem
+                icon={Layers3}
+                label={t('profile.skills')}
+                sublabel={
+                  workerServices.length > 0
+                    ? workerServices.map((s) => s.name).join(' · ')
+                    : t('profile.skillsSub')
+                }
+                badge={workerServices.length > 0 ? `${workerServices.length} ${workerServices.length === 1 ? 'Trade' : 'Trades'}` : undefined}
+                delay={655}
+                accent="#FF8C00"
+                onPress={() => router.push('/profile/specialties' as any)}
+              />
             )}
             {isWorker && (
               <MenuItem
@@ -529,6 +636,48 @@ const styles = StyleSheet.create({
   badgesRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   rolePill: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, ...Shadows.glow },
   rolePillText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+  servicesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    maxWidth: '100%',
+    paddingHorizontal: 8,
+  },
+  serviceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  serviceChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  serviceDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 1,
+  },
+  menuBadgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginRight: 6,
+  },
+  menuBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
 
 
   // Main card

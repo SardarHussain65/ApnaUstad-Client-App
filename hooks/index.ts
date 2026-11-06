@@ -2,6 +2,7 @@
 export {
   useCategories,
   useWorker,
+  useWorkerSpecialties,
   useWorkersByCategory,
   useAllWorkers,
   useBookings,
