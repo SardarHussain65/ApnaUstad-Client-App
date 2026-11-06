@@ -157,6 +157,18 @@ export default function BidsListScreen() {
       }
     });
 
+    const unsubUpdated = socketService.on('bid:updated', (updatedBid: any) => {
+      const incomingJobId = typeof updatedBid.jobPost === 'object' ? updatedBid.jobPost?._id : updatedBid.jobPost;
+      if (String(incomingJobId) === String(jobId)) {
+        setBids(prev => {
+          if (prev.some(b => String(b._id) === String(updatedBid._id))) {
+            return prev.map(b => (String(b._id) === String(updatedBid._id) ? updatedBid : b));
+          }
+          return [updatedBid, ...prev];
+        });
+      }
+    });
+
     const unsubWithdrawn = socketService.on('bid:withdrawn', (payload: any) => {
       const withdrawnBidId = payload?.bidId || payload?._id;
       if (withdrawnBidId) {
@@ -173,6 +185,7 @@ export default function BidsListScreen() {
 
     return () => {
       if (typeof unsubNewBid === 'function') unsubNewBid();
+      if (typeof unsubUpdated === 'function') unsubUpdated();
       if (typeof unsubWithdrawn === 'function') unsubWithdrawn();
       if (typeof unsubRejected === 'function') unsubRejected();
     };

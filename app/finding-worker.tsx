@@ -519,6 +519,21 @@ export default function FindingWorkerScreen() {
       setStatus(t('findingWorker.offersLabel'));
     });
 
+    const unsubscribeBidUpdated = socketService.on('bid:updated', (updatedBid: any) => {
+      const bidJobId = String(updatedBid?.jobPost?._id || updatedBid?.jobPost || '');
+      if (bidJobId && bidJobId !== String(jobId)) return;
+
+      if (updatedBid.status !== 'pending') return;
+
+      setApplicants(prev => {
+        if (prev.some(a => a._id === updatedBid._id)) {
+          return prev.map(a => a._id === updatedBid._id ? updatedBid : a);
+        }
+        return [...prev, updatedBid];
+      });
+      setStatus(t('findingWorker.offersLabel'));
+    });
+
     const unsubscribeWithdrawn = socketService.on('bid:withdrawn', (payload: any) => {
       if (payload?.jobId && String(payload.jobId) !== String(jobId)) return;
       setApplicants(prev => {
@@ -559,6 +574,7 @@ export default function FindingWorkerScreen() {
       unsubscribeAutoAssigned();
       unsubscribeSearchExtended();
       unsubscribeBids();
+      unsubscribeBidUpdated();
       unsubscribeWithdrawn();
       unsubscribeRejected();
       unsubscribeCancelled();

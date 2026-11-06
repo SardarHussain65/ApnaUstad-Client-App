@@ -120,7 +120,7 @@ export function WorkerHome() {
   const translateX = useShimmerTranslateX();
 
   const pendingBids = useMemo(() => {
-    return workerBids?.filter((bid) => bid.status === 'pending') || [];
+    return workerBids?.filter((bid) => bid.status === 'pending' || bid.status === 'rejected') || [];
   }, [workerBids]);
 
   const activeBookings = useMemo(() => {

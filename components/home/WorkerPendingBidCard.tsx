@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
+  AlertTriangle,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -93,7 +94,7 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
 
   const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
   const statusLabel = bid.status === 'rejected'
-    ? t('pendingBidDetails.declinedByClient', 'Rate declined (Tap to update)')
+    ? t('pendingBidDetails.declinedByClient', 'Offer Declined (Tap to update)')
     : bid.status === 'pending' || !meta?.statusInfo?.label
       ? t('pendingBidDetails.awaitingClient', 'Waiting for customer')
       : meta.statusInfo.label;
@@ -165,7 +166,11 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
               },
             ]}
           >
-            <Hourglass size={11} color={accentColor} strokeWidth={2.5} />
+            {bid.status === 'rejected' ? (
+              <AlertTriangle size={11} color={accentColor} strokeWidth={2.5} />
+            ) : (
+              <Hourglass size={11} color={accentColor} strokeWidth={2.5} />
+            )}
             <Text style={[styles.statusText, { color: accentColor }]} numberOfLines={1}>
               {statusLabel}
             </Text>
