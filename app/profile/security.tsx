@@ -49,9 +49,8 @@ export default function SecurityScreen() {
         type: 'success',
         text1: t('profile.deleteSuccess', 'Your account has been deleted successfully.'),
       });
-      await logout();
       setShowDeleteModal(false);
-      router.replace('/role-selection');
+      await logout();
     } catch (err: any) {
       console.error('Delete account error:', err);
       Toast.show({

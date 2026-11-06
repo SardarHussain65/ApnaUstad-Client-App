@@ -55,7 +55,9 @@ class SocketService {
       'bid:new', 'bid:submitted', 'bid:withdrawn', 'bid:won', 'bid:lost', 
       'booking:new', 'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
-      'booking:cancelled', 'booking:paid', 
+      'booking:cancelled', 'booking:paid',
+      'booking:price_increase_requested', 'booking:price_increase_approved',
+      'booking:price_increase_rejected', 'booking:price_updated',
       'chat:receive', 'worker:location', 'notification:new',
       'worker:verified', 'worker:updated', 'user:updated'
     ];

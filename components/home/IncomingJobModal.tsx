@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -147,6 +148,22 @@ export function IncomingJobModal({
   const colors = useThemeColors();
   const shadows = useThemeShadows();
   const [parentScrollEnabled, setParentScrollEnabled] = useState(true);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   if (!jobs || jobs.length === 0) return null;
 
@@ -157,11 +174,19 @@ export function IncomingJobModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <View
+        style={[
+          styles.backdrop,
+          keyboardHeight > 0 && {
+            justifyContent: 'flex-start',
+            paddingTop: Math.max(insets.top + 4, 12),
+          },
+        ]}
+      >
         <KeyboardAvoidingView
           style={styles.screen}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.screen}>
             {/* Subtle Dim Overlay */}
@@ -209,6 +234,7 @@ export function IncomingJobModal({
                     theme={theme}
                     colors={colors}
                     shadows={shadows}
+                    keyboardHeight={keyboardHeight}
                   />
                 </View>
               ))}
@@ -244,6 +270,7 @@ function JobDecisionCard({
   theme,
   colors,
   shadows,
+  keyboardHeight = 0,
 }: {
   job: any;
   totalJobs: number;
@@ -258,6 +285,7 @@ function JobDecisionCard({
   theme: ReturnType<typeof useTheme>;
   colors: ReturnType<typeof useThemeColors>;
   shadows: ReturnType<typeof useThemeShadows>;
+  keyboardHeight?: number;
 }) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const { t } = useTranslation();
@@ -269,26 +297,40 @@ function JobDecisionCard({
   const client = getClientMeta(job);
   const [secondsRemaining, setSecondsRemaining] = useState(() => resolveSecondsRemaining(job));
 
+  const isOpenPricing =
+    job.pricingType === 'open' ||
+    job.isFixedPrice === false ||
+    !job.amount ||
+    Number(job.amount || 0) === 0 ||
+    signal.isOpenPricing === true;
+
   // Inline Counter Offer state
-  const [showCounterInput, setShowCounterInput] = useState(false);
-  const [counterPrice, setCounterPrice] = useState('');
+  const [showCounterInput, setShowCounterInput] = useState(isOpenPricing);
+  const [counterPrice, setCounterPrice] = useState(isOpenPricing ? '500' : '');
   const [submittingCounter, setSubmittingCounter] = useState(false);
   const [activeCounterPrice, setActiveCounterPrice] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    if (showCounterInput) {
+    setShowCounterInput(isOpenPricing);
+    if (isOpenPricing && !counterPrice) {
+      setCounterPrice('500');
+    }
+  }, [job?._id, isOpenPricing]);
+
+  useEffect(() => {
+    if (showCounterInput || keyboardHeight > 0) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 150);
     }
-  }, [showCounterInput]);
+  }, [showCounterInput, keyboardHeight]);
 
   // Responsive device width helpers for button sizing
   const isSmallDevice = screenWidth < 380;
   const isVerySmallDevice = screenWidth < 345;
   const isCompactDevice = screenWidth < 410;
-  const hasThreeActions = isInstant && !showCounterInput;
+  const hasThreeActions = isInstant && !showCounterInput && !isOpenPricing;
 
   const btnHeight = isSmallDevice ? 46 : 48;
   const secondaryIconSize = isSmallDevice ? 14 : 16;
@@ -320,7 +362,9 @@ function JobDecisionCard({
   }, [job?._id]);
 
   const handleSubmitCounter = async (priceToSubmit?: number) => {
-    const defaultCounter = (activeCounterPrice ?? offerAmount) + 200;
+    const defaultCounter = isOpenPricing
+      ? (activeCounterPrice ?? 500)
+      : (activeCounterPrice ?? offerAmount) + 200;
     const finalPrice = priceToSubmit ?? (counterPrice ? Number(counterPrice) : defaultCounter);
     if (!finalPrice || finalPrice <= 0) {
       Toast.show({
@@ -342,9 +386,11 @@ function JobDecisionCard({
         text1: t('bidSubmission.proposalSent', 'Proposal Sent'),
         text2: t('bidSubmission.proposalSentDesc', 'The client can now review your offer.'),
       });
-      setCounterPrice('');
+      if (!isOpenPricing) {
+        setCounterPrice('');
+        setShowCounterInput(false);
+      }
       setActiveCounterPrice(finalPrice);
-      setShowCounterInput(false);
       onBidSubmitted();
     } catch (err: any) {
       if (err.response?.status === 402) {
@@ -377,7 +423,7 @@ function JobDecisionCard({
     return () => clearInterval(interval);
   }, [job]);
 
-  const offerAmount = Number(signal.amount || job.amount || job.budget || job.pricing?.clientOffer || job.hourlyRate || 0);
+  const offerAmount = isOpenPricing ? 0 : Number(signal.amount || job.amount || job.budget || job.pricing?.clientOffer || job.hourlyRate || 0);
   const netEarning = Number(signal.estimatedNetEarning ?? (offerAmount > 0 ? Math.round(offerAmount * 0.9) : 0));
   const commission = Number(signal.estimatedCommission ?? (offerAmount > 0 ? Math.round(offerAmount * 0.1) : 0));
   const walletBalance = Number(signal.walletBalance || 0);
@@ -394,19 +440,29 @@ function JobDecisionCard({
         schedule.timeLabel ? ` at ${schedule.timeLabel}` : ''
       }`;
 
-  const primaryAmountLabel = isInstant
+  const primaryAmountLabel = isOpenPricing
+    ? t('incomingJobModal.pricingType', 'PRICING')
+    : isInstant
     ? t('incomingJobModal.netEarning', 'Net earning')
     : t('incomingJobModal.clientBudget', 'Client budget');
 
-  const primaryAmountText = isInstant
+  const primaryAmountText = isOpenPricing
+    ? t('incomingJobModal.openForBids', 'Open for Bids')
+    : isInstant
     ? signal.estimatedNetEarningText || formatMoney(netEarning)
     : signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'));
 
-  const primaryAmountHint = isInstant
+  const primaryAmountHint = isOpenPricing
+    ? t('incomingJobModal.clientReviewsQuotes', 'Quote your rate below')
+    : isInstant
     ? commission > 0
       ? t('incomingJobModal.commissionText', '{{amount}} commission', { amount: formatMoney(commission) })
       : t('incomingJobModal.noCommission', 'No commission')
     : t('incomingJobModal.submitQuoteHint', 'Submit your own quote');
+
+  const dynamicMaxHeight = keyboardHeight > 0
+    ? Math.max(260, screenHeight - keyboardHeight - 50)
+    : Math.min(screenHeight * (showCounterInput ? 0.78 : 0.85), 680);
 
   return (
     // Clean, smooth subtle entrance animation without bouncy springiness
@@ -416,7 +472,7 @@ function JobDecisionCard({
         styles.cardFrame,
         {
           width: Math.min(screenWidth - 28, 440),
-          maxHeight: Math.min(screenHeight * (showCounterInput ? 0.78 : 0.85), 680),
+          maxHeight: dynamicMaxHeight,
         },
       ]}
     >
@@ -473,7 +529,7 @@ function JobDecisionCard({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           style={styles.cardScroll}
-          contentContainerStyle={[styles.cardContent, { paddingBottom: showCounterInput ? 40 : 14 }]}
+          contentContainerStyle={[styles.cardContent, { paddingBottom: showCounterInput ? 24 : 14 }]}
         >
           {/* Hero Earnings & Distance Card */}
           <View style={[styles.heroCard, { backgroundColor: alpha(theme.colors.text.primary, 0.03), borderColor: alpha(accent, 0.18) }]}>
@@ -481,7 +537,7 @@ function JobDecisionCard({
               <Text style={[styles.heroLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>
                 {primaryAmountLabel}
               </Text>
-              <Text style={[styles.heroAmount, { color: colors.success }]}>
+              <Text style={[styles.heroAmount, { color: isOpenPricing ? colors.cyan : colors.success }]}>
                 {primaryAmountText}
               </Text>
               <Text style={[styles.heroSubtext, { color: alpha(theme.colors.text.primary, 0.4) }]}>
@@ -658,34 +714,38 @@ function JobDecisionCard({
             </View>
           )}
 
-          {/* Inline Quick Counter Row (expandable when requested) */}
-          {showCounterInput && isInstant && (
+          {/* Inline Quick Counter Row (expanded by default for open pricing or when requested) */}
+          {showCounterInput && (
             <View style={[styles.counterBox, { backgroundColor: alpha(theme.colors.text.primary, 0.04), borderColor: alpha(accent, 0.25) }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={[styles.counterBoxTitle, { color: theme.colors.text.primary, marginBottom: 0 }]}>
-                  {t('incomingJobModal.offerLow', 'Want to give your own rate?')}
+                  {isOpenPricing
+                    ? t('incomingJobModal.quoteYourRate', 'What is your quote for this job?')
+                    : t('incomingJobModal.offerLow', 'Want to give your own rate?')}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowCounterInput(false);
-                    setCounterPrice('');
-                  }}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.muted }}>
-                    ✕ {t('common.cancel', 'Cancel')}
-                  </Text>
-                </TouchableOpacity>
+                {!isOpenPricing && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowCounterInput(false);
+                      setCounterPrice('');
+                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.muted }}>
+                      ✕ {t('common.cancel', 'Cancel')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
-              {/* Quick Increment Buttons for fast response */}
+              {/* Quick Increment / Suggested Rate Buttons for fast response */}
               <View style={styles.quickIncrementsRow}>
-                {[200, 500, 1000].map((inc) => {
-                  const targetPrice = (activeCounterPrice ?? offerAmount) + inc;
-                  const isSelected = Number(counterPrice || ((activeCounterPrice ?? offerAmount) + 200)) === targetPrice;
+                {(isOpenPricing ? [500, 1000, 1500] : [200, 500, 1000]).map((val) => {
+                  const targetPrice = isOpenPricing ? val : (activeCounterPrice ?? offerAmount) + val;
+                  const isSelected = Number(counterPrice || (isOpenPricing ? '500' : String((activeCounterPrice ?? offerAmount) + 200))) === targetPrice;
                   return (
                     <TouchableOpacity
-                      key={inc}
+                      key={val}
                       style={[
                         styles.quickIncrementChip,
                         {
@@ -705,7 +765,7 @@ function JobDecisionCard({
                           },
                         ]}
                       >
-                        +{inc}
+                        {isOpenPricing ? `Rs. ${val}` : `+${val}`}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -720,9 +780,9 @@ function JobDecisionCard({
                     value={counterPrice}
                     onChangeText={(val) => setCounterPrice(val.replace(/[^\d]/g, ''))}
                     keyboardType="number-pad"
-                    placeholder={String((activeCounterPrice ?? offerAmount) + 200)}
+                    placeholder={isOpenPricing ? '500' : String((activeCounterPrice ?? offerAmount) + 200)}
                     placeholderTextColor={alpha(theme.colors.text.primary, 0.3)}
-                    autoFocus
+                    autoFocus={!isOpenPricing}
                   />
                 </View>
               </View>
@@ -753,11 +813,20 @@ function JobDecisionCard({
                 gap: isSmallDevice ? 3 : 4,
               },
             ]}
-            onPress={showCounterInput ? () => { setShowCounterInput(false); setCounterPrice(''); } : onReject}
+            onPress={
+              isOpenPricing
+                ? onReject
+                : showCounterInput
+                ? () => {
+                    setShowCounterInput(false);
+                    setCounterPrice('');
+                  }
+                : onReject
+            }
             disabled={isLoading || submittingCounter}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
+            accessibilityLabel={isOpenPricing ? t('common.skip', 'Skip') : showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
           >
             <X size={isSmallDevice ? 14 : 17} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.4} />
             {(!hasThreeActions || !isVerySmallDevice) && (
@@ -771,13 +840,13 @@ function JobDecisionCard({
                 ]}
                 numberOfLines={1}
               >
-                {showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
+                {isOpenPricing ? t('common.skip', 'Skip') : showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
               </Text>
             )}
           </TouchableOpacity>
 
-          {/* Quick Counter Toggle Button (if Instant & counter input closed) */}
-          {isInstant && !showCounterInput && (
+          {/* Quick Counter Toggle Button (only when fixed price & counter input closed) */}
+          {isInstant && !showCounterInput && !isOpenPricing && (
             <TouchableOpacity
               style={[
                 styles.counterToggleBtn,
@@ -819,7 +888,7 @@ function JobDecisionCard({
             </TouchableOpacity>
           )}
 
-          {/* Primary Action Button: When countering, this is the SINGLE button to send the counter rate. When normal, it's Accept Offer. */}
+          {/* Primary Action Button: When countering or open pricing, this sends the rate. When normal fixed price, it's Accept Offer. */}
           {showCounterInput ? (
             <TouchableOpacity
               style={[
@@ -866,7 +935,12 @@ function JobDecisionCard({
                       ellipsizeMode="tail"
                     >
                       {t('incomingJobModal.sendMyRateBtn', 'Send Rate: Rs. {{amount}}', {
-                        amount: Number(counterPrice || ((activeCounterPrice ?? offerAmount) + 200)).toLocaleString(),
+                        amount: Number(
+                          counterPrice ||
+                            (isOpenPricing
+                              ? (activeCounterPrice ?? 500)
+                              : (activeCounterPrice ?? offerAmount) + 200)
+                        ).toLocaleString(),
                       })}
                     </Text>
                   </>

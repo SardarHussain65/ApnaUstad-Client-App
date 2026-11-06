@@ -253,10 +253,9 @@ export default function ProfileTab() {
   const handleConfirmLogout = async () => {
     try {
       setIsLoggingOut(true);
+      setShowLogoutModal(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await logout();
-      setShowLogoutModal(false);
-      router.replace('/role-selection');
     } catch (err) {
       console.error('Logout error:', err);
       setShowLogoutModal(false);
