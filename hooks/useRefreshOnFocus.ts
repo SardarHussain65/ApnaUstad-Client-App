@@ -25,9 +25,9 @@ export function useRefreshOnFocus(refetch: () => Promise<any> | void) {
         return;
       }
 
-      // Throttle focus refreshes to at most once every 10 seconds
+      // Throttle focus refreshes to at most once every 1.5 seconds
       const now = Date.now();
-      if (now - lastRefreshedAtRef.current < 10000) {
+      if (now - lastRefreshedAtRef.current < 1500) {
         return;
       }
       lastRefreshedAtRef.current = now;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -19,9 +19,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
+  ArrowRight,
   Banknote,
   BriefcaseBusiness,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
@@ -36,8 +38,10 @@ import {
   Send,
   ShieldCheck,
   Trash2,
+  UserCheck,
   UserRound,
   X,
+  XCircle,
   Zap,
 } from 'lucide-react-native';
 
@@ -52,6 +56,7 @@ import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/
 import api from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeyFactory';
+import { socketService } from '../services/socketService';
 
 const createStyles = (theme: AppTheme) => {
   const isDark = theme.isDark;
@@ -649,6 +654,43 @@ const createStyles = (theme: AppTheme) => {
       fontWeight: '800',
       textTransform: 'uppercase',
     },
+    // Status Notice Card Styles
+    statusNoticeCard: {
+      borderRadius: BorderRadius.xl,
+      borderWidth: 1.2,
+      padding: 14,
+      gap: 12,
+    },
+    statusNoticeIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statusNoticeTitle: {
+      fontSize: 14,
+      fontWeight: '800',
+      marginBottom: 3,
+    },
+    statusNoticeBody: {
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    statusNoticeBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: BorderRadius.l,
+    },
+    statusNoticeBtnText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '800',
+    },
     // Update Rate Modal Styles
     modalBackdrop: {
       flex: 1,
@@ -930,7 +972,7 @@ export default function PendingBidDetailsScreen() {
   const bid = bids?.find(item => item._id === params.pendingBidId);
   const bidJob = bid?.jobPost && typeof bid.jobPost === 'object' ? bid.jobPost : null;
   const jobId = params.id || (typeof bid?.jobPost === 'string' ? bid.jobPost : bidJob?._id);
-  const { data: job, isLoading: isLoadingJob } = useJobDetails(jobId);
+  const { data: job, isLoading: isLoadingJob, refetch: refetchJob } = useJobDetails(jobId);
   const { mutate: withdrawBid, isPending: isWithdrawing } = useWithdrawBidMutation();
   const { user } = useAuth();
   const toast = useToast();
@@ -943,7 +985,92 @@ export default function PendingBidDetailsScreen() {
   const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
 
   const displayJob = job || bidJob;
+  const rawJob: any = displayJob;
   const currentProposedPrice = Number(bid?.proposedPrice || displayJob?.amount || 0);
+
+  const myWorkerId = String(user?._id || '');
+  const bidStatus = String(bid?.status || '');
+  const isWon = bidStatus === 'accepted' || (
+    displayJob?.status === 'assigned' &&
+    rawJob?.assignedWorker &&
+    String(rawJob.assignedWorker?._id || rawJob.assignedWorker) === myWorkerId
+  );
+  const isHiredOther = !isWon && (
+    bidStatus === 'lost' ||
+    (
+      ['assigned', 'closed'].includes(displayJob?.status || '') &&
+      Boolean(rawJob?.assignedWorker || rawJob?.bookingId || rawJob?.acceptedBid)
+    )
+  );
+  const isJobCancelled = displayJob?.status === 'cancelled' || bidStatus === 'cancelled';
+  const isRejected = !isWon && !isHiredOther && !isJobCancelled && bidStatus === 'rejected';
+
+  // Real-time socket listener for instant UI updates when customer declines or hires
+  useEffect(() => {
+    const onBidRejected = (data: any) => {
+      const targetBidId = data?.bidId?.toString();
+      if (!targetBidId || targetBidId === params.pendingBidId || targetBidId === bid?._id?.toString()) {
+        void refetchBids();
+        void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+        toast.error(
+          'Offer Declined by Customer',
+          data?.reason || 'Customer declined your quote. You can submit an updated rate!'
+        );
+      }
+    };
+
+    const onBidLost = (data: any) => {
+      const targetJobId = data?.jobPost?._id?.toString() || data?.jobId?.toString();
+      if (!targetJobId || targetJobId === jobId) {
+        void refetchBids();
+        void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+        toast.info(
+          'Position Filled',
+          'The customer has selected another Ustad for this job.'
+        );
+      }
+    };
+
+    const onJobAssigned = (data: any) => {
+      const targetJobId = data?.jobId?.toString();
+      if (!targetJobId || targetJobId === jobId) {
+        void refetchBids();
+        void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      }
+    };
+
+    const onBidWon = (data: any) => {
+      const targetJobId = data?.jobPost?._id?.toString() || data?.jobId?.toString();
+      if (!targetJobId || targetJobId === jobId) {
+        void refetchBids();
+        void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+        toast.success(
+          'You Were Hired! 🎉',
+          'The customer accepted your proposal! Tap to view booking.'
+        );
+      }
+    };
+
+    const unsubs = [
+      socketService.on('bid:rejected', onBidRejected),
+      socketService.on('bid:lost', onBidLost),
+      socketService.on('bid:won', onBidWon),
+      socketService.on('job:assigned', onJobAssigned),
+      socketService.on('job:cancelled', onBidLost),
+    ];
+
+    return () => {
+      unsubs.forEach(u => u());
+    };
+  }, [params.pendingBidId, bid?._id, jobId, refetchBids, refetchJob, queryClient, toast]);
 
   const handleOpenUpdateModal = () => {
     setUpdatedPrice(String(currentProposedPrice));
@@ -1168,10 +1295,40 @@ export default function PendingBidDetailsScreen() {
               <View style={styles.heroAccent} />
 
               <View style={styles.heroTopRow}>
-                <View style={styles.pendingBadge}>
-                  <Hourglass size={12} color={colors.worker} strokeWidth={2.4} />
-                  <Text style={styles.pendingBadgeText}>{t('pendingBidDetails.awaitingClient')}</Text>
-                </View>
+                {isRejected ? (
+                  <View style={[styles.pendingBadge, { backgroundColor: alpha(colors.error || '#EF4444', 0.16), borderColor: alpha(colors.error || '#EF4444', 0.4) }]}>
+                    <AlertTriangle size={12} color={colors.error || '#EF4444'} strokeWidth={2.4} />
+                    <Text style={[styles.pendingBadgeText, { color: colors.error || '#EF4444' }]}>
+                      OFFER DECLINED BY CUSTOMER
+                    </Text>
+                  </View>
+                ) : isHiredOther ? (
+                  <View style={[styles.pendingBadge, { backgroundColor: alpha(colors.orange || '#F59E0B', 0.16), borderColor: alpha(colors.orange || '#F59E0B', 0.4) }]}>
+                    <X size={12} color={colors.orange || '#F59E0B'} strokeWidth={2.4} />
+                    <Text style={[styles.pendingBadgeText, { color: colors.orange || '#F59E0B' }]}>
+                      CUSTOMER HIRED ANOTHER USTAD
+                    </Text>
+                  </View>
+                ) : isJobCancelled ? (
+                  <View style={[styles.pendingBadge, { backgroundColor: alpha(colors.error || '#EF4444', 0.16), borderColor: alpha(colors.error || '#EF4444', 0.4) }]}>
+                    <X size={12} color={colors.error || '#EF4444'} strokeWidth={2.4} />
+                    <Text style={[styles.pendingBadgeText, { color: colors.error || '#EF4444' }]}>
+                      REQUEST CANCELLED
+                    </Text>
+                  </View>
+                ) : isWon ? (
+                  <View style={[styles.pendingBadge, { backgroundColor: alpha(colors.green || '#10B981', 0.16), borderColor: alpha(colors.green || '#10B981', 0.4) }]}>
+                    <CheckCircle2 size={12} color={colors.green || '#10B981'} strokeWidth={2.4} />
+                    <Text style={[styles.pendingBadgeText, { color: colors.green || '#10B981' }]}>
+                      OFFER ACCEPTED • HIRED!
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.pendingBadge}>
+                    <Hourglass size={12} color={colors.worker} strokeWidth={2.4} />
+                    <Text style={styles.pendingBadgeText}>{t('pendingBidDetails.awaitingClient')}</Text>
+                  </View>
+                )}
                 <View style={styles.submittedBadge}>
                   <Radio size={11} color={colors.cyan} strokeWidth={2.4} />
                   <Text style={styles.submittedBadgeText}>{submittedText}</Text>
@@ -1194,13 +1351,155 @@ export default function PendingBidDetailsScreen() {
                   <Text style={styles.heroValueLabel}>{t('pendingBidDetails.yourQuotedValue')}</Text>
                   <Text style={styles.heroValue}>{quoteText}</Text>
                 </View>
-                <View style={styles.heroStatusNote}>
-                  <ShieldCheck size={14} color={colors.green} strokeWidth={2.5} />
-                  <Text style={styles.heroStatusText}>{t('pendingBidDetails.offerActive')}</Text>
-                </View>
+                {isRejected ? (
+                  <View style={[styles.heroStatusNote, { backgroundColor: alpha(colors.error || '#EF4444', 0.12), borderColor: alpha(colors.error || '#EF4444', 0.35) }]}>
+                    <Pencil size={13} color={colors.error || '#EF4444'} strokeWidth={2.4} />
+                    <Text style={[styles.heroStatusText, { color: colors.error || '#EF4444' }]}>NEW RATE REQUIRED</Text>
+                  </View>
+                ) : isHiredOther ? (
+                  <View style={[styles.heroStatusNote, { backgroundColor: alpha(theme.colors.text.muted, 0.12), borderColor: alpha(theme.colors.border.default, 0.4) }]}>
+                    <Hourglass size={13} color={theme.colors.text.muted} strokeWidth={2.4} />
+                    <Text style={[styles.heroStatusText, { color: theme.colors.text.muted }]}>POSITION FILLED</Text>
+                  </View>
+                ) : isJobCancelled ? (
+                  <View style={[styles.heroStatusNote, { backgroundColor: alpha(colors.error || '#EF4444', 0.12), borderColor: alpha(colors.error || '#EF4444', 0.35) }]}>
+                    <X size={13} color={colors.error || '#EF4444'} strokeWidth={2.4} />
+                    <Text style={[styles.heroStatusText, { color: colors.error || '#EF4444' }]}>CLOSED</Text>
+                  </View>
+                ) : isWon ? (
+                  <View style={[styles.heroStatusNote, { backgroundColor: alpha(colors.green || '#10B981', 0.12), borderColor: alpha(colors.green || '#10B981', 0.35) }]}>
+                    <CheckCircle2 size={13} color={colors.green || '#10B981'} strokeWidth={2.4} />
+                    <Text style={[styles.heroStatusText, { color: colors.green || '#10B981' }]}>YOU WON THIS JOB</Text>
+                  </View>
+                ) : (
+                  <View style={styles.heroStatusNote}>
+                    <ShieldCheck size={14} color={colors.green} strokeWidth={2.5} />
+                    <Text style={styles.heroStatusText}>{t('pendingBidDetails.offerActive')}</Text>
+                  </View>
+                )}
               </View>
             </GlassCard>
           </Animated.View>
+
+          {/* Prominent Status Callout Banners */}
+          {isRejected && (
+            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
+              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.error || '#EF4444', 0.45), backgroundColor: alpha(colors.error || '#EF4444', 0.08) }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.error || '#EF4444', 0.16) }]}>
+                    <AlertTriangle size={22} color={colors.error || '#EF4444'} strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.statusNoticeTitle, { color: colors.error || '#EF4444' }]}>
+                      Offer Declined by Customer
+                    </Text>
+                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
+                      The customer declined your previous quote of {quoteText}. This job is still open! Update your rate below with a competitive price to win this job.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.statusNoticeBtn, { backgroundColor: colors.worker }]}
+                  onPress={handleOpenUpdateModal}
+                  activeOpacity={0.84}
+                >
+                  <Pencil size={15} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.statusNoticeBtnText}>Update Rate & Resubmit</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+
+          {isHiredOther && (
+            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
+              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.orange || '#F59E0B', 0.35), backgroundColor: alpha(colors.orange || '#F59E0B', 0.07) }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.orange || '#F59E0B', 0.16) }]}>
+                    <BriefcaseBusiness size={22} color={colors.orange || '#F59E0B'} strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.statusNoticeTitle, { color: theme.colors.text.primary }]}>
+                      Customer Hired Another Ustad
+                    </Text>
+                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
+                      The customer accepted another proposal for this service request. This offer has been closed. Keep an eye on the Live Radar for new nearby jobs!
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.statusNoticeBtn, { backgroundColor: colors.cyan }]}
+                  onPress={() => router.replace('/(tabs)')}
+                  activeOpacity={0.84}
+                >
+                  <Radio size={15} color="#001014" strokeWidth={2.4} />
+                  <Text style={[styles.statusNoticeBtnText, { color: '#001014' }]}>View Open Jobs on Radar</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+
+          {isJobCancelled && (
+            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
+              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.error || '#EF4444', 0.35), backgroundColor: alpha(colors.error || '#EF4444', 0.07) }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.error || '#EF4444', 0.16) }]}>
+                    <X size={22} color={colors.error || '#EF4444'} strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.statusNoticeTitle, { color: colors.error || '#EF4444' }]}>
+                      Job Request Cancelled
+                    </Text>
+                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
+                      The customer cancelled this service request. Your offer has been automatically closed.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.statusNoticeBtn, { backgroundColor: colors.cyan }]}
+                  onPress={() => router.replace('/(tabs)')}
+                  activeOpacity={0.84}
+                >
+                  <Radio size={15} color="#001014" strokeWidth={2.4} />
+                  <Text style={[styles.statusNoticeBtnText, { color: '#001014' }]}>Return to Live Radar</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+
+          {isWon && (
+            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
+              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.green || '#10B981', 0.4), backgroundColor: alpha(colors.green || '#10B981', 0.08) }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.green || '#10B981', 0.16) }]}>
+                    <CheckCircle2 size={22} color={colors.green || '#10B981'} strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.statusNoticeTitle, { color: colors.green || '#10B981' }]}>
+                      You Were Hired! 🎉
+                    </Text>
+                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
+                      The customer accepted your proposal. Tap below to navigate directly to your active booking details!
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.statusNoticeBtn, { backgroundColor: colors.green || '#10B981' }]}
+                  onPress={() => {
+                    const bId = (displayJob as any)?.bookingId || (displayJob as any)?.booking?._id;
+                    if (bId) {
+                      router.push({ pathname: '/transaction-details', params: { id: bId } });
+                    } else {
+                      router.replace('/(tabs)');
+                    }
+                  }}
+                  activeOpacity={0.84}
+                >
+                  <Text style={[styles.statusNoticeBtnText, { color: '#001014' }]}>Open Active Booking</Text>
+                  <ArrowRight size={15} color="#001014" strokeWidth={2.6} />
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
 
           <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
             <SectionHeader
@@ -1368,44 +1667,113 @@ export default function PendingBidDetailsScreen() {
               colors={['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)']}
               style={StyleSheet.absoluteFill}
             />
-            <View style={styles.dockActionsRow}>
-              {/* Primary Action: Update Offer */}
-              <TouchableOpacity
-                style={styles.updateOfferBtn}
-                onPress={handleOpenUpdateModal}
-                disabled={isWithdrawing}
-                activeOpacity={0.84}
-              >
-                <LinearGradient
-                  colors={[colors.worker, alpha(colors.worker, 0.82)]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.updateOfferGradient}
+            {isWon ? (
+              <View style={styles.dockActionsRow}>
+                <TouchableOpacity
+                  style={[styles.updateOfferBtn, { flex: 1 }]}
+                  onPress={() => {
+                    const bId = (displayJob as any)?.bookingId || (displayJob as any)?.booking?._id;
+                    if (bId) {
+                      router.push({ pathname: '/transaction-details', params: { id: bId } });
+                    } else {
+                      router.replace('/(tabs)');
+                    }
+                  }}
+                  activeOpacity={0.84}
                 >
-                  <Pencil size={16} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={styles.updateOfferText}>
-                    {t('pendingBidDetails.updateRateBtn', 'Update Rate')}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <LinearGradient
+                    colors={[colors.green || '#10B981', alpha(colors.green || '#10B981', 0.85)]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.updateOfferGradient}
+                  >
+                    <CheckCircle2 size={17} color="#001014" strokeWidth={2.4} />
+                    <Text style={[styles.updateOfferText, { color: '#001014', fontWeight: '900' }]}>
+                      View Active Booking
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ) : isHiredOther || isJobCancelled ? (
+              <View style={styles.dockActionsRow}>
+                <TouchableOpacity
+                  style={[styles.updateOfferBtn, { flex: 1 }]}
+                  onPress={() => router.replace('/(tabs)')}
+                  activeOpacity={0.84}
+                >
+                  <LinearGradient
+                    colors={[colors.cyan, alpha(colors.cyan, 0.82)]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.updateOfferGradient}
+                  >
+                    <Radio size={16} color="#001014" strokeWidth={2.4} />
+                    <Text style={[styles.updateOfferText, { color: '#001014', fontWeight: '900' }]}>
+                      {isJobCancelled ? 'Return to Home' : 'Return to Live Radar'}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ) : isRejected ? (
+              <View style={styles.dockActionsRow}>
+                <TouchableOpacity
+                  style={[styles.updateOfferBtn, { flex: 1 }]}
+                  onPress={handleOpenUpdateModal}
+                  activeOpacity={0.84}
+                >
+                  <LinearGradient
+                    colors={[colors.worker, alpha(colors.worker, 0.82)]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.updateOfferGradient}
+                  >
+                    <Pencil size={17} color="#FFFFFF" strokeWidth={2.4} />
+                    <Text style={[styles.updateOfferText, { fontWeight: '900' }]}>
+                      Update Rate & Resubmit Offer
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.dockActionsRow}>
+                {/* Primary Action: Update Offer */}
+                <TouchableOpacity
+                  style={styles.updateOfferBtn}
+                  onPress={handleOpenUpdateModal}
+                  disabled={isWithdrawing}
+                  activeOpacity={0.84}
+                >
+                  <LinearGradient
+                    colors={[colors.worker, alpha(colors.worker, 0.82)]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.updateOfferGradient}
+                  >
+                    <Pencil size={16} color="#FFFFFF" strokeWidth={2.4} />
+                    <Text style={styles.updateOfferText}>
+                      {t('pendingBidDetails.updateRateBtn', 'Update Rate')}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
 
-              {/* Secondary Action: Withdraw */}
-              <TouchableOpacity
-                style={[styles.withdrawButton, isWithdrawing && styles.buttonDisabled]}
-                onPress={handleWithdraw}
-                disabled={isWithdrawing}
-                activeOpacity={0.82}
-              >
-                {isWithdrawing ? (
-                  <ActivityIndicator color={colors.error} size="small" />
-                ) : (
-                  <>
-                    <Trash2 size={15} color={colors.error} strokeWidth={2.4} />
-                    <Text style={styles.withdrawTitle}>{t('pendingBidDetails.withdraw', 'Withdraw')}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                {/* Secondary Action: Withdraw */}
+                <TouchableOpacity
+                  style={[styles.withdrawButton, isWithdrawing && styles.buttonDisabled]}
+                  onPress={handleWithdraw}
+                  disabled={isWithdrawing}
+                  activeOpacity={0.82}
+                >
+                  {isWithdrawing ? (
+                    <ActivityIndicator color={colors.error} size="small" />
+                  ) : (
+                    <>
+                      <Trash2 size={15} color={colors.error} strokeWidth={2.4} />
+                      <Text style={styles.withdrawTitle}>{t('pendingBidDetails.withdraw', 'Withdraw')}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         ) : null}
       </View>

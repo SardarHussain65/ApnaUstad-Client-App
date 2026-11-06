@@ -38,7 +38,7 @@ import {
   LayoutGrid,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -299,6 +299,14 @@ export function ClientHome() {
   // Auto-refresh when ClientHome regains focus (switching tabs / returning to home)
   useRefreshOnFocus(handleRefresh);
 
+  // Explicitly refetch on screen focus so returning from job-creation or live-radar immediately displays updated state
+  useFocusEffect(
+    useCallback(() => {
+      void refetchJobs();
+      void refetchHomeSummary();
+    }, [refetchJobs, refetchHomeSummary])
+  );
+
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const filteredCategories = useMemo(() => {
@@ -338,42 +346,33 @@ export function ClientHome() {
     );
   }, [activeBooking]);
 
-  // Active Custom Job Post (open or reviewing without an active/accepted booking)
+  // Active Custom Job Post (open or reviewing without an accepted bid or assigned booking)
   const activeMissions = useMemo<JobPost[]>(() => {
     const recent = homeSummary?.recentBookings ?? [];
     const bookedJobPostIds = new Set<string>();
-    const activeOrRecentCategories = new Set<string>();
 
     recent.forEach((b: any) => {
-      if (b.jobPost) bookedJobPostIds.add(String(b.jobPost?._id || b.jobPost));
-      if (b.category) activeOrRecentCategories.add(b.category.toLowerCase().trim());
+      if (b.status !== 'cancelled' && b.jobPost) {
+        bookedJobPostIds.add(String(b.jobPost?._id || b.jobPost));
+      }
     });
 
-    if (activeBooking) {
-      if ((activeBooking as any).jobPost) {
-        bookedJobPostIds.add(String((activeBooking as any).jobPost?._id || (activeBooking as any).jobPost));
-      }
-      if (activeBooking.category) {
-        activeOrRecentCategories.add(activeBooking.category.toLowerCase().trim());
-      }
+    if (activeBooking && (activeBooking as any).jobPost) {
+      bookedJobPostIds.add(String((activeBooking as any).jobPost?._id || (activeBooking as any).jobPost));
     }
 
     return jobPosts
       .filter((job: any) => {
         // Must be open or reviewing
-        if (!['open', 'reviewing'].includes(job.status)) return false;
+        const status = String(job.status || '').toLowerCase();
+        if (!['open', 'reviewing'].includes(status)) return false;
 
         // If it already has an accepted bid or booking linked, it is not searching
         if (job.acceptedBid || job.hasAcceptedBid || job.cardMeta?.bidSummary?.hasAcceptedBid) return false;
         if (job.bookingId || job.detailMeta?.bookingId) return false;
 
-        // If a booking explicitly references this job post
+        // If an existing non-cancelled booking explicitly references this job post
         if (bookedJobPostIds.has(String(job._id))) return false;
-
-        // If there's an ongoing or recently completed booking matching this category
-        if (job.category && activeOrRecentCategories.has(job.category.toLowerCase().trim())) {
-          return false;
-        }
 
         return true;
       })
@@ -559,7 +558,9 @@ export function ClientHome() {
               </GlassCard>
             </TouchableOpacity>
           </Animated.View>
-        ) : activeSearchJob ? (
+        ) : null}
+
+        {activeSearchJob ? (
           <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
             {proposalCount > 0 ? (
               <GlassCard
