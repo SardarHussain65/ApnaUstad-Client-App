@@ -200,9 +200,11 @@ export default function TransactionDetailsScreen() {
       const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
       if (!incomingId || incomingId === String(id)) {
         if (timer) clearTimeout(timer);
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
         timer = setTimeout(() => {
           refetchRef.current();
-        }, 500);
+        }, 300);
       }
     };
 
@@ -212,14 +214,18 @@ export default function TransactionDetailsScreen() {
       'booking:ongoing',
       'booking:completed',
       'booking:cancelled',
-      'booking:paid'
+      'booking:paid',
+      'booking:price_increase_requested',
+      'booking:price_increase_approved',
+      'booking:price_increase_rejected',
+      'booking:price_updated'
     ];
     const unsubs = events.map(event => socketService.on(event, handleUpdate));
     return () => {
       if (timer) clearTimeout(timer);
       unsubs.forEach(u => u());
     };
-  }, [id]);
+  }, [id, queryClient]);
 
   const meta = booking?.cardMeta;
   const status = booking?.status || 'accepted';
@@ -684,14 +690,16 @@ export default function TransactionDetailsScreen() {
     const agreedAmount = Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0);
     const declared = truthPaidOption === 'more' ? Number(truthDeclaredAmount) : agreedAmount;
 
-    if (truthPaidOption === 'more' && (!declared || declared <= agreedAmount)) {
-      alertModal.showAlert(
-        t('common.error', 'Error'),
-        `Declared amount must be greater than original Rs. ${agreedAmount.toLocaleString()}.`,
-        undefined,
-        'warning'
-      );
-      return;
+    if (truthPaidOption === 'more') {
+      if (!truthDeclaredAmount || isNaN(declared) || declared <= agreedAmount) {
+        alertModal.showAlert(
+          t('common.error', 'Error'),
+          `Please enter the actual amount paid. It must be higher than the agreed Rs. ${agreedAmount.toLocaleString()}.`,
+          undefined,
+          'warning'
+        );
+        return;
+      }
     }
 
     setIsSubmittingTruth(true);
@@ -699,7 +707,7 @@ export default function TransactionDetailsScreen() {
       if (truthPaidOption === 'more' || truthReportExtraDemand) {
         await api.post(`/bookings/${id}/verify-payment`, {
           actualAmountPaid: declared,
-          reportExtraDemand: truthReportExtraDemand,
+          reportExtraDemand: Boolean(truthReportExtraDemand),
           feedback: truthFeedback.trim() || undefined,
         });
       }
@@ -713,6 +721,7 @@ export default function TransactionDetailsScreen() {
             queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
             queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
             refetch();
             setShowReviewModal(true);
           },
@@ -1044,6 +1053,119 @@ export default function TransactionDetailsScreen() {
           </Text>
         </View>
       )}
+
+      {/* ── Latest Price Revision Declined Resolution Mechanism ── */}
+      {(() => {
+        const history = (booking as any)?.priceRevisionHistory;
+        const latestRev = Array.isArray(history) && history.length > 0 ? history[history.length - 1] : null;
+        const isDeclined = latestRev?.status === 'rejected' && !(booking as any)?.pendingPriceIncrease && status === 'accepted';
+        if (!isDeclined) return null;
+
+        if (isWorker) {
+          return (
+            <View style={[styles.cardSection, { backgroundColor: alpha(colors.worker, isDark ? 0.14 : 0.08), borderColor: colors.worker, borderWidth: 1.5, marginBottom: 12 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <AlertTriangle size={18} color={colors.worker} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.worker }}>
+                  Customer Declined Price Revision
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, color: theme.colors.text.primary, lineHeight: 18, marginBottom: 6 }}>
+                Customer did not agree to increase the price to Rs. {Number(latestRev.revisedPrice).toLocaleString()}. The agreed rate of Rs. {Number(booking.totalAmount).toLocaleString()} remains active.
+              </Text>
+              <Text style={{ fontSize: 12, color: theme.colors.text.secondary, marginBottom: 10 }}>
+                Please choose how you wish to proceed:
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={{ flex: 1.2, backgroundColor: colors.cyan, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+                  onPress={handleConfirmStartWorkAgreed}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: '#001014', fontWeight: '800', fontSize: 12 }}>
+                    Proceed at Rs. {Number(booking.totalAmount).toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, borderWidth: 1, borderColor: colors.error, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+                  onPress={() => {
+                    confirmModal.showConfirm(
+                      'Cancel Booking?',
+                      'Cancel this job due to on-site price disagreement with the customer? No penalty will be applied to your account.',
+                      () => {
+                        confirmModal.closeConfirm();
+                        updateStatus(
+                          { bookingId: id as string, status: 'cancelled', cancelReason: 'Price disagreement on site (customer declined price increase)' },
+                          {
+                            onSuccess: () => {
+                              refetch();
+                              alertModal.showAlert('Booking Cancelled', 'Booking cancelled safely due to price disagreement.', undefined, 'info');
+                            }
+                          }
+                        );
+                      },
+                      undefined,
+                      'Cancel Booking',
+                      'Keep Booking'
+                    );
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: colors.error, fontWeight: '700', fontSize: 12 }}>
+                    Cancel Job
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        } else {
+          return (
+            <View style={[styles.cardSection, { backgroundColor: alpha(colors.worker, isDark ? 0.14 : 0.08), borderColor: colors.worker, borderWidth: 1.5, marginBottom: 12 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <AlertTriangle size={18} color={colors.worker} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.worker }}>
+                  Price Increase Declined
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, color: theme.colors.text.primary, lineHeight: 18, marginBottom: 6 }}>
+                You declined the Ustad's price increase of Rs. {Number(latestRev.revisedPrice).toLocaleString()}. The original price of Rs. {Number(booking.totalAmount).toLocaleString()} remains active.
+              </Text>
+              <Text style={{ fontSize: 12, color: theme.colors.text.secondary, marginBottom: 10 }}>
+                If the Ustad is willing to complete the work at the original price, they will start now. If they refuse to work, you can cancel without any charges.
+              </Text>
+              <TouchableOpacity
+                style={{ borderWidth: 1, borderColor: colors.error, paddingVertical: 9, borderRadius: 10, alignItems: 'center' }}
+                onPress={() => {
+                  confirmModal.showConfirm(
+                    'Cancel Booking?',
+                    'Cancel this booking because the Ustad refused to work at the agreed price?',
+                    () => {
+                      confirmModal.closeConfirm();
+                      updateStatus(
+                        { bookingId: id as string, status: 'cancelled', cancelReason: 'Ustad refused to work at original agreed price' },
+                        {
+                          onSuccess: () => {
+                            refetch();
+                            alertModal.showAlert('Booking Cancelled', 'Booking cancelled. You can find another Ustad anytime.', undefined, 'info');
+                          }
+                        }
+                      );
+                    },
+                    undefined,
+                    'Yes, Cancel',
+                    'Wait for Ustad'
+                  );
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: colors.error, fontWeight: '700', fontSize: 12 }}>
+                  Cancel Booking (Ustad Refused Original Rate)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }
+      })()}
 
       {/* ── 2. Unified Partner & Financial Master Hub ── */}
       <View style={[styles.cardSection, { backgroundColor: cardBg, borderColor: cardBorder }]}>
@@ -1965,21 +2087,22 @@ export default function TransactionDetailsScreen() {
                     onChangeText={setTruthDeclaredAmount}
                   />
                 </View>
-
-                {/* Report Extra Demand Toggle */}
-                <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}
-                  onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
-                >
-                  <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
-                    {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
-                  </View>
-                  <Text style={{ fontSize: 12, color: colors.error, fontWeight: '600' }}>
-                    Report: Ustad forced or demanded extra money
-                  </Text>
-                </TouchableOpacity>
               </View>
             )}
+
+            {/* Report Extra Demand Toggle (Available in both exact & more options) */}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}
+              onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
+              activeOpacity={0.8}
+            >
+              <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
+                {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
+              </View>
+              <Text style={{ flex: 1, fontSize: 12, color: colors.error, fontWeight: '600' }}>
+                Report: Ustad demanded or pressured for extra cash
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[
