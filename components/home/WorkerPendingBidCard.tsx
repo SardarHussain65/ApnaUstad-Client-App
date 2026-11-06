@@ -61,7 +61,9 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const job = useMemo(() => getJobFromBid(bid), [bid]);
   const meta = bid.cardMeta;
   const customer = job?.customer && typeof job.customer === 'object' ? job.customer : null;
-  const rawAccent = meta?.statusInfo?.accentColor || colors.worker;
+  const rawAccent = bid.status === 'rejected'
+    ? colors.error
+    : meta?.statusInfo?.accentColor || colors.worker;
   const accentColor = getAccessibleColor(rawAccent, theme.isDark);
   const isInstant = (meta?.missionKind || job?.urgency) === 'instant';
 
@@ -90,9 +92,11 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   }, [rawAddress, t]);
 
   const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
-  const statusLabel = bid.status === 'pending' || !meta?.statusInfo?.label
-    ? t('pendingBidDetails.awaitingClient', 'Waiting for customer')
-    : meta.statusInfo.label;
+  const statusLabel = bid.status === 'rejected'
+    ? t('pendingBidDetails.declinedByClient', 'Rate declined (Tap to update)')
+    : bid.status === 'pending' || !meta?.statusInfo?.label
+      ? t('pendingBidDetails.awaitingClient', 'Waiting for customer')
+      : meta.statusInfo.label;
 
   const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 

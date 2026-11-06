@@ -34,6 +34,7 @@ import * as Location from 'expo-location';
 import { BlurView } from 'expo-blur';
 import Toast from 'react-native-toast-message';
 import {
+  ArrowRight,
   Banknote,
   BriefcaseBusiness,
   CalendarDays,
@@ -198,18 +199,6 @@ export default function TransactionDetailsScreen() {
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const handleUpdate = (data: any) => {
-      const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
-      if (!incomingId || incomingId === String(id)) {
-        if (timer) clearTimeout(timer);
-        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-        timer = setTimeout(() => {
-          refetchRef.current();
-        }, 300);
-      }
-    };
-
     const events = [
       'booking:status',
       'booking:accepted',
@@ -222,15 +211,46 @@ export default function TransactionDetailsScreen() {
       'booking:price_increase_rejected',
       'booking:price_updated'
     ];
-    const unsubs = events.map(event => socketService.on(event, handleUpdate));
+
+    const unsubs = events.map(event =>
+      socketService.on(event, (data: any) => {
+        const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+        if (!incomingId || incomingId === String(id)) {
+          if (timer) clearTimeout(timer);
+          setShowStartWorkModal(false);
+
+          if (event === 'booking:price_increase_approved' && isWorker) {
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Toast.show({
+              type: 'success',
+              text1: t('transactionDetails.workerPriceApprovedTitle', 'Price Approved – Work Started! ⚡'),
+              text2: t('transactionDetails.workerPriceApprovedDesc', 'Customer approved the new price. Work is now in progress.'),
+            });
+          }
+
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+          timer = setTimeout(() => {
+            refetchRef.current();
+          }, 250);
+        }
+      })
+    );
+
     return () => {
       if (timer) clearTimeout(timer);
       unsubs.forEach(u => u());
     };
-  }, [id, queryClient]);
+  }, [id, queryClient, isWorker, t]);
 
   const meta = booking?.cardMeta;
   const status = booking?.status || 'accepted';
+
+  useEffect(() => {
+    if (status === 'ongoing' || status === 'completed') {
+      setShowStartWorkModal(false);
+    }
+  }, [status]);
   const disputeMeta = booking?.disputeMeta;
   const hasActiveDispute = Boolean(
     disputeMeta?.hasDispute && ['open', 'under_review'].includes(disputeMeta.disputeStatus || '')
@@ -562,12 +582,6 @@ export default function TransactionDetailsScreen() {
     Linking.openURL(url);
   };
 
-  const handleQuickRate = (starCount: number) => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setInteractiveRating(starCount);
-    setShowReviewModal(true);
-  };
-
   const handleStartJob = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStartWorkStep('confirm');
@@ -648,8 +662,8 @@ export default function TransactionDetailsScreen() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Toast.show({
         type: 'success',
-        text1: 'Price Approved',
-        text2: 'Updated job amount confirmed.',
+        text1: t('transactionDetails.priceApprovedTitle', 'Price Approved & Work Started ⚡'),
+        text2: t('transactionDetails.priceApprovedDesc', 'Agreed price updated. Work is now ongoing.'),
       });
       refetch();
     } catch (err: any) {
@@ -1000,46 +1014,195 @@ export default function TransactionDetailsScreen() {
       </View>
 
       {/* ── Customer Price Increase Review Alert Banner ── */}
-      {!isWorker && (booking as any)?.pendingPriceIncrease && (
-        <View style={[styles.cardSection, { backgroundColor: alpha(colors.worker || '#FF9800', isDark ? 0.14 : 0.08), borderColor: colors.worker || '#FF9800', borderWidth: 1.5, marginBottom: 12 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <AlertTriangle size={18} color={colors.worker || '#FF9800'} />
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.worker || '#FF9800' }}>
-              {t('transactionDetails.priceIncreaseAlert', 'Price Revision Request from Ustad')}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 13, color: theme.colors.text.primary, lineHeight: 18, marginBottom: 6 }}>
-            {t('transactionDetails.priceIncreaseDesc', 'The Ustad inspected the work on-site and requested to update the price to Rs. {{newPrice}}.', {
-              newPrice: Number((booking as any).pendingPriceIncrease.revisedPrice).toLocaleString(),
-            })}
-          </Text>
-          <View style={{ backgroundColor: alpha(theme.colors.text.primary, 0.05), padding: 8, borderRadius: 8, marginBottom: 10 }}>
-            <Text style={{ fontSize: 12, color: theme.colors.text.secondary }}>
-              {t('common.reason', 'Reason')}: "{(booking as any).pendingPriceIncrease.reason}"
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <TouchableOpacity
-              style={{ flex: 1, backgroundColor: colors.success, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
-              onPress={handleApprovePriceIncrease}
-              disabled={isSubmittingPriceDecision}
+      {!isWorker && (booking as any)?.pendingPriceIncrease && (() => {
+        const currentAmount = Number(booking?.totalAmount || 0);
+        const newAmount = Number((booking as any).pendingPriceIncrease.revisedPrice || 0);
+        const difference = newAmount - currentAmount;
+
+        return (
+          <View
+            style={[
+              styles.cardSection,
+              {
+                backgroundColor: isDark ? '#1C150A' : '#FFFBF5',
+                borderColor: colors.worker || '#FF9800',
+                borderWidth: 1.8,
+                borderRadius: 20,
+                padding: 16,
+                marginBottom: 14,
+                shadowColor: colors.worker || '#FF9800',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: isDark ? 0.25 : 0.12,
+                shadowRadius: 10,
+                elevation: 4,
+              },
+            ]}
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: alpha(colors.worker || '#FF9800', 0.18),
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AlertTriangle size={18} color={colors.worker || '#FF9800'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: colors.worker || '#FF9800' }}>
+                  {t('transactionDetails.priceIncreaseAlert', 'Price Revision Request from Ustad')}
+                </Text>
+                <Text style={{ fontSize: 11.5, color: theme.colors.text.muted, marginTop: 1 }}>
+                  {t('transactionDetails.priceIncreaseSubtitle', 'Ustad inspected on-site and requested an updated rate')}
+                </Text>
+              </View>
+            </View>
+
+            {/* Prominent Highlighted Price Comparison Box */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.45)' : '#FFFFFF',
+                borderColor: alpha(colors.worker || '#FF9800', 0.35),
+                borderWidth: 1.2,
+                borderRadius: 14,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                marginVertical: 10,
+              }}
             >
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
-                {isSubmittingPriceDecision ? 'Updating...' : t('common.approve', 'Approve New Price')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ flex: 1, borderWidth: 1, borderColor: colors.error, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
-              onPress={handleDeclinePriceIncrease}
-              disabled={isSubmittingPriceDecision}
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: '700',
+                    color: theme.colors.text.muted,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Current Price
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '700',
+                    color: theme.colors.text.secondary,
+                    textDecorationLine: 'line-through',
+                    marginTop: 2,
+                  }}
+                >
+                  Rs. {currentAmount.toLocaleString()}
+                </Text>
+              </View>
+
+              <View style={{ paddingHorizontal: 8, alignItems: 'center' }}>
+                <ArrowRight size={18} color={colors.worker || '#FF9800'} />
+                {difference > 0 && (
+                  <View
+                    style={{
+                      backgroundColor: alpha(colors.worker || '#FF9800', 0.18),
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                      marginTop: 3,
+                    }}
+                  >
+                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: colors.worker || '#FF9800' }}>
+                      +Rs. {difference.toLocaleString()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={{ flex: 1.2, alignItems: 'flex-end' }}>
+                <Text
+                  style={{
+                    fontSize: 10.5,
+                    fontWeight: '800',
+                    color: colors.worker || '#FF9800',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  New Requested Price
+                </Text>
+                <Text style={{ fontSize: 24, fontWeight: '900', color: colors.success || '#00E676', marginTop: 1 }}>
+                  Rs. {newAmount.toLocaleString()}
+                </Text>
+              </View>
+            </View>
+
+            {/* Reason Box */}
+            <View
+              style={{
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                borderWidth: 1,
+                padding: 10,
+                borderRadius: 10,
+                marginBottom: 12,
+              }}
             >
-              <Text style={{ color: colors.error, fontWeight: '700', fontSize: 13 }}>
-                {t('common.decline', 'Decline')}
+              <Text style={{ fontSize: 12, color: theme.colors.text.secondary, lineHeight: 17 }}>
+                <Text style={{ fontWeight: '700', color: theme.colors.text.primary }}>{t('common.reason', 'Reason')}: </Text>
+                "{(booking as any).pendingPriceIncrease.reason}"
               </Text>
-            </TouchableOpacity>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1.3,
+                  backgroundColor: colors.success,
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: colors.success,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 6,
+                  elevation: 3,
+                }}
+                onPress={handleApprovePriceIncrease}
+                disabled={isSubmittingPriceDecision}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
+                  {isSubmittingPriceDecision ? 'Updating...' : `Approve (Rs. ${newAmount.toLocaleString()})`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 0.9,
+                  borderWidth: 1.5,
+                  borderColor: colors.error,
+                  backgroundColor: alpha(colors.error, 0.08),
+                  paddingVertical: 12,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onPress={handleDeclinePriceIncrease}
+                disabled={isSubmittingPriceDecision}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: colors.error, fontWeight: '700', fontSize: 13.5 }}>
+                  {t('common.decline', 'Decline')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
+        );
+      })()}
 
       {/* ── Worker Price Increase Pending Notice Banner ── */}
       {isWorker && (booking as any)?.pendingPriceIncrease && (
@@ -1370,91 +1533,28 @@ export default function TransactionDetailsScreen() {
         )}
       </View>
 
-      {/* ── 4. Interactive Review & Rating Hero (For Client) ── */}
-      {!isWorker && isDone && isPaid && (
+      {/* ── 4. Review Submitted Confirmation (For Client) ── */}
+      {!isWorker && isDone && isPaid && booking?.isReviewed && (
         <View style={styles.ratingHeroContainer}>
-          {booking?.isReviewed ? (
-            <View
-              style={[
-                styles.reviewRecordedCard,
-                {
-                  backgroundColor: alpha(colors.success, 0.10),
-                  borderColor: alpha(colors.success, 0.28),
-                },
-              ]}
-            >
-              <CheckCircle2 size={20} color={colors.success} strokeWidth={2.4} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.reviewRecordedTitle, { color: colors.success }]}>
-                  {t('transactionDetails.feedbackRecorded', 'Review Submitted!')}
-                </Text>
-                <Text style={[styles.reviewRecordedSub, { color: theme.colors.text.muted }]}>
-                  {t('transactionDetails.feedbackThankYou', 'Thank you for rating Ustad and supporting quality work.')}
-                </Text>
-              </View>
+          <View
+            style={[
+              styles.reviewRecordedCard,
+              {
+                backgroundColor: alpha(colors.success, 0.10),
+                borderColor: alpha(colors.success, 0.28),
+              },
+            ]}
+          >
+            <CheckCircle2 size={20} color={colors.success} strokeWidth={2.4} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.reviewRecordedTitle, { color: colors.success }]}>
+                {t('transactionDetails.feedbackRecorded', 'Review Submitted!')}
+              </Text>
+              <Text style={[styles.reviewRecordedSub, { color: theme.colors.text.muted }]}>
+                {t('transactionDetails.feedbackThankYou', 'Thank you for rating Ustad and supporting quality work.')}
+              </Text>
             </View>
-          ) : (
-            <View
-              style={[
-                styles.ratingInviteCard,
-                {
-                  backgroundColor: isDark ? '#121829' : '#FFFDF7',
-                  borderColor: isDark ? 'rgba(255, 215, 0, 0.28)' : 'rgba(245, 158, 11, 0.32)',
-                },
-              ]}
-            >
-              <View style={styles.ratingInviteHeader}>
-                <View style={styles.ratingStarIconBadge}>
-                  <Star size={18} color="#FFD700" fill="#FFD700" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.ratingInviteTitle, { color: theme.colors.text.primary }]}>
-                    {t('review.howWasServiceWith', 'How was {{name}}\'s service?', { name: partnerName })}
-                  </Text>
-                  <Text style={[styles.ratingInviteSub, { color: theme.colors.text.muted }]}>
-                    {t('review.tapStarsToRate', 'Tap a star to rate & share your feedback')}
-                  </Text>
-                </View>
-              </View>
-
-              {/* 5 Interactive Golden Stars */}
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity
-                    key={star}
-                    style={styles.starTouchable}
-                    onPress={() => handleQuickRate(star)}
-                    activeOpacity={0.7}
-                  >
-                    <Star
-                      size={34}
-                      color="#FFD700"
-                      fill={star <= interactiveRating ? '#FFD700' : 'transparent'}
-                      strokeWidth={1.8}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Action Button */}
-              <TouchableOpacity
-                style={[
-                  styles.writeReviewBtn,
-                  {
-                    backgroundColor: isDark ? '#1F293D' : '#FEF3C7',
-                    borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#F59E0B',
-                  },
-                ]}
-                onPress={() => setShowReviewModal(true)}
-                activeOpacity={0.82}
-              >
-                <Text style={[styles.writeReviewBtnText, { color: isDark ? '#FDE68A' : '#92400E' }]}>
-                  {t('review.writeDetailedReview', 'Write Detailed Review')}
-                </Text>
-                <ChevronRight size={15} color={isDark ? '#FDE68A' : '#92400E'} strokeWidth={2.4} />
-              </TouchableOpacity>
-            </View>
-          )}
+          </View>
         </View>
       )}
 
@@ -2041,9 +2141,9 @@ export default function TransactionDetailsScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-                <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                <View style={{ alignItems: 'center', marginBottom: 14 }}>
                   <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.success, 0.15) }]}>
-                    <ShieldCheck size={28} color={colors.success} />
+                    <ShieldCheck size={30} color={colors.success} />
                   </View>
                   <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
                     {t('transactionDetails.verifyPaymentTitle', 'Confirm Service Payment')}
@@ -2051,31 +2151,31 @@ export default function TransactionDetailsScreen() {
                   <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
                     {t('transactionDetails.verifyPaymentAgreedLabel', 'Agreed Bill for this service:')}
                   </Text>
-                  <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 2 }}>
+                  <Text style={{ fontSize: 26, fontWeight: '800', color: colors.success, marginTop: 4 }}>
                     Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
                   </Text>
                 </View>
 
                 {/* Warranty & Honest policy notice */}
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 10, borderRadius: 10, marginBottom: 12 }}>
-                  <ShieldCheck size={16} color={colors.cyan} style={{ marginTop: 2 }} />
-                  <Text style={{ flex: 1, fontSize: 12, color: theme.colors.text.primary, lineHeight: 17 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 12, borderRadius: 12, marginBottom: 14 }}>
+                  <ShieldCheck size={18} color={colors.cyan} style={{ marginTop: 2 }} />
+                  <Text style={{ flex: 1, fontSize: 12.5, color: theme.colors.text.primary, lineHeight: 18 }}>
                     <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
                   </Text>
                 </View>
 
                 {/* Payment Choice Selection */}
-                <View style={{ gap: 8, marginBottom: 12 }}>
+                <View style={{ gap: 10, marginBottom: 14 }}>
                   <TouchableOpacity
                     style={[
                       styles.truthOptionBtn,
-                      { borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder, backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.1) : 'transparent' },
+                      { borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder, backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.12) : 'transparent' },
                     ]}
                     onPress={() => setTruthPaidOption('exact')}
                     activeOpacity={0.8}
                   >
-                    <CheckCircle2 size={18} color={truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted} />
-                    <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
+                    <CheckCircle2 size={20} color={truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted} />
+                    <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '600', color: theme.colors.text.primary, lineHeight: 18 }}>
                       I paid the exact agreed Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
                     </Text>
                   </TouchableOpacity>
@@ -2083,27 +2183,27 @@ export default function TransactionDetailsScreen() {
                   <TouchableOpacity
                     style={[
                       styles.truthOptionBtn,
-                      { borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder, backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.1) : 'transparent' },
+                      { borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder, backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.12) : 'transparent' },
                     ]}
                     onPress={() => setTruthPaidOption('more')}
                     activeOpacity={0.8}
                   >
-                    <Banknote size={18} color={truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted} />
-                    <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
+                    <Banknote size={20} color={truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted} />
+                    <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '600', color: theme.colors.text.primary, lineHeight: 18 }}>
                       I willingly paid more for extra tasks/materials
                     </Text>
                   </TouchableOpacity>
                 </View>
 
                 {truthPaidOption === 'more' && (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
+                  <View style={{ marginBottom: 14 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 6 }}>
                       ACTUAL TOTAL CASH PAID (PKR)
                     </Text>
                     <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
                       <TextInput
-                        style={{ flex: 1, fontSize: 16, fontWeight: '700', color: theme.colors.text.primary }}
+                        style={{ flex: 1, fontSize: 17, fontWeight: '700', color: theme.colors.text.primary, paddingVertical: 4 }}
                         keyboardType="numeric"
                         placeholder="Enter total amount paid"
                         placeholderTextColor={theme.colors.text.muted}
@@ -2116,14 +2216,14 @@ export default function TransactionDetailsScreen() {
 
                 {/* Report Extra Demand Toggle (Available in both exact & more options) */}
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, paddingVertical: 4, paddingHorizontal: 2 }}
                   onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
                   activeOpacity={0.8}
                 >
-                  <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
+                  <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
                     {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
                   </View>
-                  <Text style={{ flex: 1, fontSize: 12, color: colors.error, fontWeight: '600' }}>
+                  <Text style={{ flex: 1, fontSize: 13, color: colors.error, fontWeight: '600', lineHeight: 18 }}>
                     Report: Ustad demanded or pressured for extra cash
                   </Text>
                 </TouchableOpacity>
@@ -2143,10 +2243,10 @@ export default function TransactionDetailsScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{ marginTop: 8, padding: 6, alignItems: 'center' }}
+                  style={{ marginTop: 10, padding: 8, alignItems: 'center' }}
                   onPress={() => setShowTruthModal(false)}
                 >
-                  <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -2637,64 +2737,6 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 2,
   },
-  ratingInviteCard: {
-    borderRadius: 22,
-    borderWidth: 1.2,
-    padding: 18,
-    shadowColor: '#F59E0B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  ratingInviteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  ratingStarIconBadge: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 215, 0, 0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ratingInviteTitle: {
-    fontSize: 15.5,
-    fontWeight: '800',
-  },
-  ratingInviteSub: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    marginVertical: 8,
-  },
-  starTouchable: {
-    padding: 4,
-  },
-  writeReviewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 8,
-  },
-  writeReviewBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
   reviewRecordedCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3065,21 +3107,22 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
   },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 16,
     width: '100%',
   },
   successModalContainer: {
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 420,
   },
   successCard: {
     borderRadius: 24,
@@ -3123,10 +3166,11 @@ const styles = StyleSheet.create({
   },
   customModalSheet: {
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 440,
     borderRadius: 24,
     borderWidth: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.35,
@@ -3134,63 +3178,65 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   modalIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   modalTitleText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   modalSubtitleText: {
-    fontSize: 13,
+    fontSize: 13.5,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 19,
   },
   primaryModalBtn: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  primaryModalBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  secondaryModalBtn: {
     paddingVertical: 13,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-  },
-  primaryModalBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  secondaryModalBtn: {
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    borderWidth: 1,
+    marginTop: 10,
+    borderWidth: 1.5,
   },
   secondaryModalBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   modalTextInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 8,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
   },
   truthOptionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    gap: 12,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
   },
 });
