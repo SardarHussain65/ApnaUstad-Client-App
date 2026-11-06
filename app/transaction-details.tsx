@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -794,12 +796,12 @@ export default function TransactionDetailsScreen() {
         </Text>
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
           {!!id && (
-            <TouchableOpacity
-              onPress={() => refetch()}
-              style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
-            >
-              <Text style={styles.emptyButtonText}>{t('common.retry', 'Try Again')}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => refetch()}
+                style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
+              >
+                <Text style={[styles.emptyButtonText, { color: '#001014', fontWeight: '800' }]}>{t('common.retry', 'Try Again')}</Text>
+              </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={() => {
@@ -1875,136 +1877,148 @@ export default function TransactionDetailsScreen() {
         animationType="slide"
         onRequestClose={() => setShowStartWorkModal(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
-          <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            {startWorkStep === 'confirm' ? (
-              <>
-                <View style={{ alignItems: 'center', marginBottom: 16 }}>
-                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
-                    <Zap size={28} color={colors.cyan} />
-                  </View>
-                  <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
-                    {t('transactionDetails.confirmStartTitle', 'Confirm Starting Work')}
-                  </Text>
-                  <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
-                    {t('transactionDetails.confirmStartQuestion', 'Are you starting the work with the agreed amount of')}
-                  </Text>
-                  <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 4 }}>
-                    Rs. {Number(booking?.totalAmount || 0).toLocaleString()}
-                  </Text>
-                </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+        >
+          <View style={styles.modalBackdrop}>
+            <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                {startWorkStep === 'confirm' ? (
+                  <>
+                    <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                      <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
+                        <Zap size={28} color={colors.cyan} />
+                      </View>
+                      <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
+                        {t('transactionDetails.confirmStartTitle', 'Confirm Starting Work')}
+                      </Text>
+                      <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
+                        {t('transactionDetails.confirmStartQuestion', 'Are you starting the work with the agreed amount of')}
+                      </Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 4 }}>
+                        Rs. {Number(booking?.totalAmount || 0).toLocaleString()}
+                      </Text>
+                    </View>
 
-                <TouchableOpacity
-                  style={[styles.primaryModalBtn, { backgroundColor: colors.cyan }]}
-                  onPress={handleConfirmStartWorkAgreed}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.primaryModalBtnText}>
-                    {t('transactionDetails.yesStartWork', 'Yes, Start Work (Rs. {{amount}})', { amount: Number(booking?.totalAmount || 0).toLocaleString() })}
-                  </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.primaryModalBtn, { backgroundColor: colors.cyan }]}
+                      onPress={handleConfirmStartWorkAgreed}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.primaryModalBtnText, { color: '#001014', fontWeight: '900' }]}>
+                        {t('transactionDetails.yesStartWork', 'Yes, Start Work (Rs. {{amount}})', { amount: Number(booking?.totalAmount || 0).toLocaleString() })}
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.secondaryModalBtn, { borderColor: cardBorder }]}
-                  onPress={() => setStartWorkStep('price_increase')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.secondaryModalBtnText, { color: colors.worker }]}>
-                    {t('transactionDetails.noPriceIncreased', 'No, Price Increased on Site')}
-                  </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.secondaryModalBtn, { borderColor: cardBorder }]}
+                      onPress={() => setStartWorkStep('price_increase')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.secondaryModalBtnText, { color: colors.worker }]}>
+                        {t('transactionDetails.noPriceIncreased', 'No, Price Increased on Site')}
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={{ marginTop: 8, padding: 8, alignItems: 'center' }}
-                  onPress={() => setShowStartWorkModal(false)}
-                >
-                  <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <View style={{ alignItems: 'center', marginBottom: 12 }}>
-                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.worker, 0.15) }]}>
-                    <AlertTriangle size={28} color={colors.worker} />
-                  </View>
-                  <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
-                    {t('transactionDetails.reportPriceIncrease', 'Report Increased Price')}
-                  </Text>
-                  <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
-                    {t('transactionDetails.reportPriceIncreaseSub', 'If additional tasks or spare parts were required, enter the new price for customer approval.')}
-                  </Text>
-                </View>
+                    <TouchableOpacity
+                      style={{ marginTop: 8, padding: 8, alignItems: 'center' }}
+                      onPress={() => setShowStartWorkModal(false)}
+                    >
+                      <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                      <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.worker, 0.15) }]}>
+                        <AlertTriangle size={28} color={colors.worker} />
+                      </View>
+                      <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
+                        {t('transactionDetails.reportPriceIncrease', 'Report Increased Price')}
+                      </Text>
+                      <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
+                        {t('transactionDetails.reportPriceIncreaseSub', 'If additional tasks or spare parts were required, enter the new price for customer approval.')}
+                      </Text>
+                    </View>
 
-                {/* Price input */}
-                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
-                  NEW AMOUNT (PKR)
-                </Text>
-                <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
-                  <TextInput
-                    style={{ flex: 1, fontSize: 18, fontWeight: '700', color: theme.colors.text.primary }}
-                    keyboardType="numeric"
-                    placeholder={`Higher than ${Number(booking?.totalAmount || 0).toLocaleString()}`}
-                    placeholderTextColor={theme.colors.text.muted}
-                    value={revisedPriceInput}
-                    onChangeText={setRevisedPriceInput}
-                  />
-                </View>
-
-                {/* Strict validation banner */}
-                {!!revisedPriceInput && Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: alpha(colors.error, 0.1), padding: 8, borderRadius: 8, marginBottom: 10 }}>
-                    <AlertTriangle size={13} color={colors.error} />
-                    <Text style={{ flex: 1, fontSize: 11, color: colors.error, lineHeight: 15 }}>
-                      Ustads cannot lower agreed prices. Price increases only. If the scope was reduced, customer must contact Admin Support.
+                    {/* Price input */}
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
+                      NEW AMOUNT (PKR)
                     </Text>
-                  </View>
+                    <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
+                      <TextInput
+                        style={{ flex: 1, fontSize: 18, fontWeight: '700', color: theme.colors.text.primary }}
+                        keyboardType="numeric"
+                        placeholder={`Higher than ${Number(booking?.totalAmount || 0).toLocaleString()}`}
+                        placeholderTextColor={theme.colors.text.muted}
+                        value={revisedPriceInput}
+                        onChangeText={setRevisedPriceInput}
+                      />
+                    </View>
+
+                    {/* Strict validation banner */}
+                    {!!revisedPriceInput && Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: alpha(colors.error, 0.1), padding: 8, borderRadius: 8, marginBottom: 10 }}>
+                        <AlertTriangle size={13} color={colors.error} />
+                        <Text style={{ flex: 1, fontSize: 11, color: colors.error, lineHeight: 15 }}>
+                          Ustads cannot lower agreed prices. Price increases only. If the scope was reduced, customer must contact Admin Support.
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Reason input */}
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4, marginTop: 8 }}>
+                      REASON FOR INCREASE
+                    </Text>
+                    <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04), minHeight: 60, alignItems: 'flex-start' }]}>
+                      <TextInput
+                        style={{ flex: 1, fontSize: 13, color: theme.colors.text.primary, paddingVertical: 4 }}
+                        placeholder="E.g., Spare parts needed, motor rewiring, extra 2 hours"
+                        placeholderTextColor={theme.colors.text.muted}
+                        multiline
+                        value={priceIncreaseReason}
+                        onChangeText={setPriceIncreaseReason}
+                      />
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.primaryModalBtn,
+                        {
+                          backgroundColor: colors.worker,
+                          marginTop: 14,
+                          opacity: (!revisedPriceInput || Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) || !priceIncreaseReason.trim()) ? 0.5 : 1,
+                        },
+                      ]}
+                      onPress={handleSendPriceIncrease}
+                      disabled={isSubmittingPriceIncrease || !revisedPriceInput || Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) || !priceIncreaseReason.trim()}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.primaryModalBtnText}>
+                        {isSubmittingPriceIncrease ? 'Sending...' : t('transactionDetails.sendForApproval', 'Send for Customer Approval')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{ marginTop: 10, padding: 6, alignItems: 'center' }}
+                      onPress={() => setStartWorkStep('confirm')}
+                    >
+                      <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.back', 'Back')}</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
-
-                {/* Reason input */}
-                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4, marginTop: 8 }}>
-                  REASON FOR INCREASE
-                </Text>
-                <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04), minHeight: 60, alignItems: 'flex-start' }]}>
-                  <TextInput
-                    style={{ flex: 1, fontSize: 13, color: theme.colors.text.primary, paddingVertical: 4 }}
-                    placeholder="E.g., Spare parts needed, motor rewiring, extra 2 hours"
-                    placeholderTextColor={theme.colors.text.muted}
-                    multiline
-                    value={priceIncreaseReason}
-                    onChangeText={setPriceIncreaseReason}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.primaryModalBtn,
-                    {
-                      backgroundColor: colors.worker,
-                      marginTop: 14,
-                      opacity: (!revisedPriceInput || Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) || !priceIncreaseReason.trim()) ? 0.5 : 1,
-                    },
-                  ]}
-                  onPress={handleSendPriceIncrease}
-                  disabled={isSubmittingPriceIncrease || !revisedPriceInput || Number(revisedPriceInput) <= Number(booking?.totalAmount || 0) || !priceIncreaseReason.trim()}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.primaryModalBtnText}>
-                    {isSubmittingPriceIncrease ? 'Sending...' : t('transactionDetails.sendForApproval', 'Send for Customer Approval')}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={{ marginTop: 10, padding: 6, alignItems: 'center' }}
-                  onPress={() => setStartWorkStep('confirm')}
-                >
-                  <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.back', 'Back')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Truth Verification Modal (Customer at Completion) ── */}
@@ -2014,118 +2028,130 @@ export default function TransactionDetailsScreen() {
         animationType="slide"
         onRequestClose={() => setShowTruthModal(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
-          <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-            <View style={{ alignItems: 'center', marginBottom: 12 }}>
-              <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.success, 0.15) }]}>
-                <ShieldCheck size={28} color={colors.success} />
-              </View>
-              <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
-                {t('transactionDetails.verifyPaymentTitle', 'Confirm Service Payment')}
-              </Text>
-              <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
-                {t('transactionDetails.verifyPaymentAgreedLabel', 'Agreed Bill for this service:')}
-              </Text>
-              <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 2 }}>
-                Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
-              </Text>
-            </View>
-
-            {/* Warranty & Honest policy notice */}
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 10, borderRadius: 10, marginBottom: 12 }}>
-              <ShieldCheck size={16} color={colors.cyan} style={{ marginTop: 2 }} />
-              <Text style={{ flex: 1, fontSize: 12, color: theme.colors.text.primary, lineHeight: 17 }}>
-                <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
-              </Text>
-            </View>
-
-            {/* Payment Choice Selection */}
-            <View style={{ gap: 8, marginBottom: 12 }}>
-              <TouchableOpacity
-                style={[
-                  styles.truthOptionBtn,
-                  { borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder, backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.1) : 'transparent' },
-                ]}
-                onPress={() => setTruthPaidOption('exact')}
-                activeOpacity={0.8}
-              >
-                <CheckCircle2 size={18} color={truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted} />
-                <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
-                  I paid the exact agreed Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.truthOptionBtn,
-                  { borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder, backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.1) : 'transparent' },
-                ]}
-                onPress={() => setTruthPaidOption('more')}
-                activeOpacity={0.8}
-              >
-                <Banknote size={18} color={truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted} />
-                <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
-                  I willingly paid more for extra tasks/materials
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {truthPaidOption === 'more' && (
-              <View style={{ marginBottom: 12 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
-                  ACTUAL TOTAL CASH PAID (PKR)
-                </Text>
-                <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
-                  <TextInput
-                    style={{ flex: 1, fontSize: 16, fontWeight: '700', color: theme.colors.text.primary }}
-                    keyboardType="numeric"
-                    placeholder="Enter total amount paid"
-                    placeholderTextColor={theme.colors.text.muted}
-                    value={truthDeclaredAmount}
-                    onChangeText={setTruthDeclaredAmount}
-                  />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+        >
+          <View style={styles.modalBackdrop}>
+            <BlurView intensity={50} style={StyleSheet.absoluteFill} tint={theme.isDark ? 'dark' : 'light'} />
+            <ScrollView
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[styles.customModalSheet, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                  <View style={[styles.modalIconWrap, { backgroundColor: alpha(colors.success, 0.15) }]}>
+                    <ShieldCheck size={28} color={colors.success} />
+                  </View>
+                  <Text style={[styles.modalTitleText, { color: theme.colors.text.primary }]}>
+                    {t('transactionDetails.verifyPaymentTitle', 'Confirm Service Payment')}
+                  </Text>
+                  <Text style={[styles.modalSubtitleText, { color: theme.colors.text.secondary }]}>
+                    {t('transactionDetails.verifyPaymentAgreedLabel', 'Agreed Bill for this service:')}
+                  </Text>
+                  <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success, marginTop: 2 }}>
+                    Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
+                  </Text>
                 </View>
+
+                {/* Warranty & Honest policy notice */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: alpha(colors.cyan, 0.08), borderColor: alpha(colors.cyan, 0.25), borderWidth: 1, padding: 10, borderRadius: 10, marginBottom: 12 }}>
+                  <ShieldCheck size={16} color={colors.cyan} style={{ marginTop: 2 }} />
+                  <Text style={{ flex: 1, fontSize: 12, color: theme.colors.text.primary, lineHeight: 17 }}>
+                    <Text style={{ fontWeight: '700' }}>15-Day Free Rework Warranty:</Text> Your warranty only protects the exact amount declared here. The Ustad has no right to demand extra cash off-platform.
+                  </Text>
+                </View>
+
+                {/* Payment Choice Selection */}
+                <View style={{ gap: 8, marginBottom: 12 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.truthOptionBtn,
+                      { borderColor: truthPaidOption === 'exact' ? colors.success : cardBorder, backgroundColor: truthPaidOption === 'exact' ? alpha(colors.success, 0.1) : 'transparent' },
+                    ]}
+                    onPress={() => setTruthPaidOption('exact')}
+                    activeOpacity={0.8}
+                  >
+                    <CheckCircle2 size={18} color={truthPaidOption === 'exact' ? colors.success : theme.colors.text.muted} />
+                    <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
+                      I paid the exact agreed Rs. {Number((booking as any)?.agreement?.cashDue ?? booking?.totalAmount ?? 0).toLocaleString()}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.truthOptionBtn,
+                      { borderColor: truthPaidOption === 'more' ? colors.worker : cardBorder, backgroundColor: truthPaidOption === 'more' ? alpha(colors.worker, 0.1) : 'transparent' },
+                    ]}
+                    onPress={() => setTruthPaidOption('more')}
+                    activeOpacity={0.8}
+                  >
+                    <Banknote size={18} color={truthPaidOption === 'more' ? colors.worker : theme.colors.text.muted} />
+                    <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: theme.colors.text.primary }}>
+                      I willingly paid more for extra tasks/materials
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {truthPaidOption === 'more' && (
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.secondary, marginBottom: 4 }}>
+                      ACTUAL TOTAL CASH PAID (PKR)
+                    </Text>
+                    <View style={[styles.modalTextInputBox, { borderColor: cardBorder, backgroundColor: alpha(theme.colors.text.primary, 0.04) }]}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: theme.colors.text.muted, marginRight: 8 }}>PKR</Text>
+                      <TextInput
+                        style={{ flex: 1, fontSize: 16, fontWeight: '700', color: theme.colors.text.primary }}
+                        keyboardType="numeric"
+                        placeholder="Enter total amount paid"
+                        placeholderTextColor={theme.colors.text.muted}
+                        value={truthDeclaredAmount}
+                        onChangeText={setTruthDeclaredAmount}
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {/* Report Extra Demand Toggle (Available in both exact & more options) */}
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}
+                  onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
+                    {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 12, color: colors.error, fontWeight: '600' }}>
+                    Report: Ustad demanded or pressured for extra cash
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryModalBtn,
+                    { backgroundColor: colors.success },
+                  ]}
+                  onPress={handleSubmitTruthPayment}
+                  disabled={isSubmittingTruth}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.primaryModalBtnText}>
+                    {isSubmittingTruth ? 'Confirming...' : t('transactionDetails.confirmAndClose', 'Confirm Payment & Complete')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{ marginTop: 8, padding: 6, alignItems: 'center' }}
+                  onPress={() => setShowTruthModal(false)}
+                >
+                  <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
+                </TouchableOpacity>
               </View>
-            )}
-
-            {/* Report Extra Demand Toggle (Available in both exact & more options) */}
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}
-              onPress={() => setTruthReportExtraDemand(!truthReportExtraDemand)}
-              activeOpacity={0.8}
-            >
-              <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1.5, borderColor: truthReportExtraDemand ? colors.error : cardBorder, alignItems: 'center', justifyContent: 'center', backgroundColor: truthReportExtraDemand ? colors.error : 'transparent' }}>
-                {truthReportExtraDemand && <CheckCircle2 size={14} color="#fff" />}
-              </View>
-              <Text style={{ flex: 1, fontSize: 12, color: colors.error, fontWeight: '600' }}>
-                Report: Ustad demanded or pressured for extra cash
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.primaryModalBtn,
-                { backgroundColor: colors.success },
-              ]}
-              onPress={handleSubmitTruthPayment}
-              disabled={isSubmittingTruth}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.primaryModalBtnText}>
-                {isSubmittingTruth ? 'Confirming...' : t('transactionDetails.confirmAndClose', 'Confirm Payment & Complete')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ marginTop: 8, padding: 6, alignItems: 'center' }}
-              onPress={() => setShowTruthModal(false)}
-            >
-              <Text style={{ fontSize: 13, color: theme.colors.text.muted }}>{t('common.cancel', 'Cancel')}</Text>
-            </TouchableOpacity>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -3043,6 +3069,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+    width: '100%',
   },
   successModalContainer: {
     width: '100%',

@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { Redirect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../constants/Theme';
 import { ClientHome } from '../../components/home/ClientHome';
@@ -18,9 +17,9 @@ export default function HomeTab() {
     );
   }
 
-  // If token or user or role is not found, automatically redirect to role-selection
+  // If credentials are not found, navigation is centrally handled by AccountRestrictionGate
   if (!token || !user || !role) {
-    return <Redirect href={"/role-selection" as any} />;
+    return null;
   }
 
   if (role === 'worker') {

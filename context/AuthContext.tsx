@@ -263,8 +263,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener('auth:logout', () => {
-      // If logout() is already running, the interceptor's emit must not restart it.
+      // If logout() is already running or user is already fully logged out, avoid duplicate calls.
       if (isLoggingOutRef.current) return;
+      if (!tokenRef.current && !userRef.current) return;
       logout();
     });
 
@@ -406,17 +407,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    // Prevent concurrent / recursive logout calls.
-    // Without this guard the Axios 401 interceptor (triggered by the remove-token
-    // request below) emits 'auth:logout' and calls logout() again endlessly.
+    // Prevent concurrent / recursive logout calls or running when already logged out.
     if (isLoggingOutRef.current) return;
+    if (!tokenRef.current && !userRef.current && !roleRef.current) return;
     isLoggingOutRef.current = true;
 
     try {
+      // Capture current token for push-token deactivation before clearing synchronous refs
+      const currentToken = tokenRef.current;
+
+      // Synchronously clear refs immediately so concurrent listeners/effects see logged-out state
+      tokenRef.current = null;
+      roleRef.current = null;
+      userRef.current = null;
+      accountStatusRef.current = null;
+
       // Deactivate this device's push token BEFORE clearing local state.
       // Use native fetch (not the Axios instance) so the 401 interceptor cannot
       // intercept this call and re-trigger the logout cycle.
-      const currentToken = tokenRef.current;
       if (currentToken) {
         try {
           const pushToken = await getPushToken();
@@ -437,25 +445,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Stop any background location updates for active missions
-      await stopBackgroundLocationTracking().catch(() => {});
+      await stopBackgroundLocationTracking().catch(() => { });
 
-      // Completely purge in-memory React Query cache so previous account data (such as
-      // recent jobs, home summary, bookings, and wallet) is never displayed when another account logs in.
-      await clearAppQueryCache();
+      // Disconnect socket immediately
+      socketService.disconnect();
 
+      // Clear React auth states
       setTokenState(null);
       setRefreshTokenState(null);
       setRoleState(null);
       setUserState(null);
       setAccountStatusState(null);
       clearUserContext();
-      socketService.disconnect();
-      await Promise.all([
-        AsyncStorage.removeItem('user_token'),
-        AsyncStorage.removeItem('refresh_token'),
-        AsyncStorage.removeItem('user_role'),
-        AsyncStorage.removeItem('user_data'),
-        AsyncStorage.removeItem('active_enroute_booking_id'),
+
+      // Completely purge in-memory React Query cache so previous account data (such as
+      // recent jobs, home summary, bookings, and wallet) is never displayed when another account logs in.
+      await clearAppQueryCache();
+
+      // Clean persistent storage
+      await AsyncStorage.multiRemove([
+        'user_token',
+        'refresh_token',
+        'user_role',
+        'user_data',
+        'active_enroute_booking_id',
       ]);
 
       // Navigate to role-selection so the user is never left on a ghost screen
@@ -468,7 +481,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
-      isLoggingOutRef.current = false;
+      // Cooldown buffer prevents any delayed in-flight rejections from restarting logout
+      setTimeout(() => {
+        isLoggingOutRef.current = false;
+      }, 1000);
     }
   };
 

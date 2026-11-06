@@ -9,6 +9,7 @@ import {
   Dimensions,
   Text,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -84,79 +85,84 @@ export function BeautifulModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" {...modalProps}>
-      <Animated.View
-        entering={FadeIn.duration(300)}
-        exiting={FadeOut.duration(200)}
-        style={[styles.backdrop, { backgroundColor: theme.colors.modal.backdrop }]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={onClose} />
-
         <Animated.View
-          style={[
-            styles.modalContainer,
-            {
-              height: numericHeight,
-              borderColor: theme.colors.modal.border,
-              shadowColor: theme.colors.shadow.color,
-              shadowOpacity: theme.id === 'light' ? 0.14 : 0.5,
-            },
-            containerStyle,
-            animatedStyle,
-          ]}
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+          style={[styles.backdrop, { backgroundColor: theme.colors.modal.backdrop }]}
         >
-          <View style={[styles.modalGlow, { backgroundColor: alpha(resolvedGlowColor, theme.id === 'current' ? 0.12 : 0.08) }]} />
+          <TouchableOpacity style={styles.backdropTouchable} activeOpacity={1} onPress={onClose} />
 
-          <GlassCard
-            intensity={Platform.OS === 'ios' ? 95 : 100}
-            glowColor={resolvedGlowColor}
-            style={[styles.modalContent, { backgroundColor: theme.colors.modal.card }, contentStyle, { overflow: 'visible' }]}
-            contentStyle={{ flex: 1 }}
-            padding={0}
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                height: numericHeight,
+                borderColor: theme.colors.modal.border,
+                shadowColor: theme.colors.shadow.color,
+                shadowOpacity: theme.id === 'light' ? 0.14 : 0.5,
+              },
+              containerStyle,
+              animatedStyle,
+            ]}
           >
-            <LinearGradient
-              colors={[resolvedGlowColor, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={styles.topAccentBar}
-            />
+            <View style={[styles.modalGlow, { backgroundColor: alpha(resolvedGlowColor, theme.id === 'current' ? 0.12 : 0.08) }]} />
 
-            {icon && (
-              <View style={styles.floatingIconBadge}>
-                 <View
-                   style={[
-                     styles.iconBadgeInner,
-                     {
-                       backgroundColor: theme.colors.surface.raised,
-                       borderColor: alpha(resolvedGlowColor, 0.28),
-                       shadowColor: theme.colors.shadow.color,
-                       shadowOpacity: theme.id === 'light' ? 0.12 : 0.5,
-                     },
-                   ]}
-                 >
-                   {icon}
-                 </View>
-              </View>
-            )}
+            <GlassCard
+              intensity={Platform.OS === 'ios' ? 95 : 100}
+              glowColor={resolvedGlowColor}
+              style={[styles.modalContent, { backgroundColor: theme.colors.modal.card }, contentStyle, { overflow: 'visible' }]}
+              contentStyle={{ flex: 1 }}
+              padding={0}
+            >
+              <LinearGradient
+                colors={[resolvedGlowColor, 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.topAccentBar}
+              />
 
-            <View style={styles.contentInner}>
-              {title && (
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
-                  {showCloseButton && (
-                    <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.colors.modal.closeBackground }]}>
-                      <X size={20} color={theme.colors.text.primary} />
-                    </TouchableOpacity>
-                  )}
+              {icon && (
+                <View style={styles.floatingIconBadge}>
+                   <View
+                     style={[
+                       styles.iconBadgeInner,
+                       {
+                         backgroundColor: theme.colors.surface.raised,
+                         borderColor: alpha(resolvedGlowColor, 0.28),
+                         shadowColor: theme.colors.shadow.color,
+                         shadowOpacity: theme.id === 'light' ? 0.12 : 0.5,
+                       },
+                     ]}
+                   >
+                     {icon}
+                   </View>
                 </View>
               )}
 
-              <View style={styles.modalBody}>
-                {children}
+              <View style={styles.contentInner}>
+                {title && (
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
+                    {showCloseButton && (
+                      <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.colors.modal.closeBackground }]}>
+                        <X size={20} color={theme.colors.text.primary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.modalBody}>
+                  {children}
+                </View>
               </View>
-            </View>
-          </GlassCard>
+            </GlassCard>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

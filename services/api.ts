@@ -68,21 +68,21 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = await AsyncStorage.getItem('refresh_token');
+        const userToken = await AsyncStorage.getItem('user_token');
         const role = await AsyncStorage.getItem('user_role');
 
         if (!refreshToken || refreshToken.trim() === '') {
-          console.log('No refresh token found in storage, cannot refresh', {
-            hasToken: !!refreshToken,
-            role,
-            originalError: error.message
-          });
           isRefreshing = false;
-          await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
-          DeviceEventEmitter.emit('auth:logout');
-          try {
-            const { router } = require('expo-router');
-            router.replace('/role-selection');
-          } catch { }
+          // If neither refresh_token nor user_token exists in storage, the user has already logged out.
+          // Do not emit auth:logout to prevent endless redundant logout loops.
+          if (userToken) {
+            console.log('No refresh token found for active session, logging out', {
+              role,
+              originalError: error.message
+            });
+            await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
+            DeviceEventEmitter.emit('auth:logout');
+          }
           return Promise.reject(error);
         }
 
@@ -135,12 +135,8 @@ api.interceptors.response.use(
           console.warn('Refresh token is invalid or expired. Logging out.');
           await AsyncStorage.multiRemove(['user_token', 'refresh_token', 'user_role', 'user_data']);
 
-          // Dispatch logout event for AuthContext to react
+          // Dispatch logout event for AuthContext to react cleanly
           DeviceEventEmitter.emit('auth:logout');
-          try {
-            const { router } = require('expo-router');
-            router.replace('/role-selection');
-          } catch { }
         } else {
           console.warn('Network or server error during token refresh. Keeping user session intact.');
         }

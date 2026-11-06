@@ -942,72 +942,77 @@ export default function JobCreationScreen() {
           animationType="fade"
           onRequestClose={() => setShowLocationModal(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, { backgroundColor: isDark ? '#111527' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.18)' : '#E2E8F0' }]}>
-              <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>
-                {t('jobCreation.serviceLocation', 'WHERE IS THE WORK?')}
-              </Text>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalCard, { backgroundColor: isDark ? '#111527' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.18)' : '#E2E8F0' }]}>
+                <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>
+                  {t('jobCreation.serviceLocation', 'WHERE IS THE WORK?')}
+                </Text>
 
-              <TouchableOpacity
-                style={[styles.modalGpsBtn, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}
-                onPress={() => handleGetLiveLocation(false)}
-                disabled={isGettingLocation}
-              >
-                {isGettingLocation ? (
-                  <ActivityIndicator size="small" color={activeColor} />
-                ) : (
-                  <>
-                    <Target size={16} color={activeColor} />
-                    <Text style={[styles.modalGpsText, { color: activeColor }]}>
-                      {t('jobCreation.useCurrentLocation', 'Use my current location')}
+                <TouchableOpacity
+                  style={[styles.modalGpsBtn, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}
+                  onPress={() => handleGetLiveLocation(false)}
+                  disabled={isGettingLocation}
+                >
+                  {isGettingLocation ? (
+                    <ActivityIndicator size="small" color={activeColor} />
+                  ) : (
+                    <>
+                      <Target size={16} color={activeColor} />
+                      <Text style={[styles.modalGpsText, { color: activeColor }]}>
+                        {t('jobCreation.useCurrentLocation', 'Use my current location')}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={[styles.modalInputLabel, { color: palette.textSecondary }]}>
+                  {t('jobCreation.orTypeAddress', 'Or type your address:')}
+                </Text>
+                <TextInput
+                  style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC' }]}
+                  placeholder={t('jobCreation.locationPlaceholder', 'House / flat, street, block, area...')}
+                  placeholderTextColor={palette.textMuted}
+                  multiline
+                  value={tempAddressInput}
+                  onChangeText={setTempAddressInput}
+                />
+
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.modalCancelBtn, { borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1' }]}
+                    onPress={() => setShowLocationModal(false)}
+                  >
+                    <Text style={[styles.modalCancelText, { color: palette.textSecondary }]}>
+                      {t('common.cancel', 'Cancel')}
                     </Text>
-                  </>
-                )}
-              </TouchableOpacity>
+                  </TouchableOpacity>
 
-              <Text style={[styles.modalInputLabel, { color: palette.textSecondary }]}>
-                {t('jobCreation.orTypeAddress', 'Or type your address:')}
-              </Text>
-              <TextInput
-                style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC' }]}
-                placeholder={t('jobCreation.locationPlaceholder', 'House / flat, street, block, area...')}
-                placeholderTextColor={palette.textMuted}
-                multiline
-                value={tempAddressInput}
-                onChangeText={setTempAddressInput}
-              />
-
-              <View style={styles.modalActionsRow}>
-                <TouchableOpacity
-                  style={[styles.modalCancelBtn, { borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1' }]}
-                  onPress={() => setShowLocationModal(false)}
-                >
-                  <Text style={[styles.modalCancelText, { color: palette.textSecondary }]}>
-                    {t('common.cancel', 'Cancel')}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.modalSaveBtn, { backgroundColor: activeColor }]}
-                  onPress={() => {
-                    if (tempAddressInput.trim()) {
-                      const trimmed = tempAddressInput.trim();
-                      setAddress(trimmed);
-                      const cached = getCachedUserLocation();
-                      if (cached) {
-                        setCachedUserLocation({ ...cached, address: trimmed });
+                  <TouchableOpacity
+                    style={[styles.modalSaveBtn, { backgroundColor: activeColor }]}
+                    onPress={() => {
+                      if (tempAddressInput.trim()) {
+                        const trimmed = tempAddressInput.trim();
+                        setAddress(trimmed);
+                        const cached = getCachedUserLocation();
+                        if (cached) {
+                          setCachedUserLocation({ ...cached, address: trimmed });
+                        }
                       }
-                    }
-                    setShowLocationModal(false);
-                  }}
-                >
-                  <Text style={styles.modalSaveText}>
-                    {t('common.done', 'Done')}
-                  </Text>
-                </TouchableOpacity>
+                      setShowLocationModal(false);
+                    }}
+                  >
+                    <Text style={styles.modalSaveText}>
+                      {t('common.done', 'Done')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* ── Confirmation Modal ── */}

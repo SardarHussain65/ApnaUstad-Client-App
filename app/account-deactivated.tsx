@@ -63,10 +63,9 @@ export default function AccountDeactivatedScreen() {
   const handleConfirmLogout = async () => {
     try {
       setIsLoggingOut(true);
+      setShowLogoutModal(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await logout();
-      setShowLogoutModal(false);
-      router.replace('/role-selection' as any);
     } catch (err) {
       console.error('Logout error:', err);
       setShowLogoutModal(false);
