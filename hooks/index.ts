@@ -47,6 +47,7 @@ export {
   useJobDetails,
   useBidsByJob,
   useWorkerBids,
+  useBidDetails,
   type Message,
   type Job,
   type Bid,

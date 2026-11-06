@@ -259,9 +259,14 @@ const fetchBidsByJob = async (jobId: string): Promise<Bid[]> => {
 
 const fetchWorkerBids = async (): Promise<Bid[]> => {
   const response = await api.get('/jobs/my-bids', {
-    params: { status: 'pending', limit: 20 },
+    params: { status: 'pending,rejected', limit: 30 },
   });
   return response.data.data || [];
+};
+
+const fetchBidDetails = async (bidId: string): Promise<Bid> => {
+  const response = await api.get(`/jobs/bids/${bidId}`);
+  return response.data.data;
 };
 
 // Query Hooks
@@ -318,6 +323,18 @@ export function useWorkerBids(options?: Omit<UseQueryOptions<Bid[]>, 'queryKey' 
     staleTime: 1000 * 60,
     gcTime: 1000 * 60 * 10,
     enabled: Boolean(token && user?._id && (options?.enabled ?? true)),
+    ...options,
+  });
+}
+
+export function useBidDetails(bidId: string | undefined, options?: Omit<UseQueryOptions<Bid>, 'queryKey' | 'queryFn'>) {
+  const { token } = useAuth();
+  return useQuery<Bid>({
+    queryKey: ['bid', 'detail', bidId],
+    queryFn: () => fetchBidDetails(bidId!),
+    enabled: Boolean(token && bidId && (options?.enabled ?? true)),
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
     ...options,
   });
 }
