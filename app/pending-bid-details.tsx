@@ -18,6 +18,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
+  AlertTriangle,
   Banknote,
   BriefcaseBusiness,
   CalendarDays,
@@ -1289,6 +1290,29 @@ export default function PendingBidDetailsScreen() {
               subtitle={t('pendingBidDetails.yourProposalDesc')}
               color={colors.green}
             />
+            {bid?.status === 'rejected' && (
+              <View style={{
+                backgroundColor: alpha(colors.error || '#EF4444', 0.12),
+                borderColor: alpha(colors.error || '#EF4444', 0.35),
+                borderWidth: 1.2,
+                borderRadius: 14,
+                padding: 12,
+                marginBottom: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}>
+                <AlertTriangle size={20} color={colors.error || '#EF4444'} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: colors.error || '#EF4444' }}>
+                    Rate Declined by Customer
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: theme.colors.text.secondary, marginTop: 1 }}>
+                    Customer declined your quote. Tap "Edit" below to update your rate and re-submit!
+                  </Text>
+                </View>
+              </View>
+            )}
             <GlassCard padding={0} intensity={38} style={styles.proposalCard}>
               <View style={styles.proposalStats}>
                 <View style={styles.proposalStat}>

@@ -67,6 +67,7 @@ export {
   useCancelJobMutation,
   useSubmitBidMutation,
   useAcceptBidMutation,
+  useRejectBidMutation,
   useAcceptInstantJobMutation,
   useWithdrawBidMutation,
   useUpdateBookingStatusMutation,

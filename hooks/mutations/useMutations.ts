@@ -42,6 +42,12 @@ interface AcceptBidPayload {
   promoCode?: string;
 }
 
+export interface RejectBidPayload {
+  jobId: string;
+  bidId: string;
+  reason?: string;
+}
+
 interface CancelJobPayload {
   jobId: string;
 }
@@ -170,6 +176,12 @@ const submitBid = async (payload: BidSubmissionPayload): Promise<any> => {
 const acceptBid = async (payload: AcceptBidPayload): Promise<any> => {
   const { jobId, bidId, promoCode } = payload;
   const response = await api.post(`/jobs/${jobId}/bids/${bidId}/accept`, { promoCode });
+  return response.data.data;
+};
+
+const rejectBid = async (payload: RejectBidPayload): Promise<any> => {
+  const { jobId, bidId, reason } = payload;
+  const response = await api.post(`/jobs/${jobId}/bids/${bidId}/reject`, { reason });
   return response.data.data;
 };
 
@@ -314,6 +326,21 @@ export function useAcceptBidMutation(options?: Omit<UseMutationOptions<any, Erro
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+    },
+    ...options,
+  });
+}
+
+export function useRejectBidMutation(options?: Omit<UseMutationOptions<any, Error, RejectBidPayload>, 'mutationFn'>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, Error, RejectBidPayload>({
+    mutationFn: rejectBid,
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byJob(variables.jobId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
     },
     ...options,
   });

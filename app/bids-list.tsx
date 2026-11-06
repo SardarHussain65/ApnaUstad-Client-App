@@ -14,11 +14,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
+  Check,
   Star,
   Clock,
   ShieldCheck,
   Users,
   ChevronRight,
+  X,
   Zap,
   RefreshCw,
 } from 'lucide-react-native';
@@ -116,6 +118,7 @@ export default function BidsListScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
 
   const fetchBids = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -161,9 +164,17 @@ export default function BidsListScreen() {
       }
     });
 
+    const unsubRejected = socketService.on('bid:rejected', (payload: any) => {
+      const rejectedBidId = payload?.bidId || payload?._id;
+      if (rejectedBidId) {
+        setBids(prev => prev.filter(b => String(b._id) !== String(rejectedBidId)));
+      }
+    });
+
     return () => {
       if (typeof unsubNewBid === 'function') unsubNewBid();
       if (typeof unsubWithdrawn === 'function') unsubWithdrawn();
+      if (typeof unsubRejected === 'function') unsubRejected();
     };
   }, [jobId]);
 
@@ -186,6 +197,31 @@ export default function BidsListScreen() {
       });
     } finally {
       setAccepting(null);
+    }
+  };
+
+  const handleReject = async (bidId: string) => {
+    setRejecting(bidId);
+    try {
+      await api.post(`/jobs/${jobId}/bids/${bidId}/reject`, {});
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bids.byJob(jobId as string) });
+      setBids(prev => prev.filter(b => String(b._id) !== String(bidId)));
+      Toast.show({
+        type: 'info',
+        text1: 'Offer Declined',
+        text2: 'Ustad has been notified and can submit an updated rate.',
+      });
+    } catch (e: any) {
+      console.error('Reject bid error:', e?.response?.data || e.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Could not decline offer',
+        text2: e?.response?.data?.message || 'Something went wrong. Please try again.',
+      });
+    } finally {
+      setRejecting(null);
     }
   };
 
@@ -560,11 +596,30 @@ export default function BidsListScreen() {
                         />
                       </TouchableOpacity>
 
+                      {/* Reject Button */}
+                      <TouchableOpacity
+                        style={[styles.rejectBtn, (isDeploying || !!accepting || !!rejecting) && { opacity: 0.65 }]}
+                        onPress={() => handleReject(bid._id)}
+                        disabled={isDeploying || !!accepting || !!rejecting}
+                        activeOpacity={0.8}
+                      >
+                        {rejecting === bid._id ? (
+                          <ActivityIndicator size="small" color="#EF4444" />
+                        ) : (
+                          <View style={styles.rejectInner}>
+                            <X size={14} color="#EF4444" strokeWidth={2.5} />
+                            <Text style={styles.rejectBtnText}>
+                              {t('common.decline', 'Decline')}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+
                       {/* Hire Button */}
                       <TouchableOpacity
-                        style={[styles.hireBtn, (isDeploying || !!accepting) && { opacity: 0.65 }]}
+                        style={[styles.hireBtn, (isDeploying || !!accepting || !!rejecting) && { opacity: 0.65 }]}
                         onPress={() => handleAccept(bid._id)}
-                        disabled={isDeploying || !!accepting}
+                        disabled={isDeploying || !!accepting || !!rejecting}
                         activeOpacity={0.85}
                       >
                         <LinearGradient
@@ -577,7 +632,7 @@ export default function BidsListScreen() {
                           <ActivityIndicator size="small" color="#FFFFFF" />
                         ) : (
                           <View style={styles.hireInner}>
-                            <Zap size={14} color="#FFFFFF" fill="#FFFFFF" />
+                            <Check size={14} color="#FFFFFF" strokeWidth={2.8} />
                             <Text style={styles.hireBtnText}>
                               {t('bidsList.hireUstad', 'Hire Ustad')}
                             </Text>
@@ -825,6 +880,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  rejectBtn: {
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.4)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rejectInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  rejectBtnText: {
+    color: '#EF4444',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   hireBtn: {
     flex: 1,

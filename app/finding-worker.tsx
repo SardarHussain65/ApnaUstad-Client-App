@@ -21,7 +21,7 @@ import { useConfirmModal } from '../hooks';
 import { socketService } from '../services/socketService';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAcceptBidMutation, useCancelJobMutation } from '../hooks/mutations/useMutations';
+import { useAcceptBidMutation, useCancelJobMutation, useRejectBidMutation } from '../hooks/mutations/useMutations';
 import { useBidsByJob, useJobDetails } from '../hooks/queries/useMessagesAndJobs';
 import api from '../services/api';
 import Toast from 'react-native-toast-message';
@@ -278,8 +278,12 @@ export default function FindingWorkerScreen() {
     return () => clearInterval(timer);
   }, []);
 
+  const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
+  const [rejectingBidId, setRejectingBidId] = useState<string | null>(null);
+
   const { mutate: acceptBid, isPending: isAccepting } = useAcceptBidMutation({
     onSuccess: (data) => {
+      setAcceptingBidId(null);
       setStatus(t('findingWorker.verified'));
       setShowModal(false);
       
@@ -300,6 +304,7 @@ export default function FindingWorkerScreen() {
       }, 1500);
     },
     onError: (err: any) => {
+      setAcceptingBidId(null);
       Toast.show({
         type: 'error',
         text1: t('findingWorker.selectUstadError', 'Could Not Select Ustad'),
@@ -307,6 +312,62 @@ export default function FindingWorkerScreen() {
       });
     }
   });
+
+  const { mutate: rejectBid, isPending: isRejecting } = useRejectBidMutation({
+    onSuccess: (_, variables) => {
+      setRejectingBidId(null);
+      setApplicants(prev => {
+        const next = prev.filter(app => app._id !== variables.bidId);
+        if (next.length === 0) {
+          setStatus(t('findingWorker.searchingUstads'));
+        }
+        return next;
+      });
+      Toast.show({
+        type: 'info',
+        text1: t('findingWorker.offerDeclined', 'Offer Declined'),
+        text2: t('findingWorker.offerDeclinedMsg', 'Ustad has been notified and can submit an updated rate.'),
+      });
+    },
+    onError: (err: any) => {
+      setRejectingBidId(null);
+      Toast.show({
+        type: 'error',
+        text1: t('common.error', 'Error'),
+        text2: err?.response?.data?.message || 'Could not decline offer.',
+      });
+    }
+  });
+
+  const handleHireApplicant = (applicant: any) => {
+    setAcceptingBidId(applicant._id);
+    acceptBid({
+      jobId: jobId as string,
+      bidId: applicant._id,
+    });
+  };
+
+  const handleRejectApplicant = (applicant: any) => {
+    confirmModal.showConfirm(
+      t('findingWorker.declineOfferTitle', 'Decline Offer?'),
+      t('findingWorker.declineOfferPrompt', 'Decline {{name}}\'s quote of {{price}}? They will be notified and can submit an updated rate.', {
+        name: applicant.worker?.fullName || 'Ustad',
+        price: formatMoney(applicant.proposedPrice),
+      }),
+      () => {
+        confirmModal.closeConfirm();
+        setRejectingBidId(applicant._id);
+        rejectBid({
+          jobId: jobId as string,
+          bidId: applicant._id,
+        });
+      },
+      undefined,
+      t('common.decline', 'Decline Offer'),
+      t('common.keep', 'Keep Offer'),
+      colors.status.error
+    );
+  };
 
   const { data: initialBids, isLoading: isBidsLoading } = useBidsByJob(jobId as string, {
     enabled: !!jobId,
@@ -459,6 +520,15 @@ export default function FindingWorkerScreen() {
       });
     });
 
+    const unsubscribeRejected = socketService.on('bid:rejected', (payload: any) => {
+      if (payload?.jobId && String(payload.jobId) !== String(jobId)) return;
+      setApplicants(prev => {
+        const nextApplicants = prev.filter(app => app._id !== payload?.bidId);
+        if (nextApplicants.length === 0) setStatus(t('findingWorker.searchingUstads'));
+        return nextApplicants;
+      });
+    });
+
     const unsubscribeCancelled = socketService.on('job:cancelled', (data: any) => {
       const targetId = (data?.jobId || data?._id)?.toString();
       if (!targetId || targetId === String(jobId)) {
@@ -482,6 +552,7 @@ export default function FindingWorkerScreen() {
       unsubscribeSearchExtended();
       unsubscribeBids();
       unsubscribeWithdrawn();
+      unsubscribeRejected();
       unsubscribeCancelled();
     };
   }, [jobId, pulse, rotation, router, t]);
@@ -1152,88 +1223,133 @@ export default function FindingWorkerScreen() {
                   <Text style={[styles.responseText, { color: colors.text.secondary }]}>{t('findingWorker.compareProfiles')}</Text>
                 </View>
                 <View style={styles.responseProfiles}>
-                  {applicants.slice(0, 3).map((applicant) => (
-                    <TouchableOpacity
-                      key={applicant._id}
-                      style={[
-                        styles.responseProfile,
-                        {
-                          backgroundColor: theme.isDark ? 'rgba(0,0,0,0.2)' : colors.surface.raised,
-                          borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle,
-                        }
-                      ]}
-                      onPress={() => handleWorkerPress(applicant)}
-                      activeOpacity={0.78}
-                    >
-                      <Image
-                        source={{ uri: applicant.worker?.profileImage || 'https://via.placeholder.com/150' }}
-                        style={styles.responseProfileImage}
-                      />
-                      <View style={styles.responseProfileCopy}>
-                        <Text style={[styles.responseProfileName, { color: colors.text.primary }]} numberOfLines={1}>
-                          {applicant.worker?.fullName || 'Available Ustad'}
-                        </Text>
-                        <Text style={[styles.responseProfilePrice, { color: colors.status.success }]}>{formatMoney(applicant.proposedPrice)}</Text>
+                  {applicants.slice(0, 3).map((applicant) => {
+                    const isAcceptingThis = isAccepting && acceptingBidId === applicant._id;
+                    const isRejectingThis = isRejecting && rejectingBidId === applicant._id;
+                    const workerRating = getWorkerRating(applicant.worker);
+
+                    return (
+                      <View
+                        key={applicant._id}
+                        style={[
+                          styles.applicantCard,
+                          {
+                            backgroundColor: theme.isDark ? 'rgba(0,0,0,0.32)' : colors.surface.raised,
+                            borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle,
+                          },
+                        ]}
+                      >
+                        {/* Profile Row (Tappable to view Ustad profile details) */}
+                        <TouchableOpacity
+                          style={styles.applicantHeaderRow}
+                          onPress={() => handleWorkerPress(applicant)}
+                          activeOpacity={0.78}
+                        >
+                          <Image
+                            source={{ uri: applicant.worker?.profileImage || 'https://via.placeholder.com/150' }}
+                            style={styles.responseProfileImage}
+                          />
+                          <View style={styles.responseProfileCopy}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={[styles.responseProfileName, { color: colors.text.primary }]} numberOfLines={1}>
+                                {applicant.worker?.fullName || 'Available Ustad'}
+                              </Text>
+                              {workerRating > 0 && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                  <Star size={11} color="#FFD700" fill="#FFD700" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text.secondary }}>
+                                    {workerRating.toFixed(1)}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text style={[styles.responseProfilePrice, { color: colors.status.success }]}>
+                              {formatMoney(applicant.proposedPrice)}
+                            </Text>
+                          </View>
+                          <ChevronRight
+                            size={16}
+                            color={colors.text.muted}
+                            style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+                          />
+                        </TouchableOpacity>
+
+                        {/* Actions Row: Hire & Reject */}
+                        <View style={styles.applicantActionsRow}>
+                          <TouchableOpacity
+                            style={[
+                              styles.applicantHireBtn,
+                              { backgroundColor: colors.status.success },
+                              (isAccepting || isRejecting) && { opacity: 0.65 },
+                            ]}
+                            onPress={() => handleHireApplicant(applicant)}
+                            disabled={isAccepting || isRejecting}
+                            activeOpacity={0.82}
+                          >
+                            {isAcceptingThis ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <View style={styles.btnContentRow}>
+                                <Check size={14} color="#FFFFFF" strokeWidth={2.8} />
+                                <Text style={styles.applicantHireBtnText}>
+                                  {t('common.hire', 'Hire')} ({formatMoney(applicant.proposedPrice)})
+                                </Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.applicantRejectBtn,
+                              {
+                                borderColor: alpha(colors.status.error, 0.4),
+                                backgroundColor: alpha(colors.status.error, 0.1),
+                              },
+                              (isAccepting || isRejecting) && { opacity: 0.65 },
+                            ]}
+                            onPress={() => handleRejectApplicant(applicant)}
+                            disabled={isAccepting || isRejecting}
+                            activeOpacity={0.82}
+                          >
+                            {isRejectingThis ? (
+                              <ActivityIndicator size="small" color={colors.status.error} />
+                            ) : (
+                              <View style={styles.btnContentRow}>
+                                <X size={14} color={colors.status.error} strokeWidth={2.5} />
+                                <Text style={[styles.applicantRejectBtnText, { color: colors.status.error }]}>
+                                  {t('common.reject', 'Reject')}
+                                </Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <ChevronRight
-                        size={15}
-                        color={colors.brand.primary}
-                        style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-                      />
-                    </TouchableOpacity>
-                  ))}
+                    );
+                  })}
                 </View>
 
-                {/* Primary Action: Compare All Offers */}
-                <TouchableOpacity 
-                  style={[
-                    styles.reviewButton, 
-                    { backgroundColor: colors.brand.primary },
-                  ]} 
-                  onPress={handleViewAllBids} 
-                  activeOpacity={0.82}
-                >
-                  <Users size={16} color={theme.isDark ? "#001014" : "#FFFFFF"} />
-                  <Text style={[styles.reviewButtonText, { color: theme.isDark ? "#001014" : "#FFFFFF" }]}>
-                    {t('findingWorker.compareOffersBtn', { count: applicants.length, defaultValue: `Compare All Offers (${applicants.length})` })}
-                  </Text>
-                  <ChevronRight
-                    size={17}
-                    color={theme.isDark ? "#001014" : "#FFFFFF"}
-                    strokeWidth={2.8}
-                    style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-                  />
-                </TouchableOpacity>
-
-                {/* Secondary Fast Action: Quick Hire */}
-                <TouchableOpacity 
-                  style={[
-                    styles.quickHireBtn, 
-                    { 
-                      backgroundColor: theme.isDark ? 'rgba(0,255,127,0.08)' : alpha(colors.status.success, 0.08),
-                      borderColor: theme.isDark ? 'rgba(0,255,127,0.25)' : alpha(colors.status.success, 0.25),
-                    },
-                    isAccepting && { opacity: 0.65 }
-                  ]} 
-                  onPress={handleDirectSelectFirst} 
-                  disabled={isAccepting}
-                  activeOpacity={0.8}
-                >
-                  {isAccepting ? (
-                    <ActivityIndicator color={colors.status.success} size="small" />
-                  ) : (
-                    <>
-                      <Zap size={14} color={colors.status.success} fill={colors.status.success} />
-                      <Text style={[styles.quickHireBtnText, { color: colors.status.success }]}>
-                        {t('findingWorker.quickHireFirst', {
-                          name: applicants[0].worker?.fullName || 'Top Ustad',
-                          price: formatMoney(applicants[0].proposedPrice),
-                          defaultValue: `Quick Hire ${applicants[0].worker?.fullName || 'Top Ustad'} (${formatMoney(applicants[0].proposedPrice)})`
-                        })}
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                {/* Compare All Offers Button (shown when multiple offers exist) */}
+                {applicants.length > 1 && (
+                  <TouchableOpacity 
+                    style={[
+                      styles.reviewButton, 
+                      { backgroundColor: colors.brand.primary, marginTop: 4 },
+                    ]} 
+                    onPress={handleViewAllBids} 
+                    activeOpacity={0.82}
+                  >
+                    <Users size={16} color={theme.isDark ? "#001014" : "#FFFFFF"} />
+                    <Text style={[styles.reviewButtonText, { color: theme.isDark ? "#001014" : "#FFFFFF" }]}>
+                      {t('findingWorker.compareOffersBtn', { count: applicants.length, defaultValue: `Compare All Offers (${applicants.length})` })}
+                    </Text>
+                    <ChevronRight
+                      size={17}
+                      color={theme.isDark ? "#001014" : "#FFFFFF"}
+                      strokeWidth={2.8}
+                      style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
+                    />
+                  </TouchableOpacity>
+                )}
               </LinearGradient>
             </Animated.View>
           ) : (
@@ -1944,23 +2060,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   responseProfiles: {
-    gap: 8,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
-  responseProfile: {
+  applicantCard: {
+    borderRadius: 16,
+    padding: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  applicantHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 9,
-    borderRadius: 13,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    paddingBottom: 8,
   },
   responseProfileImage: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     borderWidth: 1,
     borderColor: 'rgba(0,245,255,0.35)',
   },
@@ -1969,17 +2087,57 @@ const styles = StyleSheet.create({
   },
   responseProfileName: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '800',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   responseProfilePrice: {
     color: Colors.green,
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '900',
   },
+  applicantActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  applicantHireBtn: {
+    flex: 1.4,
+    minHeight: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  applicantHireBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  applicantRejectBtn: {
+    flex: 0.9,
+    minHeight: 38,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  applicantRejectBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  btnContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
   reviewButton: {
-    minHeight: 48,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1991,22 +2149,6 @@ const styles = StyleSheet.create({
     color: '#001014',
     fontSize: 13,
     fontWeight: '900',
-  },
-  quickHireBtn: {
-    minHeight: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 8,
-    paddingHorizontal: 14,
-  },
-  quickHireBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.5,
   },
   waitingNote: {
     flexDirection: 'row',
