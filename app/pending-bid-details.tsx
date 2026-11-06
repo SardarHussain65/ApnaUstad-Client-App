@@ -49,7 +49,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
 import { ConfirmModal } from '../components/ui';
 import { alpha, BorderRadius, Colors, Shadows, Spacing, Typography, useTheme, useThemeColors, useThemeTypography, useThemeShadows, useThemedStyles, type AppTheme } from '../constants/Theme';
-import { useConfirmModal, useJobDetails, useToast, useWorkerBids } from '../hooks';
+import { useConfirmModal, useJobDetails, useToast, useWorkerBids, useBidDetails } from '../hooks';
 import { useWithdrawBidMutation } from '../hooks/mutations/useMutations';
 import { useAuth } from '../context/AuthContext';
 import { JobEvidenceGallery, buildJobEvidenceItems } from '../components/common/JobEvidenceGallery';
@@ -968,8 +968,12 @@ export default function PendingBidDetailsScreen() {
   const typography = useThemeTypography();
   const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams<{ id?: string; pendingBidId?: string }>();
+  const [liveBidStatus, setLiveBidStatus] = useState<string | null>(null);
+  const [liveRejectionReason, setLiveRejectionReason] = useState<string | null>(null);
+
+  const { data: directBid, refetch: refetchDirectBid } = useBidDetails(params.pendingBidId);
   const { data: bids, isLoading: isLoadingBids, refetch: refetchBids } = useWorkerBids();
-  const bid = bids?.find(item => item._id === params.pendingBidId);
+  const bid = directBid || bids?.find(item => item._id === params.pendingBidId);
   const bidJob = bid?.jobPost && typeof bid.jobPost === 'object' ? bid.jobPost : null;
   const jobId = params.id || (typeof bid?.jobPost === 'string' ? bid.jobPost : bidJob?._id);
   const { data: job, isLoading: isLoadingJob, refetch: refetchJob } = useJobDetails(jobId);
@@ -989,7 +993,7 @@ export default function PendingBidDetailsScreen() {
   const currentProposedPrice = Number(bid?.proposedPrice || displayJob?.amount || 0);
 
   const myWorkerId = String(user?._id || '');
-  const bidStatus = String(bid?.status || '');
+  const bidStatus = String(liveBidStatus || bid?.status || '');
   const isWon = bidStatus === 'accepted' || (
     displayJob?.status === 'assigned' &&
     rawJob?.assignedWorker &&
@@ -1010,6 +1014,11 @@ export default function PendingBidDetailsScreen() {
     const onBidRejected = (data: any) => {
       const targetBidId = data?.bidId?.toString();
       if (!targetBidId || targetBidId === params.pendingBidId || targetBidId === bid?._id?.toString()) {
+        setLiveBidStatus('rejected');
+        if (data?.reason) {
+          setLiveRejectionReason(data.reason);
+        }
+        void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
@@ -1024,6 +1033,8 @@ export default function PendingBidDetailsScreen() {
     const onBidLost = (data: any) => {
       const targetJobId = data?.jobPost?._id?.toString() || data?.jobId?.toString();
       if (!targetJobId || targetJobId === jobId) {
+        setLiveBidStatus('lost');
+        void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
@@ -1038,6 +1049,14 @@ export default function PendingBidDetailsScreen() {
     const onJobAssigned = (data: any) => {
       const targetJobId = data?.jobId?.toString();
       if (!targetJobId || targetJobId === jobId) {
+        const assignedWorker = data?.jobPost?.assignedWorker || data?.assignedWorker;
+        const assignedWorkerId = String(assignedWorker?._id || assignedWorker || '');
+        if (assignedWorkerId && assignedWorkerId === myWorkerId) {
+          setLiveBidStatus('accepted');
+        } else if (assignedWorkerId) {
+          setLiveBidStatus('lost');
+        }
+        void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
@@ -1048,6 +1067,8 @@ export default function PendingBidDetailsScreen() {
     const onBidWon = (data: any) => {
       const targetJobId = data?.jobPost?._id?.toString() || data?.jobId?.toString();
       if (!targetJobId || targetJobId === jobId) {
+        setLiveBidStatus('accepted');
+        void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
@@ -1070,7 +1091,7 @@ export default function PendingBidDetailsScreen() {
     return () => {
       unsubs.forEach(u => u());
     };
-  }, [params.pendingBidId, bid?._id, jobId, refetchBids, refetchJob, queryClient, toast]);
+  }, [params.pendingBidId, bid?._id, jobId, myWorkerId, refetchDirectBid, refetchBids, refetchJob, queryClient, toast]);
 
   const handleOpenUpdateModal = () => {
     setUpdatedPrice(String(currentProposedPrice));
@@ -1092,12 +1113,15 @@ export default function PendingBidDetailsScreen() {
       });
 
       if (response.data?.success) {
+        setLiveBidStatus('pending');
+        setLiveRejectionReason(null);
         toast.success(
           t('pendingBidDetails.priceUpdatedTitle', 'Offer Updated!'),
           t('pendingBidDetails.priceUpdatedDesc', 'The customer has been notified of your new rate.')
         );
         setShowUpdatePriceModal(false);
         await Promise.allSettled([
+          refetchDirectBid?.(),
           refetchBids(),
           queryClient.invalidateQueries({ queryKey: queryKeys.bids.all }),
           queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() }),
@@ -1589,7 +1613,7 @@ export default function PendingBidDetailsScreen() {
               subtitle={t('pendingBidDetails.yourProposalDesc')}
               color={colors.green}
             />
-            {bid?.status === 'rejected' && (
+            {isRejected && (
               <View style={{
                 backgroundColor: alpha(colors.error || '#EF4444', 0.12),
                 borderColor: alpha(colors.error || '#EF4444', 0.35),
@@ -1661,7 +1685,7 @@ export default function PendingBidDetailsScreen() {
           </Animated.View>
         </ScrollView>
 
-        {bid ? (
+        {(bid || displayJob) ? (
           <View style={[styles.bottomDock, { paddingBottom: insets.bottom + 12 }]}>
             <LinearGradient
               colors={['rgba(5,5,16,0)', 'rgba(5,5,16,0.96)', 'rgba(5,5,16,1)']}
