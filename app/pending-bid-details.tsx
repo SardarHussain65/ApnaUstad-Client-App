@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import {
@@ -1009,11 +1010,26 @@ export default function PendingBidDetailsScreen() {
   const isJobCancelled = displayJob?.status === 'cancelled' || bidStatus === 'cancelled';
   const isRejected = !isWon && !isHiredOther && !isJobCancelled && bidStatus === 'rejected';
 
-  // Real-time socket listener for instant UI updates when customer declines or hires
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      void refetchDirectBid?.();
+      void refetchBids?.();
+      void refetchJob?.();
+      void queryClient.invalidateQueries({ queryKey: ['bid'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+    }, [refetchDirectBid, refetchBids, refetchJob, queryClient])
+  );
+
+  // Real-time socket & push notification listeners for instant UI updates when customer declines or hires
   useEffect(() => {
     const onBidRejected = (data: any) => {
       const targetBidId = data?.bidId?.toString();
-      if (!targetBidId || targetBidId === params.pendingBidId || targetBidId === bid?._id?.toString()) {
+      const targetJobId = data?.jobId?.toString();
+      const isMatchingBid = !targetBidId || targetBidId === params.pendingBidId || targetBidId === bid?._id?.toString();
+      const isMatchingJob = Boolean(targetJobId && jobId && targetJobId === jobId.toString());
+
+      if (isMatchingBid || isMatchingJob) {
         setLiveBidStatus('rejected');
         if (data?.reason) {
           setLiveRejectionReason(data.reason);
@@ -1021,6 +1037,7 @@ export default function PendingBidDetailsScreen() {
         void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: ['bid'] });
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
         void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
         toast.error(
@@ -1037,6 +1054,7 @@ export default function PendingBidDetailsScreen() {
         void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: ['bid'] });
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
         void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
         toast.info(
@@ -1059,6 +1077,7 @@ export default function PendingBidDetailsScreen() {
         void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: ['bid'] });
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
         void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       }
@@ -1071,6 +1090,7 @@ export default function PendingBidDetailsScreen() {
         void refetchDirectBid?.();
         void refetchBids();
         void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: ['bid'] });
         void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
         void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
         toast.success(
@@ -1088,8 +1108,21 @@ export default function PendingBidDetailsScreen() {
       socketService.on('job:cancelled', onBidLost),
     ];
 
+    // Foreground notification listener as instant backup
+    const notifSub = Notifications.addNotificationReceivedListener((notification) => {
+      const notifData = notification?.request?.content?.data;
+      if (notifData?.type === 'bid_rejected' || notifData?.type === 'bid_declined') {
+        onBidRejected(notifData);
+      } else if (notifData?.type === 'bid_lost') {
+        onBidLost(notifData);
+      } else if (notifData?.type === 'bid_won' || notifData?.type === 'job_assigned') {
+        onBidWon(notifData);
+      }
+    });
+
     return () => {
       unsubs.forEach(u => u());
+      notifSub.remove();
     };
   }, [params.pendingBidId, bid?._id, jobId, myWorkerId, refetchDirectBid, refetchBids, refetchJob, queryClient, toast]);
 
@@ -1264,22 +1297,22 @@ export default function PendingBidDetailsScreen() {
     <BackgroundWrapper>
       <View style={styles.root}>
         <View style={[
-          styles.header, 
-          { 
+          styles.header,
+          {
             paddingTop: insets.top + 8,
             backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : theme.colors.background.screen,
             borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
           }
         ]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.headerButton,
               {
                 backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
                 borderColor: theme.isDark ? theme.colors.border.subtle : theme.colors.border.subtle,
               }
-            ]} 
-            onPress={() => router.back()} 
+            ]}
+            onPress={() => router.back()}
             activeOpacity={0.8}
           >
             <ChevronLeft size={22} color={theme.colors.text.primary} strokeWidth={2.5} />
@@ -1406,34 +1439,6 @@ export default function PendingBidDetailsScreen() {
           </Animated.View>
 
           {/* Prominent Status Callout Banners */}
-          {isRejected && (
-            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
-              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.error || '#EF4444', 0.45), backgroundColor: alpha(colors.error || '#EF4444', 0.08) }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.error || '#EF4444', 0.16) }]}>
-                    <AlertTriangle size={22} color={colors.error || '#EF4444'} strokeWidth={2.4} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.statusNoticeTitle, { color: colors.error || '#EF4444' }]}>
-                      Offer Declined by Customer
-                    </Text>
-                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
-                      The customer declined your previous quote of {quoteText}. This job is still open! Update your rate below with a competitive price to win this job.
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[styles.statusNoticeBtn, { backgroundColor: colors.worker }]}
-                  onPress={handleOpenUpdateModal}
-                  activeOpacity={0.84}
-                >
-                  <Pencil size={15} color="#FFFFFF" strokeWidth={2.4} />
-                  <Text style={styles.statusNoticeBtnText}>Update Rate & Resubmit</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
-
           {isHiredOther && (
             <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
               <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.orange || '#F59E0B', 0.35), backgroundColor: alpha(colors.orange || '#F59E0B', 0.07) }]}>
@@ -1536,7 +1541,7 @@ export default function PendingBidDetailsScreen() {
               <DetailPill icon={CalendarDays} label={t('pendingBidDetails.date')} value={dateLabel} />
               <DetailPill icon={Clock3} label={t('pendingBidDetails.time')} value={timeLabel} color={colors.worker} />
             </View>
-             <GlassCard padding={14} intensity={35} style={styles.locationCard}>
+            <GlassCard padding={14} intensity={35} style={styles.locationCard}>
               <View style={styles.locationRow}>
                 <View style={styles.locationIcon}>
                   <MapPin size={17} color={colors.green} strokeWidth={2.5} />
@@ -1578,7 +1583,7 @@ export default function PendingBidDetailsScreen() {
                     <Text style={styles.clientRole}>{t('pendingBidDetails.serviceClient')}</Text>
                     <Text style={[styles.clientName, typography.threeD]} numberOfLines={1}>{clientName}</Text>
                     <Text style={styles.clientHistory}>
-                      {clientJobs > 0 
+                      {clientJobs > 0
                         ? (clientJobs === 1 ? t('pendingBidDetails.completedServiceRequests_one') : t('pendingBidDetails.completedServiceRequests_other', { count: clientJobs }))
                         : t('pendingBidDetails.newApnaUstadClient')}
                     </Text>
@@ -1613,29 +1618,6 @@ export default function PendingBidDetailsScreen() {
               subtitle={t('pendingBidDetails.yourProposalDesc')}
               color={colors.green}
             />
-            {isRejected && (
-              <View style={{
-                backgroundColor: alpha(colors.error || '#EF4444', 0.12),
-                borderColor: alpha(colors.error || '#EF4444', 0.35),
-                borderWidth: 1.2,
-                borderRadius: 14,
-                padding: 12,
-                marginBottom: 12,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-              }}>
-                <AlertTriangle size={20} color={colors.error || '#EF4444'} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: colors.error || '#EF4444' }}>
-                    Rate Declined by Customer
-                  </Text>
-                  <Text style={{ fontSize: 11.5, color: theme.colors.text.secondary, marginTop: 1 }}>
-                    Customer declined your quote. Tap "Edit" below to update your rate and re-submit!
-                  </Text>
-                </View>
-              </View>
-            )}
             <GlassCard padding={0} intensity={38} style={styles.proposalCard}>
               <View style={styles.proposalStats}>
                 <View style={styles.proposalStat}>

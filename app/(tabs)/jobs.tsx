@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,8 @@ import { useNearbyJobs, useUserLocation, useWorkerBids } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useIsRTL } from '../../context/LanguageContext';
 import { useIncomingJob } from '../../context/IncomingJobContext';
+import api from '../../services/api';
+import Toast from 'react-native-toast-message';
 
 type UrgencyFilter = 'all' | 'instant' | 'scheduled';
 
@@ -57,17 +59,50 @@ export default function WorkerJobsTab() {
   );
   const { data: workerBids = [], refetch: refetchBids } = useWorkerBids();
 
-  // If navigated from push notification with openJobId, open modal automatically
+  const handledOpenJobIdRef = useRef<string | null>(null);
+
+  // If navigated from push notification with openJobId, open modal automatically (once only)
   useEffect(() => {
-    if (openJobId) {
+    if (openJobId && handledOpenJobIdRef.current !== openJobId) {
+      handledOpenJobIdRef.current = openJobId;
+      // Clear param from route so it doesn't trigger repeatedly on focus or query invalidations
+      router.setParams({ openJobId: '' });
+
       const targetJob = rawJobs.find((j: any) => (j._id || j.id) === openJobId);
       if (targetJob) {
-        openIncomingJobModal(targetJob);
+        if (targetJob.status === 'open') {
+          openIncomingJobModal(targetJob);
+        } else {
+          Toast.show({
+            type: 'info',
+            text1: t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+            text2: t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+          });
+        }
       } else {
-        openIncomingJobModal({ _id: openJobId, urgency: 'instant' });
+        // Fetch to verify before opening hollow modal
+        api.get(`/jobs/${openJobId}`)
+          .then((res) => {
+            if (res.data?.data && res.data.data.status === 'open') {
+              openIncomingJobModal(res.data.data);
+            } else {
+              Toast.show({
+                type: 'info',
+                text1: t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+                text2: t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+              });
+            }
+          })
+          .catch(() => {
+            Toast.show({
+              type: 'info',
+              text1: t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+              text2: t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+            });
+          });
       }
     }
-  }, [openJobId, rawJobs, openIncomingJobModal]);
+  }, [openJobId, rawJobs, openIncomingJobModal, router, t]);
 
   // Set of job IDs where this worker has already sent an offer
   const bidJobIds = useMemo(() => {

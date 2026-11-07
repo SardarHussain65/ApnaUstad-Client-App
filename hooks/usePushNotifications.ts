@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { socketService } from '../services/socketService';
 import {
   initializePushNotifications,
   setupForegroundNotificationListener,
@@ -263,9 +265,32 @@ const handleNotificationTap = async (
 export const usePushNotifications = () => {
   const { user, token, role, isLoading } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const subscriptionsRef = useRef<any[]>([]);
   const lastSavedTokenRef = useRef<string | null>(null);
   const [notificationSetupComplete, setNotificationSetupComplete] = useState(false);
+
+  const handleForegroundData = (data: any) => {
+    if (!data) return;
+    const type = data.type || data.notificationType;
+    console.log('⚡ Processing foreground notification payload:', type, data);
+
+    if (type === 'bid_rejected' || type === 'bid_declined') {
+      socketService.notify('bid:rejected', data);
+      void queryClient.invalidateQueries({ queryKey: ['bid'] });
+      void queryClient.invalidateQueries({ queryKey: ['bids'] });
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    } else if (type === 'bid_lost') {
+      socketService.notify('bid:lost', data);
+      void queryClient.invalidateQueries({ queryKey: ['bid'] });
+      void queryClient.invalidateQueries({ queryKey: ['bids'] });
+    } else if (type === 'bid_won' || type === 'job_assigned') {
+      socketService.notify('bid:won', data);
+      void queryClient.invalidateQueries({ queryKey: ['bid'] });
+      void queryClient.invalidateQueries({ queryKey: ['bids'] });
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    }
+  };
 
   useEffect(() => {
     // Wait for AuthContext to finish reading from AsyncStorage before proceeding.
@@ -314,6 +339,7 @@ export const usePushNotifications = () => {
         // ✅ NEW: Setup foreground notification listener
         const foregroundSub = setupForegroundNotificationListener((notification) => {
           console.log('📲 App received foreground notification:', notification);
+          handleForegroundData(notification.request.content.data);
         });
         subscriptionsRef.current.push(foregroundSub);
 
@@ -336,6 +362,7 @@ export const usePushNotifications = () => {
         // ✅ NEW: Setup FCM message listener
         const fcmSub = setupFCMMessageListener((message) => {
           console.log('💬 Received FCM message:', message);
+          handleForegroundData(message.data);
         });
         subscriptionsRef.current.push(fcmSub);
 

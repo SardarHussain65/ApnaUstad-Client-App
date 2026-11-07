@@ -177,6 +177,8 @@ export function WorkerHome() {
 
     const filtered = dismissedJobs.filter((job) => {
       if (job.urgency !== 'instant') return false;
+      // During an ongoing or active job, do not show new urgent jobs to the worker
+      if (hasActiveJobs) return false;
       if (job.status && job.status !== 'open') return false;
 
       const jId = String(job._id || job.id);

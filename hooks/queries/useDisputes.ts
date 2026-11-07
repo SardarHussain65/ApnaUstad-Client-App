@@ -242,6 +242,24 @@ export function useWithdrawDispute(disputeId: string) {
   });
 }
 
+export function useCancelJobFromDispute(disputeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (reason?: string) => {
+      const response = await api.post(`/disputes/${disputeId}/cancel-job`, { reason });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data?.data?.dispute) {
+        queryClient.setQueryData(queryKeys.disputes.detail(disputeId), data.data.dispute);
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.disputes.all });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+  });
+}
+
 export const markDisputeReadRequest = async (disputeId: string) => {
   try {
     await api.post(`/disputes/${disputeId}/read`);

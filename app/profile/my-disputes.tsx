@@ -11,13 +11,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import {
   Scale,
   ShieldCheck,
   CheckCircle2,
   Clock,
   AlertTriangle,
-  XCircle,
   ChevronRight,
   ChevronLeft,
   MessageSquare,
@@ -25,17 +26,15 @@ import {
   AlertCircle,
   Briefcase,
   HelpCircle,
-  Sparkles,
   Layers,
   User,
+  Sparkles,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { ProfileHeader } from '../../components/profile/ProfileHeader';
-import { GlassCard } from '../../components/home/GlassCard';
-import { CustomButton } from '../../components/CustomButton';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
-import { useMyDisputes, type DisputeRecord, type DisputeScope } from '../../hooks/queries/useDisputes';
+import { useMyDisputes, type DisputeRecord } from '../../hooks/queries/useDisputes';
 import { useIsRTL } from '../../context/LanguageContext';
 
 const formatPKR = (amount: number) => `Rs. ${Math.round(amount).toLocaleString('en-PK')}`;
@@ -64,13 +63,20 @@ export default function MyDisputesScreen() {
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
 
   const { data: disputes = [], isLoading, isFetching, refetch } = useMyDisputes(activeTab);
+  const { data: allDisputes = [] } = useMyDisputes('all');
 
   const counts = useMemo(() => {
+    if (allDisputes && allDisputes.length > 0) {
+      return {
+        active: allDisputes.filter((d) => !d.isClosed).length,
+        history: allDisputes.filter((d) => d.isClosed).length,
+      };
+    }
     return {
-      active: disputes.filter((d) => !d.isClosed).length,
-      history: disputes.filter((d) => d.isClosed).length,
+      active: activeTab === 'active' ? disputes.length : 0,
+      history: activeTab === 'history' ? disputes.length : 0,
     };
-  }, [disputes]);
+  }, [allDisputes, disputes, activeTab]);
 
   const handleOpenRoom = (disputeId: string) => {
     router.push({
@@ -84,13 +90,13 @@ export default function MyDisputesScreen() {
     const shortCaseId = String(dispute._id).slice(-6).toUpperCase();
     const isClosed = dispute.isClosed || false;
 
-    // Visual attributes
+    // Visual status indicators
     let statusColor = '#00C6FF';
     let statusLabel = t('disputes.badgeOpen', 'Report Received');
     let StatusIcon = AlertTriangle;
 
     if (isClosed) {
-      statusColor = '#34C759';
+      statusColor = '#10B981';
       StatusIcon = CheckCircle2;
       if (dispute.outcome === 'customer_favor') {
         statusLabel = t('disputes.verdictCustomerFavored', 'Customer Upheld');
@@ -100,11 +106,11 @@ export default function MyDisputesScreen() {
         statusLabel = t('disputes.verdictSettled', 'Settled');
       } else {
         statusLabel = dispute.outcomeLabel || t('disputes.badgeClosed', 'Closed');
-        statusColor = '#8E8E93';
+        statusColor = '#94A3B8';
       }
     } else if (dispute.status === 'under_review') {
-      statusColor = '#FF9F0A';
-      statusLabel = t('disputes.badgeUnderReview', 'Under Investigation');
+      statusColor = '#F59E0B';
+      statusLabel = t('disputes.badgeUnderReview', 'Under Review');
       StatusIcon = Clock;
     }
 
@@ -120,155 +126,164 @@ export default function MyDisputesScreen() {
       : t('disputes.ustad', 'Ustad (Worker)');
 
     return (
-      <Animated.View key={dispute._id} entering={FadeInDown.delay(index * 40)}>
-        <GlassCard
-          style={styles.card}
-          hasGlow={!isClosed && dispute.status === 'under_review'}
-          glowColor={statusColor}
+      <Animated.View key={dispute._id} entering={FadeInDown.delay(index * 50).duration(260)}>
+        <View
+          style={[
+            styles.disputeCard,
+            {
+              backgroundColor: theme.isDark ? '#0D1322' : '#FFFFFF',
+              borderColor: isClosed
+                ? (theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)')
+                : alpha(statusColor, 0.35),
+            },
+          ]}
         >
-          {/* Top Row: Case Ref Badge, Date, and Status Badge */}
-          <View style={styles.cardTopRow}>
-            <View style={styles.caseBadgeWrapper}>
+          {/* Subtle gradient sheen at the top of the card */}
+          <LinearGradient
+            colors={
+              isClosed
+                ? [theme.isDark ? 'rgba(16, 185, 129, 0.06)' : 'rgba(16, 185, 129, 0.04)', 'transparent']
+                : [theme.isDark ? alpha(statusColor, 0.09) : alpha(statusColor, 0.05), 'transparent']
+            }
+            style={styles.cardSheen}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
+
+          {/* Header Row: Service Icon & Title + Status Pill */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
               <View
                 style={[
-                  styles.caseIdBadge,
+                  styles.serviceIconTile,
                   {
-                    backgroundColor: alpha(theme.colors.brand.primary, 0.12),
-                    borderColor: alpha(theme.colors.brand.primary, 0.3),
+                    backgroundColor: isClosed
+                      ? (theme.isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)')
+                      : alpha(theme.colors.brand.primary, 0.12),
+                    borderColor: isClosed
+                      ? 'rgba(16, 185, 129, 0.25)'
+                      : alpha(theme.colors.brand.primary, 0.25),
                   },
                 ]}
               >
-                <Text style={[styles.caseIdText, { color: theme.colors.brand.primary }]}>
-                  {`#${shortCaseId}`}
-                </Text>
+                <Layers
+                  size={18}
+                  color={isClosed ? '#10B981' : theme.colors.brand.primary}
+                  strokeWidth={2.2}
+                />
               </View>
-              {filedDate ? (
-                <Text style={[styles.caseDateText, { color: theme.colors.text.dim }]}>
-                  {filedDate}
+              <View style={styles.serviceMeta}>
+                <Text style={[styles.serviceTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                  {booking?.category || t('disputes.booking', 'Service Booking')}
                 </Text>
-              ) : null}
+                <View style={styles.caseIdRow}>
+                  <Text style={[styles.caseIdText, { color: theme.colors.brand.primary }]}>
+                    #{shortCaseId}
+                  </Text>
+                  {filedDate ? (
+                    <>
+                      <Text style={[styles.dotSeparator, { color: theme.colors.text.dim }]}>•</Text>
+                      <Text style={[styles.caseDateText, { color: theme.colors.text.dim }]}>
+                        {filedDate}
+                      </Text>
+                    </>
+                  ) : null}
+                </View>
+              </View>
             </View>
 
+            {/* Status Pill Badge */}
             <View
               style={[
-                styles.statusBadge,
+                styles.statusPill,
                 {
-                  backgroundColor: alpha(statusColor, 0.14),
-                  borderColor: alpha(statusColor, 0.35),
+                  backgroundColor: alpha(statusColor, 0.12),
+                  borderColor: alpha(statusColor, 0.28),
                 },
               ]}
             >
-              <StatusIcon size={12} color={statusColor} />
-              <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+              <StatusIcon size={12} color={statusColor} strokeWidth={2.4} />
+              <Text style={[styles.statusPillText, { color: statusColor }]}>{statusLabel}</Text>
             </View>
           </View>
 
-          {/* Service Header Row */}
-          <View style={styles.serviceRow}>
-            <View
-              style={[
-                styles.serviceIconCircle,
-                {
-                  backgroundColor: alpha(theme.colors.brand.primary, 0.12),
-                  borderColor: alpha(theme.colors.brand.primary, 0.25),
-                },
-              ]}
-            >
-              <Layers size={14} color={theme.colors.brand.primary} />
-            </View>
-            <View style={styles.serviceTextCol}>
-              <Text
-                style={[styles.serviceTitle, { color: theme.colors.text.primary }]}
-                numberOfLines={1}
-              >
-                {booking?.category || t('disputes.booking', 'Service Booking')}
-              </Text>
-              {booking?.status ? (
-                <Text style={[styles.serviceSubText, { color: theme.colors.text.dim }]}>
-                  {t('disputes.bookingLabel', 'Job')}: {booking.status}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Structured Key Case Details (Required Details) */}
+          {/* Clean Case Specs Container */}
           <View
             style={[
-              styles.caseDetailsGrid,
+              styles.specsContainer,
               {
-                backgroundColor: alpha(theme.colors.surface.card, 0.45),
-                borderColor: theme.colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
               },
             ]}
           >
             {/* Issue Row */}
-            <View style={styles.detailRow}>
-              <View style={styles.detailLabelCol}>
-                <AlertCircle size={13} color={statusColor} />
-                <Text style={[styles.detailLabel, { color: theme.colors.text.dim }]}>
-                  {t('disputes.issue', 'Issue')}:
+            <View style={styles.specRow}>
+              <View style={styles.specLabelWrap}>
+                <AlertCircle size={13} color={theme.colors.text.dim} strokeWidth={2} />
+                <Text style={[styles.specLabel, { color: theme.colors.text.dim }]}>
+                  {t('disputes.issue', 'Issue')}
                 </Text>
               </View>
-              <Text
-                style={[styles.detailValue, { color: theme.colors.text.primary }]}
-                numberOfLines={1}
-              >
-                {dispute.reasonLabel || t(`disputes.reasons.${dispute.reason}`, dispute.reason.replace(/_/g, ' '))}
+              <Text style={[styles.specValue, { color: theme.colors.text.primary }]} numberOfLines={1}>
+                {dispute.reasonLabel || t(`disputes.reasons.${dispute.reason}`, dispute.reason?.replace(/_/g, ' ') || 'Reported Issue')}
               </Text>
             </View>
 
-            {/* Reporter Row */}
-            <View style={styles.detailRow}>
-              <View style={styles.detailLabelCol}>
-                <User size={13} color={theme.colors.text.muted} />
-                <Text style={[styles.detailLabel, { color: theme.colors.text.dim }]}>
-                  {t('disputes.reportedBy', 'Reported By')}:
+            <View style={[styles.specDivider, { backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)' }]} />
+
+            {/* Reported By Row */}
+            <View style={styles.specRow}>
+              <View style={styles.specLabelWrap}>
+                <User size={13} color={theme.colors.text.dim} strokeWidth={2} />
+                <Text style={[styles.specLabel, { color: theme.colors.text.dim }]}>
+                  {t('disputes.reportedBy', 'Reported By')}
                 </Text>
               </View>
-              <Text
-                style={[styles.detailValue, { color: theme.colors.text.primary }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.specValue, { color: theme.colors.text.primary }]} numberOfLines={1}>
                 {reporterLabel}
               </Text>
             </View>
 
-            {/* Disputed Amount Row */}
+            {/* Disputed Amount (Only if > 0) */}
             {dispute.amountDisputed > 0 && (
-              <View style={styles.detailRow}>
-                <View style={styles.detailLabelCol}>
-                  <Banknote size={13} color={theme.colors.brand.primary} />
-                  <Text style={[styles.detailLabel, { color: theme.colors.text.dim }]}>
-                    {t('disputes.disputedAmount', 'Disputed Value')}:
+              <>
+                <View style={[styles.specDivider, { backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)' }]} />
+                <View style={styles.specRow}>
+                  <View style={styles.specLabelWrap}>
+                    <Banknote size={13} color={theme.colors.text.dim} strokeWidth={2} />
+                    <Text style={[styles.specLabel, { color: theme.colors.text.dim }]}>
+                      {t('disputes.disputedAmount', 'Disputed Value')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.specAmountValue, { color: theme.colors.brand.primary }]}>
+                    {formatPKR(dispute.amountDisputed)}
                   </Text>
                 </View>
-                <Text
-                  style={[styles.detailAmountValue, { color: theme.colors.brand.primary }]}
-                  numberOfLines={1}
-                >
-                  {formatPKR(dispute.amountDisputed)}
-                </Text>
-              </View>
+              </>
             )}
           </View>
 
-          {/* Formal Ruling Verdict for Closed Cases (Clean banner, NO raw chat messages) */}
+          {/* Official Verdict Banner for Closed Cases */}
           {isClosed && (
             <View
               style={[
-                styles.closedVerdictBanner,
+                styles.verdictBanner,
                 {
-                  backgroundColor: alpha(colors.success, 0.08),
-                  borderColor: alpha(colors.success, 0.22),
+                  backgroundColor: theme.isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.06)',
+                  borderColor: 'rgba(16, 185, 129, 0.22)',
                 },
               ]}
             >
-              <ShieldCheck size={14} color={colors.success} />
-              <Text style={[styles.closedVerdictText, { color: theme.colors.text.secondary }]}>
-                {dispute.outcomeLabel
-                  ? `${dispute.outcomeLabel} • ${t('disputes.officialClosedNotice', 'Case resolved and finalized by ApnaUstad Team.')}`
-                  : t('disputes.officialClosedNotice', 'Case resolved and finalized by ApnaUstad Team.')}
-              </Text>
+              <ShieldCheck size={16} color="#10B981" strokeWidth={2.4} />
+              <View style={styles.verdictTextCol}>
+                <Text style={[styles.verdictTitle, { color: '#10B981' }]}>
+                  {dispute.outcomeLabel || t('disputes.verdictSettled', 'Settled by both sides')}
+                </Text>
+                <Text style={[styles.verdictDesc, { color: theme.colors.text.secondary }]}>
+                  {t('disputes.officialClosedNotice', 'Case resolved and finalized by ApnaUstad Team.')}
+                </Text>
+              </View>
             </View>
           )}
 
@@ -276,15 +291,15 @@ export default function MyDisputesScreen() {
           {!isClosed && unreadCount > 0 && (
             <View
               style={[
-                styles.unreadAlertBanner,
+                styles.unreadBanner,
                 {
-                  backgroundColor: alpha(theme.colors.brand.primary, 0.08),
+                  backgroundColor: alpha(theme.colors.brand.primary, 0.09),
                   borderColor: alpha(theme.colors.brand.primary, 0.25),
                 },
               ]}
             >
-              <MessageSquare size={13} color={theme.colors.brand.primary} />
-              <Text style={[styles.unreadAlertText, { color: theme.colors.brand.primary }]}>
+              <MessageSquare size={14} color={theme.colors.brand.primary} strokeWidth={2.4} />
+              <Text style={[styles.unreadBannerText, { color: theme.colors.brand.primary }]}>
                 {unreadCount === 1
                   ? t('disputes.newResponsesWaiting', '1 new response in Case Room', { count: unreadCount })
                   : t('disputes.newResponsesWaiting_other', `${unreadCount} new responses in Case Room`, { count: unreadCount })}
@@ -292,38 +307,41 @@ export default function MyDisputesScreen() {
             </View>
           )}
 
-          {/* Primary Action Button */}
+          {/* Full-width Case Action Button */}
           <TouchableOpacity
-            onPress={() => handleOpenRoom(dispute._id)}
+            activeOpacity={0.78}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              handleOpenRoom(dispute._id);
+            }}
             style={[
-              styles.actionButton,
+              styles.actionCardButton,
               {
-                backgroundColor: alpha(theme.colors.brand.primary, 0.12),
-                borderColor: alpha(theme.colors.brand.primary, 0.3),
+                backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.035)',
+                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.07)',
               },
             ]}
-            activeOpacity={0.8}
           >
-            <View style={styles.actionBtnLeft}>
-              <MessageSquare size={14} color={theme.colors.brand.primary} />
-              <Text style={[styles.actionBtnText, { color: theme.colors.brand.primary }]}>
+            <View style={styles.actionCardLeft}>
+              <MessageSquare size={15} color={theme.colors.brand.primary} strokeWidth={2.2} />
+              <Text style={[styles.actionCardLabel, { color: theme.colors.brand.primary }]}>
                 {isClosed
                   ? t('disputes.viewCaseDetails', 'View Case Record')
                   : t('disputes.openCaseRoom', 'Open Case Room')}
               </Text>
               {unreadCount > 0 && (
-                <View style={styles.unreadCountBadge}>
-                  <Text style={styles.unreadCountText}>{unreadCount}</Text>
+                <View style={styles.unreadBadgePill}>
+                  <Text style={styles.unreadBadgePillText}>{unreadCount}</Text>
                 </View>
               )}
             </View>
             {isRTL ? (
-              <ChevronLeft size={15} color={theme.colors.brand.primary} />
+              <ChevronLeft size={16} color={theme.colors.brand.primary} strokeWidth={2.4} />
             ) : (
-              <ChevronRight size={15} color={theme.colors.brand.primary} />
+              <ChevronRight size={16} color={theme.colors.brand.primary} strokeWidth={2.4} />
             )}
           </TouchableOpacity>
-        </GlassCard>
+        </View>
       </Animated.View>
     );
   };
@@ -346,82 +364,178 @@ export default function MyDisputesScreen() {
           />
         }
       >
-        {/* Top Guarantee Pill */}
-        <View style={styles.topInfoBar}>
+        {/* ── Hero Trust Card (Replaces the raw floating pill) ── */}
+        <Animated.View entering={FadeInDown.duration(240)}>
           <View
             style={[
-              styles.trustPill,
+              styles.heroTrustCard,
               {
-                backgroundColor: alpha(colors.success, 0.09),
-                borderColor: alpha(colors.success, 0.22),
+                backgroundColor: theme.isDark ? '#0D1322' : '#FFFFFF',
+                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.07)',
               },
             ]}
           >
-            <ShieldCheck size={13} color={colors.success} />
-            <Text style={[styles.trustPillText, { color: colors.success }]}>
-              {t('disputes.trustBadge', 'Fair 3-Way Dispute Arbitration')}
-            </Text>
+            <LinearGradient
+              colors={
+                theme.isDark
+                  ? ['rgba(16, 185, 129, 0.14)', 'rgba(6, 182, 212, 0.05)', 'transparent']
+                  : ['rgba(16, 185, 129, 0.09)', 'rgba(6, 182, 212, 0.03)', 'transparent']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.heroTrustIconWrap}>
+              <ShieldCheck size={22} color="#10B981" strokeWidth={2.4} />
+            </View>
+            <View style={styles.heroTrustContent}>
+              <View style={styles.heroTrustTitleRow}>
+                <Text style={[styles.heroTrustTitle, { color: theme.colors.text.primary }]}>
+                  {t('disputes.trustBadge', '100% Fair Resolution Guarantee')}
+                </Text>
+                <View style={styles.verifiedBadge}>
+                  <CheckCircle2 size={11} color="#10B981" strokeWidth={2.4} />
+                  <Text style={styles.verifiedBadgeText}>
+                    {t('disputes.protected', 'Protected')}
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.heroTrustDesc, { color: theme.colors.text.secondary }]}>
+                {t(
+                  'disputes.trustSubtitle',
+                  'Independent arbitration by ApnaUstad. Funds stay protected until both sides reach a fair solution.'
+                )}
+              </Text>
+            </View>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Clean Tabs: Active vs History */}
+        {/* ── Segmented Tab Bar ── */}
         <View
           style={[
-            styles.tabContainer,
+            styles.tabBar,
             {
-              backgroundColor: alpha(theme.colors.surface.card, 0.6),
-              borderColor: theme.colors.border.subtle,
+              backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+              borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
             },
           ]}
         >
+          {/* Active Tab */}
           <TouchableOpacity
-            onPress={() => setActiveTab('active')}
-            style={[
-              styles.tabBtn,
-              activeTab === 'active' && {
-                backgroundColor: theme.colors.brand.primary,
-              },
-            ]}
             activeOpacity={0.8}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setActiveTab('active');
+            }}
+            style={[
+              styles.tabItem,
+              activeTab === 'active' && [
+                styles.tabItemActive,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : '#FFFFFF',
+                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                },
+              ],
+            ]}
           >
             <Text
               style={[
-                styles.tabText,
+                styles.tabLabel,
                 {
-                  color: activeTab === 'active' ? '#FFFFFF' : theme.colors.text.secondary,
+                  color: activeTab === 'active' ? theme.colors.text.primary : theme.colors.text.secondary,
                   fontWeight: activeTab === 'active' ? '800' : '600',
                 },
               ]}
             >
-              {t('disputes.tabActive', 'Active Disputes')}
+              {t('disputes.tabActive', 'Active Complaints')}
             </Text>
+            {counts.active > 0 && (
+              <View
+                style={[
+                  styles.tabBadge,
+                  {
+                    backgroundColor:
+                      activeTab === 'active'
+                        ? theme.colors.brand.primary
+                        : theme.isDark
+                        ? 'rgba(255, 255, 255, 0.12)'
+                        : 'rgba(0, 0, 0, 0.08)',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabBadgeText,
+                    {
+                      color: activeTab === 'active' ? '#FFFFFF' : theme.colors.text.secondary,
+                    },
+                  ]}
+                >
+                  {counts.active}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
+          {/* History Tab */}
           <TouchableOpacity
-            onPress={() => setActiveTab('history')}
-            style={[
-              styles.tabBtn,
-              activeTab === 'history' && {
-                backgroundColor: theme.colors.brand.primary,
-              },
-            ]}
             activeOpacity={0.8}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setActiveTab('history');
+            }}
+            style={[
+              styles.tabItem,
+              activeTab === 'history' && [
+                styles.tabItemActive,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : '#FFFFFF',
+                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                },
+              ],
+            ]}
           >
             <Text
               style={[
-                styles.tabText,
+                styles.tabLabel,
                 {
-                  color: activeTab === 'history' ? '#FFFFFF' : theme.colors.text.secondary,
+                  color: activeTab === 'history' ? theme.colors.text.primary : theme.colors.text.secondary,
                   fontWeight: activeTab === 'history' ? '800' : '600',
                 },
               ]}
             >
-              {t('disputes.tabHistory', 'Case History (Closed)')}
+              {t('disputes.tabHistory', 'History (Closed)')}
             </Text>
+            {counts.history > 0 && (
+              <View
+                style={[
+                  styles.tabBadge,
+                  {
+                    backgroundColor:
+                      activeTab === 'history'
+                        ? theme.colors.brand.primary
+                        : theme.isDark
+                        ? 'rgba(255, 255, 255, 0.12)'
+                        : 'rgba(0, 0, 0, 0.08)',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabBadgeText,
+                    {
+                      color: activeTab === 'history' ? '#FFFFFF' : theme.colors.text.secondary,
+                    },
+                  ]}
+                >
+                  {counts.history}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
-        {/* Content */}
+        {/* ── Content View ── */}
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.brand.primary} />
@@ -430,52 +544,123 @@ export default function MyDisputesScreen() {
             </Text>
           </View>
         ) : disputes.length === 0 ? (
-          <Animated.View entering={FadeInDown.delay(100)}>
-            <GlassCard style={styles.emptyCard}>
+          /* ── Premium Empty State (Clean & Spacious, No Giant Clunky Outer Box) ── */
+          <Animated.View entering={FadeInDown.delay(80).duration(280)} style={styles.emptyContainer}>
+            {/* Layered glowing concentric rings */}
+            <View style={styles.emptyHeroRings}>
               <View
                 style={[
-                  styles.emptyIconCircle,
+                  styles.emptyOuterRing,
                   {
-                    backgroundColor: alpha(colors.primary, 0.12),
-                    borderColor: alpha(colors.primary, 0.35),
+                    backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.04)' : 'rgba(0, 168, 107, 0.04)',
+                    borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.14)' : 'rgba(0, 168, 107, 0.14)',
                   },
                 ]}
               >
-                <ShieldCheck size={36} color={colors.primary} />
+                <View
+                  style={[
+                    styles.emptyInnerRing,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.11)' : 'rgba(0, 168, 107, 0.10)',
+                      borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.28)' : 'rgba(0, 168, 107, 0.24)',
+                    },
+                  ]}
+                >
+                  <ShieldCheck size={34} color={colors.success || '#10B981'} strokeWidth={2.4} />
+                </View>
               </View>
+            </View>
 
-              <Text style={[styles.emptyTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                {activeTab === 'active'
-                  ? t('disputes.noActiveTitle', 'No Active Disputes')
-                  : t('disputes.noHistoryTitle', 'No Past Closed Cases')}
-              </Text>
+            <Text style={[styles.emptyHeadline, { color: theme.colors.text.primary }]}>
+              {activeTab === 'active'
+                ? t('disputes.noActiveTitle', 'No Active Disputes')
+                : t('disputes.noHistoryTitle', 'No Past Closed Cases')}
+            </Text>
 
-              <Text style={[styles.emptySubtitle, { color: theme.colors.text.secondary }]}>
-                {activeTab === 'active'
-                  ? t('disputes.noActiveSubtitle', 'Any issues reported on ongoing or completed jobs will appear here.')
-                  : t('disputes.noHistorySubtitle', 'Resolved and settled complaints will be preserved in your history.')}
-              </Text>
+            <Text style={[styles.emptyDescription, { color: theme.colors.text.secondary }]}>
+              {activeTab === 'active'
+                ? t('disputes.noActiveSubtitle', 'Any ongoing issues reported on jobs will appear here.')
+                : t('disputes.noHistorySubtitle', 'Resolved and settled complaints will be preserved in your history.')}
+            </Text>
 
-              <View style={styles.emptyActions}>
-                <CustomButton
-                  title={t('disputes.viewBookings', 'View My Bookings')}
-                  onPress={() => router.push('/(tabs)/bookings')}
-                  variant="primary"
-                  icon={<Briefcase size={16} color="#FFFFFF" />}
-                  style={{ width: '100%' }}
+            {/* Quick Assurance Strip */}
+            {activeTab === 'active' && (
+              <View
+                style={[
+                  styles.assuranceBox,
+                  {
+                    backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
+                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.05)',
+                  },
+                ]}
+              >
+                <View style={styles.assuranceItem}>
+                  <Scale size={16} color={theme.colors.brand.primary} strokeWidth={2.2} />
+                  <Text style={[styles.assuranceText, { color: theme.colors.text.secondary }]}>
+                    {t('disputes.arbitrationAssurance', 'Fair 3-way arbitration between Customer, Ustad & Mediator')}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.assuranceDivider,
+                    { backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)' },
+                  ]}
                 />
-
-                <CustomButton
-                  title={t('disputes.contactSupport', 'Need Help? Contact Support')}
-                  onPress={() => router.push('/profile/help-center')}
-                  variant="outline"
-                  icon={<HelpCircle size={16} color={theme.colors.brand.primary} />}
-                  style={{ width: '100%' }}
-                />
+                <View style={styles.assuranceItem}>
+                  <Banknote size={16} color="#10B981" strokeWidth={2.2} />
+                  <Text style={[styles.assuranceText, { color: theme.colors.text.secondary }]}>
+                    {t('disputes.paymentFreezeAssurance', 'Payments are safely protected until the issue is resolved')}
+                  </Text>
+                </View>
               </View>
-            </GlassCard>
+            )}
+
+            {/* Action Buttons */}
+            <View style={styles.emptyActionButtons}>
+              <TouchableOpacity
+                activeOpacity={0.82}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(tabs)/bookings');
+                }}
+                style={styles.primaryActionButton}
+              >
+                <LinearGradient
+                  colors={theme.isDark ? ['#00C6FF', '#0072FF'] : ['#0072FF', '#00C6FF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.primaryActionGradient}
+                >
+                  <Briefcase size={16} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.primaryActionText}>
+                    {t('disputes.viewBookings', 'View My Bookings')}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push('/profile/help-center');
+                }}
+                style={[
+                  styles.secondaryActionButton,
+                  {
+                    backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
+                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                  },
+                ]}
+              >
+                <HelpCircle size={16} color={theme.colors.text.secondary} strokeWidth={2.2} />
+                <Text style={[styles.secondaryActionText, { color: theme.colors.text.primary }]}>
+                  {t('disputes.contactSupport', 'Need Help? Contact Support')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         ) : (
+          /* ── Dispute Cards List ── */
           <View style={styles.listContainer}>
             {disputes.map((dispute, index) => renderDisputeCard(dispute, index))}
           </View>
@@ -491,77 +676,174 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.m,
-    paddingBottom: 40,
+    paddingBottom: 48,
   },
-  topInfoBar: {
+
+  /* Hero Trust Card */
+  heroTrustCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  trustPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
+    marginBottom: 16,
+    overflow: 'hidden',
+    gap: 12,
+  },
+  heroTrustIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  heroTrustContent: {
+    flex: 1,
+    gap: 3,
+  },
+  heroTrustTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  heroTrustTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    letterSpacing: 0.1,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  },
+  verifiedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#10B981',
+    letterSpacing: 0.2,
+  },
+  heroTrustDesc: {
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+
+  /* Segmented Tab Bar */
+  tabBar: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 4,
+    marginBottom: 18,
+  },
+  tabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
     gap: 6,
   },
-  trustPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    borderRadius: 14,
+  tabItemActive: {
     borderWidth: 1,
-    padding: 3,
-    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
+  tabLabel: {
+    fontSize: 13,
+    letterSpacing: 0.1,
   },
-  tabText: {
-    fontSize: 12.5,
+  tabBadge: {
+    paddingHorizontal: 6.5,
+    paddingVertical: 1.5,
+    borderRadius: 999,
   },
+  tabBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+
+  /* Loading State */
   loadingContainer: {
-    paddingVertical: 40,
+    paddingVertical: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
   },
   loadingText: {
     fontSize: 13,
   },
+
+  /* Cards List */
   listContainer: {
-    gap: 12,
+    gap: 14,
   },
-  card: {
-    padding: Spacing.m,
-    borderRadius: BorderRadius.l,
+  disputeCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 16,
     gap: 12,
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  cardTopRow: {
+  cardSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
   },
-  caseBadgeWrapper: {
+  cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flexShrink: 1,
+    gap: 10,
+    flex: 1,
   },
-  caseIdBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+  serviceIconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
+    flexShrink: 0,
+  },
+  serviceMeta: {
+    flex: 1,
+    gap: 2,
+  },
+  serviceTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.1,
+  },
+  caseIdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   caseIdText: {
     fontSize: 11,
@@ -569,173 +851,246 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     letterSpacing: 0.5,
   },
+  dotSeparator: {
+    fontSize: 10,
+  },
   caseDateText: {
     fontSize: 11,
-    flexShrink: 1,
   },
-  statusBadge: {
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 4.5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
     flexShrink: 0,
   },
-  statusText: {
+  statusPillText: {
     fontSize: 11,
-    fontWeight: '700',
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  serviceIconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  serviceTextCol: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  serviceTitle: {
-    fontSize: 14.5,
     fontWeight: '800',
     letterSpacing: 0.2,
   },
-  serviceSubText: {
-    fontSize: 11,
-    marginTop: 1,
-    textTransform: 'capitalize',
-  },
-  caseDetailsGrid: {
-    padding: 10,
-    borderRadius: 12,
+
+  /* Specs Container */
+  specsContainer: {
+    borderRadius: 14,
     borderWidth: 1,
-    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
   },
-  detailRow: {
+  specRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: 10,
   },
-  detailLabelCol: {
+  specLabelWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flexShrink: 0,
   },
-  detailLabel: {
-    fontSize: 11.5,
-    fontWeight: '600',
-  },
-  detailValue: {
+  specLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    flexShrink: 1,
-    textAlign: 'right',
-  },
-  detailAmountValue: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    flexShrink: 1,
-    textAlign: 'right',
-  },
-  closedVerdictBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  closedVerdictText: {
-    fontSize: 11,
-    flex: 1,
-    lineHeight: 15,
     fontWeight: '600',
   },
-  unreadAlertBanner: {
+  specValue: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  specAmountValue: {
+    fontSize: 13.5,
+    fontWeight: '900',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  specDivider: {
+    height: 1,
+    width: '100%',
+  },
+
+  /* Verdict Banner */
+  verdictBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  unreadAlertText: {
+  verdictTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  verdictTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.1,
+  },
+  verdictDesc: {
     fontSize: 11,
+    lineHeight: 15,
+  },
+
+  /* Unread Alert */
+  unreadBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  unreadBannerText: {
+    fontSize: 11.5,
     fontWeight: '700',
     flex: 1,
   },
-  actionButton: {
+
+  /* Action Card Button */
+  actionCardButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 14,
-    paddingVertical: 9.5,
-    borderRadius: 12,
+    paddingVertical: 11,
+    borderRadius: 14,
     borderWidth: 1,
-    marginTop: 2,
   },
-  actionBtnLeft: {
+  actionCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  actionBtnText: {
-    fontSize: 12.5,
+  actionCardLabel: {
+    fontSize: 13,
     fontWeight: '800',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
-  unreadCountBadge: {
-    backgroundColor: '#FF3B30',
+  unreadBadgePill: {
+    backgroundColor: '#EF4444',
     borderRadius: 999,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
-  unreadCountText: {
+  unreadBadgePillText: {
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '800',
   },
-  emptyCard: {
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.l,
+
+  /* Premium Empty State */
+  emptyContainer: {
     alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
-  emptyIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+  emptyHeroRings: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyOuterRing: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyTitle: {
-    fontSize: 18,
+  emptyInnerRing: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyHeadline: {
+    fontSize: 19,
     fontWeight: '800',
     textAlign: 'center',
+    letterSpacing: 0.2,
+    marginBottom: 8,
   },
-  emptySubtitle: {
+  emptyDescription: {
     fontSize: 13,
+    lineHeight: 19,
     textAlign: 'center',
-    lineHeight: 18,
+    maxWidth: 320,
+    marginBottom: 20,
   },
-  emptyActions: {
+  assuranceBox: {
+    width: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+    marginBottom: 22,
+  },
+  assuranceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  assuranceText: {
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 16,
+  },
+  assuranceDivider: {
+    height: 1,
+    width: '100%',
+  },
+  emptyActionButtons: {
     width: '100%',
     gap: 10,
-    marginTop: 8,
+  },
+  primaryActionButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#0072FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  primaryActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  secondaryActionButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 8,
+  },
+  secondaryActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
 });

@@ -165,7 +165,18 @@ export function IncomingJobModal({
     };
   }, []);
 
-  if (!jobs || jobs.length === 0) return null;
+  // Filter out any expired jobs before rendering so 00:00 stale cards never linger
+  const activeJobs = useMemo(() => {
+    return (jobs || []).filter(job => resolveSecondsRemaining(job) > 0);
+  }, [jobs]);
+
+  useEffect(() => {
+    if (visible && jobs && jobs.length > 0 && activeJobs.length === 0) {
+      onClose();
+    }
+  }, [visible, jobs, activeJobs.length, onClose]);
+
+  if (!visible || !activeJobs || activeJobs.length === 0) return null;
 
   const handleWalletPress = () => {
     onClose();
@@ -218,11 +229,11 @@ export function IncomingJobModal({
               contentContainerStyle={styles.jobPager}
               decelerationRate="fast"
             >
-              {jobs.map((job, index) => (
+              {activeJobs.map((job, index) => (
                 <View key={job._id} style={[styles.jobPage, { width: screenWidth }]}>
                   <JobDecisionCard
                     job={job}
-                    totalJobs={jobs.length}
+                    totalJobs={activeJobs.length}
                     currentIndex={index + 1}
                     isLoading={acceptingJobId === job._id}
                     onAccept={() => onAccept(job)}
@@ -240,11 +251,11 @@ export function IncomingJobModal({
               ))}
             </ScrollView>
 
-            {jobs.length > 1 && (
+            {activeJobs.length > 1 && (
               <View style={[styles.swipeHint, { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderColor: alpha(colors.cyan, 0.25) }]}>
                 <ChevronLeft size={13} color={colors.cyan} strokeWidth={2.5} />
                 <Text style={[styles.swipeHintText, { color: colors.cyan }]}>
-                  {t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: jobs.length })}
+                  {t('incomingJobModal.swipeHint', 'Swipe for {{count}} offers', { count: activeJobs.length })}
                 </Text>
                 <ChevronRight size={13} color={colors.cyan} strokeWidth={2.5} />
               </View>
@@ -416,12 +427,22 @@ function JobDecisionCard({
   };
 
   useEffect(() => {
-    setSecondsRemaining(resolveSecondsRemaining(job));
+    const initialRemaining = resolveSecondsRemaining(job);
+    setSecondsRemaining(initialRemaining);
+    if (initialRemaining <= 0) {
+      onReject();
+      return;
+    }
     const interval = setInterval(() => {
-      setSecondsRemaining(resolveSecondsRemaining(job));
+      const remaining = resolveSecondsRemaining(job);
+      setSecondsRemaining(remaining);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        onReject();
+      }
     }, 1000);
     return () => clearInterval(interval);
-  }, [job]);
+  }, [job, onReject]);
 
   const offerAmount = isOpenPricing ? 0 : Number(signal.amount || job.amount || job.budget || job.pricing?.clientOffer || job.hourlyRate || 0);
   const netEarning = Number(signal.estimatedNetEarning ?? (offerAmount > 0 ? Math.round(offerAmount * 0.9) : 0));
@@ -436,29 +457,28 @@ function JobDecisionCard({
 
   const timingText = isInstant
     ? t('incomingJobModal.immediateResponse', 'Immediate response requested')
-    : `${schedule.fullDateLabel || schedule.dateLabel || t('incomingJobModal.scheduledVisit', 'Scheduled visit')}${
-        schedule.timeLabel ? ` at ${schedule.timeLabel}` : ''
-      }`;
+    : `${schedule.fullDateLabel || schedule.dateLabel || t('incomingJobModal.scheduledVisit', 'Scheduled visit')}${schedule.timeLabel ? ` at ${schedule.timeLabel}` : ''
+    }`;
 
   const primaryAmountLabel = isOpenPricing
     ? t('incomingJobModal.pricingType', 'PRICING')
     : isInstant
-    ? t('incomingJobModal.netEarning', 'Net earning')
-    : t('incomingJobModal.clientBudget', 'Client budget');
+      ? t('incomingJobModal.netEarning', 'Net earning')
+      : t('incomingJobModal.clientBudget', 'Client budget');
 
   const primaryAmountText = isOpenPricing
     ? t('incomingJobModal.openForBids', 'Open for Bids')
     : isInstant
-    ? signal.estimatedNetEarningText || formatMoney(netEarning)
-    : signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'));
+      ? signal.estimatedNetEarningText || formatMoney(netEarning)
+      : signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'));
 
   const primaryAmountHint = isOpenPricing
     ? t('incomingJobModal.clientReviewsQuotes', 'Quote your rate below')
     : isInstant
-    ? commission > 0
-      ? t('incomingJobModal.commissionText', '{{amount}} commission', { amount: formatMoney(commission) })
-      : t('incomingJobModal.noCommission', 'No commission')
-    : t('incomingJobModal.submitQuoteHint', 'Submit your own quote');
+      ? commission > 0
+        ? t('incomingJobModal.commissionText', '{{amount}} commission', { amount: formatMoney(commission) })
+        : t('incomingJobModal.noCommission', 'No commission')
+      : t('incomingJobModal.submitQuoteHint', 'Submit your own quote');
 
   const dynamicMaxHeight = keyboardHeight > 0
     ? Math.max(260, screenHeight - keyboardHeight - 50)
@@ -817,11 +837,11 @@ function JobDecisionCard({
               isOpenPricing
                 ? onReject
                 : showCounterInput
-                ? () => {
+                  ? () => {
                     setShowCounterInput(false);
                     setCounterPrice('');
                   }
-                : onReject
+                  : onReject
             }
             disabled={isLoading || submittingCounter}
             activeOpacity={0.7}
@@ -937,9 +957,9 @@ function JobDecisionCard({
                       {t('incomingJobModal.sendMyRateBtn', 'Send Rate: Rs. {{amount}}', {
                         amount: Number(
                           counterPrice ||
-                            (isOpenPricing
-                              ? (activeCounterPrice ?? 500)
-                              : (activeCounterPrice ?? offerAmount) + 200)
+                          (isOpenPricing
+                            ? (activeCounterPrice ?? 500)
+                            : (activeCounterPrice ?? offerAmount) + 200)
                         ).toLocaleString(),
                       })}
                     </Text>
