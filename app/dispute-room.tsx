@@ -39,6 +39,9 @@ import {
   User,
   Wrench,
   Sparkles,
+  Ban,
+  RefreshCw,
+  Check,
 } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeInUp, FadeInRight, FadeInLeft } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -51,11 +54,13 @@ import { BeautifulModal } from '../components/ui/BeautifulModal';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import { socketService } from '../services/socketService';
+import api from '../services/api';
 import {
   useDisputeDetail,
   useDisputeMessages,
   useSendDisputeMessage,
   useWithdrawDispute,
+  useCancelJobFromDispute,
   uploadDisputeEvidence,
   markDisputeReadRequest,
   type DisputeMessage,
@@ -85,6 +90,13 @@ export default function DisputeRoomScreen() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawNote, setWithdrawNote] = useState('');
+  const [showCancelJobModal, setShowCancelJobModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenBudget, setReopenBudget] = useState('');
+  const [useCustomBudget, setUseCustomBudget] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
+  const [targetJobPostId, setTargetJobPostId] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<DisputeMessage[]>([]);
 
   const flatListRef = useRef<FlatList<any>>(null);
@@ -101,6 +113,7 @@ export default function DisputeRoomScreen() {
 
   const { mutate: sendMessage, isPending: isSending } = useSendDisputeMessage(disputeId);
   const { mutate: withdraw, isPending: isWithdrawing } = useWithdrawDispute(disputeId);
+  const { mutate: cancelJob, isPending: isCancellingJob } = useCancelJobFromDispute(disputeId);
 
   // Combine paginated server messages with local optimistic messages
   const serverMessages = useMemo(() => {
@@ -279,6 +292,89 @@ export default function DisputeRoomScreen() {
 
   const booking = typeof dispute?.booking === 'object' ? dispute.booking : null;
 
+  const linkedJobPostId = useMemo(() => {
+    if (!dispute) return null;
+    const b = typeof dispute.booking === 'object' ? (dispute.booking as any) : null;
+    if (!b) return null;
+    if (b.jobPost) {
+      return typeof b.jobPost === 'object' ? String(b.jobPost._id) : String(b.jobPost);
+    }
+    return null;
+  }, [dispute]);
+
+  const handleConfirmCancelJob = () => {
+    const reason = cancelReason.trim() || 'Disagreement between parties during dispute';
+    cancelJob(reason, {
+      onSuccess: (data: any) => {
+        setShowCancelJobModal(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+        const extractedJobId =
+          data?.data?.jobPostId ||
+          linkedJobPostId;
+
+        const isCustomerUser = role === 'client' || dispute?.myRole === 'customer';
+
+        if (isCustomerUser && extractedJobId) {
+          setTargetJobPostId(extractedJobId);
+          setReopenBudget(String(dispute?.amountDisputed || ''));
+          setUseCustomBudget(false);
+          setShowReopenModal(true);
+        } else {
+          Alert.alert(
+            t('disputes.jobCancelledTitle', 'Job Cancelled'),
+            isCustomerUser
+              ? t('disputes.jobCancelledCustMsg', 'The job has been cancelled and dispute closed.')
+              : t('disputes.jobCancelledWorkerMsg', 'The job has been cancelled. Any commission hold has been released back to your wallet.'),
+            [
+              {
+                text: t('common.ok', 'OK'),
+                onPress: () => router.replace('/(tabs)'),
+              },
+            ]
+          );
+        }
+      },
+      onError: (err: any) => {
+        Alert.alert(
+          t('common.error', 'Error'),
+          err?.response?.data?.message || t('disputes.cancelJobFailed', 'Failed to cancel job.')
+        );
+      },
+    });
+  };
+
+  const handleReopenJob = async () => {
+    if (!targetJobPostId) return;
+    try {
+      setIsReopening(true);
+      const budgetNum = Number(reopenBudget);
+      const payload: Record<string, any> = {};
+      if (useCustomBudget && budgetNum > 0) {
+        payload.budget = budgetNum;
+      }
+
+      await api.post(`/jobs/${targetJobPostId}/reopen`, payload);
+      setShowReopenModal(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+
+      router.replace({
+        pathname: '/finding-worker',
+        params: { jobId: targetJobPostId },
+      });
+    } catch (err: any) {
+      Alert.alert(
+        t('common.error', 'Error'),
+        err?.response?.data?.message || t('disputes.reopenFailed', 'Failed to reopen job request.')
+      );
+    } finally {
+      setIsReopening(false);
+    }
+  };
+
   // Render Case Summary Card (part of the scrollable chat feed)
   const renderCaseSummaryCard = () => {
     if (!dispute) return null;
@@ -408,25 +504,76 @@ export default function DisputeRoomScreen() {
                 </View>
               )}
 
-              {/* Reporter Settle / Withdraw Action */}
-              {dispute.canWithdraw && (
-                <TouchableOpacity
-                  onPress={() => setShowWithdrawModal(true)}
-                  style={[
-                    styles.withdrawBtn,
-                    {
-                      backgroundColor: alpha(colors.success, 0.1),
-                      borderColor: alpha(colors.success, 0.3),
-                    },
-                  ]}
-                  activeOpacity={0.75}
-                >
-                  <Sparkles size={14} color={colors.success} />
-                  <Text style={[styles.withdrawBtnText, { color: colors.success }]}>
-                    {t('disputes.settleQuestion', 'Problem sorted out? Withdraw complaint')}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              {/* Action Buttons */}
+              <View style={styles.summaryActionsWrap}>
+                {/* Reporter Settle / Withdraw Action */}
+                {dispute.canWithdraw && (
+                  <TouchableOpacity
+                    onPress={() => setShowWithdrawModal(true)}
+                    style={[
+                      styles.withdrawBtn,
+                      {
+                        backgroundColor: alpha(colors.success, 0.1),
+                        borderColor: alpha(colors.success, 0.3),
+                      },
+                    ]}
+                    activeOpacity={0.75}
+                  >
+                    <Sparkles size={14} color={colors.success} />
+                    <Text style={[styles.withdrawBtnText, { color: colors.success }]}>
+                      {t('disputes.settleQuestion', 'Problem sorted out? Withdraw complaint')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Cancel Job Action for both customer and worker if not closed */}
+                {!isClosed && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCancelReason('');
+                      setShowCancelJobModal(true);
+                    }}
+                    style={[
+                      styles.cancelJobSummaryBtn,
+                      {
+                        backgroundColor: alpha(theme.colors.status.error, 0.08),
+                        borderColor: alpha(theme.colors.status.error, 0.3),
+                      },
+                    ]}
+                    activeOpacity={0.75}
+                  >
+                    <Ban size={14} color={theme.colors.status.error} />
+                    <Text style={[styles.cancelJobSummaryBtnText, { color: theme.colors.status.error }]}>
+                      {t('disputes.cancelJobBtn', 'Cannot agree? Cancel Job & End Request')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Reopen Job on Live Radar (If case closed, user is customer, and linked job post exists) */}
+                {isClosed && (role === 'client' || dispute.myRole === 'customer') && linkedJobPostId && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTargetJobPostId(linkedJobPostId);
+                      setReopenBudget(String(dispute.amountDisputed || ''));
+                      setUseCustomBudget(false);
+                      setShowReopenModal(true);
+                    }}
+                    style={[
+                      styles.reopenRadarSummaryBtn,
+                      {
+                        backgroundColor: alpha(theme.colors.brand.primary, 0.12),
+                        borderColor: alpha(theme.colors.brand.primary, 0.35),
+                      },
+                    ]}
+                    activeOpacity={0.75}
+                  >
+                    <RefreshCw size={14} color={theme.colors.brand.primary} />
+                    <Text style={[styles.reopenRadarSummaryBtnText, { color: theme.colors.brand.primary }]}>
+                      {t('disputes.reopenRadarBtn', 'Find another Ustad on Live Radar')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           )}
         </GlassCard>
@@ -842,6 +989,28 @@ export default function DisputeRoomScreen() {
                   t('disputes.historySavedHint', 'A final decision was recorded. This chat is preserved for your records.')}
               </Text>
             </View>
+            {(role === 'client' || dispute?.myRole === 'customer') && linkedJobPostId && (
+              <TouchableOpacity
+                onPress={() => {
+                  setTargetJobPostId(linkedJobPostId);
+                  setReopenBudget(String(dispute?.amountDisputed || ''));
+                  setUseCustomBudget(false);
+                  setShowReopenModal(true);
+                }}
+                style={[
+                  styles.reopenPillBtn,
+                  {
+                    backgroundColor: theme.colors.brand.primary,
+                  },
+                ]}
+                activeOpacity={0.8}
+              >
+                <RefreshCw size={12} color="#FFFFFF" />
+                <Text style={styles.reopenPillText}>
+                  {t('disputes.reopenShort', 'Reopen')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <KeyboardAvoidingView
@@ -1057,6 +1226,231 @@ export default function DisputeRoomScreen() {
               </TouchableOpacity>
             </View>
           </View>
+        </BeautifulModal>
+
+        {/* Cancel Job Confirmation Modal */}
+        <BeautifulModal
+          visible={showCancelJobModal}
+          onClose={() => setShowCancelJobModal(false)}
+          title={t('disputes.cancelJobModalTitle', 'Cancel Job Request')}
+          icon={<Ban size={22} color={theme.colors.status.error} />}
+          height={390}
+        >
+          <View style={styles.withdrawModalContent}>
+            <Text style={[styles.withdrawModalDesc, { color: theme.colors.text.secondary }]}>
+              {role === 'worker' || dispute?.myRole === 'worker'
+                ? t(
+                    'disputes.workerCancelBody',
+                    'Are you sure you want to cancel this job? This will end the booking and your commission hold will be refunded back to your wallet immediately.'
+                  )
+                : t(
+                    'disputes.customerCancelBody',
+                    'Are you sure you want to cancel this job? This will end the booking with this Ustad. You will be able to reopen your job post on the Live Radar to find another Ustad.'
+                  )}
+            </Text>
+
+            <Text style={[styles.withdrawNoteLabel, { color: theme.colors.text.dim }]}>
+              {t('disputes.cancelReasonLabel', 'Reason for Cancellation (Optional)')}
+            </Text>
+            <TextInput
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              placeholder={t('disputes.cancelReasonPlaceholder', 'e.g. Could not agree on price or work scope')}
+              placeholderTextColor={theme.colors.text.dim}
+              multiline
+              numberOfLines={2}
+              style={[
+                styles.withdrawInput,
+                {
+                  color: theme.colors.text.primary,
+                  backgroundColor: theme.colors.input.background,
+                  borderColor: theme.colors.border.subtle,
+                  minHeight: 65,
+                },
+              ]}
+            />
+
+            <View style={styles.withdrawActionRow}>
+              <TouchableOpacity
+                onPress={() => setShowCancelJobModal(false)}
+                style={[styles.withdrawCancelBtn, { borderColor: theme.colors.border.subtle }]}
+              >
+                <Text style={{ color: theme.colors.text.secondary, fontWeight: '700' }}>
+                  {t('common.keepJob', 'Keep Job')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleConfirmCancelJob}
+                disabled={isCancellingJob}
+                style={[styles.withdrawConfirmBtn, { backgroundColor: theme.colors.status.error }]}
+              >
+                {isCancellingJob ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>
+                    {t('disputes.confirmCancelBtn', 'Cancel Job')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </BeautifulModal>
+
+        {/* Reopen Job Request Modal (For Customer) */}
+        <BeautifulModal
+          visible={showReopenModal}
+          onClose={() => {
+            setShowReopenModal(false);
+            router.replace('/(tabs)');
+          }}
+          title={t('disputes.reopenModalTitle', 'Find Another Ustad?')}
+          icon={<RefreshCw size={22} color={theme.colors.brand.primary} />}
+          height={490}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.withdrawModalContent}
+          >
+            <Text style={[styles.withdrawModalDesc, { color: theme.colors.text.secondary }]}>
+              {t(
+                'disputes.reopenDesc',
+                'Your booking has been cancelled. Would you like to post this job back to the Live Radar so nearby Ustads can bid on it?'
+              )}
+            </Text>
+
+            <Text style={[styles.withdrawNoteLabel, { color: theme.colors.text.dim, marginTop: 4 }]}>
+              {t('disputes.budgetOptionLabel', 'Select Your Budget:')}
+            </Text>
+
+            {/* Option A: Keep current budget */}
+            <TouchableOpacity
+              onPress={() => setUseCustomBudget(false)}
+              activeOpacity={0.8}
+              style={[
+                styles.budgetChoiceCard,
+                {
+                  borderColor: !useCustomBudget ? theme.colors.brand.primary : theme.colors.border.subtle,
+                  backgroundColor: !useCustomBudget
+                    ? alpha(theme.colors.brand.primary, 0.1)
+                    : alpha(theme.colors.surface.card, 0.6),
+                },
+              ]}
+            >
+              <View style={styles.budgetChoiceRow}>
+                <View
+                  style={[
+                    styles.radioCircle,
+                    {
+                      borderColor: !useCustomBudget ? theme.colors.brand.primary : theme.colors.text.dim,
+                    },
+                  ]}
+                >
+                  {!useCustomBudget && (
+                    <View style={[styles.radioDot, { backgroundColor: theme.colors.brand.primary }]} />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.budgetChoiceTitle,
+                      { color: !useCustomBudget ? theme.colors.brand.primary : theme.colors.text.primary },
+                    ]}
+                  >
+                    {t('disputes.keepCurrentBudget', 'Keep Current Budget')}
+                  </Text>
+                  <Text style={[styles.budgetChoiceSub, { color: theme.colors.text.muted }]}>
+                    {formatPKR(Number(reopenBudget) || dispute?.amountDisputed || 0)}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {/* Option B: Update budget */}
+            <TouchableOpacity
+              onPress={() => setUseCustomBudget(true)}
+              activeOpacity={0.8}
+              style={[
+                styles.budgetChoiceCard,
+                {
+                  borderColor: useCustomBudget ? theme.colors.brand.primary : theme.colors.border.subtle,
+                  backgroundColor: useCustomBudget
+                    ? alpha(theme.colors.brand.primary, 0.1)
+                    : alpha(theme.colors.surface.card, 0.6),
+                },
+              ]}
+            >
+              <View style={styles.budgetChoiceRow}>
+                <View
+                  style={[
+                    styles.radioCircle,
+                    {
+                      borderColor: useCustomBudget ? theme.colors.brand.primary : theme.colors.text.dim,
+                    },
+                  ]}
+                >
+                  {useCustomBudget && (
+                    <View style={[styles.radioDot, { backgroundColor: theme.colors.brand.primary }]} />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.budgetChoiceTitle,
+                      { color: useCustomBudget ? theme.colors.brand.primary : theme.colors.text.primary },
+                    ]}
+                  >
+                    {t('disputes.updateBudgetOption', 'Update Budget with New Price')}
+                  </Text>
+                  <Text style={[styles.budgetChoiceSub, { color: theme.colors.text.muted }]}>
+                    {t('disputes.updateBudgetSub', 'Set a custom amount to attract Ustads faster')}
+                  </Text>
+                </View>
+              </View>
+
+              {useCustomBudget && (
+                <View style={styles.customBudgetInputWrap}>
+                  <Text style={[styles.currencyPrefix, { color: theme.colors.brand.primary }]}>PKR</Text>
+                  <TextInput
+                    value={reopenBudget}
+                    onChangeText={setReopenBudget}
+                    placeholder="Enter amount (e.g. 1500)"
+                    placeholderTextColor={theme.colors.text.dim}
+                    keyboardType="numeric"
+                    style={[styles.customBudgetInput, { color: theme.colors.text.primary }]}
+                  />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={[styles.withdrawActionRow, { marginTop: 10 }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowReopenModal(false);
+                  router.replace('/(tabs)');
+                }}
+                style={[styles.withdrawCancelBtn, { borderColor: theme.colors.border.subtle }]}
+              >
+                <Text style={{ color: theme.colors.text.secondary, fontWeight: '700' }}>
+                  {t('disputes.noCloseBtn', 'No, Close Request')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleReopenJob}
+                disabled={isReopening}
+                style={[styles.withdrawConfirmBtn, { backgroundColor: theme.colors.brand.primary }]}
+              >
+                {isReopening ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>
+                    {t('disputes.reopenRadarAction', 'Post to Radar')}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </BeautifulModal>
       </SafeAreaView>
     </BackgroundWrapper>
@@ -1554,5 +1948,102 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  summaryActionsWrap: {
+    gap: 8,
+    marginTop: 4,
+  },
+  cancelJobSummaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  cancelJobSummaryBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  reopenRadarSummaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  reopenRadarSummaryBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  reopenPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  reopenPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  budgetChoiceCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 8,
+  },
+  budgetChoiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  budgetChoiceTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  budgetChoiceSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  customBudgetInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    height: 40,
+    marginTop: 4,
+  },
+  currencyPrefix: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginRight: 6,
+  },
+  customBudgetInput: {
+    flex: 1,
+    fontSize: 13,
+    padding: 0,
   },
 });
