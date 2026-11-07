@@ -162,11 +162,11 @@ function DetailTile({
   const theme = useTheme();
   const tileColor = color || theme.legacy.cyan;
   return (
-    <View style={[styles.detailTile, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-      <View style={[styles.detailTileIcon, { backgroundColor: `${tileColor}12` }]}>
-        <Icon size={14} color={tileColor} strokeWidth={2.4} />
+    <View style={[styles.detailTile, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]}>
+      <View style={[styles.detailTileIcon, { backgroundColor: `${tileColor}18`, borderWidth: 1, borderColor: `${tileColor}35` }]}>
+        <Icon size={15} color={tileColor} strokeWidth={2.4} />
       </View>
-      <Text style={[styles.detailTileLabel, { color: theme.colors.text.muted }]}>{label}</Text>
+      <Text style={[styles.detailTileLabel, { color: theme.colors.text.secondary }]}>{label}</Text>
       <Text style={[styles.detailTileValue, { color: theme.colors.text.primary }]} numberOfLines={1}>{value}</Text>
     </View>
   );
@@ -364,11 +364,20 @@ export default function JobDetailsScreen() {
   const detailMeta = job.detailMeta;
   const baseStatus = STATUS_CONFIG[job.status] || STATUS_CONFIG.open;
   const trans = getStatusInfo(job.status);
+  const statusColorMap: Record<string, string> = {
+    cyan: colors.cyan,
+    worker: colors.worker,
+    success: colors.green,
+    textMuted: theme.colors.text.muted,
+    error: colors.error,
+  };
+  const resolvedAccent = detailMeta?.statusInfo?.accentColor || baseStatus.color;
+  const resolvedStatusColor = statusColorMap[resolvedAccent] || (resolvedAccent.startsWith('#') ? resolvedAccent : colors.cyan);
   const status = {
     ...baseStatus,
     label: detailMeta?.statusInfo?.label || trans.label,
     description: trans.description,
-    color: detailMeta?.statusInfo?.accentColor || baseStatus.color,
+    color: resolvedStatusColor,
   };
   const StatusIcon = status.Icon;
   const isInstant = (detailMeta?.missionKind || job.urgency) === 'instant';
@@ -451,16 +460,16 @@ export default function JobDetailsScreen() {
           styles.header, 
           { 
             paddingTop: insets.top + 8,
-            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : theme.colors.background.screen,
-            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.88)' : theme.colors.background.screen,
+            borderBottomColor: theme.colors.border.default,
           }
         ]}>
           <TouchableOpacity 
             style={[
               styles.headerButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
-                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               }
             ]} 
             onPress={() => router.back()} 
@@ -470,7 +479,7 @@ export default function JobDetailsScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCopy}>
-            <Text style={[styles.headerEyebrow, { color: theme.colors.text.muted }]}>{t('jobDetails.defaultTitle')}</Text>
+            <Text style={[styles.headerEyebrow, { color: theme.colors.text.secondary }]}>{t('jobDetails.defaultTitle')}</Text>
             <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>{t('jobDetails.title')}</Text>
           </View>
 
@@ -478,8 +487,8 @@ export default function JobDetailsScreen() {
             style={[
               styles.headerButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(theme.colors.text.primary, 0.03),
-                borderColor: theme.isDark ? P.border : theme.colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               }
             ]} 
             onPress={shareRequest} 
@@ -499,11 +508,16 @@ export default function JobDetailsScreen() {
               intensity={50}
               hasGlow
               glowColor={status.color}
+              borderColor={theme.isDark ? alpha(status.color, 0.45) : theme.colors.border.default}
               style={styles.heroCard}
               contentStyle={styles.heroContent}
             >
               <LinearGradient
-                colors={[`${status.color}26`, 'rgba(8,10,30,0.96)', 'rgba(0,245,255,0.08)']}
+                colors={
+                  theme.isDark
+                    ? [alpha(status.color, 0.16), 'rgba(8,10,30,0.92)', alpha(colors.cyan, 0.08)]
+                    : [alpha(status.color, 0.12), '#FFFFFF', alpha(colors.cyan, 0.06)]
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
@@ -511,18 +525,18 @@ export default function JobDetailsScreen() {
               <View style={[styles.heroAccent, { backgroundColor: status.color }]} />
 
               <View style={styles.heroTopRow}>
-                <View style={[styles.statusBadge, { backgroundColor: `${status.color}14`, borderColor: `${status.color}40` }]}>
-                  <StatusIcon size={12} color={status.color} strokeWidth={2.5} />
+                <View style={[styles.statusBadge, { backgroundColor: alpha(status.color, 0.14), borderColor: alpha(status.color, 0.45) }]}>
+                  <StatusIcon size={13} color={status.color} strokeWidth={2.5} />
                   <Text style={[styles.statusBadgeText, { color: status.color }]}>{status.label}</Text>
                 </View>
-                <View style={styles.amountBadge}>
-                  <Banknote size={13} color={colors.green} strokeWidth={2.4} />
+                <View style={[styles.amountBadge, { backgroundColor: alpha(colors.green, 0.14), borderColor: alpha(colors.green, 0.45) }]}>
+                  <Banknote size={14} color={colors.green} strokeWidth={2.4} />
                   <Text style={[styles.amountBadgeText, { color: colors.green }]}>{amountText}</Text>
                 </View>
               </View>
 
               <View style={styles.heroTitleRow}>
-                <View style={[styles.heroIcon, { backgroundColor: isInstant ? `${colors.worker}18` : `${colors.cyan}18` }]}>
+                <View style={[styles.heroIcon, { backgroundColor: isInstant ? alpha(colors.worker, 0.16) : alpha(colors.cyan, 0.16), borderColor: isInstant ? alpha(colors.worker, 0.4) : alpha(colors.cyan, 0.4) }]}>
                   <MissionIcon size={24} color={isInstant ? colors.worker : colors.cyan} strokeWidth={2.3} />
                 </View>
                 <View style={styles.heroTitleCopy}>
@@ -532,9 +546,9 @@ export default function JobDetailsScreen() {
                 </View>
               </View>
 
-              <View style={[styles.stateMessage, { borderTopColor: theme.colors.border.subtle }]}>
+              <View style={[styles.stateMessage, { borderTopColor: theme.colors.border.default }]}>
                 <View style={[styles.stateDot, { backgroundColor: status.color }]} />
-                <Text style={[styles.stateMessageText, { color: theme.colors.text.muted }]}>{status.description}</Text>
+                <Text style={[styles.stateMessageText, { color: theme.colors.text.secondary }]}>{status.description}</Text>
               </View>
             </GlassCard>
           </Animated.View>
@@ -547,24 +561,24 @@ export default function JobDetailsScreen() {
               <DetailTile icon={Clock3} label={t('transactionDetails.time')} value={timeLabel} color={colors.worker} />
             </View>
 
-            <GlassCard padding={14} intensity={35} borderColor={theme.colors.border.subtle} style={styles.locationCard}>
+            <GlassCard padding={15} intensity={35} borderColor={theme.colors.border.default} style={styles.locationCard}>
               <View style={{ gap: 12 }}>
                 <View style={styles.locationRow}>
-                  <View style={[styles.locationIcon, { backgroundColor: `${colors.green}18` }]}>
+                  <View style={[styles.locationIcon, { backgroundColor: alpha(colors.green, 0.15) }]}>
                     <MapPin size={18} color={colors.green} strokeWidth={2.5} />
                   </View>
                   <View style={styles.locationCopy}>
-                    <Text style={[styles.locationLabel, { color: theme.colors.text.muted }]}>{t('transactionDetails.serviceLocation')}</Text>
+                    <Text style={[styles.locationLabel, { color: theme.colors.text.secondary }]}>{t('transactionDetails.serviceLocation')}</Text>
                     <Text style={[styles.locationValue, { color: theme.colors.text.primary }]}>{locationLabel}</Text>
                   </View>
                 </View>
                 {!!workerLoc && (
                   <View style={styles.locationRow}>
-                    <View style={[styles.locationIcon, { backgroundColor: `${colors.cyan}18` }]}>
+                    <View style={[styles.locationIcon, { backgroundColor: alpha(colors.cyan, 0.15) }]}>
                       <MapPin size={18} color={colors.cyan} strokeWidth={2.5} />
                     </View>
                     <View style={styles.locationCopy}>
-                      <Text style={[styles.locationLabel, { color: theme.colors.text.muted }]}>{t('jobDetails.workerLocationLabel')}</Text>
+                      <Text style={[styles.locationLabel, { color: theme.colors.text.secondary }]}>{t('jobDetails.workerLocationLabel')}</Text>
                       <Text style={[styles.locationValue, { color: theme.colors.text.primary }]}>{workerLoc}</Text>
                     </View>
                   </View>
@@ -839,7 +853,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: P.border,
     backgroundColor: 'rgba(255,255,255,0.055)',
   },
@@ -848,14 +862,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerEyebrow: {
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '900',
-    marginTop: 3,
+    marginTop: 2,
   },
   scrollContent: {
     paddingHorizontal: Spacing.m,
@@ -866,7 +880,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.l,
   },
   heroContent: {
-    padding: 16,
+    padding: 18,
     overflow: 'hidden',
   },
   heroAccent: {
@@ -874,9 +888,9 @@ const styles = StyleSheet.create({
     top: 16,
     bottom: 16,
     left: 0,
-    width: 3,
-    borderTopRightRadius: 3,
-    borderBottomRightRadius: 3,
+    width: 4,
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -890,14 +904,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     maxWidth: '60%',
-    paddingHorizontal: 9,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   statusBadgeText: {
     flexShrink: 1,
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -905,15 +919,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 9,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(0,255,127,0.26)',
     backgroundColor: P.greenMuted,
   },
   amountBadgeText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '900',
   },
   heroTitleRow: {
@@ -924,10 +938,10 @@ const styles = StyleSheet.create({
   heroIcon: {
     width: 54,
     height: 54,
-    borderRadius: 19,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.09)',
   },
   heroTitleCopy: {
@@ -936,8 +950,8 @@ const styles = StyleSheet.create({
   },
   heroLabel: {
     color: Colors.primary,
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 11.5,
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   heroTitle: {
@@ -948,8 +962,8 @@ const styles = StyleSheet.create({
   },
   heroDescription: {
     color: P.textMuted,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14.5,
+    lineHeight: 20,
     fontWeight: '600',
     marginTop: 6,
   },
@@ -957,20 +971,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderTopWidth: 1,
+    borderTopWidth: 1.2,
     borderTopColor: 'rgba(255,255,255,0.08)',
     marginTop: 16,
     paddingTop: 13,
   },
   stateDot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: 4,
   },
   stateMessageText: {
     flex: 1,
     color: P.textMuted,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   section: {
@@ -979,64 +993,64 @@ const styles = StyleSheet.create({
   sectionHeading: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    marginBottom: 11,
+    gap: 10,
+    marginBottom: 12,
   },
   sectionIcon: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   sectionHeadingCopy: {
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   sectionSubtitle: {
     color: P.textDim,
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '600',
-    lineHeight: 15,
+    lineHeight: 17,
     marginTop: 2,
   },
   detailGrid: {
     flexDirection: 'row',
-    gap: 7,
-    marginBottom: 9,
+    gap: 8,
+    marginBottom: 10,
   },
   detailTile: {
     flex: 1,
     minWidth: 0,
-    minHeight: 81,
+    minHeight: 86,
     borderRadius: BorderRadius.l,
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: P.border,
     backgroundColor: 'rgba(8,10,30,0.72)',
-    padding: 9,
+    padding: 11,
   },
   detailTileIcon: {
-    width: 27,
-    height: 27,
-    borderRadius: 9,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 7,
+    marginBottom: 8,
   },
   detailTileLabel: {
     color: P.textDim,
-    fontSize: 8,
-    fontWeight: '900',
+    fontSize: 10,
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   detailTileValue: {
     color: Colors.text,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     marginTop: 3,
   },
@@ -1049,8 +1063,8 @@ const styles = StyleSheet.create({
     gap: 11,
   },
   locationIcon: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1061,16 +1075,16 @@ const styles = StyleSheet.create({
   },
   locationLabel: {
     color: P.textDim,
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 10.5,
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   locationValue: {
     color: Colors.text,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14.5,
+    lineHeight: 20,
     fontWeight: '800',
-    marginTop: 4,
+    marginTop: 3,
   },
   mediaRail: {
     gap: 10,

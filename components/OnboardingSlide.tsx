@@ -65,21 +65,21 @@ export const OnboardingSlide: React.FC<OnboardingSlideProps> = ({ item, index, s
       </View>
 
       <Animated.View style={[styles.content, animatedCardStyle]}>
-<GlassCard
-           intensity={28}
-           padding={Spacing.l}
-           style={[styles.infoCard, { borderColor: theme.colors.border.subtle }]}
-           gradient={[alpha(item.accent, 0.1), alpha(theme.colors.brand.secondary, 0.04)]}
-         >
-          <View style={[styles.eyebrow, { borderColor: alpha(item.accent, 0.4) }]}>
+        <GlassCard
+          intensity={28}
+          padding={Spacing.l}
+          style={[styles.infoCard, { borderColor: theme.colors.border.default }]}
+          gradient={[alpha(item.accent, 0.1), alpha(theme.colors.brand.secondary, 0.04)]}
+        >
+          <View style={[styles.eyebrow, { borderColor: alpha(item.accent, 0.45), backgroundColor: alpha(item.accent, 0.08) }]}>
             <Sparkles size={13} color={item.accent} />
             <Text style={[styles.eyebrowText, { color: item.accent }]}>{item.eyebrow}</Text>
           </View>
           <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{item.title}</Text>
-          <Text style={[styles.description, { color: theme.colors.text.muted }]}>{item.description}</Text>
+          <Text style={[styles.description, { color: theme.colors.text.secondary }]}>{item.description}</Text>
           <View style={styles.benefitRow}>
-            <CheckCircle2 size={16} color={item.accent} strokeWidth={2.5} />
-            <Text style={[styles.benefit, { color: theme.colors.text.secondary }]}>{item.benefit}</Text>
+            <CheckCircle2 size={17} color={item.accent} strokeWidth={2.5} />
+            <Text style={[styles.benefit, { color: theme.colors.text.primary }]}>{item.benefit}</Text>
           </View>
         </GlassCard>
       </Animated.View>
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     borderRadius: BorderRadius.xxl,
-    borderColor: alpha('#FFFFFF', 0.14),
+    borderWidth: 1.8,
   },
   eyebrow: {
     alignSelf: 'flex-start',
@@ -136,11 +136,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginBottom: 14,
   },
   eyebrowText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 1.1,
     textTransform: 'uppercase',
@@ -153,8 +153,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   description: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 14.5,
+    fontWeight: '600',
     lineHeight: 21,
   },
   benefitRow: {
@@ -164,9 +164,9 @@ const styles = StyleSheet.create({
   },
   benefit: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
-    lineHeight: 17,
+    lineHeight: 18,
     marginLeft: 8,
   },
 });

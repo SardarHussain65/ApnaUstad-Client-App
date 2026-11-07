@@ -76,7 +76,7 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
     >
       <View style={[styles.cardGlow, { shadowColor: themeColor }]} />
 
-      <View style={[styles.workerCard, { borderColor: theme.colors.border.subtle }]}>
+      <View style={[styles.workerCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]}>
         <LinearGradient
           colors={[alpha(themeColor, 0.15), 'transparent']}
           start={{ x: 0, y: 0 }}
@@ -154,7 +154,7 @@ const WorkerCard = React.memo(({ worker, index, onHire, onViewDetails }: WorkerC
             </View>
           </View>
 
-          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
             <View style={styles.statItem}>
               <Star size={12} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{(worker.rating ?? 0) > 0 ? worker.rating!.toFixed(1) : '—'}</Text>
@@ -301,7 +301,7 @@ export default function FavoritesScreen() {
             ))
           ) : (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyState}>
-              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
                 <Heart size={48} color={theme.colors.text.muted} strokeWidth={1.5} />
               </View>
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('profile.noFavorites')}</Text>
@@ -309,7 +309,7 @@ export default function FavoritesScreen() {
                 {t('profile.noFavoritesDesc')}
               </Text>
               <TouchableOpacity style={[styles.exploreBtn, { backgroundColor: theme.colors.brand.primary }]} onPress={() => router.replace('/(tabs)')}>
-                <Text style={[styles.exploreBtnText, { color: theme.colors.text.inverse }]}>{t('common.getStarted')}</Text>
+                <Text style={[styles.exploreBtnText, { color: theme.colors.button.primaryText }]}>{t('common.getStarted')}</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   iconBtnPlaceholder: {
     width: 42,
@@ -365,13 +365,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
   headerSub: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     marginTop: 2,
     letterSpacing: 0.5,
   },
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   workerCard: {
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 1.8,
     overflow: 'hidden',
     flexDirection: 'row',
   },
@@ -455,8 +455,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   workerName: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16.5,
+    fontWeight: '900',
     letterSpacing: 0.3,
     flexShrink: 1,
   },
@@ -469,13 +469,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 7,
   },
   metaChipText: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '800',
     letterSpacing: 0.3,
   },
   starsRow: {
@@ -484,14 +484,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ratingText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     marginLeft: 4,
   },
   statsBar: {
     flexDirection: 'row',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingVertical: 10,
   },
   statItem: {
@@ -504,17 +504,17 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   statValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   statLabel: {
-    fontSize: 9,
-    fontWeight: '600',
+    fontSize: 10.5,
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
   bioText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: -4,
   },
   deployBtn: {

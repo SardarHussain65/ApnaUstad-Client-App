@@ -50,7 +50,7 @@ export default function NotificationsScreen() {
               colors={[theme.colors.brand.primary, theme.colors.brand.secondary]}
               style={styles.iconGlow}
             />
-            <View style={[styles.iconCircle, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+            <View style={[styles.iconCircle, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
               <Bell size={40} color={theme.colors.text.primary} />
             </View>
           </View>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     flex: 1,
     borderRadius: 50,
-    borderWidth: 1,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -174,17 +174,18 @@ const styles = StyleSheet.create({
   screenSubtitle: {
     textAlign: 'center',
     paddingHorizontal: 20,
-    fontSize: 14,
+    fontSize: 14.5,
     lineHeight: 20,
+    fontWeight: '500',
   },
   section: {
     marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     marginBottom: 12,
     marginHorizontal: 4,
   },
@@ -196,9 +197,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   itemIconBox: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginEnd: 16,
@@ -206,7 +208,7 @@ const styles = StyleSheet.create({
   itemLabel: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   footerInfo: {
     paddingHorizontal: 20,

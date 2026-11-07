@@ -134,7 +134,7 @@ export default function VerifyScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={[styles.otpCard, { borderColor: theme.colors.border.subtle }]}
+              style={[styles.otpCard, { borderColor: theme.colors.border.default }]}
               gradient={[alpha(accentColor, 0.14), alpha(theme.colors.brand.secondary, 0.05)]}
             >
               <Text style={[styles.otpLabel, { color: theme.colors.text.muted }]}>{t('verify.otpLabel')}</Text>
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   otpCard: {
     borderRadius: BorderRadius.xxl,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   otpLabel: {
     fontSize: 11,

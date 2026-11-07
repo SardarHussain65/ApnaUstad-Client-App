@@ -40,8 +40,8 @@ export function useJobCreationPalette(): JobCreationPalette {
     surface: theme.colors.surface.card,
     surfaceRaised: theme.colors.surface.raised,
     surfaceHigh: theme.colors.surface.selected,
-    border: theme.id === 'light' ? theme.colors.border.default : 'rgba(255,255,255,0.18)',
-    borderMedium: theme.id === 'light' ? theme.colors.border.strong : 'rgba(255,255,255,0.28)',
+    border: theme.colors.border.default,
+    borderMedium: theme.colors.border.strong,
     cyan: theme.colors.brand.primary,
     cyanDim: theme.id === 'light' ? theme.colors.text.secondary : '#38BDF8',
     cyanMuted: alpha(theme.colors.brand.primary, 0.14),
@@ -87,12 +87,12 @@ export const SectionLabel = ({ icon: Icon, label, color, badge }: SectionLabelPr
 const sectionStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   iconWrap: {
-    width: 22, height: 22, borderRadius: 6,
+    width: 24, height: 24, borderRadius: 7,
     alignItems: 'center', justifyContent: 'center',
   },
-  label: { fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  line: { flex: 1, height: 1 },
-  badge: { fontSize: 9, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase' },
+  label: { fontSize: 11.5, fontWeight: '800', letterSpacing: 1.5 },
+  line: { flex: 1, height: 1.2 },
+  badge: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.7, textTransform: 'uppercase' },
 });
 
 // ─── GlassInput ────────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ export const GlassInput = ({ children, style, glowColor }: GlassInputProps) => {
         backgroundColor: palette.surfaceRaised,
         borderColor: palette.border,
       },
-      glowColor ? { borderColor: addAlpha(glowColor, '30'), shadowColor: glowColor, shadowOpacity: theme.id === 'current' ? 0.15 : 0.08, shadowRadius: 12 } : {},
+      glowColor ? { borderColor: addAlpha(glowColor, '65'), shadowColor: glowColor, shadowOpacity: theme.id === 'current' ? 0.15 : 0.08, shadowRadius: 12 } : {},
       style,
     ]}>
       {children}
@@ -124,7 +124,7 @@ export const GlassInput = ({ children, style, glowColor }: GlassInputProps) => {
 const glassStyles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.8,
     overflow: 'hidden',
   },
 });

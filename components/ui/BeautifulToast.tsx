@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderWidth: 1.2,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'space-between',
     ...Platform.select({
@@ -223,10 +223,10 @@ const styles = StyleSheet.create({
     }),
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -236,14 +236,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   toastTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
     letterSpacing: -0.1,
   },
   toastMessage: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 17,
   },
   closeButton: {
     padding: 6,

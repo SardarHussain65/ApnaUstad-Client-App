@@ -263,8 +263,8 @@ export default function BidsListScreen() {
             style={[
               styles.backBtn,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               },
             ]}
             onPress={() => router.back()}
@@ -285,12 +285,12 @@ export default function BidsListScreen() {
               style={[
                 styles.countBadge,
                 {
-                  backgroundColor: alpha(primaryColor, 0.1),
-                  borderColor: alpha(primaryColor, 0.25),
+                  backgroundColor: alpha(primaryColor, 0.14),
+                  borderColor: alpha(primaryColor, 0.4),
                 },
               ]}
             >
-              <Users size={11} color={primaryColor} />
+              <Users size={12} color={primaryColor} />
               <Text style={[styles.countBadgeText, { color: primaryColor }]}>
                 {t('bidsList.countLabel', { count: bids.length, defaultValue: `${bids.length} Offers` })}
               </Text>
@@ -301,8 +301,8 @@ export default function BidsListScreen() {
             style={[
               styles.refreshHeaderBtn,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               },
             ]}
             onPress={handleRefresh}
@@ -408,8 +408,8 @@ export default function BidsListScreen() {
                     style={[
                       styles.proposalCard,
                       {
-                        backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
-                        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                        backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.88)' : theme.colors.surface.card,
+                        borderColor: theme.colors.border.default,
                       },
                     ]}
                   >
@@ -447,7 +447,7 @@ export default function BidsListScreen() {
                           <View
                             style={[
                               styles.avatarFallback,
-                              { backgroundColor: alpha(primaryColor, 0.12) },
+                              { backgroundColor: alpha(primaryColor, 0.14), borderColor: alpha(primaryColor, 0.4) },
                             ]}
                           >
                             <Text style={[styles.avatarInitials, { color: primaryColor }]}>
@@ -456,7 +456,7 @@ export default function BidsListScreen() {
                           </View>
                         )}
                         {bid.worker?.isAvailable !== false && (
-                          <View style={[styles.onlineDot, { backgroundColor: colors.success }]} />
+                          <View style={[styles.onlineDot, { backgroundColor: colors.success, borderColor: theme.colors.surface.card }]} />
                         )}
                       </View>
 
@@ -470,11 +470,11 @@ export default function BidsListScreen() {
                             {bid.worker?.fullName || t('common.anonymous', 'Ustad')}
                           </Text>
                           {bid.worker?.isVerified && (
-                            <ShieldCheck size={14} color={colors.success} strokeWidth={2.4} />
+                            <ShieldCheck size={15} color={colors.success} strokeWidth={2.4} />
                           )}
                         </View>
 
-                        <Text style={[styles.workerSub, { color: theme.colors.text.muted }]} numberOfLines={1}>
+                        <Text style={[styles.workerSub, { color: theme.colors.text.secondary }]} numberOfLines={1}>
                           {categoryOrExp}
                         </Text>
 
@@ -486,12 +486,12 @@ export default function BidsListScreen() {
                         style={[
                           styles.priceBox,
                           {
-                            backgroundColor: alpha(colors.success, 0.08),
-                            borderColor: alpha(colors.success, 0.22),
+                            backgroundColor: theme.isDark ? alpha(colors.success, 0.14) : '#DCFCE7',
+                            borderColor: theme.isDark ? alpha(colors.success, 0.4) : '#22C55E',
                           },
                         ]}
                       >
-                        <Text style={[styles.priceTag, { color: alpha(colors.success, 0.85) }]}>
+                        <Text style={[styles.priceTag, { color: colors.success }]}>
                           {t('bidsList.quotedPrice', 'RATE')}
                         </Text>
                         <Text style={[styles.priceAmount, { color: colors.success }]}>
@@ -506,8 +506,8 @@ export default function BidsListScreen() {
                         style={[
                           styles.messageContainer,
                           {
-                            backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-                            borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : theme.colors.border.subtle,
+                            backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+                            borderColor: theme.colors.border.default,
                           },
                         ]}
                       >
@@ -527,12 +527,12 @@ export default function BidsListScreen() {
                           style={[
                             styles.chip,
                             {
-                              backgroundColor: alpha(colors.success, 0.08),
-                              borderColor: alpha(colors.success, 0.2),
+                              backgroundColor: theme.isDark ? alpha(colors.success, 0.12) : '#DCFCE7',
+                              borderColor: theme.isDark ? alpha(colors.success, 0.35) : '#22C55E',
                             },
                           ]}
                         >
-                          <ShieldCheck size={11} color={colors.success} strokeWidth={2.2} />
+                          <ShieldCheck size={12} color={colors.success} strokeWidth={2.4} />
                           <Text style={[styles.chipText, { color: colors.success }]}>
                             {t('findingWorker.verified', 'VERIFIED')}
                           </Text>
@@ -544,12 +544,12 @@ export default function BidsListScreen() {
                           style={[
                             styles.chip,
                             {
-                              backgroundColor: alpha(colors.cyan, 0.08),
-                              borderColor: alpha(colors.cyan, 0.2),
+                              backgroundColor: theme.isDark ? alpha(colors.cyan, 0.12) : '#E0F2FE',
+                              borderColor: theme.isDark ? alpha(colors.cyan, 0.35) : '#38BDF8',
                             },
                           ]}
                         >
-                          <Clock size={11} color={colors.cyan} strokeWidth={2.2} />
+                          <Clock size={12} color={colors.cyan} strokeWidth={2.4} />
                           <Text style={[styles.chipText, { color: colors.cyan }]}>
                             {t('bidsList.estDaysLabel', {
                               count: bid.estimatedDays,
@@ -562,12 +562,12 @@ export default function BidsListScreen() {
                           style={[
                             styles.chip,
                             {
-                              backgroundColor: alpha(primaryColor, 0.08),
-                              borderColor: alpha(primaryColor, 0.2),
+                              backgroundColor: theme.isDark ? alpha(primaryColor, 0.12) : '#DBEAFE',
+                              borderColor: theme.isDark ? alpha(primaryColor, 0.35) : '#3B82F6',
                             },
                           ]}
                         >
-                          <Clock size={11} color={primaryColor} strokeWidth={2.2} />
+                          <Clock size={12} color={primaryColor} strokeWidth={2.4} />
                           <Text style={[styles.chipText, { color: primaryColor }]}>
                             {t('findingWorker.available', 'AVAILABLE NOW')}
                           </Text>
@@ -582,8 +582,8 @@ export default function BidsListScreen() {
                         style={[
                           styles.profileBtn,
                           {
-                            borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : theme.colors.border.default,
-                            backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                            borderColor: theme.colors.border.default,
+                            backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
                           },
                         ]}
                         onPress={() =>
@@ -603,8 +603,8 @@ export default function BidsListScreen() {
                           {t('bidsList.profileBtn', 'Profile')}
                         </Text>
                         <ChevronRight
-                          size={13}
-                          color={theme.colors.text.muted}
+                          size={14}
+                          color={theme.colors.text.secondary}
                           style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
                         />
                       </TouchableOpacity>
@@ -680,18 +680,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   refreshHeaderBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -700,30 +700,30 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   topBarTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
   countBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
+    gap: 5,
+    borderWidth: 1.4,
     borderRadius: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
   },
   countBadgeText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
 
   // Skeleton Card
   skeletonCard: {
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.6,
     padding: 16,
   },
   skeletonTopRow: {
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
   },
   proposalCard: {
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 16,
     overflow: 'hidden',
     position: 'relative',
@@ -754,32 +754,32 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatar: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(148,163,184,0.35)',
   },
   avatarFallback: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(148,163,184,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
   },
   onlineDot: {
     position: 'absolute',
     bottom: -1,
     right: -1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 13,
+    height: 13,
+    borderRadius: 7,
     borderWidth: 2,
     borderColor: '#0B0F17',
   },
@@ -794,13 +794,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   workerName: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '800',
     flexShrink: 1,
   },
   workerSub: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
   },
   starRow: {
     flexDirection: 'row',
@@ -809,45 +809,46 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   ratingScore: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
   },
   reviewCountText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // Quoted Price
   priceBox: {
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 13,
+    borderWidth: 1.5,
   },
   priceTag: {
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginBottom: 2,
   },
   priceAmount: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
   },
 
   // Message Container
   messageContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
     marginBottom: 12,
   },
   messageText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13.5,
+    fontWeight: '500',
+    lineHeight: 19,
     fontStyle: 'italic',
   },
 
@@ -855,22 +856,22 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 7,
     marginBottom: 14,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   chipText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
 
   // Action Row
@@ -884,23 +885,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 11,
+    paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   profileBtnText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   rejectBtn: {
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.4)',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1.6,
+    borderColor: 'rgba(239, 68, 68, 0.5)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -911,15 +912,15 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   rejectBtnText: {
-    color: '#EF4444',
-    fontSize: 12.5,
+    color: '#DC2626',
+    fontSize: 13.5,
     fontWeight: '800',
   },
   hireBtn: {
     flex: 1,
     borderRadius: 14,
     overflow: 'hidden',
-    paddingVertical: 11,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
@@ -932,9 +933,9 @@ const styles = StyleSheet.create({
   },
   hireBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.6,
   },
 
   // Empty State

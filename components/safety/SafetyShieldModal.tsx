@@ -24,6 +24,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useTheme, alpha, BorderRadius, Spacing } from '../../constants/Theme';
+import { cleanAddressString } from '../../hooks';
 
 interface SafetyShieldModalProps {
   visible: boolean;
@@ -54,6 +55,8 @@ export function SafetyShieldModal({
     void Linking.openURL(`tel:${number}`);
   };
 
+  const cleanedAddress = cleanAddressString(address || '');
+
   const handleShareTrip = async () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
@@ -61,7 +64,7 @@ export function SafetyShieldModal({
       const shareMessage = `🛡️ Apna Ustad Live Mission Tracking\n\n` +
         `I am currently in an active service session with ${partnerName} (${roleLabel}).\n` +
         (partnerCategory ? `Service: ${partnerCategory}\n` : '') +
-        (address ? `Location: ${address}\n` : '') +
+        (cleanedAddress ? `Location: ${cleanedAddress}\n` : '') +
         `Booking Ref: #${bookingId.slice(-6).toUpperCase()}\n\n` +
         `Shared via Apna Ustad Safety Shield.`;
 
@@ -92,22 +95,22 @@ export function SafetyShieldModal({
           style={[
             styles.modalContainer,
             {
-              backgroundColor: theme.isDark ? '#0D1322' : '#FFFFFF',
-              borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.25)' : 'rgba(0, 168, 107, 0.2)',
+              backgroundColor: theme.colors.surface.card,
+              borderColor: theme.colors.border.default,
             },
           ]}
         >
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleRow}>
-              <View style={[styles.shieldBadge, { backgroundColor: alpha('#00F5FF', 0.15) }]}>
-                <ShieldCheck size={24} color="#00F5FF" />
+              <View style={[styles.shieldBadge, { backgroundColor: alpha(theme.colors.brand.primary, 0.14), borderWidth: 1.5, borderColor: alpha(theme.colors.brand.primary, 0.35) }]}>
+                <ShieldCheck size={24} color={theme.colors.brand.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.title, { color: theme.colors.text.primary }]}>
                   {t('safety.shieldTitle', 'Safety & Emergency Shield')}
                 </Text>
-                <Text style={[styles.subtitle, { color: theme.colors.text.muted }]}>
+                <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
                   {t('safety.shieldDesc', 'Your safety is our highest priority')}
                 </Text>
               </View>
@@ -115,10 +118,10 @@ export function SafetyShieldModal({
 
             <TouchableOpacity
               onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: theme.colors.surface.subtle }]}
+              style={[styles.closeBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}
               hitSlop={8}
             >
-              <X size={18} color={theme.colors.text.muted} />
+              <X size={18} color={theme.colors.text.primary} />
             </TouchableOpacity>
           </View>
 
@@ -128,27 +131,27 @@ export function SafetyShieldModal({
               style={[
                 styles.identityCard,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
-                  borderColor: theme.colors.border.subtle,
+                  backgroundColor: theme.colors.surface.subtle,
+                  borderColor: theme.colors.border.default,
                 },
               ]}
             >
               <View style={styles.partnerRow}>
-                <FileCheck2 size={22} color="#10B981" />
+                <FileCheck2 size={22} color={theme.colors.status.success} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={[styles.partnerName, { color: theme.colors.text.primary }]}>
                     {partnerName}
                   </Text>
-                  <Text style={[styles.partnerStatus, { color: '#10B981' }]}>
+                  <Text style={[styles.partnerStatus, { color: theme.colors.status.success }]}>
                     ✓ {t('safety.verifiedGovt', 'Government CNIC & Profile Verified')}
                   </Text>
                 </View>
               </View>
-              {address ? (
-                <View style={styles.addressRow}>
-                  <MapPin size={14} color={theme.colors.text.muted} />
-                  <Text style={[styles.addressText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                    {address}
+              {cleanedAddress ? (
+                <View style={[styles.addressRow, { borderTopColor: theme.colors.border.subtle }]}>
+                  <MapPin size={14} color={theme.colors.text.secondary} />
+                  <Text style={[styles.addressText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
+                    {cleanedAddress}
                   </Text>
                 </View>
               ) : null}
@@ -156,29 +159,29 @@ export function SafetyShieldModal({
 
             {/* Quick Share Live Status */}
             <TouchableOpacity
-              style={[styles.shareCard, { backgroundColor: alpha('#00F5FF', 0.08), borderColor: alpha('#00F5FF', 0.3) }]}
+              style={[styles.shareCard, { backgroundColor: alpha(theme.colors.brand.primary, 0.1), borderColor: alpha(theme.colors.brand.primary, 0.45) }]}
               onPress={handleShareTrip}
               activeOpacity={0.8}
             >
-              <Share2 size={20} color="#00F5FF" />
+              <Share2 size={20} color={theme.colors.brand.primary} />
               <View style={{ flex: 1, marginHorizontal: 12 }}>
                 <Text style={[styles.shareTitle, { color: theme.colors.text.primary }]}>
                   {t('safety.shareTripTitle', 'Share Mission with Family')}
                 </Text>
-                <Text style={[styles.shareSubtitle, { color: theme.colors.text.muted }]}>
+                <Text style={[styles.shareSubtitle, { color: theme.colors.text.secondary }]}>
                   {t('safety.shareTripDesc', 'Send live details & coordinates via WhatsApp or SMS')}
                 </Text>
               </View>
             </TouchableOpacity>
 
             {/* Emergency Hotline Buttons */}
-            <Text style={[styles.sectionHeading, { color: theme.colors.text.muted }]}>
+            <Text style={[styles.sectionHeading, { color: theme.colors.text.secondary }]}>
               {t('safety.emergencyHotlines', 'EMERGENCY HOTLINES (PAKISTAN)')}
             </Text>
 
             <View style={styles.hotlineGrid}>
               <TouchableOpacity
-                style={[styles.emergencyBtn, { backgroundColor: '#EF4444' }]}
+                style={[styles.emergencyBtn, { backgroundColor: '#DC2626' }]}
                 onPress={() => handleCallEmergency('15')}
                 activeOpacity={0.85}
               >
@@ -187,7 +190,7 @@ export function SafetyShieldModal({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.emergencyBtn, { backgroundColor: '#F59E0B' }]}
+                style={[styles.emergencyBtn, { backgroundColor: '#D97706' }]}
                 onPress={() => handleCallEmergency('1122')}
                 activeOpacity={0.85}
               >
@@ -201,19 +204,19 @@ export function SafetyShieldModal({
               style={[
                 styles.supportRow,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : '#F1F5F9',
-                  borderColor: theme.colors.border.subtle,
+                  backgroundColor: theme.colors.surface.subtle,
+                  borderColor: theme.colors.border.default,
                 },
               ]}
               onPress={() => handleCallEmergency('+923000000000')}
               activeOpacity={0.8}
             >
-              <HeartHandshake size={20} color="#00F5FF" />
+              <HeartHandshake size={20} color={theme.colors.brand.primary} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.supportTitle, { color: theme.colors.text.primary }]}>
                   {t('safety.apnaUstadSupport', 'Apna Ustad Safety Desk')}
                 </Text>
-                <Text style={[styles.supportSub, { color: theme.colors.text.muted }]}>
+                <Text style={[styles.supportSub, { color: theme.colors.text.secondary }]}>
                   {t('safety.supportSub', '24/7 dedicated dispute & incident assistance')}
                 </Text>
               </View>
@@ -237,11 +240,11 @@ const styles = StyleSheet.create({
     width: '100%',
     maxHeight: '85%',
     borderRadius: 28,
-    borderWidth: 1.5,
+    borderWidth: 1.8,
     padding: 22,
     ...Platform.select({
       ios: {
-        shadowColor: '#00F5FF',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
         shadowRadius: 20,
@@ -270,19 +273,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     letterSpacing: 0.2,
   },
   subtitle: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     marginTop: 2,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -292,8 +296,8 @@ const styles = StyleSheet.create({
   },
   identityCard: {
     borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
+    padding: 15,
+    borderWidth: 1.6,
     marginBottom: 14,
   },
   partnerRow: {
@@ -301,12 +305,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   partnerName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
   },
   partnerStatus: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     marginTop: 2,
   },
   addressRow: {
@@ -314,11 +318,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
     paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopWidth: 1,
   },
   addressText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
     marginLeft: 6,
     flex: 1,
   },
@@ -326,21 +330,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 18,
-    borderWidth: 1,
-    padding: 14,
+    borderWidth: 1.6,
+    padding: 15,
     marginBottom: 18,
   },
   shareTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
   },
   shareSubtitle: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12.5,
+    fontWeight: '600',
     marginTop: 2,
   },
   sectionHeading: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
     letterSpacing: 1,
     marginBottom: 10,
@@ -357,29 +361,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 16,
   },
   emergencyBtnText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 13,
+    fontSize: 14,
   },
   supportRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 15,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.6,
     marginBottom: 10,
   },
   supportTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
   },
   supportSub: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12.5,
+    fontWeight: '600',
     marginTop: 2,
   },
 });

@@ -60,11 +60,11 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
           </View>
         </View>
 
-        <View style={[styles.ratingBadge, { borderColor: innerBorderColor, backgroundColor: 'rgba(250,204,21,0.12)' }]}>
-          <Star size={14} color="#facc15" fill="#facc15" strokeWidth={2.4} />
+        <View style={[styles.ratingBadge, { borderColor: innerBorderColor, backgroundColor: 'rgba(250,204,21,0.14)' }]}>
+          <Star size={15} color="#facc15" fill="#facc15" strokeWidth={2.4} />
           <View>
-            <Text style={styles.ratingValue}>{Number(stats.rating || 0).toFixed(1)}</Text>
-            <Text style={styles.ratingLabel}>{t('home.worker.rating')}</Text>
+            <Text style={[styles.ratingValue, { color: theme.colors.text.primary }]}>{Number(stats.rating || 0).toFixed(1)}</Text>
+            <Text style={[styles.ratingLabel, { color: theme.colors.text.muted }]}>{t('home.worker.rating')}</Text>
           </View>
         </View>
       </View>
@@ -111,7 +111,7 @@ export const WorkerStatsCard = React.memo(function WorkerStatsCard({ stats }: Wo
 const styles = StyleSheet.create({
   dashboardCard: {
     borderRadius: 30,
-    borderWidth: 1,
+    borderWidth: 1.8,
     marginTop: 14,
   },
   dashboardContent: {
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   heroTextContainer: {
     flex: 1,
@@ -163,10 +163,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0,
+    letterSpacing: 0.2,
   },
   heroValue: {
     fontSize: 24,
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   heroSubText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
   },
@@ -183,23 +183,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 7,
     paddingVertical: 8,
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   ratingValue: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
   ratingLabel: {
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   progressBlock: {
     padding: 12,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.6,
     marginBottom: 11,
   },
   progressHeader: {
@@ -209,13 +209,13 @@ const styles = StyleSheet.create({
     marginBottom: 9,
   },
   progressTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 0,
+    letterSpacing: 0.2,
   },
   progressValue: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
   },
   progressTrack: {
@@ -233,28 +233,28 @@ const styles = StyleSheet.create({
   },
   statTile: {
     flex: 1,
-    minHeight: 82,
+    minHeight: 86,
     borderRadius: 18,
-    padding: 11,
-    borderWidth: 1,
+    padding: 12,
+    borderWidth: 1.6,
   },
   statIconBubble: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 7,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
   },
   statLabel: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0,
+    letterSpacing: 0.2,
     marginTop: 2,
   },
 });

@@ -30,7 +30,7 @@ import {
   XCircle,
 } from 'lucide-react-native';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
-import { useBookingDetails } from '../hooks';
+import { useBookingDetails, cleanAddressString } from '../hooks';
 import api from '../services/api';
 import { alpha, useTheme, useThemeColors } from '../constants/Theme';
 
@@ -194,7 +194,7 @@ export default function ClientDetailsScreen() {
           { 
             paddingTop: insets.top + 8,
             backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : colors.background.screen,
-            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle,
+            borderBottomColor: colors.border.default,
           }
         ]}>
           <TouchableOpacity 
@@ -202,8 +202,8 @@ export default function ClientDetailsScreen() {
             style={[
               styles.headerButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(colors.text.primary, 0.03),
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : colors.border.subtle,
+                backgroundColor: colors.surface.card,
+                borderColor: colors.border.default,
               }
             ]} 
             activeOpacity={0.8}
@@ -211,7 +211,7 @@ export default function ClientDetailsScreen() {
             <ChevronLeft color={colors.text.primary} size={22} strokeWidth={2.4} />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={[styles.headerEyebrow, { color: colors.text.dim }]}>{t('clientDetails.title').toUpperCase()}</Text>
+            <Text style={[styles.headerEyebrow, { color: colors.text.muted }]}>{t('clientDetails.title').toUpperCase()}</Text>
             <Text style={[styles.headerTitle, { color: colors.text.primary }]}>{t('clientDetails.serviceRequester')}</Text>
           </View>
           {canContactClient ? (
@@ -220,8 +220,8 @@ export default function ClientDetailsScreen() {
               style={[
                 styles.headerButton,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.055)' : alpha(colors.text.primary, 0.03),
-                  borderColor: theme.isDark ? 'rgba(255,255,255,0.09)' : colors.border.subtle,
+                  backgroundColor: colors.surface.card,
+                  borderColor: colors.border.default,
                 }
               ]} 
               activeOpacity={0.8}
@@ -241,11 +241,11 @@ export default function ClientDetailsScreen() {
             styles.heroCard,
             {
               backgroundColor: colors.surface.card,
-              borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : colors.border.subtle,
+              borderColor: theme.id === 'current' ? 'rgba(0,245,255,0.28)' : colors.border.default,
             }
           ]}>
             <LinearGradient
-              colors={theme.isDark 
+              colors={theme.id === 'current' 
                 ? ['rgba(0,245,255,0.16)', 'rgba(5,11,31,0.94)', 'rgba(8,123,255,0.08)']
                 : [alpha(colors.brand.primary, 0.06), colors.surface.card, alpha(colors.brand.secondary, 0.03)]
               }
@@ -257,7 +257,7 @@ export default function ClientDetailsScreen() {
               <View style={[
                 styles.avatarShell,
                 {
-                  borderColor: theme.isDark ? 'rgba(0,245,255,0.74)' : colors.border.strong,
+                  borderColor: theme.id === 'current' ? 'rgba(0,245,255,0.74)' : colors.brand.primary,
                   backgroundColor: theme.isDark ? 'rgba(0,245,255,0.09)' : colors.surface.subtle,
                 }
               ]}>
@@ -281,28 +281,39 @@ export default function ClientDetailsScreen() {
               </View>
 
               <View style={styles.heroCopy}>
-                <View style={[styles.accountPill, !isActive && styles.accountPillInactive]}>
-                  <ShieldCheck size={12} color={isActive ? legacyColors.green : colors.text.dim} />
-                  <Text style={[styles.accountPillText, !isActive && styles.accountPillTextInactive]}>
+                <View style={[
+                  styles.accountPill,
+                  {
+                    borderColor: isActive ? alpha(legacyColors.green, 0.4) : colors.border.default,
+                    backgroundColor: isActive ? alpha(legacyColors.green, 0.12) : colors.surface.subtle,
+                  },
+                ]}>
+                  <ShieldCheck size={13} color={isActive ? legacyColors.green : colors.text.muted} />
+                  <Text style={[
+                    styles.accountPillText,
+                    { color: isActive ? legacyColors.green : colors.text.muted },
+                  ]}>
                     {isActive ? t('clientDetails.activeClient').toUpperCase() : t('clientDetails.inactiveAccount').toUpperCase()}
                   </Text>
                 </View>
                 <Text style={[styles.name, { color: colors.text.primary }]}>{client.fullName || 'Client'}</Text>
                 <View style={styles.locationLine}>
-                  <MapPin size={13} color={legacyColors.pink} />
-                  <Text style={[styles.locationText, { color: colors.text.muted }]} numberOfLines={1}>{client.city || client.address || t('clientDetails.locationNotAdded')}</Text>
+                  <MapPin size={14} color={legacyColors.pink} />
+                  <Text style={[styles.locationText, { color: colors.text.secondary }]} numberOfLines={1}>
+                    {cleanAddressString(client.city || client.address || '') || t('clientDetails.locationNotAdded')}
+                  </Text>
                 </View>
               </View>
             </View>
 
             <View style={[
               styles.heroDivider,
-              { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle }
+              { backgroundColor: colors.border.subtle }
             ]} />
 
             <View style={styles.joinedRow}>
-              <CalendarDays size={14} color={legacyColors.cyan} />
-              <Text style={[styles.joinedText, { color: colors.text.muted }]}>{formatSince(client.createdAt, t)}</Text>
+              <CalendarDays size={15} color={legacyColors.cyan} />
+              <Text style={[styles.joinedText, { color: colors.text.secondary }]}>{formatSince(client.createdAt, t)}</Text>
             </View>
           </Animated.View>
 
@@ -310,13 +321,13 @@ export default function ClientDetailsScreen() {
             styles.statsStrip,
             {
               backgroundColor: colors.surface.card,
-              borderColor: colors.border.subtle,
+              borderColor: colors.border.default,
             }
           ]}>
             <Metric icon={BriefcaseBusiness} value={String(stats.totalBookings)} label={t('clientDetails.bookings')} color={legacyColors.cyan} />
-            <View style={[styles.metricDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle }]} />
+            <View style={[styles.metricDivider, { backgroundColor: colors.border.subtle }]} />
             <Metric icon={CheckCircle2} value={String(stats.completedBookings)} label={t('clientDetails.completed')} color={legacyColors.green} />
-            <View style={[styles.metricDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle }]} />
+            <View style={[styles.metricDivider, { backgroundColor: colors.border.subtle }]} />
             <Metric
               icon={ShieldCheck}
               value={stats.reliabilityRate === null ? t('common.new') : `${stats.reliabilityRate}%`}
@@ -329,7 +340,7 @@ export default function ClientDetailsScreen() {
             styles.sectionCard,
             {
               backgroundColor: colors.surface.card,
-              borderColor: colors.border.subtle,
+              borderColor: colors.border.default,
             }
           ]}>
             <SectionTitle icon={UserRound} title={t('clientDetails.clientActivity')} color={legacyColors.cyan} />
@@ -343,7 +354,7 @@ export default function ClientDetailsScreen() {
             styles.sectionCard,
             {
               backgroundColor: colors.surface.card,
-              borderColor: colors.border.subtle,
+              borderColor: colors.border.default,
             }
           ]}>
             <SectionTitle icon={ShieldCheck} title={t('clientDetails.contactLocation')} color={legacyColors.green} />
@@ -354,23 +365,38 @@ export default function ClientDetailsScreen() {
               color={legacyColors.green}
               onPress={clientPhone ? callClient : undefined}
             />
-            <View style={[styles.infoDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle }]} />
-            <InfoRow icon={MapPin} label={t('clientDetails.serviceAddress')} value={client.address || client.city || t('clientDetails.notProvided')} color={legacyColors.pink} />
+            <View style={[styles.infoDivider, { backgroundColor: colors.border.subtle }]} />
+            <InfoRow
+              icon={MapPin}
+              label={t('clientDetails.serviceAddress')}
+              value={cleanAddressString(client.address || client.city || '') || t('clientDetails.notProvided')}
+              color={legacyColors.pink}
+            />
           </Animated.View>
         </ScrollView>
 
         {canContactClient && (
           <View style={[styles.dock, { paddingBottom: insets.bottom + 12 }]}>
             <BlurView intensity={80} tint={theme.blurTint} style={StyleSheet.absoluteFillObject} />
-            <View style={[styles.dockLine, { backgroundColor: colors.border.subtle }]} />
-            <TouchableOpacity style={styles.secondaryAction} onPress={callClient} activeOpacity={0.8}>
+            <View style={[styles.dockLine, { backgroundColor: colors.border.default }]} />
+            <TouchableOpacity
+              style={[
+                styles.secondaryAction,
+                {
+                  borderColor: alpha(legacyColors.green, 0.45),
+                  backgroundColor: alpha(legacyColors.green, 0.12),
+                },
+              ]}
+              onPress={callClient}
+              activeOpacity={0.8}
+            >
               <Phone size={19} color={legacyColors.green} />
-              <Text style={styles.secondaryActionText}>{t('clientDetails.call')}</Text>
+              <Text style={[styles.secondaryActionText, { color: legacyColors.green }]}>{t('clientDetails.call')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.primaryAction} onPress={openChat} activeOpacity={0.86}>
-              <LinearGradient colors={[legacyColors.cyan, C.blue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
-              <MessageSquare size={19} color="#001018" />
-              <Text style={styles.primaryActionText}>{t('clientDetails.messageClient')}</Text>
+              <LinearGradient colors={colors.gradients.primary as any} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFillObject} />
+              <MessageSquare size={19} color={colors.button.primaryText} />
+              <Text style={[styles.primaryActionText, { color: colors.button.primaryText }]}>{t('clientDetails.messageClient')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -437,13 +463,13 @@ function ActivityTile({
     <View style={[
       styles.activityTile, 
       { 
-        borderColor: theme.isDark ? `${color}24` : theme.colors.border.subtle,
-        backgroundColor: theme.isDark ? 'rgba(255,255,255,0.025)' : theme.colors.surface.subtle,
+        borderColor: theme.isDark ? `${color}38` : theme.colors.border.default,
+        backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : theme.colors.surface.subtle,
       }
     ]}>
-      <Icon size={16} color={color} />
+      <Icon size={18} color={color} />
       <Text style={[styles.activityValue, { color: theme.colors.text.primary }]}>{value}</Text>
-      <Text style={[styles.activityLabel, { color: theme.colors.text.dim }]}>{label}</Text>
+      <Text style={[styles.activityLabel, { color: theme.colors.text.secondary }]}>{label}</Text>
     </View>
   );
 }
@@ -465,11 +491,11 @@ function InfoRow({
   const Wrapper = onPress ? TouchableOpacity : View;
   return (
     <Wrapper style={styles.infoRow} onPress={onPress as any} activeOpacity={0.82 as any}>
-      <View style={[styles.infoIcon, { backgroundColor: `${color}11` }]}>
-        <Icon size={17} color={color} />
+      <View style={[styles.infoIcon, { backgroundColor: `${color}15`, borderWidth: 1, borderColor: `${color}35` }]}>
+        <Icon size={18} color={color} />
       </View>
       <View style={styles.infoCopy}>
-        <Text style={[styles.infoLabel, { color: theme.colors.text.dim }]}>{label}</Text>
+        <Text style={[styles.infoLabel, { color: theme.colors.text.muted }]}>{label}</Text>
         <Text style={[styles.infoValue, { color: theme.colors.text.primary }]}>{value}</Text>
       </View>
     </Wrapper>
@@ -479,61 +505,59 @@ function InfoRow({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24 },
-  loadingText: { fontSize: 13, fontWeight: '800' },
-  emptyTitle: { fontSize: 18, fontWeight: '900' },
-  emptyText: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  loadingText: { fontSize: 14, fontWeight: '800' },
+  emptyTitle: { fontSize: 19, fontWeight: '900' },
+  emptyText: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
   emptyAction: { marginTop: 8, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 12 },
-  emptyActionText: { fontSize: 12, fontWeight: '900' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
-  headerButton: { width: 43, height: 43, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  emptyActionText: { fontSize: 13, fontWeight: '900' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1.5 },
+  headerButton: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.6 },
   headerCopy: { flex: 1, alignItems: 'center' },
-  headerSpacer: { width: 43, height: 43 },
-  headerEyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '900' },
+  headerSpacer: { width: 44, height: 44 },
+  headerEyebrow: { fontSize: 10.5, fontWeight: '900', letterSpacing: 1.8, marginBottom: 4 },
+  headerTitle: { fontSize: 19, fontWeight: '900' },
   scroll: { paddingHorizontal: 16, paddingTop: 16 },
-  heroCard: { overflow: 'hidden', borderRadius: 20, borderWidth: 1, padding: 15, marginBottom: 12 },
-  heroIdentity: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  heroCard: { overflow: 'hidden', borderRadius: 20, borderWidth: 1.8, padding: 16, marginBottom: 14 },
+  heroIdentity: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatarShell: { width: 82, height: 82, borderRadius: 24, padding: 3, borderWidth: 2 },
   avatar: { width: '100%', height: '100%', borderRadius: 20 },
   avatarFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   avatarText: { fontSize: 24, fontWeight: '900' },
-  accountDot: { position: 'absolute', bottom: 0, right: 0, width: 15, height: 15, borderRadius: 999, borderWidth: 2, backgroundColor: '#00E887' },
+  accountDot: { position: 'absolute', bottom: 0, right: 0, width: 15, height: 15, borderRadius: 999, borderWidth: 2, backgroundColor: '#16A34A' },
   accountDotInactive: { backgroundColor: '#6E778C' },
   heroCopy: { flex: 1, minWidth: 0 },
-  accountPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,232,135,0.24)', backgroundColor: 'rgba(0,232,135,0.08)', marginBottom: 8 },
-  accountPillInactive: { borderColor: 'rgba(110,119,140,0.2)', backgroundColor: 'rgba(110,119,140,0.08)' },
-  accountPillText: { color: '#00E887', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 },
-  accountPillTextInactive: { color: '#6E778C' },
+  accountPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999, borderWidth: 1.4, marginBottom: 8 },
+  accountPillText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
   name: { fontSize: 23, fontWeight: '900', marginBottom: 8 },
-  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  locationText: { flex: 1, fontSize: 11, fontWeight: '700' },
+  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  locationText: { flex: 1, fontSize: 13, fontWeight: '700' },
   heroDivider: { height: 1, marginVertical: 14 },
   joinedRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  joinedText: { fontSize: 12, fontWeight: '700' },
-  statsStrip: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 13, borderRadius: 18, borderWidth: 1, marginBottom: 12 },
+  joinedText: { fontSize: 13, fontWeight: '700' },
+  statsStrip: { flexDirection: 'row', alignItems: 'stretch', paddingVertical: 14, borderRadius: 18, borderWidth: 1.8, marginBottom: 14 },
   metric: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' },
   metricDivider: { width: 1, marginVertical: 5 },
-  metricValue: { maxWidth: '100%', fontSize: 16, fontWeight: '900', marginTop: 7, paddingHorizontal: 4 },
-  metricLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 0.9, marginTop: 4 },
-  sectionCard: { padding: 15, borderRadius: 18, borderWidth: 1, marginBottom: 12 },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 13 },
-  sectionIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  metricValue: { maxWidth: '100%', fontSize: 18, fontWeight: '900', marginTop: 7, paddingHorizontal: 4 },
+  metricLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.7, marginTop: 4 },
+  sectionCard: { padding: 16, borderRadius: 18, borderWidth: 1.8, marginBottom: 14 },
+  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  sectionIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontSize: 11.5, fontWeight: '900', letterSpacing: 1.2 },
   sectionLine: { flex: 1, height: 1 },
   activityGrid: { flexDirection: 'row', gap: 10 },
-  activityTile: { flex: 1, minHeight: 94, justifyContent: 'center', padding: 12, borderRadius: 14, borderWidth: 1 },
-  activityValue: { fontSize: 20, fontWeight: '900', marginTop: 8 },
-  activityLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 0.8, marginTop: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 8 },
+  activityTile: { flex: 1, minHeight: 96, justifyContent: 'center', padding: 13, borderRadius: 14, borderWidth: 1.6 },
+  activityValue: { fontSize: 22, fontWeight: '900', marginTop: 8 },
+  activityLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.6, marginTop: 4 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   infoDivider: { height: 1, marginVertical: 7 },
-  infoIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 13 },
+  infoIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 13 },
   infoCopy: { flex: 1 },
-  infoLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.9, textTransform: 'uppercase' },
-  infoValue: { fontSize: 14, lineHeight: 20, fontWeight: '800', marginTop: 4 },
-  dock: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 16, paddingTop: 12, overflow: 'hidden' },
-  dockLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 1 },
-  secondaryAction: { width: 92, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(0,232,135,0.2)', backgroundColor: 'rgba(0,232,135,0.07)' },
-  secondaryActionText: { color: '#00E887', fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
-  primaryAction: { flex: 1, height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden', borderRadius: 15 },
-  primaryActionText: { color: '#001018', fontSize: 12, fontWeight: '900', letterSpacing: 0.7 },
+  infoLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  infoValue: { fontSize: 15, lineHeight: 21, fontWeight: '800', marginTop: 4 },
+  dock: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, overflow: 'hidden' },
+  dockLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 1.5 },
+  secondaryAction: { width: 96, height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 15, borderWidth: 1.6 },
+  secondaryActionText: { fontSize: 12.5, fontWeight: '900', letterSpacing: 0.6 },
+  primaryAction: { flex: 1, height: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden', borderRadius: 15 },
+  primaryActionText: { fontSize: 13.5, fontWeight: '900', letterSpacing: 0.6 },
 });

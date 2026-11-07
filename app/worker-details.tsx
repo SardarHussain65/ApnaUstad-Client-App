@@ -282,7 +282,7 @@ export default function WorkerDetailsScreen() {
             {
               paddingTop: insets.top + (Platform.OS === 'ios' ? 8 : 12),
               backgroundColor: theme.isDark ? 'rgba(5,5,16,0.76)' : theme.colors.background.screen,
-              borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+              borderBottomColor: theme.colors.border.default,
             },
           ]}
         >
@@ -292,8 +292,8 @@ export default function WorkerDetailsScreen() {
             style={[
               styles.headerButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               },
             ]}
             onPress={() => router.back()}
@@ -323,8 +323,8 @@ export default function WorkerDetailsScreen() {
                   styles.headerButton,
                   {
                     marginRight: 8,
-                    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
                 onPress={handleToggleFavorite}
@@ -344,8 +344,8 @@ export default function WorkerDetailsScreen() {
               style={[
                 styles.headerButton,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border.subtle,
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
                 },
               ]}
               onPress={shareProfile}
@@ -422,8 +422,8 @@ export default function WorkerDetailsScreen() {
                 style={[
                   styles.heroCard,
                   {
-                    backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
-                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -566,8 +566,8 @@ export default function WorkerDetailsScreen() {
                 style={[
                   styles.statsStrip,
                   {
-                    backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
-                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -580,7 +580,7 @@ export default function WorkerDetailsScreen() {
                 <View
                   style={[
                     styles.metricDivider,
-                    { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.07)' : theme.colors.border.subtle },
+                    { backgroundColor: theme.colors.border.default },
                   ]}
                 />
                 <Metric
@@ -592,7 +592,7 @@ export default function WorkerDetailsScreen() {
                 <View
                   style={[
                     styles.metricDivider,
-                    { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.07)' : theme.colors.border.subtle },
+                    { backgroundColor: theme.colors.border.default },
                   ]}
                 />
                 <Metric
@@ -613,8 +613,8 @@ export default function WorkerDetailsScreen() {
                 style={[
                   styles.sectionCard,
                   {
-                    backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
-                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -630,8 +630,8 @@ export default function WorkerDetailsScreen() {
                 style={[
                   styles.sectionCard,
                   {
-                    backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
-                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -644,12 +644,12 @@ export default function WorkerDetailsScreen() {
                         style={[
                           styles.skillPill,
                           {
-                            backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                            borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+                            backgroundColor: theme.colors.surface.subtle,
+                            borderColor: theme.colors.border.default,
                           },
                         ]}
                       >
-                        <Check size={11} color={colors.success} strokeWidth={2.8} />
+                        <Check size={12} color={colors.success} strokeWidth={2.8} />
                         <Text style={[styles.skillText, { color: theme.colors.text.primary }]}>{skill}</Text>
                       </View>
                     ))}
@@ -667,8 +667,8 @@ export default function WorkerDetailsScreen() {
                 style={[
                   styles.sectionCard,
                   {
-                    backgroundColor: theme.isDark ? 'rgba(17, 24, 39, 0.82)' : theme.colors.surface.card,
-                    borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -947,27 +947,27 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     overflow: 'hidden',
   },
   headerButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   headerCopy: { flex: 1, alignItems: 'center' },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
-  headerEyebrow: { fontSize: 9, fontWeight: '800', letterSpacing: 1.5, marginBottom: 2 },
-  headerTitle: { fontSize: 15, fontWeight: '800' },
+  headerEyebrow: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2, marginBottom: 2 },
+  headerTitle: { fontSize: 17, fontWeight: '800' },
 
   scroll: { paddingHorizontal: 16 },
 
   skeletonBlock: {
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.6,
     padding: 16,
   },
 
@@ -977,18 +977,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.6,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 12,
   },
   quoteBannerLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   quoteBannerPrice: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
   },
   quoteCheckPill: {
@@ -996,11 +996,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: 10,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
   },
   quoteCheckText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '800',
   },
 
@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create({
   heroCard: {
     overflow: 'hidden',
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 16,
     marginBottom: 12,
     position: 'relative',
@@ -1019,7 +1019,7 @@ const styles = StyleSheet.create({
     height: 76,
     borderRadius: 22,
     padding: 3,
-    borderWidth: 1.5,
+    borderWidth: 1.8,
     position: 'relative',
   },
   avatar: { width: '100%', height: '100%', borderRadius: 18 },
@@ -1035,40 +1035,40 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   availabilityDotBusy: { backgroundColor: '#6B7280' },
-  heroCopy: { flex: 1, minWidth: 0, gap: 3 },
+  heroCopy: { flex: 1, minWidth: 0, gap: 4 },
   heroBadgeRow: { flexDirection: 'row', marginBottom: 2 },
   verificationPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
-  verificationText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
-  workerName: { fontSize: 18, fontWeight: '900' },
-  workerCategory: { fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
-  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
-  locationText: { flex: 1, fontSize: 11, fontWeight: '600' },
+  verificationText: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.5 },
+  workerName: { fontSize: 20, fontWeight: '900' },
+  workerCategory: { fontSize: 12.5, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase' },
+  locationLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 },
+  locationText: { flex: 1, fontSize: 12.5, fontWeight: '600' },
 
   heroDivider: { height: 1, marginVertical: 14 },
   heroBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   ratingBlock: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   ratingStars: { flexDirection: 'row', gap: 2 },
-  ratingText: { fontSize: 12, fontWeight: '800' },
-  ratingMeta: { fontSize: 11, fontWeight: '600' },
+  ratingText: { fontSize: 14, fontWeight: '800' },
+  ratingMeta: { fontSize: 12.5, fontWeight: '600' },
   availabilityPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   availabilityMiniDot: { width: 6, height: 6, borderRadius: 3 },
-  availabilityLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  availabilityLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.5 },
 
   // Stats Strip
   statsStrip: {
@@ -1076,65 +1076,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.8,
     marginBottom: 12,
   },
   metric: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'center' },
   metricDivider: { width: 1, height: 28 },
-  metricValue: { maxWidth: '100%', fontSize: 14, fontWeight: '900', marginTop: 4, paddingHorizontal: 4 },
-  metricLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.8, marginTop: 2 },
+  metricValue: { maxWidth: '100%', fontSize: 15.5, fontWeight: '900', marginTop: 4, paddingHorizontal: 4 },
+  metricLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6, marginTop: 2 },
 
   // Section Cards
-  sectionCard: { padding: 16, borderRadius: 18, borderWidth: 1, marginBottom: 12 },
+  sectionCard: { padding: 16, borderRadius: 18, borderWidth: 1.8, marginBottom: 12 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  sectionIcon: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  sectionTitle: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  sectionIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontSize: 12.5, fontWeight: '800', letterSpacing: 0.9 },
   sectionLine: { flex: 1, height: 1 },
-  sectionCount: { fontSize: 10, fontWeight: '800' },
-  bioText: { fontSize: 13, lineHeight: 20, fontWeight: '500' },
-  skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  sectionCount: { fontSize: 11.5, fontWeight: '800' },
+  bioText: { fontSize: 14.5, lineHeight: 22, fontWeight: '500' },
+  skillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   skillPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
-  skillText: { fontSize: 11, fontWeight: '700' },
+  skillText: { fontSize: 12.5, fontWeight: '700' },
   emptyReviews: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
-  emptySectionText: { fontSize: 12, lineHeight: 18, fontWeight: '600' },
+  emptySectionText: { fontSize: 13.5, lineHeight: 20, fontWeight: '600' },
 
   // Reviews
   reviewItem: { paddingVertical: 10 },
   reviewDivider: { borderBottomWidth: 1 },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   reviewAvatar: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   reviewAvatarImage: { width: '100%', height: '100%' },
-  reviewAvatarText: { fontSize: 13, fontWeight: '900' },
+  reviewAvatarText: { fontSize: 14, fontWeight: '900' },
   reviewCopy: { flex: 1, gap: 1 },
-  reviewerName: { fontSize: 12, fontWeight: '800' },
-  reviewDate: { fontSize: 10, fontWeight: '500' },
+  reviewerName: { fontSize: 13.5, fontWeight: '800' },
+  reviewDate: { fontSize: 11, fontWeight: '600' },
   reviewRating: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
-  reviewRatingText: { fontSize: 11, fontWeight: '800' },
-  reviewComment: { fontSize: 12, lineHeight: 18, fontWeight: '500', marginTop: 6, fontStyle: 'italic' },
+  reviewRatingText: { fontSize: 12, fontWeight: '800' },
+  reviewComment: { fontSize: 13.5, lineHeight: 20, fontWeight: '500', marginTop: 6, fontStyle: 'italic' },
 
   // Dock
   dock: {
@@ -1149,26 +1149,26 @@ const styles = StyleSheet.create({
   dockRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 },
   dockActionBtn: {
     flex: 1,
-    height: 48,
+    height: 50,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  dockActionLabel: { fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  dockActionLabel: { fontSize: 14, fontWeight: '800', letterSpacing: 0.4 },
   shareDockBtn: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   primaryAction: {
     flex: 1,
-    height: 48,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1177,5 +1177,5 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     position: 'relative',
   },
-  primaryActionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', letterSpacing: 0.6 },
+  primaryActionText: { color: '#FFFFFF', fontSize: 14.5, fontWeight: '800', letterSpacing: 0.4 },
 });

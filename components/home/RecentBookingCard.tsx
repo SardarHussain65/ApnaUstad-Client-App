@@ -2,33 +2,19 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  CalendarDays,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Clock3,
-  MapPin,
-  XCircle,
-  Zap,
-} from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { alpha, Spacing, BorderRadius, useTheme, useThemeColors, useThemeTypography, getAccessibleColor } from '../../constants/Theme';
-import { Booking } from '../../hooks';
-import { useIsRTL } from '../../context/LanguageContext';
+  Spacing,
+  BorderRadius,
+  useTheme,
+  getBookingCardPalette,
+} from '../../constants/Theme';
+import { Booking, cleanAddressString } from '../../hooks';
 
-type StatusConfig = {
-  label: string;
-  color: string;
-  Icon: React.ComponentType<any>;
-};
-
-const STATUS_CONFIG: Record<string, StatusConfig> = {
-  completed: { label: 'Completed', color: 'success', Icon: CheckCircle2 },
-  pending: { label: 'Pending', color: 'yellow', Icon: Clock },
-  accepted: { label: 'Accepted', color: 'cyan', Icon: Zap },
-  ongoing: { label: 'In progress', color: 'purple', Icon: Zap },
-  cancelled: { label: 'Cancelled', color: 'error', Icon: XCircle },
+const STATUS_LABELS: Record<string, string> = {
+  completed: 'Completed',
+  pending: 'Pending',
+  accepted: 'Confirmed',
+  ongoing: 'Ongoing',
+  cancelled: 'Cancelled',
 };
 
 const initialsFor = (name?: string) => {
@@ -57,18 +43,18 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
   onPress,
 }: RecentBookingCardProps) {
   const { t } = useTranslation();
-  const isRTL = useIsRTL();
   const theme = useTheme();
-  const colors = useThemeColors();
-  const typography = useThemeTypography();
   const meta = booking.cardMeta;
-  const isPaymentPending = (booking.status === 'completed' && booking.paymentStatus !== 'paid') || Boolean((meta as any)?.isPaymentPending);
-  const baseStatus = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const rawStatusColor = isPaymentPending
-    ? (meta?.statusInfo?.accentColor || colors.orange || '#F59E0B')
-    : ((meta?.statusInfo?.accentColor || colors[baseStatus.color as keyof typeof colors] || theme.colors.brand.primary) as string);
-  const statusColor = getAccessibleColor(rawStatusColor, theme.isDark);
-  const StatusIcon = isPaymentPending ? Clock : baseStatus.Icon;
+
+  const isPaymentPending =
+    (booking.status === 'completed' && booking.paymentStatus !== 'paid') ||
+    Boolean((meta as any)?.isPaymentPending);
+
+  const palette = useMemo(
+    () => getBookingCardPalette(theme, booking.status, isPaymentPending),
+    [theme, booking.status, isPaymentPending]
+  );
+
   const isInstant = (meta?.missionKind || booking.bookingType) === 'instant';
 
   const personName =
@@ -90,130 +76,133 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
   const rawTimeLabel = meta?.schedule?.timeLabel || booking.scheduledTime || 'ASAP';
   const timeLabel = rawTimeLabel === 'ASAP' ? t('common.asap', 'Right Away') : rawTimeLabel;
 
-  // Clean location: strip Google plus codes (e.g. "J3VF+58G, ") and show clean readable area/city
   const rawAddress = meta?.location?.address || booking.address || '';
   const cleanLocation = useMemo(() => {
     if (!rawAddress) return t('bookings.openDetailsToViewLocation', 'View in details');
-    const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+    const cleaned = cleanAddressString(rawAddress);
     const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
     if (parts.length > 2) {
       return `${parts[0]}, ${parts[parts.length - 1]}`;
     }
-    return cleaned || rawAddress;
+    return cleaned || t('bookings.openDetailsToViewLocation', 'View in details');
   }, [rawAddress, t]);
 
+  const numericAmount = Number(
+    meta?.financial?.amount ?? booking.workerEarning ?? booking.totalAmount ?? 0
+  );
   const amountText =
     meta?.financial?.amountText ||
-    `Rs. ${Number(meta?.financial?.amount ?? booking.workerEarning ?? booking.totalAmount ?? 0).toLocaleString()}`;
+    (numericAmount > 0 ? `Rs. ${numericAmount.toLocaleString()}` : '');
 
-  const gradientColors: [string, string, string] = [
-    alpha(statusColor, theme.isDark ? 0.16 : 0.05),
-    alpha(theme.colors.background.screen, theme.isDark ? 0.92 : 0.98),
-    alpha(theme.colors.brand.primary, theme.isDark ? 0.08 : 0.02),
-  ];
+  const statusText = isPaymentPending
+    ? t('bookingStatus.paymentDue.label', meta?.statusInfo?.label || 'Payment Due')
+    : t(
+        `bookingStatus.${booking.status}.label`,
+        meta?.statusInfo?.label || STATUS_LABELS[booking.status] || 'Pending'
+      );
 
   return (
     <TouchableOpacity
       style={[
         styles.card,
         {
-          borderColor: theme.isDark ? alpha(statusColor, 0.22) : 'rgba(15, 23, 42, 0.18)',
-          backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.85) : '#FFFFFF',
+          backgroundColor: palette.cardBg,
+          borderColor: palette.cardBorder,
         },
       ]}
       onPress={onPress}
-      activeOpacity={0.84}
+      activeOpacity={0.85}
     >
-      <LinearGradient
-        colors={gradientColors}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-      <View style={[styles.accentGlow, { backgroundColor: alpha(statusColor, theme.isDark ? 0.06 : 0.02) }]} />
-
-      {/* Top Header: Service Title + Urgent Tag + Status Badge */}
+      {/* Top Row: Service Title on left, Badges on right */}
       <View style={styles.topRow}>
-        <View style={styles.titleArea}>
-          <Text style={[styles.categoryTitle, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-            {title}
-          </Text>
+        <Text
+          style={[styles.categoryTitle, { color: theme.colors.text.primary }]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+
+        <View style={styles.badgesGroup}>
           {isInstant && (
-            <View style={[styles.instantBadge, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.25) }]}>
-              <Zap size={10} color={colors.worker} strokeWidth={2.5} />
-              <Text style={[styles.instantBadgeText, { color: colors.worker }]}>
+            <View
+              style={[
+                styles.pillBadge,
+                { backgroundColor: palette.urgentPillBg },
+              ]}
+            >
+              <Text
+                style={[styles.pillBadgeText, { color: palette.urgentPillText }]}
+              >
                 {t('home.worker.instant', 'Urgent')}
               </Text>
             </View>
           )}
-        </View>
 
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: alpha(statusColor, theme.isDark ? 0.1 : 0.08),
-              borderColor: alpha(statusColor, theme.isDark ? 0.28 : 0.24),
-            },
-          ]}
-        >
-          <StatusIcon size={11} color={statusColor} strokeWidth={2.5} />
-          <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-            {isPaymentPending
-              ? t('bookingStatus.paymentDue.label', meta?.statusInfo?.label || 'Payment Due')
-              : t(`bookingStatus.${booking.status}.label`, meta?.statusInfo?.label || baseStatus.label)}
-          </Text>
+          <View
+            style={[
+              styles.pillBadge,
+              { backgroundColor: palette.statusPillBg },
+            ]}
+          >
+            <Text
+              style={[styles.pillBadgeText, { color: palette.statusPillText }]}
+              numberOfLines={1}
+            >
+              {statusText}
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Middle Row: Counterparty info + Date & Time */}
+      {/* Middle Row: Counterparty Avatar + Name on left, Date · Time on right */}
       <View style={styles.middleRow}>
         <View style={styles.personContainer}>
-          <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(statusColor, 0.3) : theme.colors.border.subtle }]}>
+          <View
+            style={[
+              styles.avatarCircle,
+              { backgroundColor: palette.avatarBg },
+            ]}
+          >
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <LinearGradient
-                colors={[alpha(statusColor, 0.35), alpha(theme.colors.brand.primary, 0.18)]}
-                style={styles.avatarFallback}
-              >
-                <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>{initialsFor(personName)}</Text>
-              </LinearGradient>
+              <Text style={[styles.avatarText, { color: palette.avatarText }]}>
+                {initialsFor(personName)}
+              </Text>
             )}
           </View>
-          <Text style={[styles.personName, { color: theme.colors.text.primary }]} numberOfLines={1}>
+          <Text
+            style={[styles.personName, { color: theme.colors.text.primary }]}
+            numberOfLines={1}
+          >
             {personName}
           </Text>
         </View>
 
-        <View style={styles.scheduleRow}>
-          <CalendarDays size={12} color={theme.colors.text.muted} strokeWidth={2.2} />
-          <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{dateLabel}</Text>
-          <View style={styles.scheduleDot} />
-          <Clock3 size={12} color={theme.colors.text.muted} strokeWidth={2.2} />
-          <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{timeLabel}</Text>
-        </View>
+        <Text style={[styles.scheduleText, { color: theme.colors.text.secondary }]}>
+          {`${dateLabel} · ${timeLabel}`}
+        </Text>
       </View>
 
-      {/* Footer: Clean Location on left, Price & Action Arrow on right */}
-      <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, 0.06) }]}>
-        <View style={styles.locationGroup}>
-          <MapPin size={12} color={theme.colors.text.muted} strokeWidth={2} />
-          <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-            {cleanLocation}
-          </Text>
-        </View>
+      {/* Footer Row: Location on left, Price on right */}
+      <View
+        style={[
+          styles.footerRow,
+          { borderTopColor: palette.dividerColor },
+        ]}
+      >
+        <Text
+          style={[styles.locationText, { color: theme.colors.text.secondary }]}
+          numberOfLines={1}
+        >
+          {cleanLocation}
+        </Text>
 
-        <View style={styles.footerRight}>
-          <Text style={[styles.amountValue, { color: colors.success }]}>{amountText}</Text>
-          <View style={[styles.openIconBtn, { backgroundColor: alpha(statusColor, 0.12), borderColor: alpha(statusColor, 0.25) }]}>
-            {isRTL ? (
-              <ChevronLeft size={13} color={statusColor} strokeWidth={2.8} />
-            ) : (
-              <ChevronRight size={13} color={statusColor} strokeWidth={2.8} />
-            )}
-          </View>
-        </View>
+        {amountText ? (
+          <Text style={[styles.amountValue, { color: theme.colors.text.primary }]}>
+            {amountText}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -221,26 +210,12 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
 
 const styles = StyleSheet.create({
   card: {
-    position: 'relative',
-    overflow: 'hidden',
-    borderRadius: 18,
-    borderWidth: 1.2,
-    marginBottom: 12,
+    borderRadius: 20,
+    borderWidth: 1.8,
+    marginBottom: 14,
     marginHorizontal: Spacing.l,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  accentGlow: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    right: -50,
-    top: -50,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   topRow: {
     flexDirection: 'row',
@@ -248,131 +223,82 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  titleArea: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   categoryTitle: {
-    fontSize: 16,
+    fontSize: 18.5,
     fontWeight: '800',
-    flexShrink: 1,
+    flex: 1,
+    letterSpacing: -0.3,
   },
-  instantBadge: {
+  badgesGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
+    gap: 6,
   },
-  instantBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  pillBadge: {
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statusText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+  pillBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   middleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 12,
     gap: 8,
   },
   personContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flex: 1,
   },
-  avatarShell: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
-  avatarFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   avatarText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
   },
   personName: {
-    fontSize: 13,
+    fontSize: 15.5,
     fontWeight: '700',
     flexShrink: 1,
   },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
   scheduleText: {
-    fontSize: 11,
+    fontSize: 14.5,
     fontWeight: '600',
-  },
-  scheduleDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.25)',
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-  },
-  locationGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-    marginRight: 10,
-  },
-  locationText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  footerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1.2,
     gap: 10,
   },
-  amountValue: {
-    fontSize: 16,
-    fontWeight: '900',
+  locationText: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
   },
-  openIconBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  amountValue: {
+    fontSize: 16.5,
+    fontWeight: '800',
   },
 });

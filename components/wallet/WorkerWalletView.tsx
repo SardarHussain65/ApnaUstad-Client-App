@@ -93,7 +93,7 @@ function SummaryChip({ label, value, color, theme }: { label: string; value: num
     <GlassCard
       intensity={24}
       padding={12}
-      style={[styles.chipCard, { borderColor: color + '48' }]}
+      style={[styles.chipCard, { borderColor: color + '66' }]}
       glowColor={color}
       gradient={[color + '5C', theme.colors.brand.primary + '26', alpha(theme.colors.surface.card, 0.18)]}
     >
@@ -267,11 +267,11 @@ export function WorkerWalletView({
           glowColor={colors.success}
           gradient={cardGradient(colors.success, colors.cyan)}
         >
-          <View style={[styles.earningsOverviewHead, { borderBottomColor: theme.colors.border.subtle }]}>
+          <View style={[styles.earningsOverviewHead, { borderBottomColor: theme.colors.border.default }]}>
             <View style={styles.earningsOverviewLead}>
               <View style={[styles.balanceEarningsIcon, {
-                backgroundColor: alpha(colors.success, 0.1),
-                borderColor: alpha(colors.success, 0.2),
+                backgroundColor: alpha(colors.success, 0.14),
+                borderColor: alpha(colors.success, 0.35),
               }]}>
                 <Banknote size={22} color={colors.success} strokeWidth={1.9} />
               </View>
@@ -290,15 +290,15 @@ export function WorkerWalletView({
             </Text>
           </View>
 
-          <View style={[styles.balanceEarningsGrid, { borderTopColor: theme.colors.border.subtle }]}>
-            <View style={[styles.balanceEarningsMetric, { borderRightColor: theme.colors.border.subtle }]}>
+          <View style={[styles.balanceEarningsGrid, { borderTopColor: theme.colors.border.default }]}>
+            <View style={[styles.balanceEarningsMetric, { borderRightColor: theme.colors.border.default }]}>
               <View style={[styles.earningsMetricDot, { backgroundColor: colors.success }]} />
               <Text style={[styles.balanceEarningsMiniLabel, { color: theme.colors.text.muted }]}>{t('wallet.received')}</Text>
               <Text style={[styles.balanceEarningsMiniValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                 {formatMoney(summary.paid)}
               </Text>
             </View>
-            <View style={[styles.balanceEarningsMetric, { borderRightColor: theme.colors.border.subtle }]}>
+            <View style={[styles.balanceEarningsMetric, { borderRightColor: theme.colors.border.default }]}>
               <View style={[styles.earningsMetricDot, { backgroundColor: '#00B8FF' }]} />
               <Text style={[styles.balanceEarningsMiniLabel, { color: theme.colors.text.muted }]}>{t('wallet.ready')}</Text>
               <Text style={[styles.balanceEarningsMiniValue, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
@@ -358,7 +358,7 @@ export function WorkerWalletView({
           <GlassCard
             intensity={24}
             padding={12}
-            style={[styles.chipCard, { borderColor: colors.success + '48' }]}
+            style={[styles.chipCard, { borderColor: colors.success + '66' }]}
             glowColor={colors.success}
             gradient={cardGradient(colors.success, colors.cyan)}
           >
@@ -372,7 +372,7 @@ export function WorkerWalletView({
           <GlassCard
             intensity={24}
             padding={12}
-            style={[styles.chipCard, { borderColor: '#FF8C0048' }]}
+            style={[styles.chipCard, { borderColor: '#FF8C0066' }]}
             glowColor="#FF8C00"
             gradient={cardGradient('#FF8C00', '#FF1493')}
           >
@@ -386,7 +386,7 @@ export function WorkerWalletView({
           <GlassCard
             intensity={24}
             padding={12}
-            style={[styles.chipCard, { borderColor: '#BF5AF248' }]}
+            style={[styles.chipCard, { borderColor: '#BF5AF266' }]}
             glowColor="#BF5AF2"
             gradient={cardGradient('#BF5AF2', colors.cyan)}
           >
@@ -420,8 +420,8 @@ export function WorkerWalletView({
 
         {/* Segmented Control */}
         <View style={[styles.segmentContainer, {
-          backgroundColor: alpha(theme.colors.text.primary, 0.03),
-          borderColor: alpha(theme.colors.text.primary, 0.06),
+          backgroundColor: theme.colors.surface.subtle,
+          borderColor: theme.colors.border.default,
         }]}>
           <TouchableOpacity
             style={[
@@ -430,7 +430,7 @@ export function WorkerWalletView({
                 styles.segmentBtnActive,
                 {
                   backgroundColor: theme.colors.surface.card,
-                  borderColor: theme.colors.border.subtle,
+                  borderColor: theme.colors.border.default,
                 }
               ]
             ]}
@@ -449,7 +449,7 @@ export function WorkerWalletView({
                 styles.segmentBtnActive,
                 {
                   backgroundColor: theme.colors.surface.card,
-                  borderColor: theme.colors.border.subtle,
+                  borderColor: theme.colors.border.default,
                 }
               ]
             ]}
@@ -468,7 +468,7 @@ export function WorkerWalletView({
                 styles.segmentBtnActive,
                 {
                   backgroundColor: theme.colors.surface.card,
-                  borderColor: theme.colors.border.subtle,
+                  borderColor: theme.colors.border.default,
                 }
               ]
             ]}
@@ -520,7 +520,7 @@ export function WorkerWalletView({
                       >
                         <GlassCard
                           intensity={20}
-                          style={[styles.transactionCard, { borderColor: txConf.color + '48' }]}
+                          style={[styles.transactionCard, { borderColor: txConf.color + '66' }]}
                           padding={14}
                           gradient={cardGradient(txConf.color, isPositive ? '#00B8FF' : '#FF1493')}
                         >
@@ -596,7 +596,7 @@ export function WorkerWalletView({
                       >
                         <GlassCard
                           intensity={20}
-                          style={[styles.transactionCard, { borderColor: conf.color + '48' }]}
+                          style={[styles.transactionCard, { borderColor: conf.color + '66' }]}
                           padding={14}
                           gradient={cardGradient(conf.color, '#00B8FF')}
                         >
@@ -679,7 +679,7 @@ export function WorkerWalletView({
                       >
                         <GlassCard
                           intensity={20}
-                          style={[styles.transactionCard, { borderColor: statusConf.color + '48' }]}
+                          style={[styles.transactionCard, { borderColor: statusConf.color + '66' }]}
                           padding={14}
                           gradient={cardGradient(statusConf.color, '#00B8FF')}
                           onPress={() => {
@@ -746,8 +746,8 @@ export function WorkerWalletView({
 
 const styles = StyleSheet.create({
   header: { marginBottom: Spacing.xs },
-  headerTitle: { fontSize: 28, fontWeight: '900', letterSpacing: 0.5 },
-  headerSubtitle: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  headerTitle: { fontSize: 29, fontWeight: '900', letterSpacing: 0.5 },
+  headerSubtitle: { fontSize: 14.5, fontWeight: '700', marginTop: 4 },
   scrollContent: {
     paddingHorizontal: Spacing.m,
     gap: 16,
@@ -757,18 +757,18 @@ const styles = StyleSheet.create({
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 16,
     padding: 12,
     marginBottom: 8,
   },
-  warningTitle: { fontSize: 13, fontWeight: '800', marginBottom: 2 },
-  warningSub: { fontSize: 10, fontWeight: '600', lineHeight: 14 },
+  warningTitle: { fontSize: 14, fontWeight: '800', marginBottom: 2 },
+  warningSub: { fontSize: 11.5, fontWeight: '700', lineHeight: 16 },
   balanceSection: { marginBottom: 4 },
   balanceCard: { borderRadius: 24 },
   balanceHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   balanceEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  balanceEyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 2 },
+  balanceEyebrow: { fontSize: 10.5, fontWeight: '900', letterSpacing: 2 },
   balanceEligibilityPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -776,33 +776,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   statusIndicator: { width: 5, height: 5, borderRadius: 2.5 },
-  balanceEligibilityText: { fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  balanceEligibilityText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 0.5 },
   balanceContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   workerBalanceContent: { marginBottom: 16 },
   balanceTextGroup: { gap: 4, flex: 1 },
-  balanceLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1 },
-  balanceAmount: { fontSize: 32, fontWeight: '900' },
-  balanceReserveText: { fontSize: 10, fontWeight: '600' },
+  balanceLabel: { fontSize: 10.5, fontWeight: '900', letterSpacing: 1 },
+  balanceAmount: { fontSize: 34, fontWeight: '900' },
+  balanceReserveText: { fontSize: 11.5, fontWeight: '700' },
   walletIconWrap: {
     width: 58,
     height: 58,
     borderRadius: 20,
-    borderWidth: 1.5,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rechargeBtn: {
-    height: 44,
+    height: 46,
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 1.6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rechargeBtnText: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
+  rechargeBtnText: { fontSize: 13, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 },
   earningsSection: { marginBottom: 4 },
   earningsOverviewCard: { borderRadius: 22 },
   earningsOverviewHead: {
@@ -810,84 +810,84 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
   },
   earningsOverviewLead: { flexDirection: 'row', gap: 12, alignItems: 'center', flex: 1 },
   balanceEarningsIcon: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
-  balanceEarningsLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 1.5 },
-  balanceEarningsSub: { fontSize: 10, fontWeight: '600', marginTop: 2 },
-  balanceEarningsAmount: { fontSize: 20, fontWeight: '900' },
+  balanceEarningsLabel: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.5 },
+  balanceEarningsSub: { fontSize: 11.5, fontWeight: '700', marginTop: 2 },
+  balanceEarningsAmount: { fontSize: 21.5, fontWeight: '900' },
   balanceEarningsGrid: { flexDirection: 'row' },
   balanceEarningsMetric: {
     flex: 1,
     padding: 12,
     alignItems: 'center',
     gap: 3,
-    borderRightWidth: 1,
+    borderRightWidth: 1.5,
   },
   balanceEarningsMetricLast: { borderRightWidth: 0 },
-  earningsMetricDot: { width: 4, height: 4, borderRadius: 2, marginBottom: 2 },
-  balanceEarningsMiniLabel: { fontSize: 8, fontWeight: '800', textTransform: 'uppercase' },
-  balanceEarningsMiniValue: { fontSize: 13, fontWeight: '900' },
+  earningsMetricDot: { width: 5, height: 5, borderRadius: 2.5, marginBottom: 2 },
+  balanceEarningsMiniLabel: { fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
+  balanceEarningsMiniValue: { fontSize: 14, fontWeight: '900' },
   walletStatsHeader: { marginTop: 8 },
-  walletStatsTitle: { fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
-  walletStatsCaption: { fontSize: 12, fontWeight: '600', marginTop: 2 },
+  walletStatsTitle: { fontSize: 21, fontWeight: '900', letterSpacing: 0.3 },
+  walletStatsCaption: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   summaryRow: { flexDirection: 'row', gap: 8, justifyContent: 'space-between' },
-  chipCard: { flex: 1, borderRadius: 14, minHeight: 74 },
+  chipCard: { flex: 1, borderRadius: 14, minHeight: 76, borderWidth: 1.6 },
   chipDot: { width: 6, height: 6, borderRadius: 3, marginBottom: 8 },
-  chipValue: { fontSize: 14, fontWeight: '900', marginBottom: 2 },
-  chipLabel: { fontSize: 9, lineHeight: 12, fontWeight: '700', textTransform: 'uppercase' },
+  chipValue: { fontSize: 15, fontWeight: '900', marginBottom: 2 },
+  chipLabel: { fontSize: 10, lineHeight: 13, fontWeight: '800', textTransform: 'uppercase' },
   transactionsSection: { marginTop: 12 },
   walletRecordsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  walletRecordsTitle: { fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
-  walletRecordsCaption: { fontSize: 12, fontWeight: '600', marginTop: 2 },
+  walletRecordsTitle: { fontSize: 21, fontWeight: '900', letterSpacing: 0.3 },
+  walletRecordsCaption: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   walletRecordsCount: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
-  walletRecordsCountText: { fontSize: 10, fontWeight: '900' },
+  walletRecordsCountText: { fontSize: 11.5, fontWeight: '900' },
   segmentContainer: {
     flexDirection: 'row',
     borderRadius: 14,
     padding: 3,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginBottom: 16,
   },
   segmentBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 11 },
-  segmentBtnActive: { borderWidth: 1 },
-  segmentText: { fontSize: 12, fontWeight: '700' },
+  segmentBtnActive: { borderWidth: 1.5 },
+  segmentText: { fontSize: 13, fontWeight: '800' },
   segmentTextActive: {},
   transactionList: { gap: 12 },
-  transactionCard: { borderRadius: 18, borderWidth: 1 },
+  transactionCard: { borderRadius: 18, borderWidth: 1.6 },
   txRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   txIconBox: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   txInfo: { flex: 1, minWidth: 0, gap: 4 },
-  txTitle: { fontSize: 15, fontWeight: '900' },
+  txTitle: { fontSize: 16, fontWeight: '900' },
   txMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  txDate: { fontSize: 11, fontWeight: '600' },
-  txStatusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  txStatusText: { fontSize: 8, fontWeight: '900', textTransform: 'uppercase' },
+  txDate: { fontSize: 12, fontWeight: '700' },
+  txStatusBadge: { paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 6 },
+  txStatusText: { fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
   txAmountGroup: { alignItems: 'flex-end', gap: 2 },
-  txAmount: { fontSize: 15, fontWeight: '900' },
-  txBalanceAfter: { fontSize: 10, fontWeight: '600' },
-  txCurrency: { fontSize: 9, fontWeight: '700' },
+  txAmount: { fontSize: 16, fontWeight: '900' },
+  txBalanceAfter: { fontSize: 11, fontWeight: '700' },
+  txCurrency: { fontSize: 10, fontWeight: '800' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, gap: 12 },
-  emptyTitle: { fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
-  emptySub: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  emptyTitle: { fontSize: 17, fontWeight: '900', letterSpacing: 0.5 },
+  emptySub: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
 });

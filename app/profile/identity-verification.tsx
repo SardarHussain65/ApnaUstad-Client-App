@@ -358,7 +358,7 @@ export default function IdentityVerificationScreen() {
 
               <TouchableOpacity style={[styles.resubmitBtn, shadows.glow]} onPress={handleReset}>
                 <LinearGradient colors={[theme.colors.brand.primary, theme.colors.brand.secondary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.resubmitGradient}>
-                  <Text style={[styles.resubmitText, { color: theme.colors.text.inverse }]}>{t('identityVerification.correctResubmit')}</Text>
+                  <Text style={[styles.resubmitText, { color: theme.colors.button.primaryText }]}>{t('identityVerification.correctResubmit')}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
@@ -424,11 +424,11 @@ export default function IdentityVerificationScreen() {
                     style={styles.saveGradient}
                   >
                     {isSubmitting ? (
-                      <ActivityIndicator color={theme.colors.text.inverse} />
+                      <ActivityIndicator color={theme.colors.button.primaryText} />
                     ) : (
                       <>
-                        <Check size={20} color={theme.colors.text.inverse} strokeWidth={3} />
-                        <Text style={[styles.saveText, { color: theme.colors.text.inverse }]}>{t('identityVerification.submitBtn')}</Text>
+                        <Check size={20} color={theme.colors.button.primaryText} strokeWidth={3} />
+                        <Text style={[styles.saveText, { color: theme.colors.button.primaryText }]}>{t('identityVerification.submitBtn')}</Text>
                       </>
                     )}
                   </LinearGradient>
@@ -487,25 +487,25 @@ function DocumentUploadWidget({ title, localUri, onlineUrl, onSelectGallery, onS
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.pickerBox}>
+        <View style={[styles.pickerBox, { borderColor: theme.colors.border.default }]}>
           <LinearGradient colors={[theme.colors.surface.subtle, 'rgba(0,0,0,0)']} style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]} />
 
-          <View style={[styles.pickerIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+          <View style={[styles.pickerIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
             <ImageIcon size={28} color={theme.colors.text.muted} strokeWidth={1.5} />
           </View>
 
           <Text style={[styles.pickerNudge, { color: theme.colors.text.muted }]}>{t('identityVerification.noDocument')}</Text>
 
           <View style={styles.pickerBtnRow}>
-            <TouchableOpacity style={[styles.pickerBtn, { borderColor: theme.colors.border.subtle }]} onPress={onSelectCamera}>
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: theme.colors.border.default }]} onPress={onSelectCamera}>
               <LinearGradient colors={[alpha(theme.colors.text.primary, 0.06), alpha(theme.colors.text.primary, 0.02)]} style={StyleSheet.absoluteFill} />
-              <Camera size={14} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
+              <Camera size={15} color={theme.colors.brand.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
               <Text style={[styles.pickerBtnTxt, { color: theme.colors.text.primary }]}>{t('identityVerification.camera')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.pickerBtn, { borderColor: theme.colors.border.subtle }]} onPress={onSelectGallery}>
+            <TouchableOpacity style={[styles.pickerBtn, { borderColor: theme.colors.border.default }]} onPress={onSelectGallery}>
               <LinearGradient colors={[alpha(theme.colors.text.primary, 0.06), alpha(theme.colors.text.primary, 0.02)]} style={StyleSheet.absoluteFill} />
-              <ImageIcon size={14} color={theme.colors.brand.secondary} strokeWidth={2.5} style={{ marginRight: 6 }} />
+              <ImageIcon size={15} color={theme.colors.brand.secondary} strokeWidth={2.5} style={{ marginRight: 6 }} />
               <Text style={[styles.pickerBtnTxt, { color: theme.colors.text.primary }]}>{t('identityVerification.gallery')}</Text>
             </TouchableOpacity>
           </View>
@@ -527,41 +527,41 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
 
   // Intro
-  formIntro: { fontSize: 13, fontWeight: '500', lineHeight: 20, marginBottom: 24, paddingHorizontal: 2 },
+  formIntro: { fontSize: 14, fontWeight: '500', lineHeight: 20, marginBottom: 24, paddingHorizontal: 2 },
 
   // Form
   fieldWrap: { marginBottom: 20 },
   fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7, marginLeft: 2 },
-  fieldLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  inputCard: { borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  input: { fontSize: 16, fontWeight: '700', letterSpacing: 0.8, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
+  fieldLabel: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  inputCard: { borderRadius: 14, borderWidth: 1.6, overflow: 'hidden' },
+  input: { fontSize: 16.5, fontWeight: '700', letterSpacing: 0.8, paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
 
   // Upload Widget
   uploadWidgetWrap: { marginBottom: 22 },
-  uploadWidgetTitle: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginLeft: 2 },
+  uploadWidgetTitle: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginLeft: 2 },
   pickerBox: {
-    borderRadius: 16, borderWidth: 1.5,
+    borderRadius: 16, borderWidth: 1.6,
     borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', paddingVertical: 24, paddingHorizontal: 16,
   },
-  pickerIcon: { width: 50, height: 50, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  pickerNudge: { fontSize: 13, fontWeight: '600', marginBottom: 16 },
+  pickerIcon: { width: 50, height: 50, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  pickerNudge: { fontSize: 13.5, fontWeight: '600', marginBottom: 16 },
   pickerBtnRow: { flexDirection: 'row', gap: 12 },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10,
-    borderWidth: 1, overflow: 'hidden', minWidth: 100,
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 11,
+    borderWidth: 1.6, overflow: 'hidden', minWidth: 108,
   },
-  pickerBtnTxt: { fontSize: 12, fontWeight: '700' },
+  pickerBtnTxt: { fontSize: 13, fontWeight: '800' },
 
   // Image Preview
-  imagePreviewWrap: { position: 'relative', width: '100%', aspectRatio: 8 / 5, borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
+  imagePreviewWrap: { position: 'relative', width: '100%', aspectRatio: 8 / 5, borderRadius: 16, overflow: 'hidden', borderWidth: 1.6 },
   previewImage: { width: '100%', height: '100%' },
-  imageClearBtn: { position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  imageClearBtn: { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.4 },
 
   // Status Panels
   statusPanel: {
-    alignItems: 'center', borderRadius: 24, overflow: 'hidden',
+    alignItems: 'center', borderRadius: 24, borderWidth: 1.8, overflow: 'hidden',
     paddingVertical: 32, paddingHorizontal: 20, marginBottom: 24,
   },
   glowRing: {
@@ -571,13 +571,13 @@ const styles = StyleSheet.create({
   },
   pulseAnim: { transform: [{ scale: 1 }] },
   statusTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5, marginBottom: 8 },
-  statusDesc: { fontSize: 13, fontWeight: '500', textAlign: 'center', lineHeight: 20, marginBottom: 24, paddingHorizontal: 10 },
+  statusDesc: { fontSize: 14, fontWeight: '500', textAlign: 'center', lineHeight: 20, marginBottom: 24, paddingHorizontal: 10 },
   cardInfo: {
     width: '100%',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',

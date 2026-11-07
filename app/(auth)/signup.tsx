@@ -156,7 +156,7 @@ export default function SignupScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={[styles.formCard, { borderColor: theme.colors.border.subtle }]}
+              style={[styles.formCard, { borderColor: theme.colors.border.default }]}
               gradient={[`${accentColor}16`, alpha(theme.colors.brand.secondary, 0.06)]}
             >
               <InputField
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   formCard: {
     borderRadius: BorderRadius.xxl,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   submitButton: {
     marginTop: Spacing.s,

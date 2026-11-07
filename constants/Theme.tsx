@@ -8,11 +8,32 @@ import React, {
   useState,
 } from 'react';
 
-export type ThemeId = 'current' | 'light' | 'dark';
+export type ThemeId = 'light' | 'dark' | 'current';
 
 export const THEME_STORAGE_KEY = 'app-theme';
 
 export type AppGradient = [string, string, ...string[]];
+
+export interface CategoryTilePalette {
+  cardBg: string;
+  cardBorder: string;
+  iconBoxBg: string;
+  iconColor: string;
+  titleColor: string;
+  subtitleColor?: string;
+}
+
+export interface BookingCardPalette {
+  cardBg: string;
+  cardBorder: string;
+  dividerColor: string;
+  statusPillBg: string;
+  statusPillText: string;
+  urgentPillBg: string;
+  urgentPillText: string;
+  avatarBg: string;
+  avatarText: string;
+}
 
 export interface LegacyColors {
   background: string;
@@ -51,6 +72,7 @@ export interface AppTheme {
   name: string;
   isDark: boolean;
   useImageBackground: boolean;
+  categoryCardStyle: 'multi' | 'monotone';
   blurTint: 'dark' | 'light' | 'default';
   colors: {
     background: {
@@ -265,14 +287,11 @@ export function getContrastTextColor(backgroundColor: string): string {
 /**
  * Ensures any color (e.g. backend accent colors or neon legacy colors)
  * is fully legible on the active theme's background.
- * In Light mode, bright aqua/cyan, neon green, and bright yellow
- * are automatically mapped to crisp, high-contrast dark tones.
  */
 export function getAccessibleColor(color: string, isDark: boolean = true): string {
   if (isDark || !color || typeof color !== 'string') return color;
   const normalized = color.trim().toLowerCase();
 
-  // Bright aqua / neon cyan variants -> deep cerulean / ocean blue
   if (
     normalized === '#00f5ff' ||
     normalized === '#00ffff' ||
@@ -283,13 +302,13 @@ export function getAccessibleColor(color: string, isDark: boolean = true): strin
     normalized === '#67e8f9' ||
     normalized === '#a5f3fc' ||
     normalized === '#cffafe' ||
+    normalized === '#60a5fa' ||
     normalized === 'cyan' ||
     normalized === 'aqua'
   ) {
-    return '#0369A1';
+    return '#1D4ED8';
   }
 
-  // Neon green variants -> deep forest green
   if (
     normalized === '#00ff7f' ||
     normalized === '#39ff14' ||
@@ -302,7 +321,6 @@ export function getAccessibleColor(color: string, isDark: boolean = true): strin
     return '#15803D';
   }
 
-  // Bright yellow / gold variants -> dark amber
   if (
     normalized === '#ffd700' ||
     normalized === '#ffe600' ||
@@ -319,7 +337,6 @@ export function getAccessibleColor(color: string, isDark: boolean = true): strin
     return '#B45309';
   }
 
-  // General RGB analysis for any arbitrary hex color in light mode:
   if (normalized.startsWith('#')) {
     const hex = normalized.slice(1);
     let r = 0, g = 0, b = 0;
@@ -332,21 +349,427 @@ export function getAccessibleColor(color: string, isDark: boolean = true): strin
       g = parseInt(hex.substring(2, 4), 16);
       b = parseInt(hex.substring(4, 6), 16);
     }
-    // High red + high green, low blue = Yellow / Gold / Amber
     if (r > 190 && g > 150 && b < 120) {
       return '#B45309';
     }
-    // High blue + high green, low red = Cyan / Aqua
     if (b > 180 && g > 160 && r < 120) {
-      return '#0369A1';
+      return '#1D4ED8';
     }
-    // High green, moderate red/blue = Light green
     if (g > 180 && r < 160 && b < 160) {
       return '#15803D';
     }
   }
 
   return color;
+}
+
+/**
+ * Returns the calibrated Category Tile palette (background, border, iconBox, iconColor, titleColor)
+ * with strong borders and rich semantic tints for Light, Dark, and Cosmic themes.
+ */
+export function getCategoryTilePalette(
+  theme: AppTheme,
+  categoryName: string = '',
+  index: number = 0,
+  isViewAll: boolean = false,
+): CategoryTilePalette {
+  const isCosmic = theme.id === 'current';
+
+  if (isViewAll) {
+    if (isCosmic) {
+      return {
+        cardBg: 'rgba(12, 60, 82, 0.84)',
+        cardBorder: '#00F5FF',
+        iconBoxBg: 'rgba(0, 245, 255, 0.24)',
+        iconColor: '#00F5FF',
+        titleColor: '#00F5FF',
+        subtitleColor: '#CBD5E1',
+      };
+    }
+    return theme.isDark
+      ? {
+          cardBg: '#13284C',
+          cardBorder: '#3B82F6',
+          iconBoxBg: '#1E3F75',
+          iconColor: '#60A5FA',
+          titleColor: '#93C5FD',
+          subtitleColor: '#60A5FA',
+        }
+      : {
+          cardBg: '#D6E8FF',
+          cardBorder: '#3B82F6',
+          iconBoxBg: '#ADCFF8',
+          iconColor: '#1E40AF',
+          titleColor: '#1E3A8A',
+          subtitleColor: '#1E40AF',
+        };
+  }
+
+  const lower = categoryName.toLowerCase();
+  type SemanticSlot = 'teal' | 'purple' | 'amber' | 'green' | 'rose' | 'blue';
+  let slot: SemanticSlot;
+
+  if (lower.includes('ac') || lower.includes('appliance') || lower.includes('cool') || lower.includes('hvac')) {
+    slot = 'teal';
+  } else if (lower.includes('plumb') || lower.includes('water') || lower.includes('pipe') || lower.includes('gas')) {
+    slot = 'purple';
+  } else if (lower.includes('electr') || lower.includes('solar') || lower.includes('wiring') || lower.includes('power')) {
+    slot = 'amber';
+  } else if (lower.includes('clean') || lower.includes('pest') || lower.includes('garden') || lower.includes('wash')) {
+    slot = 'green';
+  } else if (lower.includes('paint') || lower.includes('renov') || lower.includes('construct') || lower.includes('wood') || lower.includes('carpent')) {
+    slot = 'rose';
+  } else {
+    const order: SemanticSlot[] = ['teal', 'purple', 'amber', 'green', 'rose', 'blue'];
+    slot = order[index % order.length];
+  }
+
+  if (isCosmic) {
+    switch (slot) {
+      case 'teal':
+        return {
+          cardBg: 'rgba(12, 62, 72, 0.84)',
+          cardBorder: '#14B8A6',
+          iconBoxBg: 'rgba(20, 184, 166, 0.30)',
+          iconColor: '#5EEAD4',
+          titleColor: '#FFFFFF',
+        };
+      case 'purple':
+        return {
+          cardBg: 'rgba(48, 28, 84, 0.84)',
+          cardBorder: '#A855F7',
+          iconBoxBg: 'rgba(168, 85, 247, 0.30)',
+          iconColor: '#E9D5FF',
+          titleColor: '#FFFFFF',
+        };
+      case 'amber':
+        return {
+          cardBg: 'rgba(72, 44, 14, 0.84)',
+          cardBorder: '#F59E0B',
+          iconBoxBg: 'rgba(245, 158, 11, 0.30)',
+          iconColor: '#FDE68A',
+          titleColor: '#FFFFFF',
+        };
+      case 'green':
+        return {
+          cardBg: 'rgba(14, 58, 36, 0.84)',
+          cardBorder: '#22C55E',
+          iconBoxBg: 'rgba(34, 197, 94, 0.30)',
+          iconColor: '#86EFAC',
+          titleColor: '#FFFFFF',
+        };
+      case 'rose':
+        return {
+          cardBg: 'rgba(72, 24, 30, 0.84)',
+          cardBorder: '#F87171',
+          iconBoxBg: 'rgba(248, 113, 113, 0.30)',
+          iconColor: '#FECACA',
+          titleColor: '#FFFFFF',
+        };
+      case 'blue':
+      default:
+        return {
+          cardBg: 'rgba(18, 42, 80, 0.84)',
+          cardBorder: '#3B82F6',
+          iconBoxBg: 'rgba(59, 130, 246, 0.30)',
+          iconColor: '#93C5FD',
+          titleColor: '#FFFFFF',
+        };
+    }
+  }
+
+  if (theme.isDark) {
+    switch (slot) {
+      case 'teal':
+        return {
+          cardBg: '#0D3137',
+          cardBorder: '#14B8A6',
+          iconBoxBg: '#154E56',
+          iconColor: '#5EEAD4',
+          titleColor: '#FFFFFF',
+        };
+      case 'purple':
+        return {
+          cardBg: '#251B4A',
+          cardBorder: '#8B5CF6',
+          iconBoxBg: '#3B2B73',
+          iconColor: '#C4B5FD',
+          titleColor: '#FFFFFF',
+        };
+      case 'amber':
+        return {
+          cardBg: '#3B250A',
+          cardBorder: '#F59E0B',
+          iconBoxBg: '#5C3A10',
+          iconColor: '#FCD34D',
+          titleColor: '#FFFFFF',
+        };
+      case 'green':
+        return {
+          cardBg: '#0E3121',
+          cardBorder: '#22C55E',
+          iconBoxBg: '#164E35',
+          iconColor: '#4ADE80',
+          titleColor: '#FFFFFF',
+        };
+      case 'rose':
+        return {
+          cardBg: '#3D181B',
+          cardBorder: '#EF4444',
+          iconBoxBg: '#61252A',
+          iconColor: '#FCA5A5',
+          titleColor: '#FFFFFF',
+        };
+      case 'blue':
+      default:
+        return {
+          cardBg: '#13284C',
+          cardBorder: '#3B82F6',
+          iconBoxBg: '#1E3F75',
+          iconColor: '#60A5FA',
+          titleColor: '#FFFFFF',
+        };
+    }
+  } else {
+    switch (slot) {
+      case 'teal':
+        return {
+          cardBg: '#CCFBF1',
+          cardBorder: '#14B8A6',
+          iconBoxBg: '#99F6E4',
+          iconColor: '#0F766E',
+          titleColor: '#0F172A',
+        };
+      case 'purple':
+        return {
+          cardBg: '#E4D9FF',
+          cardBorder: '#8B5CF6',
+          iconBoxBg: '#C4B5FD',
+          iconColor: '#4C1D95',
+          titleColor: '#0F172A',
+        };
+      case 'amber':
+        return {
+          cardBg: '#FDE8C8',
+          cardBorder: '#F59E0B',
+          iconBoxBg: '#FCD38D',
+          iconColor: '#78350F',
+          titleColor: '#0F172A',
+        };
+      case 'green':
+        return {
+          cardBg: '#D1FAE5',
+          cardBorder: '#22C55E',
+          iconBoxBg: '#A7F3D0',
+          iconColor: '#14532D',
+          titleColor: '#0F172A',
+        };
+      case 'rose':
+        return {
+          cardBg: '#FADCD9',
+          cardBorder: '#F87171',
+          iconBoxBg: '#FCA5A5',
+          iconColor: '#7F1D1D',
+          titleColor: '#0F172A',
+        };
+      case 'blue':
+      default:
+        return {
+          cardBg: '#D6E8FF',
+          cardBorder: '#3B82F6',
+          iconBoxBg: '#ADCFF8',
+          iconColor: '#1E40AF',
+          titleColor: '#0F172A',
+        };
+    }
+  }
+}
+
+/**
+ * Returns the calibrated Recent Booking Card palette for the active theme and booking status.
+ */
+export function getBookingCardPalette(
+  theme: AppTheme,
+  status: string,
+  isPaymentPending: boolean = false,
+): BookingCardPalette {
+  const effectiveStatus = isPaymentPending ? 'payment_due' : status;
+
+  // 1. Cosmic Space Theme ('current')
+  if (theme.id === 'current') {
+    if (effectiveStatus === 'completed' || effectiveStatus === 'closed') {
+      return {
+        cardBg: 'rgba(8, 38, 28, 0.86)',
+        cardBorder: '#22C55E',
+        dividerColor: 'rgba(34, 197, 94, 0.30)',
+        statusPillBg: 'rgba(34, 197, 94, 0.22)',
+        statusPillText: '#4ADE80',
+        urgentPillBg: 'rgba(245, 158, 11, 0.24)',
+        urgentPillText: '#FBBF24',
+        avatarBg: 'rgba(34, 197, 94, 0.25)',
+        avatarText: '#FFFFFF',
+      };
+    }
+    if (
+      effectiveStatus === 'accepted' ||
+      effectiveStatus === 'ongoing' ||
+      effectiveStatus === 'in-progress' ||
+      effectiveStatus === 'assigned'
+    ) {
+      return {
+        cardBg: 'rgba(12, 32, 62, 0.86)',
+        cardBorder: '#00F5FF',
+        dividerColor: 'rgba(0, 245, 255, 0.28)',
+        statusPillBg: 'rgba(0, 245, 255, 0.22)',
+        statusPillText: '#00F5FF',
+        urgentPillBg: 'rgba(245, 158, 11, 0.24)',
+        urgentPillText: '#FBBF24',
+        avatarBg: 'rgba(0, 245, 255, 0.22)',
+        avatarText: '#FFFFFF',
+      };
+    }
+    if (effectiveStatus === 'cancelled') {
+      return {
+        cardBg: 'rgba(46, 16, 22, 0.86)',
+        cardBorder: '#EF4444',
+        dividerColor: 'rgba(239, 68, 68, 0.28)',
+        statusPillBg: 'rgba(239, 68, 68, 0.24)',
+        statusPillText: '#FCA5A5',
+        urgentPillBg: 'rgba(245, 158, 11, 0.24)',
+        urgentPillText: '#FBBF24',
+        avatarBg: 'rgba(239, 68, 68, 0.25)',
+        avatarText: '#FFFFFF',
+      };
+    }
+    return {
+      cardBg: 'rgba(44, 30, 12, 0.86)',
+      cardBorder: '#F59E0B',
+      dividerColor: 'rgba(245, 158, 11, 0.28)',
+      statusPillBg: 'rgba(245, 158, 11, 0.24)',
+      statusPillText: '#FBBF24',
+      urgentPillBg: 'rgba(245, 158, 11, 0.24)',
+      urgentPillText: '#FBBF24',
+      avatarBg: 'rgba(245, 158, 11, 0.25)',
+      avatarText: '#FFFFFF',
+    };
+  }
+
+  // 2. Professional Dark ('dark')
+  if (theme.isDark) {
+    if (effectiveStatus === 'completed' || effectiveStatus === 'closed') {
+      return {
+        cardBg: '#0B2B1E',
+        cardBorder: '#22C55E',
+        dividerColor: '#1E563B',
+        statusPillBg: '#22C55E',
+        statusPillText: '#052E16',
+        urgentPillBg: '#F59E0B',
+        urgentPillText: '#1C1917',
+        avatarBg: '#164E35',
+        avatarText: '#FFFFFF',
+      };
+    }
+    if (
+      effectiveStatus === 'accepted' ||
+      effectiveStatus === 'ongoing' ||
+      effectiveStatus === 'in-progress' ||
+      effectiveStatus === 'assigned'
+    ) {
+      return {
+        cardBg: '#102342',
+        cardBorder: '#3B82F6',
+        dividerColor: '#254782',
+        statusPillBg: '#60A5FA',
+        statusPillText: '#081426',
+        urgentPillBg: '#F59E0B',
+        urgentPillText: '#1C1917',
+        avatarBg: '#1E3F75',
+        avatarText: '#FFFFFF',
+      };
+    }
+    if (effectiveStatus === 'cancelled') {
+      return {
+        cardBg: '#301518',
+        cardBorder: '#EF4444',
+        dividerColor: '#69262C',
+        statusPillBg: '#F87171',
+        statusPillText: '#2A080A',
+        urgentPillBg: '#F59E0B',
+        urgentPillText: '#1C1917',
+        avatarBg: '#542126',
+        avatarText: '#FFFFFF',
+      };
+    }
+    // pending / open / reviewing / payment_due
+    return {
+      cardBg: '#2E220D',
+      cardBorder: '#F59E0B',
+      dividerColor: '#664B1C',
+      statusPillBg: '#F59E0B',
+      statusPillText: '#1C1917',
+      urgentPillBg: '#F59E0B',
+      urgentPillText: '#1C1917',
+      avatarBg: '#4D3815',
+      avatarText: '#FFFFFF',
+    };
+  }
+
+  // 3. Professional Light ('light')
+  if (effectiveStatus === 'completed' || effectiveStatus === 'closed') {
+    return {
+      cardBg: '#DCFCE7',
+      cardBorder: '#22C55E',
+      dividerColor: '#86EFAC',
+      statusPillBg: '#A7F3D0',
+      statusPillText: '#064E3B',
+      urgentPillBg: '#FDE68A',
+      urgentPillText: '#78350F',
+      avatarBg: '#FFFFFF',
+      avatarText: '#0F172A',
+    };
+  }
+  if (
+    effectiveStatus === 'accepted' ||
+    effectiveStatus === 'ongoing' ||
+    effectiveStatus === 'in-progress' ||
+    effectiveStatus === 'assigned'
+  ) {
+    return {
+      cardBg: '#DBEAFE',
+      cardBorder: '#3B82F6',
+      dividerColor: '#93C5FD',
+      statusPillBg: '#1D4ED8',
+      statusPillText: '#FFFFFF',
+      urgentPillBg: '#FDE68A',
+      urgentPillText: '#78350F',
+      avatarBg: '#FFFFFF',
+      avatarText: '#0F172A',
+    };
+  }
+  if (effectiveStatus === 'cancelled') {
+    return {
+      cardBg: '#FEE2E2',
+      cardBorder: '#EF4444',
+      dividerColor: '#FCA5A5',
+      statusPillBg: '#FECACA',
+      statusPillText: '#7F1D1D',
+      urgentPillBg: '#FDE68A',
+      urgentPillText: '#78350F',
+      avatarBg: '#FFFFFF',
+      avatarText: '#0F172A',
+    };
+  }
+  return {
+    cardBg: '#FEF3C7',
+    cardBorder: '#F59E0B',
+    dividerColor: '#FCD34D',
+    statusPillBg: '#FDE68A',
+    statusPillText: '#78350F',
+    urgentPillBg: '#FDE68A',
+    urgentPillText: '#78350F',
+    avatarBg: '#FFFFFF',
+    avatarText: '#0F172A',
+  };
 }
 
 export const Spacing = {
@@ -377,100 +800,103 @@ export const Animation = {
   },
 };
 
-const currentLegacy: LegacyColors = {
-  background: '#050510',
-  card: '#0F0F1A',
-  cardSelected: '#1A1A2E',
-  text: '#FFFFFF',
-  textMuted: '#8E8E93',
-  textDim: '#5B5B5E',
-  primary: '#00F5FF',
-  secondary: '#BF5AF2',
-  worker: '#FF8C00',
-  success: '#34C759',
-  error: '#FF3B30',
-  cyan: '#00F5FF',
-  orange: '#FF8C00',
-  green: '#00FF7F',
-  pink: '#FF1493',
-  purple: '#BF5AF2',
-  deepBlue: '#121225',
-  yellow: '#FFD700',
-  border: '#1C1C2E',
-  inputBackground: '#0F0F1A',
-  surface: '#0A0A1F',
-  surfaceLight: '#1C1C2E',
-  surfaceHighlight: '#2C2C4E',
-  cyanGradient: ['#00F5FF', '#007AFF'],
-  orangeGradient: ['#FF8C00', '#FF5E00'],
-  purpleGradient: ['#BF5AF2', '#FF2D55'],
-  successGradient: ['#34C759', '#11998e'],
-  cosmicGradient: ['#050510', '#121225', '#050510'],
-  glowingGradient: ['rgba(0, 245, 255, 0.15)', 'rgba(191, 90, 242, 0.15)'],
-};
-
+// ─── 1. Professional Light ('light') ─────────────────────────────────────────
 const lightLegacy: LegacyColors = {
-  background: '#F7F8FA',
+  background: '#FFFFFF',
   card: '#FFFFFF',
-  cardSelected: '#EAF2FF',
-  text: '#111827',
-  textMuted: '#64748B',
-  textDim: '#64748B',
-  primary: '#2563EB',
+  cardSelected: '#DBEAFE',
+  text: '#0F172A',
+  textMuted: '#334155',
+  textDim: '#475569',
+  primary: '#1D4ED8',
   secondary: '#0F766E',
-  worker: '#EA580C',
-  success: '#16A34A',
+  worker: '#D97706',
+  success: '#15803D',
   error: '#DC2626',
-  cyan: '#0369A1',
-  orange: '#EA580C',
-  green: '#16A34A',
+  cyan: '#1D4ED8',
+  orange: '#D97706',
+  green: '#15803D',
   pink: '#DB2777',
-  purple: '#7C3AED',
-  deepBlue: '#EAF2FF',
+  purple: '#5B21B6',
+  deepBlue: '#DBEAFE',
   yellow: '#B45309',
-  border: '#CBD5E1',
+  border: '#94A3B8',
   inputBackground: '#FFFFFF',
   surface: '#F1F5F9',
   surfaceLight: '#FFFFFF',
-  surfaceHighlight: '#EAF2FF',
-  cyanGradient: ['#0284C7', '#0369A1'],
-  orangeGradient: ['#F97316', '#EA580C'],
-  purpleGradient: ['#7C3AED', '#2563EB'],
+  surfaceHighlight: '#DBEAFE',
+  cyanGradient: ['#1D4ED8', '#1E40AF'],
+  orangeGradient: ['#F59E0B', '#D97706'],
+  purpleGradient: ['#6D28D9', '#1D4ED8'],
   successGradient: ['#16A34A', '#0F766E'],
-  cosmicGradient: ['#F7F8FA', '#EEF2F7', '#F7F8FA'],
-  glowingGradient: ['rgba(3, 105, 161, 0.08)', 'rgba(15, 118, 110, 0.08)'],
+  cosmicGradient: ['#FFFFFF', '#F8FAFC', '#FFFFFF'],
+  glowingGradient: ['rgba(29, 78, 216, 0.08)', 'rgba(15, 118, 110, 0.08)'],
 };
 
+// ─── 2. Professional Dark ('dark') ───────────────────────────────────────────
 const darkLegacy: LegacyColors = {
-  background: '#101114',
-  card: '#191C22',
-  cardSelected: '#222731',
-  text: '#F8FAFC',
-  textMuted: '#A7B0C0',
-  textDim: '#7E8B9F',
+  background: '#080C14',
+  card: '#111822',
+  cardSelected: '#1C283B',
+  text: '#FFFFFF',
+  textMuted: '#CBD5E1',
+  textDim: '#94A3B8',
   primary: '#60A5FA',
   secondary: '#2DD4BF',
-  worker: '#FB923C',
+  worker: '#F59E0B',
   success: '#22C55E',
   error: '#F87171',
   cyan: '#60A5FA',
-  orange: '#FB923C',
+  orange: '#F59E0B',
   green: '#22C55E',
   pink: '#F472B6',
   purple: '#A78BFA',
-  deepBlue: '#16181D',
+  deepBlue: '#111A2B',
   yellow: '#FBBF24',
-  border: '#2E3544',
-  inputBackground: '#171A20',
-  surface: '#15171C',
-  surfaceLight: '#222731',
-  surfaceHighlight: '#2B3340',
-  cyanGradient: ['#60A5FA', '#2DD4BF'],
-  orangeGradient: ['#FB923C', '#F97316'],
-  purpleGradient: ['#A78BFA', '#60A5FA'],
-  successGradient: ['#22C55E', '#14B8A6'],
-  cosmicGradient: ['#101114', '#15171C', '#101114'],
-  glowingGradient: ['rgba(96, 165, 250, 0.12)', 'rgba(45, 212, 191, 0.1)'],
+  border: '#334155',
+  inputBackground: '#111822',
+  surface: '#0F1620',
+  surfaceLight: '#1A2436',
+  surfaceHighlight: '#233858',
+  cyanGradient: ['#3B82F6', '#2563EB'],
+  orangeGradient: ['#F59E0B', '#D97706'],
+  purpleGradient: ['#8B5CF6', '#3B82F6'],
+  successGradient: ['#22C55E', '#10B981'],
+  cosmicGradient: ['#080C14', '#0F1620', '#080C14'],
+  glowingGradient: ['rgba(96, 165, 250, 0.12)', 'rgba(45, 212, 191, 0.10)'],
+};
+
+// ─── 3. Cosmic Space ('current') ─────────────────────────────────────────────
+const cosmicLegacy: LegacyColors = {
+  background: '#060914',
+  card: 'rgba(14, 20, 36, 0.84)',
+  cardSelected: 'rgba(24, 36, 64, 0.90)',
+  text: '#FFFFFF',
+  textMuted: '#CBD5E1',
+  textDim: '#94A3B8',
+  primary: '#00F5FF',
+  secondary: '#BF5AF2',
+  worker: '#FF9F0A',
+  success: '#22C55E',
+  error: '#FF453A',
+  cyan: '#00F5FF',
+  orange: '#FF9F0A',
+  green: '#22C55E',
+  pink: '#FF375F',
+  purple: '#BF5AF2',
+  deepBlue: '#0D1528',
+  yellow: '#FFD60A',
+  border: 'rgba(148, 163, 184, 0.35)',
+  inputBackground: 'rgba(12, 18, 34, 0.86)',
+  surface: 'rgba(12, 18, 34, 0.84)',
+  surfaceLight: 'rgba(24, 34, 58, 0.88)',
+  surfaceHighlight: 'rgba(0, 245, 255, 0.16)',
+  cyanGradient: ['#00F5FF', '#0088FF'],
+  orangeGradient: ['#FF9F0A', '#FF375F'],
+  purpleGradient: ['#BF5AF2', '#00F5FF'],
+  successGradient: ['#22C55E', '#00F5FF'],
+  cosmicGradient: ['#060914', '#0D1326', '#060914'],
+  glowingGradient: ['rgba(0, 245, 255, 0.16)', 'rgba(191, 90, 242, 0.14)'],
 };
 
 const buildTheme = (
@@ -479,128 +905,141 @@ const buildTheme = (
   legacy: LegacyColors,
   isDark: boolean,
   useImageBackground: boolean,
-): AppTheme => ({
-  id,
-  name,
-  isDark,
-  useImageBackground,
-  blurTint: isDark ? 'dark' : 'light',
-  colors: {
-    background: {
-      app: legacy.background,
-      screen: legacy.background,
-      elevated: id === 'light' ? '#FFFFFF' : legacy.surface,
-      imageOverlay: id === 'current' ? 'rgba(5, 5, 16, 0.7)' : alpha(legacy.background, 0.94),
+): AppTheme => {
+  const isCosmic = id === 'current';
+
+  return {
+    id,
+    name,
+    isDark,
+    useImageBackground,
+    categoryCardStyle: 'multi',
+    blurTint: isDark ? 'dark' : 'light',
+    colors: {
+      background: {
+        app: legacy.background,
+        screen: legacy.background,
+        elevated: !isDark ? '#FFFFFF' : legacy.surface,
+        imageOverlay: isCosmic ? 'rgba(6, 9, 20, 0.56)' : alpha(legacy.background, 0.94),
+      },
+      surface: {
+        card: legacy.card,
+        cardMuted: !isDark ? legacy.surface : alpha(legacy.cardSelected, 0.85),
+        raised: !isDark ? '#FFFFFF' : legacy.surfaceLight,
+        selected: legacy.cardSelected,
+        highlight: legacy.surfaceHighlight,
+        subtle: !isDark ? legacy.surface : legacy.card,
+      },
+      text: {
+        primary: legacy.text,
+        secondary: !isDark ? '#1E293B' : '#E2E8F0',
+        muted: legacy.textMuted,
+        dim: legacy.textDim,
+        inverse: !isDark ? '#FFFFFF' : '#0F172A',
+        onBrand: !isDark ? '#FFFFFF' : '#080C14',
+      },
+      border: {
+        default: legacy.border,
+        strong: !isDark ? '#64748B' : '#475569',
+        focus: legacy.primary,
+        subtle: !isDark ? '#CBD5E1' : legacy.border,
+      },
+      brand: {
+        primary: legacy.primary,
+        secondary: legacy.secondary,
+        worker: legacy.worker,
+        accent: legacy.secondary,
+      },
+      status: {
+        success: legacy.success,
+        warning: !isDark ? '#D97706' : '#FBBF24',
+        error: legacy.error,
+        info: legacy.primary,
+      },
+      input: {
+        background: legacy.inputBackground,
+        border: !isDark ? '#1D4ED8' : isCosmic ? 'rgba(0, 245, 255, 0.45)' : '#3B82F6',
+        focusedBorder: legacy.primary,
+        placeholder: !isDark ? '#475569' : '#94A3B8',
+        text: legacy.text,
+      },
+      button: {
+        primaryBackground: legacy.cyanGradient,
+        primaryText: !isDark ? '#FFFFFF' : '#080C14',
+        secondaryBackground: !isDark ? ['#E2E8F0', '#CBD5E1'] : [legacy.card, legacy.cardSelected],
+        secondaryText: legacy.text,
+        workerBackground: legacy.orangeGradient,
+        workerText: '#FFFFFF',
+        outlineText: legacy.text,
+        outlineBorder: legacy.border,
+        disabledOpacity: 0.5,
+      },
+      tabBar: {
+        background: !isDark ? '#FFFFFF' : isCosmic ? 'rgba(10, 15, 28, 0.92)' : legacy.surface,
+        border: !isDark ? '#94A3B8' : isCosmic ? 'rgba(0, 245, 255, 0.28)' : legacy.border,
+        activeBackground: !isDark
+          ? '#C7D9F8'
+          : isCosmic
+            ? 'rgba(0, 245, 255, 0.16)'
+            : '#233858',
+        activeBorder: isCosmic ? 'rgba(0, 245, 255, 0.40)' : 'transparent',
+        activeIcon: !isDark
+          ? '#1D4ED8'
+          : isCosmic
+            ? '#00F5FF'
+            : '#60A5FA',
+        inactiveIcon: !isDark ? '#1E293B' : '#CBD5E1',
+        shadow: 'transparent',
+      },
+      modal: {
+        backdrop: !isDark ? 'rgba(15, 23, 42, 0.50)' : 'rgba(0, 0, 0, 0.74)',
+        card: !isDark ? '#FFFFFF' : '#111822',
+        border: !isDark ? '#94A3B8' : legacy.border,
+        closeBackground: !isDark ? '#E2E8F0' : legacy.surfaceLight,
+      },
+      toast: {
+        background: !isDark ? '#FFFFFF' : '#111822',
+        border: !isDark ? '#94A3B8' : legacy.border,
+        title: legacy.text,
+        message: !isDark ? '#334155' : '#CBD5E1',
+      },
+      skeleton: {
+        base: !isDark ? '#CBD5E1' : '#1A2436',
+        shimmer: !isDark ? '#F1F5F9' : '#26344D',
+      },
+      overlay: {
+        subtle: !isDark ? alpha('#0F172A', 0.04) : alpha('#FFFFFF', 0.05),
+        medium: !isDark ? alpha('#0F172A', 0.08) : alpha('#FFFFFF', 0.10),
+        strong: !isDark ? alpha('#0F172A', 0.18) : alpha('#000000', 0.55),
+      },
+      shadow: {
+        color: '#000000',
+        softOpacity: 0,
+        cardOpacity: 0,
+        glowOpacity: 0,
+      },
+      gradients: {
+        primary: legacy.cyanGradient,
+        worker: legacy.orangeGradient,
+        secondary: legacy.purpleGradient,
+        success: legacy.successGradient,
+        page: legacy.cosmicGradient,
+        card: !isDark ? ['#FFFFFF', '#FFFFFF'] : [legacy.card, legacy.card],
+        glow: legacy.glowingGradient,
+      },
     },
-    surface: {
-      card: legacy.card,
-      cardMuted: id === 'light' ? '#F8FAFC' : alpha(legacy.cardSelected, 0.82),
-      raised: id === 'light' ? '#FFFFFF' : legacy.surfaceLight,
-      selected: legacy.cardSelected,
-      highlight: legacy.surfaceHighlight,
-      subtle: id === 'light' ? '#F1F5F9' : alpha('#FFFFFF', isDark ? 0.055 : 0.08),
-    },
-    text: {
-      primary: legacy.text,
-      secondary: id === 'current' ? '#E8EAED' : (id === 'light' ? '#334155' : '#CBD5E1'),
-      muted: legacy.textMuted,
-      dim: legacy.textDim,
-      inverse: id === 'light' ? '#FFFFFF' : '#111827',
-      onBrand: id === 'light' ? '#FFFFFF' : '#001014',
-    },
-    border: {
-      default: id === 'light' ? '#CBD5E1' : alpha('#FFFFFF', isDark ? 0.14 : 0.18),
-      strong: id === 'light' ? '#94A3B8' : alpha('#FFFFFF', isDark ? 0.22 : 0.26),
-      focus: legacy.primary,
-      subtle: id === 'light' ? '#E2E8F0' : alpha('#FFFFFF', isDark ? 0.09 : 0.08),
-    },
-    brand: {
-      primary: legacy.primary,
-      secondary: legacy.secondary,
-      worker: legacy.worker,
-      accent: id === 'current' ? legacy.purple : legacy.secondary,
-    },
-    status: {
-      success: legacy.success,
-      warning: id === 'light' ? '#D97706' : '#FBBF24',
-      error: legacy.error,
-      info: legacy.primary,
-    },
-    input: {
-      background: legacy.inputBackground,
-      border: id === 'light' ? '#CBD5E1' : alpha('#FFFFFF', 0.14),
-      focusedBorder: legacy.primary,
-      placeholder: legacy.textDim,
-      text: legacy.text,
-    },
-    button: {
-      primaryBackground: legacy.cyanGradient,
-      primaryText: id === 'light' ? '#FFFFFF' : '#001014',
-      secondaryBackground: id === 'light' ? ['#F1F5F9', '#E2E8F0'] : [legacy.card, legacy.cardSelected],
-      secondaryText: legacy.text,
-      workerBackground: legacy.orangeGradient,
-      workerText: '#FFFFFF',
-      outlineText: legacy.text,
-      outlineBorder: legacy.border,
-      disabledOpacity: 0.5,
-    },
-    tabBar: {
-      background: id === 'light' ? alpha('#FFFFFF', 0.94) : alpha(legacy.surface, id === 'current' ? 0.72 : 0.94),
-      border: id === 'light' ? '#E2E8F0' : alpha('#FFFFFF', 0.08),
-      activeBackground: alpha(legacy.primary, id === 'current' ? 0.08 : 0.12),
-      activeBorder: alpha(legacy.primary, id === 'current' ? 0.15 : 0.25),
-      activeIcon: legacy.primary,
-      inactiveIcon: legacy.textDim,
-      shadow: legacy.primary,
-    },
-    modal: {
-      backdrop: id === 'light' ? 'rgba(15, 23, 42, 0.45)' : 'rgba(0, 0, 0, 0.72)',
-      card: id === 'light' ? '#FFFFFF' : alpha(legacy.card, 0.96),
-      border: id === 'light' ? '#E2E8F0' : alpha('#FFFFFF', 0.15),
-      closeBackground: id === 'light' ? '#F1F5F9' : alpha('#FFFFFF', 0.06),
-    },
-    toast: {
-      background: id === 'light' ? '#FFFFFF' : alpha(legacy.card, 0.96),
-      border: id === 'light' ? '#E2E8F0' : alpha('#FFFFFF', 0.12),
-      title: legacy.text,
-      message: id === 'light' ? '#475569' : '#D1D5DB',
-    },
-    skeleton: {
-      base: id === 'light' ? '#E2E8F0' : alpha('#FFFFFF', 0.08),
-      shimmer: id === 'light' ? '#F8FAFC' : alpha('#FFFFFF', 0.16),
-    },
-    overlay: {
-      subtle: id === 'light' ? alpha('#FFFFFF', 0.6) : alpha('#FFFFFF', 0.045),
-      medium: id === 'light' ? alpha('#0F172A', 0.08) : alpha('#FFFFFF', 0.08),
-      strong: id === 'light' ? alpha('#0F172A', 0.18) : alpha('#000000', 0.5),
-    },
-    shadow: {
-      color: id === 'light' ? '#0F172A' : '#000000',
-      softOpacity: id === 'light' ? 0.08 : 0.2,
-      cardOpacity: id === 'light' ? 0.12 : 0.5,
-      glowOpacity: id === 'current' ? 0.6 : 0.18,
-    },
-    gradients: {
-      primary: legacy.cyanGradient,
-      worker: legacy.orangeGradient,
-      secondary: legacy.purpleGradient,
-      success: legacy.successGradient,
-      page: legacy.cosmicGradient,
-      card: id === 'light' ? ['#FFFFFF', '#F8FAFC'] : [legacy.card, legacy.surface],
-      glow: legacy.glowingGradient,
-    },
-  },
-  legacy,
-});
+    legacy,
+  };
+};
 
 export const themes: Record<ThemeId, AppTheme> = {
-  current: buildTheme('current', 'Current Theme', currentLegacy, true, true),
-  light: buildTheme('light', 'Light Theme', lightLegacy, false, false),
-  dark: buildTheme('dark', 'Dark Theme', darkLegacy, true, false),
+  light: buildTheme('light', 'Professional Light', lightLegacy, false, false),
+  dark: buildTheme('dark', 'Professional Dark', darkLegacy, true, false),
+  current: buildTheme('current', 'Cosmic Space', cosmicLegacy, true, true),
 };
 
 const isThemeId = (value: string | null): value is ThemeId => {
-  return value === 'current' || value === 'light' || value === 'dark';
+  return value === 'light' || value === 'dark' || value === 'current';
 };
 
 interface ThemeContextValue {
@@ -615,7 +1054,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 let memoryCachedThemeId: ThemeId | null = null;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeId, setThemeIdState] = useState<ThemeId>(memoryCachedThemeId || 'current');
+  const [themeId, setThemeIdState] = useState<ThemeId>(memoryCachedThemeId || 'dark');
   const [isHydrated, setIsHydrated] = useState(Boolean(memoryCachedThemeId));
 
   useEffect(() => {
@@ -623,9 +1062,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     AsyncStorage.getItem(THEME_STORAGE_KEY)
       .then((storedThemeId) => {
-        if (isMounted && isThemeId(storedThemeId)) {
+        if (!isMounted) return;
+        if (isThemeId(storedThemeId)) {
           memoryCachedThemeId = storedThemeId;
           setThemeIdState(storedThemeId);
+        } else if (storedThemeId === 'emerald_light') {
+          memoryCachedThemeId = 'light';
+          setThemeIdState('light');
+          void AsyncStorage.setItem(THEME_STORAGE_KEY, 'light');
+        } else if (storedThemeId === 'emerald_dark') {
+          memoryCachedThemeId = 'dark';
+          setThemeIdState('dark');
+          void AsyncStorage.setItem(THEME_STORAGE_KEY, 'dark');
         }
       })
       .catch((error) => {
@@ -641,15 +1089,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setThemeId = useCallback(async (nextThemeId: ThemeId) => {
-    memoryCachedThemeId = nextThemeId;
-    setThemeIdState(nextThemeId);
-    await AsyncStorage.setItem(THEME_STORAGE_KEY, nextThemeId);
+    const resolvedId: ThemeId = isThemeId(nextThemeId) ? nextThemeId : 'dark';
+    memoryCachedThemeId = resolvedId;
+    setThemeIdState(resolvedId);
+    await AsyncStorage.setItem(THEME_STORAGE_KEY, resolvedId);
   }, []);
 
   const value = useMemo(
     () => ({
       themeId,
-      theme: themes[themeId],
+      theme: themes[themeId] || themes.dark,
       isHydrated,
       setThemeId,
     }),
@@ -679,16 +1128,16 @@ export function useThemedStyles<T>(factory: (theme: AppTheme) => T): T {
 export function createTypography(theme: AppTheme) {
   return {
     h1: {
-      fontSize: 40,
-      fontWeight: '900' as const,
-      color: theme.colors.text.primary,
-      letterSpacing: -1,
-    },
-    h2: {
-      fontSize: 28,
+      fontSize: 36,
       fontWeight: '800' as const,
       color: theme.colors.text.primary,
-      letterSpacing: -0.5,
+      letterSpacing: -0.6,
+    },
+    h2: {
+      fontSize: 26,
+      fontWeight: '800' as const,
+      color: theme.colors.text.primary,
+      letterSpacing: -0.4,
     },
     h3: {
       fontSize: 20,
@@ -705,71 +1154,50 @@ export function createTypography(theme: AppTheme) {
       color: theme.colors.text.muted,
       fontWeight: '500' as const,
     },
-    threeD: (theme.isDark && theme.id === 'current')
-      ? {
-          textShadowColor: 'rgba(0, 0, 0, 0.75)',
-          textShadowOffset: { width: 0, height: 2 },
-          textShadowRadius: 4,
-        }
-      : {
-          textShadowColor: 'transparent',
-          textShadowOffset: { width: 0, height: 0 },
-          textShadowRadius: 0,
-        },
-    threeDLight: (theme.isDark && theme.id === 'current')
-      ? {
-          textShadowColor: 'rgba(255, 255, 255, 0.3)',
-          textShadowOffset: { width: 0, height: -1 },
-          textShadowRadius: 1,
-        }
-      : {
-          textShadowColor: 'transparent',
-          textShadowOffset: { width: 0, height: 0 },
-          textShadowRadius: 0,
-        },
+    threeD: {
+      textShadowColor: 'transparent',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 0,
+    },
+    threeDLight: {
+      textShadowColor: 'transparent',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 0,
+    },
   };
 }
 
-export function createShadows(theme: AppTheme) {
+export function createShadows(_theme: AppTheme) {
   return {
     glow: {
-      shadowColor: theme.colors.brand.primary,
+      shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: theme.colors.shadow.glowOpacity,
-      shadowRadius: theme.id === 'current' ? 20 : 12,
-      elevation: theme.id === 'current' ? 15 : 4,
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     neonPurple: {
-      shadowColor: theme.colors.brand.accent,
+      shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: theme.id === 'current' ? 0.8 : 0.18,
-      shadowRadius: theme.id === 'current' ? 15 : 10,
-      elevation: theme.id === 'current' ? 12 : 4,
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     card: {
-      shadowColor: theme.colors.shadow.color,
-      shadowOffset: { width: 0, height: theme.id === 'light' ? 8 : 10 },
-      shadowOpacity: theme.colors.shadow.cardOpacity,
-      shadowRadius: theme.id === 'light' ? 18 : 30,
-      elevation: theme.id === 'light' ? 5 : 8,
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     depth: {
-      shadowColor: theme.colors.shadow.color,
-      shadowOffset: { width: 0, height: theme.id === 'light' ? 10 : 15 },
-      shadowOpacity: theme.id === 'light' ? 0.14 : 0.6,
-      shadowRadius: theme.id === 'light' ? 18 : 25,
-      elevation: theme.id === 'light' ? 8 : 20,
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
-    bevel: {
-      borderTopWidth: 1,
-      borderLeftWidth: 1,
-      borderTopColor: theme.id === 'light' ? alpha('#FFFFFF', 0.9) : alpha('#FFFFFF', 0.2),
-      borderLeftColor: theme.id === 'light' ? alpha('#FFFFFF', 0.8) : alpha('#FFFFFF', 0.1),
-      borderBottomWidth: 1,
-      borderRightWidth: 1,
-      borderBottomColor: theme.id === 'light' ? alpha('#0F172A', 0.08) : alpha('#000000', 0.4),
-      borderRightColor: theme.id === 'light' ? alpha('#0F172A', 0.06) : alpha('#000000', 0.3),
-    },
+    bevel: {},
   };
 }
 
@@ -787,20 +1215,6 @@ export function useThemeColors() {
   return useTheme().legacy;
 }
 
-// Backward-compatible static exports. New or migrated components should prefer
-// useTheme(), useThemeColors(), useThemeTypography(), and useThemeShadows().
-export const Colors = themes.current.legacy;
-export const Typography = {
-  ...createTypography(themes.current),
-  threeD: {
-    textShadowColor: 'transparent',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 0,
-  },
-  threeDLight: {
-    textShadowColor: 'transparent',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 0,
-  },
-};
-export const Shadows = createShadows(themes.current);
+export const Colors = themes.dark.legacy;
+export const Typography = createTypography(themes.dark);
+export const Shadows = createShadows(themes.dark);

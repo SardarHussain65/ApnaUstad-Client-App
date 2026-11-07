@@ -78,24 +78,29 @@ export default function AccountDeactivatedScreen() {
     <BackgroundWrapper>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.iconOuter}>
-            <View style={styles.iconInner}>
-              <ShieldAlert size={44} color="#FF453A" strokeWidth={2.4} />
+          <View style={[styles.iconOuter, { borderColor: alpha(theme.colors.status.error, 0.35), backgroundColor: alpha(theme.colors.status.error, 0.08) }]}>
+            <View style={[styles.iconInner, { backgroundColor: alpha(theme.colors.status.error, 0.14) }]}>
+              <ShieldAlert size={44} color={theme.colors.status.error} strokeWidth={2.4} />
             </View>
           </View>
 
-          <Text style={[styles.title, Typography.threeD]}>{t('accountDeactivated.title')}</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, Typography.threeD, { color: theme.colors.text.primary }]}>{t('accountDeactivated.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
             {t('accountDeactivated.subtitle')}
           </Text>
 
-          <GlassCard style={styles.card} intensity={24} padding={Spacing.l}>
-            <Text style={styles.reasonLabel}>{t('accountDeactivated.reasonLabel')}</Text>
-            <Text style={styles.reasonText}>{reason}</Text>
-            {deactivatedAt && <Text style={styles.dateText}>{t('accountDeactivated.deactivatedOn', { date: deactivatedAt })}</Text>}
+          <GlassCard
+            style={[styles.card, { borderColor: alpha(theme.colors.status.error, 0.45) }]}
+            borderColor={alpha(theme.colors.status.error, 0.45)}
+            intensity={24}
+            padding={Spacing.l}
+          >
+            <Text style={[styles.reasonLabel, { color: theme.colors.status.error }]}>{t('accountDeactivated.reasonLabel')}</Text>
+            <Text style={[styles.reasonText, { color: theme.colors.text.primary }]}>{reason}</Text>
+            {deactivatedAt && <Text style={[styles.dateText, { color: theme.colors.text.muted }]}>{t('accountDeactivated.deactivatedOn', { date: deactivatedAt })}</Text>}
           </GlassCard>
 
-          <Text style={styles.explainer}>
+          <Text style={[styles.explainer, { color: theme.colors.text.secondary }]}>
             {t('accountDeactivated.explainer')}
           </Text>
 
@@ -103,20 +108,20 @@ export default function AccountDeactivatedScreen() {
             <CustomButton
               title={t('accountDeactivated.contactAdmin')}
               onPress={handleContactAdmin}
-              icon={<MessageCircle size={20} color="#000" strokeWidth={2.5} />}
+              icon={<MessageCircle size={20} color={theme.colors.button.primaryText} strokeWidth={2.5} />}
             />
             <CustomButton
               title={checking ? t('accountDeactivated.checking') : t('accountDeactivated.checkStatus')}
               onPress={handleCheckStatus}
               loading={checking}
               variant="secondary"
-              icon={<RefreshCcw size={20} color="#fff" strokeWidth={2.5} />}
+              icon={<RefreshCcw size={20} color={theme.colors.text.primary} strokeWidth={2.5} />}
             />
             <CustomButton
               title={t('accountDeactivated.logout')}
               onPress={handlePressLogout}
               variant="outline"
-              icon={<LogOut size={20} color="#fff" strokeWidth={2.5} />}
+              icon={<LogOut size={20} color={theme.colors.text.primary} strokeWidth={2.5} />}
             />
           </View>
         </ScrollView>
@@ -139,7 +144,7 @@ export default function AccountDeactivatedScreen() {
               styles.modalCard,
               {
                 backgroundColor: theme.colors.surface.card,
-                borderColor: theme.colors.border.subtle,
+                borderColor: theme.colors.border.default,
               },
             ]}
           >
@@ -149,7 +154,7 @@ export default function AccountDeactivatedScreen() {
                 styles.modalIconRing,
                 {
                   backgroundColor: alpha('#EF4444', 0.12),
-                  borderColor: alpha('#EF4444', 0.25),
+                  borderColor: alpha('#EF4444', 0.35),
                 },
               ]}
             >
@@ -160,7 +165,7 @@ export default function AccountDeactivatedScreen() {
             <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
               {t('profile.logoutConfirmTitle', 'Log Out?')}
             </Text>
-            <Text style={[styles.modalDesc, { color: theme.colors.text.muted }]}>
+            <Text style={[styles.modalDesc, { color: theme.colors.text.secondary }]}>
               {t('profile.logoutConfirmDesc', 'Are you sure you want to log out of your account?')}
             </Text>
 
@@ -189,7 +194,7 @@ export default function AccountDeactivatedScreen() {
                   styles.modalCancelBtn,
                   {
                     backgroundColor: theme.colors.surface.subtle,
-                    borderColor: theme.colors.border.subtle,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
                 onPress={() => setShowLogoutModal(false)}
@@ -223,9 +228,7 @@ const styles = StyleSheet.create({
     borderRadius: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,69,58,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,69,58,0.22)',
+    borderWidth: 1.8,
     marginBottom: 24,
   },
   iconInner: {
@@ -234,53 +237,46 @@ const styles = StyleSheet.create({
     borderRadius: 39,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,69,58,0.13)',
   },
   title: {
-    color: '#fff',
     fontSize: 30,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.62)',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
     marginBottom: 22,
   },
   card: {
     borderRadius: BorderRadius.xl,
-    borderColor: 'rgba(255,69,58,0.24)',
+    borderWidth: 1.8,
     marginBottom: 18,
   },
   reasonLabel: {
-    color: '#FF453A',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   reasonText: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 16.5,
     fontWeight: '800',
-    lineHeight: 23,
+    lineHeight: 24,
   },
   dateText: {
-    color: 'rgba(255,255,255,0.42)',
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '700',
     marginTop: 12,
   },
   explainer: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 21,
     textAlign: 'center',
     marginBottom: 26,
   },
@@ -298,7 +294,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 24,
     alignItems: 'center',
     shadowColor: '#000',
@@ -312,7 +308,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    borderWidth: 1,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -324,9 +320,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   modalDesc: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
+    fontSize: 14.5,
+    lineHeight: 21,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -347,8 +343,8 @@ const styles = StyleSheet.create({
   },
   modalConfirmBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
     textAlign: 'center',
   },
   modalCancelBtn: {
@@ -356,14 +352,14 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 16,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   modalCancelBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
     textAlign: 'center',
   },
 });

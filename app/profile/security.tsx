@@ -139,7 +139,7 @@ export default function SecurityScreen() {
               styles.modalCard,
               {
                 backgroundColor: theme.colors.surface.card,
-                borderColor: theme.colors.border.subtle,
+                borderColor: theme.colors.border.default,
               },
             ]}
           >
@@ -189,7 +189,7 @@ export default function SecurityScreen() {
                   styles.modalCancelBtn,
                   {
                     backgroundColor: theme.colors.surface.subtle,
-                    borderColor: theme.colors.border.subtle,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
                 onPress={() => setShowDeleteModal(false)}
@@ -236,9 +236,10 @@ function SecurityItem({
         <GlassCard
           style={[
             styles.itemCard,
+            { borderColor: theme.colors.border.default },
             danger && {
-              borderColor: alpha(dangerColor, 0.28),
-              backgroundColor: alpha(dangerColor, 0.05),
+              borderColor: alpha(dangerColor, 0.4),
+              backgroundColor: alpha(dangerColor, 0.06),
             },
           ]}
           intensity={25}
@@ -249,8 +250,8 @@ function SecurityItem({
               style={[
                 styles.itemIconBox,
                 danger
-                  ? { backgroundColor: alpha(dangerColor, 0.12), borderColor: alpha(dangerColor, 0.28) }
-                  : { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle },
+                  ? { backgroundColor: alpha(dangerColor, 0.14), borderColor: alpha(dangerColor, 0.35) }
+                  : { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default },
               ]}
             >
               <Icon size={20} color={danger ? dangerColor : (primaryColor || theme.colors.text.primary)} />
@@ -314,13 +315,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   itemIconBox: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginEnd: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   itemContent: {
     flexDirection: 'row',
@@ -328,31 +329,33 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     marginVertical: 8,
+    borderWidth: 1.6,
   },
   section: {
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     marginBottom: 8,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   itemLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 16.5,
+    fontWeight: '700',
   },
   itemSublabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     marginTop: 2,
   },
   screenTitle: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
     marginTop: 12,
   },
   screenSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '600',
     marginTop: 6,
   },
 
@@ -368,7 +371,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 24,
     alignItems: 'center',
     shadowColor: '#000',

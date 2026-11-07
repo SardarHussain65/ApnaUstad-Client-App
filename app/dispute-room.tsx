@@ -452,8 +452,8 @@ export default function DisputeRoomScreen() {
                   style={[
                     styles.statementBox,
                     {
-                      backgroundColor: alpha(theme.colors.surface.card, 0.5),
-                      borderColor: theme.colors.border.subtle,
+                      backgroundColor: theme.colors.surface.subtle,
+                      borderColor: theme.colors.border.default,
                     },
                   ]}
                 >
@@ -594,8 +594,8 @@ export default function DisputeRoomScreen() {
               {
                 backgroundColor: isDecision
                   ? alpha(colors.success, 0.12)
-                  : alpha(theme.colors.surface.card, 0.7),
-                borderColor: isDecision ? alpha(colors.success, 0.4) : theme.colors.border.subtle,
+                  : theme.colors.surface.card,
+                borderColor: isDecision ? alpha(colors.success, 0.45) : theme.colors.border.default,
               },
             ]}
           >
@@ -645,13 +645,13 @@ export default function DisputeRoomScreen() {
       ? theme.colors.brand.primary
       : isAdmin
       ? alpha('#FFB800', 0.18)
-      : alpha(theme.colors.surface.card, 0.9);
+      : theme.colors.surface.card;
 
     const borderColor = isMe
       ? 'transparent'
       : isAdmin
-      ? alpha('#FFB800', 0.45)
-      : theme.colors.border.subtle;
+      ? alpha('#FFB800', 0.5)
+      : theme.colors.border.default;
 
     return (
       <View style={[styles.messageRow, isMe ? styles.myMessageRow : styles.theirMessageRow]}>
@@ -792,14 +792,14 @@ export default function DisputeRoomScreen() {
     <BackgroundWrapper>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         {/* Header Bar */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border.subtle }]}>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border.default }]}>
           <TouchableOpacity
             onPress={() => router.back()}
             style={[
               styles.headerBtn,
               {
                 backgroundColor: theme.colors.surface.card,
-                borderColor: theme.colors.border.subtle,
+                borderColor: theme.colors.border.default,
               },
             ]}
           >
@@ -833,7 +833,7 @@ export default function DisputeRoomScreen() {
         </View>
 
         {/* 3-Step Visual Progress Tracker */}
-        <View style={[styles.stepperContainer, { borderBottomColor: theme.colors.border.subtle }]}>
+        <View style={[styles.stepperContainer, { borderBottomColor: theme.colors.border.default }]}>
           <View style={styles.stepItem}>
             <View
               style={[
@@ -1076,7 +1076,7 @@ export default function DisputeRoomScreen() {
                 styles.composerContainer,
                 {
                   backgroundColor: theme.colors.background.screen,
-                  borderTopColor: theme.colors.border.subtle,
+                  borderTopColor: theme.colors.border.default,
                   paddingBottom: insets.bottom + 8,
                 },
               ]}
@@ -1088,8 +1088,8 @@ export default function DisputeRoomScreen() {
                 style={[
                   styles.attachBtn,
                   {
-                    backgroundColor: alpha(theme.colors.surface.card, 0.9),
-                    borderColor: theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
                 activeOpacity={0.7}
@@ -1106,8 +1106,8 @@ export default function DisputeRoomScreen() {
                 style={[
                   styles.inputWrap,
                   {
-                    backgroundColor: alpha(theme.colors.surface.card, 0.9),
-                    borderColor: theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -1466,14 +1466,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.m,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     gap: 10,
   },
   headerBtn: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1486,21 +1486,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   headerTitle: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '800',
   },
   headerSubtitle: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     marginTop: 1,
   },
   statusPill: {
     paddingHorizontal: 10,
-    paddingVertical: 4.5,
+    paddingVertical: 5,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   statusPillText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   stepperContainer: {
@@ -1509,7 +1509,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.m,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
   },
   stepItem: {
     flexDirection: 'row',
@@ -1517,14 +1517,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   stepCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepLabel: {
-    fontSize: 11,
+    fontSize: 12,
   },
   stepConnector: {
     flex: 1,
@@ -1563,7 +1563,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   summaryTitle: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '800',
     flexShrink: 1,
   },
@@ -1578,30 +1578,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   amountPill: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   statementBox: {
     padding: 10,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     gap: 4,
     marginTop: 2,
   },
   statementLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   statementText: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13.5,
+    lineHeight: 19,
     fontStyle: 'italic',
   },
   summaryBody: {
@@ -1617,42 +1617,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 11.5,
+    fontSize: 12.5,
   },
   summaryValue: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
   },
   pauseNoticeBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    padding: 8,
+    padding: 9,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   pauseNoticeText: {
-    fontSize: 11,
+    fontSize: 12,
     flex: 1,
-    lineHeight: 15,
+    lineHeight: 17,
   },
   initialEvidenceRow: {
     marginTop: 4,
     gap: 6,
   },
   evidenceLabel: {
-    fontSize: 11,
+    fontSize: 12,
   },
   evidenceThumbs: {
     flexDirection: 'row',
     gap: 8,
   },
   evidenceThumbCard: {
-    width: 52,
-    height: 52,
+    width: 54,
+    height: 54,
     borderRadius: 10,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.15)',
   },
   evidenceThumbImg: {
@@ -1664,15 +1664,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginTop: 4,
   },
   withdrawBtnText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   chatArea: {
     flex: 1,
@@ -1695,7 +1695,7 @@ const styles = StyleSheet.create({
     maxWidth: '88%',
     padding: 12,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     gap: 4,
   },
@@ -1705,18 +1705,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   systemMessageTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   systemMessageText: {
-    fontSize: 12,
+    fontSize: 13.5,
     textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 19,
   },
   systemMessageTime: {
-    fontSize: 9.5,
+    fontSize: 10.5,
     marginTop: 2,
   },
   messageRow: {
@@ -1737,13 +1737,13 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   senderNameText: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   bubble: {
-    padding: 11,
+    padding: 12,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     gap: 6,
   },
   replyQuoteBox: {
@@ -1754,15 +1754,15 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   replyQuoteSender: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   replyQuoteContent: {
-    fontSize: 10.5,
+    fontSize: 11.5,
   },
   messageText: {
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 21,
   },
   attachmentsGrid: {
     flexDirection: 'row',
@@ -1790,7 +1790,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   timeText: {
-    fontSize: 9.5,
+    fontSize: 10.5,
   },
   replyActionBtn: {
     flexDirection: 'row',
@@ -1798,8 +1798,8 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   replyActionText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
   closedNoticeBar: {
     flexDirection: 'row',
@@ -1807,31 +1807,31 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: Spacing.m,
     paddingTop: 12,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
   },
   closedTitle: {
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: '800',
   },
   closedSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 17,
   },
   replyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.m,
     paddingVertical: 8,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
     gap: 8,
   },
   replyBannerTitle: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   replyBannerContent: {
-    fontSize: 11.5,
+    fontSize: 12.5,
   },
   photoPreviewRow: {
     paddingHorizontal: Spacing.m,
@@ -1862,32 +1862,32 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: Spacing.m,
     paddingTop: 8,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
     gap: 8,
   },
   attachBtn: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputWrap: {
     flex: 1,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.6,
     paddingHorizontal: 14,
     paddingVertical: Platform.OS === 'ios' ? 8 : 4,
     maxHeight: 100,
   },
   textInput: {
-    fontSize: 13.5,
-    minHeight: 28,
+    fontSize: 15,
+    minHeight: 30,
   },
   sendBtn: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

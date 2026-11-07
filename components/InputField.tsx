@@ -30,8 +30,8 @@ export const InputField: React.FC<InputFieldProps> = ({
   const resolvedAccentColor = accentColor ?? theme.colors.brand.primary;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    borderColor: withTiming(error ? colors.error : (focused ? resolvedAccentColor : theme.colors.input.border)),
-    borderWidth: withTiming(focused || error ? 1.5 : 1),
+    borderColor: withTiming(error ? colors.error : (focused ? resolvedAccentColor : theme.colors.border.default)),
+    borderWidth: withTiming(focused || error ? 2 : 1.6),
   }));
 
   const handleFocus = (e: any) => {
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: Spacing.s,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   inputWrapper: {
@@ -100,20 +100,21 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginRight: Spacing.s,
-    opacity: 0.8,
+    opacity: 0.85,
   },
   rightIconContainer: {
     marginLeft: Spacing.s,
-    opacity: 0.8,
+    opacity: 0.85,
   },
   input: {
     flex: 1,
     height: '100%',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   errorText: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: 12.5,
+    fontWeight: '600',
   },
 });

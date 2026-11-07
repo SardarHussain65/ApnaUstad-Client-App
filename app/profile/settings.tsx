@@ -71,25 +71,25 @@ export default function SettingsScreen() {
     previewColors: [string, string];
   }[] = [
       {
-        id: 'current',
-        label: t('settings.themeCurrent'),
-        description: t('settings.themeCurrentDesc'),
-        Icon: Sparkles,
-        previewColors: ['#00F5FF', '#090E24'],
+        id: 'dark',
+        label: t('settings.themeDark', 'Professional Dark'),
+        description: t('settings.themeDarkDesc', 'Deep navy dark mode with vibrant service cards.'),
+        Icon: Moon,
+        previewColors: ['#080C14', '#3B82F6'],
       },
       {
         id: 'light',
-        label: t('settings.themeLight'),
-        description: t('settings.themeLightDesc'),
+        label: t('settings.themeLight', 'Professional Light'),
+        description: t('settings.themeLightDesc', 'Crisp daylight white with high-contrast service cards.'),
         Icon: Sun,
-        previewColors: ['#FFFFFF', '#0284C7'],
+        previewColors: ['#FFFFFF', '#1D4ED8'],
       },
       {
-        id: 'dark',
-        label: t('settings.themeDark'),
-        description: t('settings.themeDarkDesc'),
-        Icon: Moon,
-        previewColors: ['#121620', '#00F5FF'],
+        id: 'current',
+        label: t('settings.themeCurrent', 'Cosmic Space'),
+        description: t('settings.themeCurrentDesc', 'Classic ApnaUstad cosmic galaxy background with neon accents.'),
+        Icon: Sparkles,
+        previewColors: ['#060914', '#00F5FF'],
       },
     ];
 

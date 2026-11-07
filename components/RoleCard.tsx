@@ -40,27 +40,27 @@ export const RoleCard: React.FC<RoleCardProps> = ({
         style={[
           styles.container,
           {
-            borderColor: alpha(mainColor, theme.id === 'light' ? 0.2 : 0.4),
-            backgroundColor: alpha(mainColor, theme.id === 'light' ? 0.03 : 0.04),
+            borderColor: alpha(mainColor, theme.id === 'light' ? 0.35 : 0.45),
+            backgroundColor: alpha(mainColor, theme.id === 'light' ? 0.05 : 0.06),
           },
           isSelected && {
-            borderColor: alpha(mainColor, 0.7),
-            backgroundColor: alpha(mainColor, 0.05),
+            borderColor: alpha(mainColor, 0.85),
+            backgroundColor: alpha(mainColor, theme.id === 'light' ? 0.1 : 0.12),
           },
         ]}
       >
-        <View style={[styles.iconContainer, { backgroundColor: alpha(mainColor, 0.18), borderColor: alpha(mainColor, theme.id === 'light' ? 0.3 : 0.5) }]}>
+        <View style={[styles.iconContainer, { backgroundColor: alpha(mainColor, 0.18), borderColor: alpha(mainColor, theme.id === 'light' ? 0.4 : 0.5) }]}>
           {icon}
         </View>
         <View style={styles.copy}>
           <Text style={[styles.label, { color: mainColor }]}>{label}</Text>
           <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{title}</Text>
-          <Text style={[styles.description, { color: theme.colors.text.muted }]}>{description}</Text>
+          <Text style={[styles.description, { color: theme.colors.text.secondary }]}>{description}</Text>
         </View>
         <CheckCircle2
           color={isSelected ? mainColor : theme.colors.text.dim}
-          size={21}
-          strokeWidth={isSelected ? 2.8 : 1.8}
+          size={22}
+          strokeWidth={isSelected ? 2.8 : 2}
         />
       </GlassCard>
     </TouchableOpacity>
@@ -74,20 +74,20 @@ const styles = StyleSheet.create({
   },
   container: {
     borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 104,
+    minHeight: 108,
   },
   iconContainer: {
-    width: 54,
-    height: 54,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: BorderRadius.l,
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginRight: Spacing.m,
   },
   copy: {
@@ -95,20 +95,20 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.s,
   },
   label: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 1.2,
     marginBottom: 4,
     textTransform: 'uppercase',
   },
   title: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
     marginBottom: 5,
   },
   description: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 17,
+    fontSize: 13.5,
+    fontWeight: '600',
+    lineHeight: 18,
   },
 });

@@ -117,6 +117,7 @@ export {
   getCachedUserLocation,
   setCachedUserLocation,
   formatAddress,
+  cleanAddressString,
   extractCityFromAddress,
   type UserLocation,
 } from './useUserLocation';

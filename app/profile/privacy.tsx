@@ -67,20 +67,20 @@ export default function PrivacyScreen() {
         </View>
 
         {/* Tab Selector */}
-        <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+        <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'privacy' && { backgroundColor: theme.colors.brand.primary }]}
             onPress={() => setActiveTab('privacy')}
           >
-            <ShieldAlert size={14} color={activeTab === 'privacy' ? theme.colors.text.inverse : theme.colors.text.muted} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'privacy' && { color: theme.colors.button.primaryText }]}>{t('privacy.privacyTab')}</Text>
+            <ShieldAlert size={15} color={activeTab === 'privacy' ? theme.colors.button.primaryText : theme.colors.text.muted} style={styles.tabIcon} />
+            <Text style={[styles.tabText, { color: activeTab === 'privacy' ? theme.colors.button.primaryText : theme.colors.text.secondary }]}>{t('privacy.privacyTab')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'terms' && { backgroundColor: theme.colors.brand.primary }]}
             onPress={() => setActiveTab('terms')}
           >
-            <FileText size={14} color={activeTab === 'terms' ? theme.colors.text.inverse : theme.colors.text.muted} style={styles.tabIcon} />
-            <Text style={[styles.tabText, activeTab === 'terms' && { color: theme.colors.button.primaryText }]}>{t('privacy.termsTab')}</Text>
+            <FileText size={15} color={activeTab === 'terms' ? theme.colors.button.primaryText : theme.colors.text.muted} style={styles.tabIcon} />
+            <Text style={[styles.tabText, { color: activeTab === 'terms' ? theme.colors.button.primaryText : theme.colors.text.secondary }]}>{t('privacy.termsTab')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -140,24 +140,24 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   title: {
     fontSize: 26,
     marginBottom: 6,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   subtitle: {
     textAlign: 'center',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
     paddingHorizontal: 12,
   },
   tabContainer: {
     flexDirection: 'row',
     borderRadius: BorderRadius.m,
     padding: 4,
-    borderWidth: 1,
+    borderWidth: 1.6,
     marginBottom: 16,
   },
   tabBtn: {
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: BorderRadius.m - 2,
   },
   activeTabBtn: {},
@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
     marginEnd: 6,
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   activeTabText: {},
   policyCard: {
@@ -189,21 +189,21 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 14,
     marginTop: 12,
     fontWeight: '600',
   },
   paragraphText: {
-    lineHeight: 20,
+    lineHeight: 21,
     marginBottom: 14,
   },
   headingText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     marginTop: 6,
   },
   bodyText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
   },
   footerNote: {

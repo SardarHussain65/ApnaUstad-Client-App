@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { useTheme, alpha } from '../../constants/Theme';
 
 export type JobEvidenceItem = {
   type: 'image' | 'video' | 'audio';
@@ -140,6 +141,7 @@ function VideoCard({ item, index, width }: { item: JobEvidenceItem; index: numbe
 
 function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; index: number; width: number; isWorker?: boolean }) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const player = useAudioPlayer(item.url);
   const status = useAudioPlayerStatus(player);
 
@@ -156,43 +158,53 @@ function AudioCard({ item, index, width, isWorker }: { item: JobEvidenceItem; in
 
   const progress = status.duration > 0 ? status.currentTime / status.duration : 0;
   const progressPercent = Math.min(100, Math.max(0, progress * 100));
+  const accentColor = theme.id === 'light' ? '#D97706' : '#FF9F0A';
 
   return (
-    <View style={[styles.whatsappVoiceCard, { width }]}>
-      <LinearGradient 
-        colors={['rgba(255,140,0,0.14)', 'rgba(12,16,42,0.96)']} 
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={StyleSheet.absoluteFillObject} 
-      />
+    <View style={[
+      styles.whatsappVoiceCard,
+      {
+        width,
+        backgroundColor: theme.id === 'light' ? '#FFFBEB' : 'rgba(12,16,42,0.92)',
+        borderColor: theme.id === 'light' ? '#F59E0B' : 'rgba(255,159,10,0.4)',
+      },
+    ]}>
+      {theme.isDark && (
+        <LinearGradient 
+          colors={['rgba(255,140,0,0.14)', 'rgba(12,16,42,0.96)']} 
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject} 
+        />
+      )}
       
       {/* Left Icon Avatar */}
-      <View style={styles.waAvatarShell}>
-        <Volume2 size={16} color="#FF9F0A" strokeWidth={2.5} />
+      <View style={[styles.waAvatarShell, { backgroundColor: alpha(accentColor, 0.15), borderColor: alpha(accentColor, 0.35) }]}>
+        <Volume2 size={17} color={accentColor} strokeWidth={2.5} />
       </View>
  
       {/* Play/Pause Button */}
       <TouchableOpacity style={styles.waPlayButton} onPress={togglePlayback} activeOpacity={0.8}>
         {status.playing ? (
-          <PauseCircle size={28} color="#FF9F0A" fill="rgba(255,159,10,0.1)" strokeWidth={2} />
+          <PauseCircle size={30} color={accentColor} fill={alpha(accentColor, 0.12)} strokeWidth={2} />
         ) : (
-          <PlayCircle size={28} color="#FF9F0A" fill="rgba(255,159,10,0.1)" strokeWidth={2} />
+          <PlayCircle size={30} color={accentColor} fill={alpha(accentColor, 0.12)} strokeWidth={2} />
         )}
       </TouchableOpacity>
  
       {/* Progress Slider Track */}
       <View style={styles.waTrackContainer}>
-        <View style={styles.waTrackBg}>
-          <View style={[styles.waTrackFill, { width: `${progressPercent}%` }]} />
-          <View style={[styles.waTrackThumb, { left: `${progressPercent}%` }]} />
+        <View style={[styles.waTrackBg, { backgroundColor: theme.id === 'light' ? 'rgba(217,119,6,0.2)' : 'rgba(255,255,255,0.16)' }]}>
+          <View style={[styles.waTrackFill, { width: `${progressPercent}%`, backgroundColor: accentColor }]} />
+          <View style={[styles.waTrackThumb, { left: `${progressPercent}%`, backgroundColor: theme.id === 'light' ? accentColor : '#FFFFFF' }]} />
         </View>
         
         {/* Info text below track */}
         <View style={styles.waMetaRow}>
-          <Text style={styles.waTitleText}>
+          <Text style={[styles.waTitleText, { color: theme.colors.text.secondary }]}>
             {isWorker ? t('jobEvidence.clientVoiceBrief', 'Client voice brief') : t('jobEvidence.yourVoiceBrief', 'Your voice brief')}
           </Text>
-          <Text style={styles.waTimeText}>
+          <Text style={[styles.waTimeText, { color: accentColor }]}>
             {formatPlaybackTime(status.currentTime)} / {formatPlaybackTime(status.duration)}
           </Text>
         </View>
@@ -243,8 +255,8 @@ const styles = StyleSheet.create({
     height: 238,
     overflow: 'hidden',
     borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(191,90,242,0.42)',
+    borderWidth: 1.8,
+    borderColor: 'rgba(191,90,242,0.5)',
     backgroundColor: 'rgba(10,8,30,0.92)',
   },
   image: {
@@ -393,10 +405,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   whatsappVoiceCard: {
-    height: 82,
+    height: 84,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,159,10,0.3)',
+    borderWidth: 1.8,
+    borderColor: 'rgba(255,159,10,0.4)',
     backgroundColor: 'rgba(12,16,42,0.92)',
     flexDirection: 'row',
     alignItems: 'center',
@@ -404,19 +416,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   waAvatarShell: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,159,10,0.15)',
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(255,159,10,0.25)',
   },
   waPlayButton: {
     marginLeft: 10,
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -426,23 +438,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   waTrackBg: {
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: 'rgba(255,255,255,0.12)',
     position: 'relative',
   },
   waTrackFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 2.5,
     backgroundColor: '#FF9F0A',
     position: 'absolute',
     left: 0,
     top: 0,
   },
   waTrackThumb: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
     backgroundColor: '#FFFFFF',
     position: 'absolute',
     top: -3,
@@ -457,16 +469,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 6,
+    marginTop: 7,
   },
   waTitleText: {
     color: 'rgba(255,255,255,0.6)',
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   waTimeText: {
     color: '#FF9F0A',
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '900',
   },
 });

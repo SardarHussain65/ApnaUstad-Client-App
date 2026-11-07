@@ -745,37 +745,37 @@ export default function FindingWorkerScreen() {
         <View style={[
           styles.header,
           {
-            borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle,
-            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.74)' : colors.background.screen,
+            borderBottomColor: theme.colors.border.default,
+            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.88)' : colors.background.screen,
           }
         ]}>
           <TouchableOpacity 
             style={[
               styles.headerButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.045)' : alpha(colors.text.primary, 0.03),
-                borderColor: theme.isDark ? 'rgba(0,245,255,0.2)' : colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.surface.card,
+                borderColor: theme.colors.border.default,
               }
             ]} 
             onPress={handleBackHome} 
             activeOpacity={0.75}
           >
             <ArrowLeft
-              size={19}
+              size={20}
               color={colors.text.primary}
-              strokeWidth={2.2}
+              strokeWidth={2.4}
               style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
             />
           </TouchableOpacity>
           <View style={styles.headerCopy}>
-            <Text style={[styles.headerEyebrow, { color: colors.text.muted }]}>{t('findingWorker.requestSent')}</Text>
+            <Text style={[styles.headerEyebrow, { color: colors.text.secondary }]}>{t('findingWorker.requestSent')}</Text>
             <Text style={[styles.headerTitle, { color: colors.text.primary }]}>{t('findingWorker.findingUstad')}</Text>
           </View>
           <View style={[
             styles.liveBadge,
             {
-              backgroundColor: theme.isDark ? 'rgba(0,245,255,0.08)' : alpha(colors.brand.primary, 0.06),
-              borderColor: theme.isDark ? 'rgba(0,245,255,0.24)' : alpha(colors.brand.primary, 0.16),
+              backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : '#DBEAFE',
+              borderColor: theme.isDark ? 'rgba(0,245,255,0.35)' : '#3B82F6',
             }
           ]}>
             <View style={[styles.liveDot, { backgroundColor: theme.isDark ? Colors.cyan : colors.brand.primary }]} />
@@ -793,8 +793,8 @@ export default function FindingWorkerScreen() {
             style={[
               styles.searchHero,
               {
-                backgroundColor: theme.isDark ? 'rgba(2,8,26,0.82)' : colors.surface.card,
-                borderColor: theme.isDark ? 'rgba(0,245,255,0.28)' : colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(2,8,26,0.86)' : colors.surface.card,
+                borderColor: theme.isDark ? 'rgba(0,245,255,0.35)' : theme.colors.border.default,
               }
             ]}
           >
@@ -1119,15 +1119,15 @@ export default function FindingWorkerScreen() {
               style={[
                 styles.jobBriefCard,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(4,9,29,0.82)' : colors.surface.card,
-                  borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : colors.border.subtle,
+                  backgroundColor: theme.isDark ? 'rgba(4,9,29,0.86)' : colors.surface.card,
+                  borderColor: theme.colors.border.default,
                 }
               ]}
             >
               <LinearGradient
                 colors={theme.isDark 
                   ? ['rgba(0,245,255,0.10)', 'rgba(255,255,255,0.025)']
-                  : [alpha(colors.brand.primary, 0.04), alpha(colors.surface.card, 0.1)]
+                  : [alpha(colors.brand.primary, 0.06), colors.surface.card]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -1137,14 +1137,14 @@ export default function FindingWorkerScreen() {
                   <View style={[
                     styles.sectionIcon,
                     {
-                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.1)' : alpha(colors.brand.primary, 0.06),
-                      borderColor: theme.isDark ? 'rgba(0,245,255,0.22)' : alpha(colors.brand.primary, 0.15),
+                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(colors.brand.primary, 0.12),
+                      borderColor: theme.isDark ? 'rgba(0,245,255,0.3)' : alpha(colors.brand.primary, 0.35),
                     }
                   ]}>
-                    <Briefcase size={15} color={colors.brand.primary} />
+                    <Briefcase size={16} color={colors.brand.primary} />
                   </View>
                   <View style={styles.sectionHeadingCopy}>
-                    <Text style={[styles.sectionEyebrow, { color: colors.text.muted }]}>{t('findingWorker.yourJob')}</Text>
+                    <Text style={[styles.sectionEyebrow, { color: colors.text.secondary }]}>{t('findingWorker.yourJob')}</Text>
                     <Text style={[styles.jobTitle, { color: colors.text.primary }]}>{job.category || 'Service Request'}</Text>
                   </View>
                   <View style={[
@@ -1152,11 +1152,11 @@ export default function FindingWorkerScreen() {
                     job.urgency !== 'instant' && styles.scheduledBadge,
                     {
                       backgroundColor: isInstant 
-                        ? (theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(colors.brand.primary, 0.08))
-                        : (theme.isDark ? 'rgba(255,140,0,0.12)' : alpha(colors.brand.worker, 0.08)),
+                        ? (theme.isDark ? 'rgba(0,245,255,0.15)' : '#DBEAFE')
+                        : (theme.isDark ? 'rgba(255,140,0,0.15)' : '#FFEDD5'),
                       borderColor: isInstant
-                        ? (theme.isDark ? 'rgba(0,245,255,0.24)' : alpha(colors.brand.primary, 0.18))
-                        : (theme.isDark ? 'rgba(255,140,0,0.24)' : alpha(colors.brand.worker, 0.18)),
+                        ? (theme.isDark ? 'rgba(0,245,255,0.35)' : '#3B82F6')
+                        : (theme.isDark ? 'rgba(255,140,0,0.35)' : '#F97316'),
                     }
                   ]}>
                     <Text style={[
@@ -1178,35 +1178,35 @@ export default function FindingWorkerScreen() {
                 </Text>
 
                 {!isInstant && (
-                  <View style={[styles.scheduleRow, { borderTopColor: theme.isDark ? 'rgba(255,255,255,0.05)' : colors.border.subtle }]}>
+                  <View style={[styles.scheduleRow, { borderColor: theme.colors.border.default, backgroundColor: theme.isDark ? 'rgba(255,149,0,0.08)' : '#FFF7ED' }]}>
                     <View style={styles.scheduleItem}>
-                      <CalendarDays size={14} color={colors.brand.worker} />
+                      <CalendarDays size={15} color={colors.brand.worker} />
                       <View style={styles.scheduleCopy}>
-                        <Text style={[styles.scheduleLabel, { color: colors.text.muted }]}>{t('findingWorker.visitDate')}</Text>
+                        <Text style={[styles.scheduleLabel, { color: colors.text.secondary }]}>{t('findingWorker.visitDate')}</Text>
                         <Text style={[styles.scheduleValue, { color: colors.text.primary }]}>{scheduledDateLabel}</Text>
                       </View>
                     </View>
-                    <View style={[styles.scheduleDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : colors.border.subtle }]} />
+                    <View style={[styles.scheduleDivider, { backgroundColor: theme.colors.border.default }]} />
                     <View style={styles.scheduleItem}>
-                      <Clock size={14} color={colors.brand.worker} />
+                      <Clock size={15} color={colors.brand.worker} />
                       <View style={styles.scheduleCopy}>
-                        <Text style={[styles.scheduleLabel, { color: colors.text.muted }]}>{t('findingWorker.visitTime')}</Text>
+                        <Text style={[styles.scheduleLabel, { color: colors.text.secondary }]}>{t('findingWorker.visitTime')}</Text>
                         <Text style={[styles.scheduleValue, { color: colors.text.primary }]}>{scheduledTimeLabel}</Text>
                       </View>
                     </View>
                   </View>
                 )}
 
-                <View style={[styles.requestMetaRow, { borderTopColor: theme.isDark ? 'rgba(255,255,255,0.05)' : colors.border.subtle }]}>
+                <View style={[styles.requestMetaRow, { borderColor: theme.colors.border.default }]}>
                   <View style={styles.requestMetaItem}>
-                    <Text style={[styles.requestMetaLabel, { color: colors.text.muted }]}>{t('findingWorker.budget')}</Text>
+                    <Text style={[styles.requestMetaLabel, { color: colors.text.secondary }]}>{t('findingWorker.budget')}</Text>
                     <Text style={[styles.requestMetaValue, { color: colors.text.primary }]}>{formatMoney(job.detailMeta?.financial?.amount ?? job.budget ?? job.amount)}</Text>
                   </View>
-                  <View style={[styles.requestMetaDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : colors.border.subtle }]} />
+                  <View style={[styles.requestMetaDivider, { backgroundColor: theme.colors.border.default }]} />
                   <View style={styles.requestMetaItem}>
-                    <Text style={[styles.requestMetaLabel, { color: colors.text.muted }]}>{t('findingWorker.photosVideos')}</Text>
+                    <Text style={[styles.requestMetaLabel, { color: colors.text.secondary }]}>{t('findingWorker.photosVideos')}</Text>
                     <View style={styles.inlineMeta}>
-                      <ImageIcon size={13} color={colors.brand.secondary} />
+                      <ImageIcon size={14} color={colors.brand.secondary} />
                       <Text style={[styles.requestMetaValue, { color: colors.text.primary }]}>
                         {evidenceCount === 1 ? t('findingWorker.photosAdded', { count: evidenceCount }) : t('findingWorker.photosAddedPlural', { count: evidenceCount })}
                       </Text>
@@ -1215,8 +1215,8 @@ export default function FindingWorkerScreen() {
                 </View>
 
                 {!!job.address && (
-                  <View style={[styles.locationRow, { borderTopColor: theme.isDark ? 'rgba(255,255,255,0.05)' : colors.border.subtle }]}>
-                    <MapPin size={14} color={colors.brand.worker} />
+                  <View style={[styles.locationRow, { borderTopColor: theme.colors.border.default }]}>
+                    <MapPin size={15} color={colors.brand.worker} />
                     <Text style={[styles.locationText, { color: colors.text.secondary }]} numberOfLines={1}>{job.address}</Text>
                   </View>
                 )}
@@ -1230,15 +1230,15 @@ export default function FindingWorkerScreen() {
               style={[
                 styles.responseCard,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(2,18,26,0.88)' : colors.surface.card,
-                  borderColor: theme.isDark ? 'rgba(0,255,127,0.25)' : colors.border.subtle,
+                  backgroundColor: theme.isDark ? 'rgba(2,18,26,0.92)' : colors.surface.card,
+                  borderColor: theme.isDark ? 'rgba(0,255,127,0.35)' : '#22C55E',
                 }
               ]}
             >
               <LinearGradient
                 colors={theme.isDark
                   ? ['rgba(0,255,127,0.15)', 'rgba(0,245,255,0.08)']
-                  : [alpha(colors.status.success, 0.05), alpha(colors.brand.primary, 0.03)]
+                  : ['#F0FDF4', '#FFFFFF']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -1261,8 +1261,8 @@ export default function FindingWorkerScreen() {
                         style={[
                           styles.applicantCard,
                           {
-                            backgroundColor: theme.isDark ? 'rgba(0,0,0,0.32)' : colors.surface.raised,
-                            borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.border.subtle,
+                            backgroundColor: theme.isDark ? 'rgba(0,0,0,0.35)' : '#FFFFFF',
+                            borderColor: theme.colors.border.default,
                           },
                         ]}
                       >
@@ -1383,11 +1383,11 @@ export default function FindingWorkerScreen() {
             <View style={[
               styles.waitingNote,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.035)' : colors.surface.raised,
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle,
+                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : colors.surface.card,
+                borderColor: theme.colors.border.default,
               }
             ]}>
-              <Clock size={15} color={colors.text.muted} />
+              <Clock size={16} color={colors.text.secondary} />
               <Text style={[styles.waitingText, { color: colors.text.secondary }]}>{t('findingWorker.safeToLeave')}</Text>
             </View>
           )}
@@ -1395,24 +1395,24 @@ export default function FindingWorkerScreen() {
           <View style={[
             styles.statsRow,
             {
-              backgroundColor: theme.isDark ? 'rgba(3,8,25,0.76)' : colors.surface.card,
-              borderColor: theme.isDark ? 'rgba(255,255,255,0.07)' : colors.border.subtle,
+              backgroundColor: theme.isDark ? 'rgba(3,8,25,0.82)' : colors.surface.card,
+              borderColor: theme.colors.border.default,
             }
           ]}>
             <View style={styles.statItem}>
-              <Users size={15} color={colors.brand.primary} />
+              <Users size={16} color={colors.brand.primary} />
               <Text style={[styles.statVal, { color: colors.text.primary }]}>{applicants.length}</Text>
               <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.offersLabel')}</Text>
             </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : colors.border.subtle }]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
             <View style={styles.statItem}>
-              <Radio size={15} color={colors.brand.worker} />
+              <Radio size={16} color={colors.brand.worker} />
               <Text style={[styles.statVal, { color: colors.text.primary }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
               <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.jobTypeLabel')}</Text>
             </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : colors.border.subtle }]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
             <View style={styles.statItem}>
-              <Clock size={15} color={colors.brand.worker} />
+              <Clock size={16} color={colors.brand.worker} />
               <Text style={[styles.statVal, { color: colors.text.primary }]}>{formatElapsedTime(elapsedSeconds)}</Text>
               <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.elapsedLabel')}</Text>
             </View>
@@ -1428,8 +1428,8 @@ export default function FindingWorkerScreen() {
             style={[
               styles.cancelBtn,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,59,48,0.06)' : alpha(colors.status.error, 0.06),
-                borderColor: theme.isDark ? 'rgba(255,59,48,0.16)' : alpha(colors.status.error, 0.16),
+                backgroundColor: theme.isDark ? 'rgba(255,59,48,0.1)' : '#FEF2F2',
+                borderColor: theme.isDark ? 'rgba(255,59,48,0.35)' : '#EF4444',
               },
               isCancelling && { opacity: 0.5 }
             ]}
@@ -1558,7 +1558,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.045)',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(0,245,255,0.2)',
   },
   headerCopy: {
@@ -1566,38 +1566,38 @@ const styles = StyleSheet.create({
   },
   headerEyebrow: {
     color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.6,
-    marginBottom: 3,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 2,
   },
   headerTitle: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: 'rgba(0,245,255,0.08)',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(0,245,255,0.24)',
   },
   liveDot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: 4,
     backgroundColor: Colors.cyan,
   },
   liveText: {
     color: Colors.cyan,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   scrollContent: {
     paddingHorizontal: 18,
@@ -1607,7 +1607,7 @@ const styles = StyleSheet.create({
   searchHero: {
     borderRadius: 20,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.8,
     borderColor: 'rgba(0,245,255,0.28)',
     backgroundColor: 'rgba(2,8,26,0.82)',
   },
@@ -1622,18 +1622,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 7,
     borderRadius: 999,
     backgroundColor: 'rgba(0,245,255,0.07)',
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(0,245,255,0.18)',
   },
   searchStatusText: {
     color: Colors.cyan,
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   animationContainer: {
     width: 220,
@@ -1647,17 +1647,17 @@ const styles = StyleSheet.create({
     width: 184,
     height: 184,
     borderRadius: 92,
-    borderWidth: 1.5,
+    borderWidth: 1.8,
     borderColor: 'rgba(0,245,255,0.85)',
   },
   centerNode: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: 'rgba(0,245,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(0,245,255,0.4)',
     shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
@@ -1681,19 +1681,19 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
   },
   statusText: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
   },
   subText: {
-    fontSize: 13,
+    fontSize: 14,
     color: Colors.textDim,
     textAlign: 'center',
     marginTop: 8,
     lineHeight: 20,
     fontWeight: '600',
-    maxWidth: 300,
+    maxWidth: 310,
   },
   instantBadgesRow: {
     flexDirection: 'row',
@@ -1707,22 +1707,22 @@ const styles = StyleSheet.create({
   instantChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.4,
     gap: 6,
   },
   instantChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: 12.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   boosterCard: {
     marginTop: 14,
     borderRadius: 18,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.8,
     borderColor: 'rgba(255,140,0,0.3)',
     backgroundColor: 'rgba(4,9,29,0.85)',
     shadowColor: Colors.orange,
@@ -1906,7 +1906,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 18,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.8,
     borderColor: 'rgba(255,255,255,0.1)',
     backgroundColor: 'rgba(4,9,29,0.82)',
   },
@@ -1920,13 +1920,13 @@ const styles = StyleSheet.create({
     marginBottom: 13,
   },
   sectionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,245,255,0.1)',
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(0,245,255,0.22)',
   },
   sectionHeadingCopy: {
@@ -1934,22 +1934,22 @@ const styles = StyleSheet.create({
   },
   sectionEyebrow: {
     color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-    marginBottom: 3,
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   jobTitle: {
     color: '#FFFFFF',
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '900',
   },
   requestTypeBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
     backgroundColor: 'rgba(255,20,147,0.08)',
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(255,20,147,0.24)',
   },
   scheduledBadge: {
@@ -1958,28 +1958,28 @@ const styles = StyleSheet.create({
   },
   requestTypeText: {
     color: Colors.pink,
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
   },
   scheduledText: {
     color: Colors.orange,
   },
   jobDescription: {
-    fontSize: 14,
+    fontSize: 15,
     color: 'rgba(255,255,255,0.76)',
-    lineHeight: 20,
+    lineHeight: 21,
     fontWeight: '600',
     marginBottom: 14,
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 11,
+    padding: 12,
     marginBottom: 12,
     borderRadius: 13,
     backgroundColor: 'rgba(255,149,0,0.07)',
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(255,149,0,0.18)',
   },
   scheduleItem: {
@@ -1999,21 +1999,21 @@ const styles = StyleSheet.create({
   },
   scheduleLabel: {
     color: 'rgba(255,255,255,0.42)',
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-    marginBottom: 3,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    marginBottom: 2,
   },
   scheduleValue: {
     color: Colors.orange,
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '900',
   },
   requestMetaRow: {
     flexDirection: 'row',
     paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    borderTopWidth: 1.2,
+    borderBottomWidth: 1.2,
     borderColor: 'rgba(255,255,255,0.07)',
   },
   requestMetaItem: {
@@ -2026,14 +2026,14 @@ const styles = StyleSheet.create({
   },
   requestMetaLabel: {
     color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.1,
-    marginBottom: 5,
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    marginBottom: 4,
   },
   requestMetaValue: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
   inlineMeta: {
@@ -2050,40 +2050,40 @@ const styles = StyleSheet.create({
   locationText: {
     flex: 1,
     color: 'rgba(255,255,255,0.68)',
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
   },
   responseCard: {
     marginTop: 14,
     borderRadius: 18,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.8,
     borderColor: 'rgba(0,255,127,0.25)',
     backgroundColor: 'rgba(2,18,26,0.88)',
   },
   responseGradient: {
-    padding: 15,
+    padding: 16,
   },
   responseCopy: {
     marginBottom: 12,
   },
   responseEyebrow: {
     color: Colors.green,
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
-    letterSpacing: 1.2,
-    marginBottom: 5,
+    letterSpacing: 1,
+    marginBottom: 4,
   },
   responseTitle: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
     marginBottom: 4,
   },
   responseText: {
     color: 'rgba(255,255,255,0.62)',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13.5,
+    lineHeight: 19,
     fontWeight: '600',
   },
   responseProfiles: {
@@ -2092,8 +2092,8 @@ const styles = StyleSheet.create({
   },
   applicantCard: {
     borderRadius: 16,
-    padding: 10,
-    borderWidth: 1,
+    padding: 12,
+    borderWidth: 1.6,
     overflow: 'hidden',
   },
   applicantHeaderRow: {
@@ -2103,10 +2103,10 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   responseProfileImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    borderWidth: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1.4,
     borderColor: 'rgba(0,245,255,0.35)',
   },
   responseProfileCopy: {
@@ -2114,13 +2114,13 @@ const styles = StyleSheet.create({
   },
   responseProfileName: {
     color: '#FFFFFF',
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: '800',
     marginBottom: 2,
   },
   responseProfilePrice: {
     color: Colors.green,
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: '900',
   },
   applicantActionsRow: {
@@ -2128,12 +2128,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopWidth: 1.2,
+    borderTopColor: 'rgba(148, 163, 184, 0.25)',
   },
   applicantHireBtn: {
     flex: 1.4,
-    minHeight: 38,
+    minHeight: 40,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2141,21 +2141,21 @@ const styles = StyleSheet.create({
   },
   applicantHireBtnText: {
     color: '#FFFFFF',
-    fontSize: 12.5,
+    fontSize: 13.5,
     fontWeight: '800',
   },
   applicantRejectBtn: {
     flex: 0.9,
-    minHeight: 38,
+    minHeight: 40,
     borderRadius: 11,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
   },
   applicantRejectBtnText: {
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   btnContentRow: {
     flexDirection: 'row',
@@ -2164,7 +2164,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   reviewButton: {
-    minHeight: 46,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2174,7 +2174,7 @@ const styles = StyleSheet.create({
   },
   reviewButtonText: {
     color: '#001014',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
   waitingNote: {
@@ -2182,26 +2182,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     marginTop: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.035)',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.07)',
   },
   waitingText: {
     flex: 1,
     color: Colors.textDim,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13.5,
+    lineHeight: 19,
     fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',
     marginTop: 14,
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.07)',
     backgroundColor: 'rgba(3,8,25,0.76)',
   },
@@ -2212,14 +2212,14 @@ const styles = StyleSheet.create({
   },
   statVal: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '900',
   },
   statLab: {
     color: Colors.textDim,
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.8,
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   statDivider: {
     width: 1,
@@ -2227,7 +2227,7 @@ const styles = StyleSheet.create({
   },
   ratingSummary: {
     color: Colors.textDim,
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 10,
@@ -2239,18 +2239,18 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 18,
     alignSelf: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 11,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 999,
     backgroundColor: 'rgba(255,59,48,0.06)',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,59,48,0.16)',
   },
   cancelText: {
     color: Colors.error,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.8,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   satelliteOrbit: {
     ...StyleSheet.absoluteFillObject,

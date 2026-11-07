@@ -21,60 +21,72 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
   const colors = useThemeColors();
   const typography = useThemeTypography();
 
+  const isLight = !theme.isDark;
+
   const cards = [
     {
       key: 'today',
       icon: Banknote,
-      color: colors.success,
-      tint: alpha(colors.success, 0.12),
+      color: isLight ? '#15803D' : colors.success,
+      bg: isLight ? '#DCFCE7' : '#0F291E',
+      border: isLight ? '#22C55E' : alpha(colors.success, 0.55),
+      tint: isLight ? '#BBF7D0' : alpha(colors.success, 0.18),
       value: `Rs. ${(summary.todayEarnings || 0).toLocaleString()}`,
-      label: t('home.worker.todayEarned', 'Today earned'),
+      label: t('home.worker.todayEarned', 'Earned Today'),
       meta: t('home.worker.todayJobsCount', '{{count}} jobs today', { count: summary.todayJobs || 0 }),
     },
     {
       key: 'week',
       icon: BriefcaseBusiness,
-      color: colors.cyan,
-      tint: alpha(colors.cyan, 0.12),
+      color: isLight ? '#1D4ED8' : colors.cyan,
+      bg: isLight ? '#DBEAFE' : '#132238',
+      border: isLight ? '#3B82F6' : alpha(colors.cyan, 0.55),
+      tint: isLight ? '#BFDBFE' : alpha(colors.cyan, 0.18),
       value: String(summary.thisWeekJobs || 0),
-      label: t('home.worker.jobsThisWeek', { count: summary.thisWeekJobs || 0, defaultValue: 'Jobs this week' }),
+      label: t('home.worker.jobsThisWeekLabel', 'Jobs This Week'),
       meta: `Rs. ${(summary.thisWeekEarnings || 0).toLocaleString()}`,
     },
     {
       key: 'month',
       icon: CalendarCheck,
-      color: colors.worker,
-      tint: alpha(colors.worker, 0.12),
+      color: isLight ? '#B45309' : colors.worker,
+      bg: isLight ? '#FEF3C7' : '#2E1F0F',
+      border: isLight ? '#F59E0B' : alpha(colors.worker, 0.55),
+      tint: isLight ? '#FDE68A' : alpha(colors.worker, 0.18),
       value: `Rs. ${(summary.thisMonthEarnings || 0).toLocaleString()}`,
-      label: t('home.worker.monthEarned', 'Month earned'),
+      label: t('home.worker.monthEarned', 'Earned This Month'),
       meta: t('home.worker.monthJobsCount', '{{count}} jobs this month', { count: summary.thisMonthJobs || 0 }),
     },
   ];
 
   return (
     <Animated.View entering={FadeInDown.delay(100).duration(350)} style={styles.container}>
-      {cards.map(({ key, icon: Icon, color, tint, value, label, meta }) => (
-        <GlassCard
+      {cards.map(({ key, icon: Icon, color, bg, border, tint, value, label, meta }) => (
+        <View
           key={key}
-          intensity={28}
-          glowColor={color}
-          style={styles.card}
-          padding={0}
-          contentStyle={styles.cardContent}
+          style={[
+            styles.card,
+            {
+              backgroundColor: bg,
+              borderColor: border,
+            },
+          ]}
         >
-          <View style={[styles.iconBubble, { backgroundColor: tint }]}>
-            <Icon size={15} color={color} strokeWidth={2.5} />
+          <View style={styles.cardContent}>
+            <View style={[styles.iconBubble, { backgroundColor: tint, borderColor: alpha(color, 0.35) }]}>
+              <Icon size={17} color={color} strokeWidth={2.5} />
+            </View>
+            <Text style={[styles.value, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+              {value}
+            </Text>
+            <Text style={[styles.label, { color: theme.colors.text.secondary }]} numberOfLines={2}>
+              {label}
+            </Text>
+            <Text style={[styles.subMeta, { color }]} numberOfLines={1}>
+              {meta}
+            </Text>
           </View>
-          <Text style={[styles.value, typography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit>
-            {value}
-          </Text>
-          <Text style={[styles.label, { color: theme.colors.text.muted }]} numberOfLines={2}>
-            {label}
-          </Text>
-          <Text style={[styles.subMeta, { color: theme.colors.text.dim }]} numberOfLines={1}>
-            {meta}
-          </Text>
-        </GlassCard>
+        </View>
       ))}
     </Animated.View>
   );
@@ -83,45 +95,46 @@ export const WorkerQuickInsights = React.memo(function WorkerQuickInsights({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: 9,
+    gap: 10,
     marginBottom: 0,
   },
   card: {
     flex: 1,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.8,
+    overflow: 'hidden',
   },
   cardContent: {
-    padding: 11,
-    paddingTop: 10,
-    paddingBottom: 10,
-    minHeight: 112,
+    padding: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+    minHeight: 122,
   },
   iconBubble: {
-    width: 30,
-    height: 30,
+    width: 34,
+    height: 34,
     borderRadius: 11,
+    borderWidth: 1.4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 7,
+    marginBottom: 8,
   },
   value: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '900',
-    minHeight: 20,
+    minHeight: 22,
   },
   label: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0,
-    marginTop: 2,
-    minHeight: 20,
+    letterSpacing: 0.2,
+    marginTop: 3,
+    minHeight: 24,
   },
   subMeta: {
-    fontSize: 8,
-    fontWeight: '700',
-    marginTop: 3,
+    fontSize: 10.5,
+    fontWeight: '800',
+    marginTop: 4,
   },
 });

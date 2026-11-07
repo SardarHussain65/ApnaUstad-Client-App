@@ -57,6 +57,7 @@ import {
   getCachedUserLocation,
   setCachedUserLocation,
   formatAddress,
+  cleanAddressString,
 } from '../hooks';
 import { useTheme, alpha } from '../constants/Theme';
 import { useJobCreationPalette } from '../components/job-creation/shared';
@@ -135,13 +136,13 @@ export default function JobCreationScreen() {
     ? (CATEGORY_TRANSLATIONS_UR[categoryName.toLowerCase().trim()] || categoryName)
     : categoryName;
 
-  const cardBg = isDark ? 'rgba(14, 20, 38, 0.82)' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.16)' : '#E2E8F0';
-  const inactivePillBg = isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9';
-  const inactivePillBorder = isDark ? 'rgba(255, 255, 255, 0.16)' : '#CBD5E1';
-  const pillTextColor = isDark ? '#CBD5E1' : '#475569';
-  const backBtnBg = isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF';
-  const backBtnBorder = isDark ? 'rgba(255, 255, 255, 0.18)' : '#CBD5E1';
+  const cardBg = theme.id === 'current' ? 'rgba(14, 20, 38, 0.85)' : (isDark ? '#111822' : '#FFFFFF');
+  const cardBorder = theme.id === 'current' ? 'rgba(255, 255, 255, 0.24)' : (isDark ? '#334155' : '#94A3B8');
+  const inactivePillBg = theme.id === 'current' ? 'rgba(255, 255, 255, 0.08)' : (isDark ? '#182232' : '#F1F5F9');
+  const inactivePillBorder = theme.id === 'current' ? 'rgba(255, 255, 255, 0.22)' : (isDark ? '#334155' : '#94A3B8');
+  const pillTextColor = isDark ? '#E2E8F0' : '#1E293B';
+  const backBtnBg = theme.id === 'current' ? 'rgba(255, 255, 255, 0.1)' : (isDark ? '#111822' : '#FFFFFF');
+  const backBtnBorder = theme.id === 'current' ? 'rgba(255, 255, 255, 0.24)' : (isDark ? '#334155' : '#94A3B8');
 
   // ─── State ──────────────────────────────────────────────────────────────────
   const [urgency, setUrgency] = useState<Urgency>((urgencyParam as Urgency) || 'instant');
@@ -153,20 +154,21 @@ export default function JobCreationScreen() {
 
   // Location state
   const initialCachedLoc = getCachedUserLocation();
-  const [address, setAddress] = useState<string>(initialCachedLoc?.address || 'Detecting location...');
+  const [address, setAddress] = useState<string>(cleanAddressString(initialCachedLoc?.address) || 'Detecting location...');
   const [latitude, setLatitude] = useState<number>(initialCachedLoc?.latitude || 33.6927);
   const [longitude, setLongitude] = useState<number>(initialCachedLoc?.longitude || 73.0743);
   const [isGettingLocation, setIsGettingLocation] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
-  const [tempAddressInput, setTempAddressInput] = useState<string>(initialCachedLoc?.address || '');
+  const [tempAddressInput, setTempAddressInput] = useState<string>(cleanAddressString(initialCachedLoc?.address) || '');
 
   const { location: liveUserLocation } = useUserLocation();
 
   // Keep location in sync when live location resolves
   useEffect(() => {
     if (liveUserLocation?.address && (!address || address === 'Detecting location...')) {
-      setAddress(liveUserLocation.address);
-      setTempAddressInput(liveUserLocation.address);
+      const cleaned = cleanAddressString(liveUserLocation.address);
+      setAddress(cleaned);
+      setTempAddressInput(cleaned);
       if (liveUserLocation.latitude && liveUserLocation.longitude) {
         setLatitude(liveUserLocation.latitude);
         setLongitude(liveUserLocation.longitude);
@@ -186,7 +188,16 @@ export default function JobCreationScreen() {
   const [createdJobId, setCreatedJobId] = useState<string | null>(null);
 
   const isInstant = urgency === 'instant';
-  const activeColor = isInstant ? '#2DD4BF' : '#FB923C';
+  const activeColor = isInstant
+    ? (isDark ? '#2DD4BF' : '#0D9488')
+    : (isDark ? '#FB923C' : '#EA580C');
+  const activeTextColor = isInstant
+    ? (isDark ? '#2DD4BF' : '#0F766E')
+    : (isDark ? '#FB923C' : '#C2410C');
+  const activeSoftBg = isInstant
+    ? (isDark ? 'rgba(45, 212, 191, 0.2)' : '#CCFBF1')
+    : (isDark ? 'rgba(251, 146, 60, 0.2)' : '#FFEDD5');
+  const activeSolidText = isDark ? '#001014' : '#FFFFFF';
 
   // ─── Audio Recorder ─────────────────────────────────────────────────────────
   const handleRecordingStatus = useCallback((status: RecordingStatus) => {
@@ -528,7 +539,7 @@ export default function JobCreationScreen() {
                 style={[
                   styles.modePill,
                   isInstant
-                    ? [styles.modePillActive, { backgroundColor: '#2DD4BF', borderColor: '#2DD4BF' }]
+                    ? [styles.modePillActive, { backgroundColor: isDark ? '#2DD4BF' : '#0D9488', borderColor: isDark ? '#2DD4BF' : '#0F766E' }]
                     : [styles.modePillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                 ]}
                 onPress={() => {
@@ -537,7 +548,7 @@ export default function JobCreationScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.modePillText, isInstant ? styles.modePillTextActive : { color: pillTextColor }]}>
+                <Text style={[styles.modePillText, isInstant ? [styles.modePillTextActive, { color: activeSolidText }] : { color: pillTextColor }]}>
                   {t('jobCreation.urgentNow', 'Urgent - Now')}
                 </Text>
               </TouchableOpacity>
@@ -546,7 +557,7 @@ export default function JobCreationScreen() {
                 style={[
                   styles.modePill,
                   !isInstant
-                    ? [styles.modePillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                    ? [styles.modePillActive, { backgroundColor: isDark ? '#FB923C' : '#EA580C', borderColor: isDark ? '#FB923C' : '#C2410C' }]
                     : [styles.modePillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                 ]}
                 onPress={() => {
@@ -555,7 +566,7 @@ export default function JobCreationScreen() {
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.modePillText, !isInstant ? styles.modePillTextActive : { color: pillTextColor }]}>
+                <Text style={[styles.modePillText, !isInstant ? [styles.modePillTextActive, { color: activeSolidText }] : { color: pillTextColor }]}>
                   {t('jobCreation.bookLater', 'Book later')}
                 </Text>
               </TouchableOpacity>
@@ -563,17 +574,17 @@ export default function JobCreationScreen() {
 
             {/* Direct Ustad Target Banner (if requested from profile) */}
             {Boolean(targetWorkerName) && (
-              <View style={[styles.targetWorkerBanner, { borderColor: alpha(activeColor, 0.35), backgroundColor: cardBg }]}>
-                <UserRound size={16} color={activeColor} strokeWidth={2.4} />
+              <View style={[styles.targetWorkerBanner, { borderColor: activeColor, backgroundColor: cardBg }]}>
+                <UserRound size={18} color={activeTextColor} strokeWidth={2.4} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.targetWorkerEyebrow, { color: activeColor }]}>
+                  <Text style={[styles.targetWorkerEyebrow, { color: activeTextColor }]}>
                     {t('jobCreation.selectedUstad', 'SELECTED USTAD')}
                   </Text>
                   <Text style={[styles.targetWorkerNameText, { color: palette.textPrimary }]}>
                     {targetWorkerName}
                   </Text>
                 </View>
-                <Sparkles size={16} color={activeColor} />
+                <Sparkles size={18} color={activeTextColor} />
               </View>
             )}
 
@@ -601,13 +612,13 @@ export default function JobCreationScreen() {
 
                 <View style={styles.inputCardBottomRow}>
                   {voiceNoteUri ? (
-                    <View style={[styles.voiceStatusPill, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}>
-                      <Mic size={13} color={activeColor} strokeWidth={2.5} />
-                      <Text style={[styles.voiceStatusText, { color: activeColor }]}>
+                    <View style={[styles.voiceStatusPill, { backgroundColor: activeSoftBg, borderColor: activeColor }]}>
+                      <Mic size={14} color={activeTextColor} strokeWidth={2.5} />
+                      <Text style={[styles.voiceStatusText, { color: activeTextColor }]}>
                         {t('jobCreation.voiceBriefAttached', 'Voice message added')}
                       </Text>
                       <TouchableOpacity onPress={() => setVoiceNoteUri(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                        <Trash2 size={13} color="#FF6B63" />
+                        <Trash2 size={14} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   ) : isRecording ? (
@@ -632,7 +643,7 @@ export default function JobCreationScreen() {
                     {isRecording ? (
                       <Square size={16} color="#FFFFFF" fill="#FFFFFF" />
                     ) : (
-                      <Mic size={18} color="#001014" strokeWidth={2.5} />
+                      <Mic size={19} color={activeSolidText} strokeWidth={2.5} />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -642,13 +653,13 @@ export default function JobCreationScreen() {
             {/* ── 4. Service Location Card ── */}
             <View style={styles.sectionWrap}>
               <View style={[styles.locationCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
-                <View style={[styles.locationIconWrap, { backgroundColor: alpha(activeColor, 0.14) }]}>
-                  <MapPin size={18} color={activeColor} strokeWidth={2.3} />
+                <View style={[styles.locationIconWrap, { backgroundColor: activeSoftBg, borderWidth: 1.2, borderColor: alpha(activeColor, 0.4) }]}>
+                  <MapPin size={20} color={activeTextColor} strokeWidth={2.4} />
                 </View>
 
                 <View style={styles.locationDetails}>
                   <Text style={[styles.locationAddressText, { color: palette.textPrimary }]} numberOfLines={2} ellipsizeMode="tail">
-                    {address || t('jobCreation.updatingLocation', 'Detecting location...')}
+                    {cleanAddressString(address) || t('jobCreation.updatingLocation', 'Detecting location...')}
                   </Text>
                   <Text style={[styles.locationSubText, { color: palette.textSecondary }]}>
                     {t('jobCreation.serviceLocationSub', 'Service location')}
@@ -656,14 +667,14 @@ export default function JobCreationScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.locationChangeBtn}
+                  style={[styles.locationChangeBtn, { backgroundColor: activeSoftBg, borderColor: alpha(activeColor, 0.45) }]}
                   onPress={() => {
-                    setTempAddressInput(address);
+                    setTempAddressInput(cleanAddressString(address));
                     setShowLocationModal(true);
                   }}
-                  activeOpacity={0.7}
+                  activeOpacity={0.75}
                 >
-                  <Text style={[styles.locationChangeBtnText, { color: activeColor }]}>
+                  <Text style={[styles.locationChangeBtnText, { color: activeTextColor }]}>
                     {t('common.change', 'Change')}
                   </Text>
                 </TouchableOpacity>
@@ -683,12 +694,12 @@ export default function JobCreationScreen() {
                     style={[
                       styles.chipPill,
                       selectedDateOption === 'today'
-                        ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                        ? [styles.chipPillActive, { backgroundColor: activeColor, borderColor: activeColor }]
                         : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                     ]}
                     onPress={() => handleSelectDateOption('today')}
                   >
-                    <Text style={[styles.chipPillText, selectedDateOption === 'today' ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                    <Text style={[styles.chipPillText, selectedDateOption === 'today' ? [styles.chipPillTextActive, { color: activeSolidText }] : { color: pillTextColor }]}>
                       {t('jobCreation.today', 'Today')}
                     </Text>
                   </TouchableOpacity>
@@ -697,12 +708,12 @@ export default function JobCreationScreen() {
                     style={[
                       styles.chipPill,
                       selectedDateOption === 'tomorrow'
-                        ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                        ? [styles.chipPillActive, { backgroundColor: activeColor, borderColor: activeColor }]
                         : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                     ]}
                     onPress={() => handleSelectDateOption('tomorrow')}
                   >
-                    <Text style={[styles.chipPillText, selectedDateOption === 'tomorrow' ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                    <Text style={[styles.chipPillText, selectedDateOption === 'tomorrow' ? [styles.chipPillTextActive, { color: activeSolidText }] : { color: pillTextColor }]}>
                       {t('jobCreation.tomorrow', 'Tomorrow')}
                     </Text>
                   </TouchableOpacity>
@@ -711,12 +722,12 @@ export default function JobCreationScreen() {
                     style={[
                       styles.chipPill,
                       selectedDateOption === 'custom'
-                        ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                        ? [styles.chipPillActive, { backgroundColor: activeColor, borderColor: activeColor }]
                         : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                     ]}
                     onPress={() => setShowPickerModal(true)}
                   >
-                    <Text style={[styles.chipPillText, selectedDateOption === 'custom' ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                    <Text style={[styles.chipPillText, selectedDateOption === 'custom' ? [styles.chipPillTextActive, { color: activeSolidText }] : { color: pillTextColor }]}>
                       {selectedDateOption === 'custom' ? scheduledDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : t('jobCreation.pickDate', 'Pick date')}
                     </Text>
                   </TouchableOpacity>
@@ -732,12 +743,12 @@ export default function JobCreationScreen() {
                         style={[
                           styles.chipPill,
                           isSelected
-                            ? [styles.chipPillActive, { backgroundColor: '#FB923C', borderColor: '#FB923C' }]
+                            ? [styles.chipPillActive, { backgroundColor: activeColor, borderColor: activeColor }]
                             : [styles.chipPillInactive, { backgroundColor: inactivePillBg, borderColor: inactivePillBorder }]
                         ]}
                         onPress={() => handleSelectTimeSlot(slot)}
                       >
-                        <Text style={[styles.chipPillText, isSelected ? styles.chipPillTextActive : { color: pillTextColor }]}>
+                        <Text style={[styles.chipPillText, isSelected ? [styles.chipPillTextActive, { color: activeSolidText }] : { color: pillTextColor }]}>
                           {slot}
                         </Text>
                       </TouchableOpacity>
@@ -754,13 +765,13 @@ export default function JobCreationScreen() {
               </Text>
 
               {/* Mode Selector Toggle */}
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: pricingMode === 'fixed' ? 12 : 4 }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: pricingMode === 'fixed' ? 12 : 4 }}>
                 <TouchableOpacity
                   style={[
-                    styles.budgetChipBtn,
+                    styles.budgetModeBtn,
                     {
                       flex: 1,
-                      backgroundColor: pricingMode === 'fixed' ? alpha(activeColor, isDark ? 0.22 : 0.14) : inactivePillBg,
+                      backgroundColor: pricingMode === 'fixed' ? activeSoftBg : inactivePillBg,
                       borderColor: pricingMode === 'fixed' ? activeColor : inactivePillBorder,
                     },
                   ]}
@@ -771,17 +782,17 @@ export default function JobCreationScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.budgetChipText, { color: pricingMode === 'fixed' ? activeColor : pillTextColor, fontWeight: '700' }]}>
+                  <Text style={[styles.budgetModeText, { color: pricingMode === 'fixed' ? activeTextColor : pillTextColor }]}>
                     {t('jobCreation.setSpecificBudget', 'Set Budget')}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
-                    styles.budgetChipBtn,
+                    styles.budgetModeBtn,
                     {
                       flex: 1,
-                      backgroundColor: pricingMode === 'open' ? alpha(activeColor, isDark ? 0.22 : 0.14) : inactivePillBg,
+                      backgroundColor: pricingMode === 'open' ? activeSoftBg : inactivePillBg,
                       borderColor: pricingMode === 'open' ? activeColor : inactivePillBorder,
                     },
                   ]}
@@ -792,7 +803,7 @@ export default function JobCreationScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.budgetChipText, { color: pricingMode === 'open' ? activeColor : pillTextColor, fontWeight: '700' }]}>
+                  <Text style={[styles.budgetModeText, { color: pricingMode === 'open' ? activeTextColor : pillTextColor }]}>
                     {t('jobCreation.openToOffers', 'Open to offers')}
                   </Text>
                 </TouchableOpacity>
@@ -800,7 +811,7 @@ export default function JobCreationScreen() {
 
               {pricingMode === 'fixed' && (
                 <>
-                  <Text style={{ fontSize: 12, color: palette.textSecondary, marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13.5, fontWeight: '600', color: palette.textSecondary, marginBottom: 10 }}>
                     {t('jobCreation.scheduledBudgetSub', 'Specify your budget for this work.')}
                   </Text>
 
@@ -825,7 +836,7 @@ export default function JobCreationScreen() {
                           style={[
                             styles.budgetChipBtn,
                             {
-                              backgroundColor: isSelected ? alpha(activeColor, isDark ? 0.2 : 0.14) : inactivePillBg,
+                              backgroundColor: isSelected ? activeSoftBg : inactivePillBg,
                               borderColor: isSelected ? activeColor : inactivePillBorder,
                             },
                           ]}
@@ -834,7 +845,7 @@ export default function JobCreationScreen() {
                             void Haptics.selectionAsync();
                           }}
                         >
-                          <Text style={[styles.budgetChipText, { color: isSelected ? activeColor : pillTextColor }, isSelected && { fontWeight: '700' }]}>
+                          <Text style={[styles.budgetChipText, { color: isSelected ? activeTextColor : pillTextColor }, isSelected && { fontWeight: '800' }]}>
                             Rs. {Number(amt).toLocaleString()}
                           </Text>
                         </TouchableOpacity>
@@ -852,8 +863,8 @@ export default function JobCreationScreen() {
                 onPress={pickMedia}
                 activeOpacity={0.8}
               >
-                <View style={[styles.photoIconBox, { backgroundColor: alpha(activeColor, 0.14) }]}>
-                  <Camera size={18} color={activeColor} strokeWidth={2} />
+                <View style={[styles.photoIconBox, { backgroundColor: activeSoftBg, borderWidth: 1.2, borderColor: alpha(activeColor, 0.4) }]}>
+                  <Camera size={20} color={activeTextColor} strokeWidth={2.2} />
                 </View>
                 <Text style={[styles.photoCardText, { color: palette.textPrimary }]}>
                   {selectedMedia.length > 0
@@ -868,7 +879,7 @@ export default function JobCreationScreen() {
               {selectedMedia.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbsScroll}>
                   {selectedMedia.map((asset, index) => (
-                    <View key={index} style={styles.thumbWrapper}>
+                    <View key={index} style={[styles.thumbWrapper, { borderWidth: 1.5, borderColor: cardBorder }]}>
                       <Image source={{ uri: asset.uri }} style={styles.thumbImage} />
                       <TouchableOpacity
                         style={styles.thumbRemoveBtn}
@@ -889,38 +900,43 @@ export default function JobCreationScreen() {
             style={[
               styles.stickyFooter,
               {
-                backgroundColor: isDark ? 'rgba(8,12,24,0.96)' : 'rgba(255,255,255,0.96)',
-                borderTopColor: palette.border,
+                backgroundColor: isDark ? 'rgba(8,12,24,0.96)' : 'rgba(255,255,255,0.98)',
+                borderTopColor: cardBorder,
                 paddingBottom: Math.max(insets.bottom, 16),
               }
             ]}
           >
             <TouchableOpacity
-              activeOpacity={0.82}
+              activeOpacity={0.84}
               onPress={handlePostJob}
               disabled={isSubmitting}
               style={[
                 styles.bottomActionBtn,
                 {
-                  shadowColor: isInstant ? '#2DD4BF' : '#FB923C',
-                  shadowOpacity: 0.35,
-                  shadowRadius: 14,
-                  shadowOffset: { width: 0, height: 6 },
-                  elevation: 8,
+                  borderColor: isInstant ? (isDark ? '#2DD4BF' : '#0F766E') : (isDark ? '#FB923C' : '#C2410C'),
+                  shadowColor: activeColor,
+                  shadowOpacity: isDark ? 0.35 : 0.22,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 5 },
+                  elevation: 6,
                 },
                 isSubmitting && { opacity: 0.7 }
               ]}
             >
               <LinearGradient
-                colors={isInstant ? ['#2DD4BF', '#00E5FF'] : ['#FB923C', '#F97316']}
+                colors={
+                  isInstant
+                    ? (isDark ? ['#2DD4BF', '#06B6D4'] : ['#0D9488', '#0F766E'])
+                    : (isDark ? ['#FB923C', '#F97316'] : ['#EA580C', '#C2410C'])
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.bottomActionGradient}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator color="#001014" size="small" />
+                  <ActivityIndicator color={activeSolidText} size="small" />
                 ) : (
-                  <Text style={styles.bottomActionText}>
+                  <Text style={[styles.bottomActionText, { color: activeSolidText }]}>
                     {isInstant
                       ? (amount && Number(amount) > 0
                           ? t('jobCreation.findUstadNowPrice', { price: Number(amount).toLocaleString() })
@@ -947,22 +963,22 @@ export default function JobCreationScreen() {
             style={{ flex: 1 }}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalCard, { backgroundColor: isDark ? '#111527' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.18)' : '#E2E8F0' }]}>
+              <View style={[styles.modalCard, { backgroundColor: isDark ? '#111822' : '#FFFFFF', borderColor: cardBorder }]}>
                 <Text style={[styles.modalTitle, { color: palette.textPrimary }]}>
                   {t('jobCreation.serviceLocation', 'WHERE IS THE WORK?')}
                 </Text>
 
                 <TouchableOpacity
-                  style={[styles.modalGpsBtn, { backgroundColor: alpha(activeColor, 0.12), borderColor: alpha(activeColor, 0.3) }]}
+                  style={[styles.modalGpsBtn, { backgroundColor: activeSoftBg, borderColor: activeColor }]}
                   onPress={() => handleGetLiveLocation(false)}
                   disabled={isGettingLocation}
                 >
                   {isGettingLocation ? (
-                    <ActivityIndicator size="small" color={activeColor} />
+                    <ActivityIndicator size="small" color={activeTextColor} />
                   ) : (
                     <>
-                      <Target size={16} color={activeColor} />
-                      <Text style={[styles.modalGpsText, { color: activeColor }]}>
+                      <Target size={18} color={activeTextColor} />
+                      <Text style={[styles.modalGpsText, { color: activeTextColor }]}>
                         {t('jobCreation.useCurrentLocation', 'Use my current location')}
                       </Text>
                     </>
@@ -973,7 +989,7 @@ export default function JobCreationScreen() {
                   {t('jobCreation.orTypeAddress', 'Or type your address:')}
                 </Text>
                 <TextInput
-                  style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1', backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC' }]}
+                  style={[styles.modalTextInput, { color: palette.textPrimary, borderColor: cardBorder, backgroundColor: isDark ? '#182232' : '#F8FAFC' }]}
                   placeholder={t('jobCreation.locationPlaceholder', 'House / flat, street, block, area...')}
                   placeholderTextColor={palette.textMuted}
                   multiline
@@ -983,7 +999,7 @@ export default function JobCreationScreen() {
 
                 <View style={styles.modalActionsRow}>
                   <TouchableOpacity
-                    style={[styles.modalCancelBtn, { borderColor: isDark ? 'rgba(255,255,255,0.16)' : '#CBD5E1' }]}
+                    style={[styles.modalCancelBtn, { borderColor: cardBorder, backgroundColor: inactivePillBg }]}
                     onPress={() => setShowLocationModal(false)}
                   >
                     <Text style={[styles.modalCancelText, { color: palette.textSecondary }]}>
@@ -995,7 +1011,7 @@ export default function JobCreationScreen() {
                     style={[styles.modalSaveBtn, { backgroundColor: activeColor }]}
                     onPress={() => {
                       if (tempAddressInput.trim()) {
-                        const trimmed = tempAddressInput.trim();
+                        const trimmed = cleanAddressString(tempAddressInput.trim());
                         setAddress(trimmed);
                         const cached = getCachedUserLocation();
                         if (cached) {
@@ -1005,7 +1021,7 @@ export default function JobCreationScreen() {
                       setShowLocationModal(false);
                     }}
                   >
-                    <Text style={styles.modalSaveText}>
+                    <Text style={[styles.modalSaveText, { color: activeSolidText }]}>
                       {t('common.done', 'Done')}
                     </Text>
                   </TouchableOpacity>
@@ -1078,19 +1094,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 14,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.3,
     flex: 1,
@@ -1100,25 +1116,24 @@ const styles = StyleSheet.create({
   modeToggleRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 22,
     marginTop: 4,
   },
   modePill: {
     flex: 1,
-    height: 48,
-    borderRadius: 14,
+    height: 50,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.2,
+    borderWidth: 1.8,
   },
   modePillActive: {},
   modePillInactive: {},
   modePillText: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '700',
   },
   modePillTextActive: {
-    color: '#001014',
     fontWeight: '800',
   },
 
@@ -1127,48 +1142,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 14,
-    borderWidth: 1.2,
+    borderRadius: 15,
+    borderWidth: 1.8,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 16,
+    paddingVertical: 12,
+    marginBottom: 18,
   },
   targetWorkerEyebrow: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
     marginBottom: 2,
   },
   targetWorkerNameText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
   },
 
   // Section Wrap
   sectionWrap: {
-    marginBottom: 20,
+    marginBottom: 22,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 10,
-    letterSpacing: 0.1,
+    fontSize: 17.5,
+    fontWeight: '800',
+    marginBottom: 11,
+    letterSpacing: -0.2,
   },
 
   // 3. What Needs Fixing Card
   inputCard: {
     borderRadius: 18,
-    borderWidth: 1.2,
+    borderWidth: 1.8,
     paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingTop: 15,
+    paddingBottom: 13,
   },
   textArea: {
-    fontSize: 15,
-    minHeight: 80,
+    fontSize: 16,
+    fontWeight: '500',
+    minHeight: 88,
     textAlignVertical: 'top',
     padding: 0,
     marginBottom: 10,
+    lineHeight: 22,
   },
   inputCardBottomRow: {
     flexDirection: 'row',
@@ -1179,14 +1196,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 11,
+    borderWidth: 1.5,
   },
   voiceStatusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   recordingStatusWrap: {
     flexDirection: 'row',
@@ -1194,20 +1211,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pulseDotRed: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
     backgroundColor: '#EF4444',
   },
   recordingTimerText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '800',
     color: '#EF4444',
   },
   micCircleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 'auto',
@@ -1218,14 +1235,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,
-    borderWidth: 1.2,
-    padding: 14,
+    borderWidth: 1.8,
+    padding: 15,
     gap: 12,
   },
   locationIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1233,20 +1250,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   locationAddressText: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 2,
+    fontSize: 15.5,
+    fontWeight: '800',
+    marginBottom: 3,
+    lineHeight: 20,
   },
   locationSubText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13.5,
+    fontWeight: '600',
   },
   locationChangeBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.4,
   },
   locationChangeBtnText: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '800',
   },
 
@@ -1257,92 +1277,104 @@ const styles = StyleSheet.create({
   },
   chipPill: {
     flex: 1,
-    height: 44,
+    height: 46,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
-  chipPillActive: {},
+  chipPillActive: {
+    borderWidth: 1.8,
+  },
   chipPillInactive: {
-    borderWidth: 1.2,
+    borderWidth: 1.6,
   },
   chipPillText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14.5,
+    fontWeight: '700',
   },
   chipPillTextActive: {
-    color: '#001014',
     fontWeight: '800',
   },
 
-  // Book Later: Budget
+  // Book Later / Instant: Budget
+  budgetModeBtn: {
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.8,
+  },
+  budgetModeText: {
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
   budgetInputCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1.2,
+    borderRadius: 15,
+    borderWidth: 1.8,
     paddingHorizontal: 16,
-    height: 50,
+    height: 54,
   },
   budgetCurrencyLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginRight: 10,
+    fontSize: 15.5,
+    fontWeight: '800',
+    marginRight: 12,
   },
   budgetTextInput: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
   },
   budgetChipsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 10,
+    marginTop: 12,
   },
   budgetChipBtn: {
     flex: 1,
-    height: 40,
-    borderRadius: 12,
+    height: 42,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.2,
+    borderWidth: 1.6,
   },
   budgetChipText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
 
   // 6. Photos/Video
   photoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    borderWidth: 1.2,
-    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.8,
+    padding: 15,
     gap: 12,
   },
   photoIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoCardText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14.5,
+    fontWeight: '700',
     flex: 1,
   },
   thumbsScroll: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 10,
+    marginTop: 12,
   },
   thumbWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
+    width: 64,
+    height: 64,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -1352,12 +1384,12 @@ const styles = StyleSheet.create({
   },
   thumbRemoveBtn: {
     position: 'absolute',
-    top: 3,
-    right: 3,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.75)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1366,28 +1398,28 @@ const styles = StyleSheet.create({
   stickyFooter: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
   },
   bottomActionBtn: {
     borderRadius: 16,
+    borderWidth: 1.6,
     overflow: 'hidden',
   },
   bottomActionGradient: {
-    paddingVertical: 15,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   bottomActionText: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '800',
-    color: '#001014',
     letterSpacing: 0.3,
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(0,0,0,0.68)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -1395,11 +1427,11 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 20,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
   },
@@ -1407,27 +1439,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 13,
+    borderRadius: 13,
+    borderWidth: 1.6,
     gap: 8,
     marginBottom: 14,
   },
   modalGpsText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
   },
   modalInputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13.5,
+    fontWeight: '700',
     marginBottom: 8,
   },
   modalTextInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    fontSize: 14,
-    minHeight: 70,
+    borderRadius: 13,
+    borderWidth: 1.8,
+    padding: 13,
+    fontSize: 15,
+    fontWeight: '500',
+    minHeight: 76,
     textAlignVertical: 'top',
     marginBottom: 16,
   },
@@ -1437,26 +1470,25 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 13,
+    borderRadius: 13,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCancelText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   modalSaveBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 13,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalSaveText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#001014',
   },
 });

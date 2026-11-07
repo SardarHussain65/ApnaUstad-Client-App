@@ -70,7 +70,7 @@ const DEFAULT_P = {
 function getReviewPalette(theme: ReturnType<typeof useTheme>, colors: ReturnType<typeof useThemeColors>) {
   if (theme.id === 'current') return DEFAULT_P;
   return {
-    gold: colors.yellow,
+    gold: theme.id === 'light' ? '#D97706' : colors.yellow,
     goldMuted: alpha(colors.yellow, 0.14),
     cyan: colors.cyan,
     cyanMuted: alpha(colors.cyan, 0.12),
@@ -78,11 +78,11 @@ function getReviewPalette(theme: ReturnType<typeof useTheme>, colors: ReturnType
     greenMuted: alpha(colors.green, 0.12),
     surface: theme.colors.surface.card,
     surfaceFocus: theme.colors.surface.raised,
-    border: theme.colors.border.subtle,
+    border: theme.colors.border.default,
     borderFocus: colors.cyan,
-    borderGold: alpha(colors.yellow, 0.35),
-    textDim: theme.colors.text.dim,
-    textMuted: theme.colors.text.muted,
+    borderGold: alpha(colors.yellow, 0.45),
+    textDim: theme.colors.text.muted,
+    textMuted: theme.colors.text.secondary,
     text: theme.colors.text.primary,
   };
 }
@@ -201,8 +201,8 @@ export default function ReviewScreen() {
           styles.header, 
           { 
             paddingTop: insets.top + 10,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.isDark ? 'transparent' : theme.colors.border.subtle,
+            borderBottomWidth: 1.5,
+            borderBottomColor: theme.isDark ? 'transparent' : theme.colors.border.default,
             backgroundColor: theme.isDark ? 'transparent' : theme.colors.background.screen,
           }
         ]}>
@@ -211,8 +211,8 @@ export default function ReviewScreen() {
             style={[
               styles.backBtn,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : alpha(theme.colors.text.primary, 0.03),
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : theme.colors.border.subtle,
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               }
             ]} 
             activeOpacity={0.8}
@@ -238,7 +238,7 @@ export default function ReviewScreen() {
                 <CheckCircle2 size={50} color={colors.success} />
                 <Text style={[styles.doneTitle, { color: P.text }]}>{t('review.alreadySubmitted', 'Review Already Submitted')}</Text>
                 <Text style={[styles.doneText, { color: P.textMuted }]}>{t('review.alreadySubmittedDesc', 'This completed job already has customer feedback attached.')}</Text>
-                <TouchableOpacity onPress={() => router.replace({ pathname: '/transaction-details', params: { id: bookingId } })} style={styles.doneBtn}>
+                <TouchableOpacity onPress={() => router.replace({ pathname: '/transaction-details', params: { id: bookingId } })} style={[styles.doneBtn, { backgroundColor: theme.colors.brand.primary, borderColor: theme.colors.brand.primary }]}>
                   <Text style={[styles.doneBtnText, { color: theme.colors.button.primaryText }]}>{t('review.backToDetails', 'BACK TO DETAILS')}</Text>
                 </TouchableOpacity>
               </GlassCard>
@@ -249,7 +249,7 @@ export default function ReviewScreen() {
                 <MessageSquareText size={50} color={colors.orange} />
                 <Text style={[styles.doneTitle, { color: P.text }]}>{t('review.unlocksAfterCompletion', 'Review Unlocks After Completion')}</Text>
                 <Text style={[styles.doneText, { color: P.textMuted }]}>{t('review.unlocksAfterCompletionDesc', 'Once the job is completed, you can rate the service and share your experience.')}</Text>
-                <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn}>
+                <TouchableOpacity onPress={() => router.back()} style={[styles.doneBtn, { backgroundColor: theme.colors.brand.primary, borderColor: theme.colors.brand.primary }]}>
                   <Text style={[styles.doneBtnText, { color: theme.colors.button.primaryText }]}>{t('review.goBack', 'GO BACK')}</Text>
                 </TouchableOpacity>
               </GlassCard>
@@ -267,12 +267,12 @@ export default function ReviewScreen() {
                       style={StyleSheet.absoluteFillObject}
                     />
                   )}
-                  <View style={styles.avatarShell}>
+                  <View style={[styles.avatarShell, { borderColor: P.borderGold, backgroundColor: theme.colors.surface.subtle }]}>
                     {workerImage ? (
                       <Image source={{ uri: workerImage }} style={styles.avatarImage} />
                     ) : (
-                      <LinearGradient colors={['rgba(255,215,0,0.22)', 'rgba(0,245,255,0.18)']} style={styles.avatarFallback}>
-                        <Text style={styles.avatarText}>{initialsFor(workerName)}</Text>
+                      <LinearGradient colors={[alpha(P.gold, 0.22), alpha(P.cyan, 0.18)]} style={styles.avatarFallback}>
+                        <Text style={[styles.avatarText, { color: P.gold }]}>{initialsFor(workerName)}</Text>
                       </LinearGradient>
                     )}
                     {isVerified && (
@@ -283,10 +283,10 @@ export default function ReviewScreen() {
                   </View>
                   <View style={styles.workerMeta}>
                     <View style={styles.roleRow}>
-                      <Text style={styles.workerLabel}>{t('review.assignedUstad', 'ASSIGNED USTAD')}</Text>
+                      <Text style={[styles.workerLabel, { color: P.textDim }]}>{t('review.assignedUstad', 'ASSIGNED USTAD')}</Text>
                       {isVerified && (
-                        <View style={[styles.verifiedLabel, { borderColor: alpha(P.cyan, 0.25), backgroundColor: alpha(P.cyan, 0.08) }]}>
-                          <Sparkles size={8} color={P.cyan} />
+                        <View style={[styles.verifiedLabel, { borderColor: alpha(P.cyan, 0.35), backgroundColor: alpha(P.cyan, 0.1) }]}>
+                          <Sparkles size={10} color={P.cyan} />
                           <Text style={[styles.verifiedLabelText, { color: P.cyan }]}>{t('review.verifiedSpecialist', 'Verified Specialist')}</Text>
                         </View>
                       )}
@@ -310,6 +310,7 @@ export default function ReviewScreen() {
                   <View style={styles.starRow}>
                     {[1, 2, 3, 4, 5].map((value) => {
                       const active = value <= rating;
+                      const starColor = active ? (theme.id === 'light' ? '#F59E0B' : P.gold) : theme.colors.border.default;
                       return (
                         <TouchableOpacity
                           key={value}
@@ -322,17 +323,17 @@ export default function ReviewScreen() {
                         >
                           <Star
                             size={36}
-                            color={active ? P.gold : (theme.id === 'light' ? theme.colors.border.strong : 'rgba(255,255,255,0.15)')}
-                            fill={active ? P.gold : 'transparent'}
-                            strokeWidth={1.8}
+                            color={starColor}
+                            fill={active ? (theme.id === 'light' ? '#F59E0B' : P.gold) : 'transparent'}
+                            strokeWidth={2}
                           />
                         </TouchableOpacity>
                       );
                     })}
                   </View>
 
-                  <View style={[styles.ratingBadge, { borderColor: `${P.gold}30`, backgroundColor: `${P.gold}10` }]}>
-                    <Text style={styles.ratingLabel}>{t(`review.label${rating}`, RATING_LABELS[rating])}</Text>
+                  <View style={[styles.ratingBadge, { borderColor: alpha(P.gold, 0.45), backgroundColor: alpha(P.gold, 0.12) }]}>
+                    <Text style={[styles.ratingLabel, { color: P.gold }]}>{t(`review.label${rating}`, RATING_LABELS[rating])}</Text>
                   </View>
                 </View>
               </Animated.View>
@@ -442,42 +443,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(9, 12, 32, 0.74)',
+    borderWidth: 1.8,
     gap: 16,
     marginTop: 40,
   },
   doneTitle: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   doneText: {
-    color: '#646B7E',
-    fontSize: 14,
+    fontSize: 14.5,
+    fontWeight: '600',
     textAlign: 'center',
     lineHeight: 22,
   },
   doneBtn: {
     marginTop: 12,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#00F5FF',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.4)',
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1.6,
   },
   doneBtnText: {
-    color: '#001014',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  loadingText: { color: '#9BA3B4', fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
+  loadingText: { color: '#9BA3B4', fontSize: 13, fontWeight: '800', letterSpacing: 1.2 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -489,15 +484,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCopy: { alignItems: 'center' },
-  headerEyebrow: { color: '#646B7E', fontSize: 9, fontWeight: '900', letterSpacing: 2.2 },
-  headerTitle: { color: '#fff', fontSize: 21, fontWeight: '900', marginTop: 4 },
+  headerEyebrow: { fontSize: 10.5, fontWeight: '900', letterSpacing: 2 },
+  headerTitle: { fontSize: 21, fontWeight: '900', marginTop: 4 },
   scroll: {
     paddingHorizontal: Spacing.l,
     paddingTop: Spacing.s,
@@ -510,27 +503,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1.8,
     padding: 16,
-    backgroundColor: 'transparent',
   },
   avatarShell: {
     position: 'relative',
-    width: 58,
-    height: 58,
+    width: 60,
+    height: 60,
     borderRadius: 20,
-    borderWidth: 1.4,
-    borderColor: 'rgba(255,215,0,0.38)',
+    borderWidth: 1.8,
     padding: 3,
-    backgroundColor: 'rgba(255,255,255,0.04)',
     marginRight: 16,
   },
   avatarImage: {
     width: '100%',
     height: '100%',
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   avatarFallback: {
     flex: 1,
@@ -538,7 +526,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#FFD700', fontSize: 21, fontWeight: '900' },
+  avatarText: { fontSize: 21, fontWeight: '900' },
   verifiedBadge: {
     position: 'absolute',
     right: -4,
@@ -559,36 +547,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  workerLabel: { color: '#646B7E', fontSize: 8, fontWeight: '900', letterSpacing: 1.8 },
+  workerLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
   verifiedLabel: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: 'rgba(0,245,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
+    borderWidth: 1.4,
   },
   verifiedLabelText: {
-    color: '#00F5FF',
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '900',
   },
-  workerName: { color: '#fff', fontSize: 19, fontWeight: '900', marginTop: 4 },
-  workerSub: { color: '#00F5FF', fontSize: 12, fontWeight: '700', marginTop: 3 },
+  workerName: { fontSize: 19, fontWeight: '900', marginTop: 4 },
+  workerSub: { fontSize: 13.5, fontWeight: '700', marginTop: 3 },
   ratingCard: {
     position: 'relative',
     overflow: 'hidden',
     alignItems: 'center',
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1.8,
     padding: 18,
-    backgroundColor: 'transparent',
   },
-  sectionTitle: { color: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: '900', letterSpacing: 2 },
+  sectionTitle: { fontSize: 11, fontWeight: '900', letterSpacing: 1.6 },
   starRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 16, gap: 8 },
   starBtn: { padding: 4 },
   ratingBadge: {
@@ -596,19 +579,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
-  ratingLabel: { color: '#FFD700', fontSize: 13, fontWeight: '900', letterSpacing: 0.2 },
+  ratingLabel: { fontSize: 14, fontWeight: '900', letterSpacing: 0.2 },
   tagsCard: {
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1.8,
     padding: 16,
-    backgroundColor: 'transparent',
   },
   tagsHint: {
-    color: '#646B7E',
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '600',
     marginTop: 4,
     marginBottom: 12,
@@ -619,37 +599,33 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1.6,
   },
   tagText: {
-    color: '#d8d9e4',
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   commentCard: {
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 16,
     minHeight: 180,
   },
   commentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   counterPanel: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
-  counter: { color: '#646B7E', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  counter: { fontSize: 10.5, fontWeight: '900', letterSpacing: 0.5 },
   input: {
     minHeight: 110,
-    color: '#fff',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     fontWeight: '600',
     padding: 0,
   },
@@ -660,18 +636,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: Spacing.l,
     paddingTop: 16,
-    backgroundColor: 'rgba(5,5,16,0.96)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
+    borderTopWidth: 1.5,
   },
   submitBtn: { borderRadius: 16, overflow: 'hidden' },
   submitBtnDisabled: { opacity: 0.4 },
   submitGradient: {
-    height: 52,
+    height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  submitText: { color: '#000', fontSize: 13, fontWeight: '900', letterSpacing: 1 },
+  submitText: { fontSize: 14, fontWeight: '900', letterSpacing: 1 },
 });

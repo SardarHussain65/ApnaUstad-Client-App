@@ -110,7 +110,7 @@ export default function ForgotPasswordScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={[styles.recoveryCard, { borderColor: theme.colors.border.subtle }]}
+              style={[styles.recoveryCard, { borderColor: theme.colors.border.default }]}
               gradient={[`${accentColor}14`, 'rgba(191,90,242,0.05)']}
             >
               <InputField
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   recoveryCard: {
     borderRadius: BorderRadius.xxl,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   actionButton: {
     marginTop: Spacing.s,

@@ -145,6 +145,16 @@ export default function TransactionDetailsScreen() {
   const { role, user } = useAuth();
   const isWorker = role === 'worker';
 
+  const shieldColor = theme.id === 'light'
+    ? '#0284C7'
+    : (theme.id === 'dark' ? '#38BDF8' : '#00F5FF');
+  const shieldBg = theme.id === 'light'
+    ? '#E0F2FE'
+    : (theme.id === 'dark' ? alpha('#38BDF8', 0.16) : alpha('#00F5FF', 0.18));
+  const shieldBorder = theme.id === 'light'
+    ? '#0284C7'
+    : (theme.id === 'dark' ? '#38BDF8' : '#00F5FF');
+
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [interactiveRating, setInteractiveRating] = useState<number>(5);
@@ -880,9 +890,9 @@ export default function TransactionDetailsScreen() {
 
   const isDone = status === 'completed';
   const isDark = theme.isDark;
-  const cardBg = isDark ? '#0C101E' : '#FFFFFF';
-  const cardBorder = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(15, 23, 42, 0.14)';
-  const metaDividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
+  const cardBg = theme.id === 'current' ? 'rgba(12, 16, 30, 0.88)' : (isDark ? '#111822' : '#FFFFFF');
+  const cardBorder = theme.colors.border.default;
+  const metaDividerColor = isDark ? 'rgba(255, 255, 255, 0.14)' : '#CBD5E1';
 
   const renderCards = () => (
     <View style={styles.cardsWrap}>
@@ -892,14 +902,14 @@ export default function TransactionDetailsScreen() {
           styles.heroCard,
           {
             backgroundColor: isDone
-              ? (isDark ? 'rgba(16, 185, 129, 0.08)' : '#F0FDF4')
+              ? (isDark ? 'rgba(16, 185, 129, 0.12)' : '#ECFDF5')
               : isWorkerArrived
-                ? (isDark ? 'rgba(14, 165, 233, 0.08)' : '#F0F9FF')
+                ? (isDark ? 'rgba(14, 165, 233, 0.12)' : '#EFF6FF')
                 : cardBg,
             borderColor: isDone
-              ? (isDark ? 'rgba(34, 197, 94, 0.32)' : '#86EFAC')
+              ? (isDark ? 'rgba(34, 197, 94, 0.45)' : '#22C55E')
               : isWorkerArrived
-                ? (isDark ? 'rgba(56, 189, 248, 0.32)' : '#7DD3FC')
+                ? (isDark ? 'rgba(56, 189, 248, 0.45)' : '#3B82F6')
                 : cardBorder,
           },
         ]}
@@ -1769,42 +1779,72 @@ export default function TransactionDetailsScreen() {
           {/* Top Header Overlay Controls */}
           <View style={[styles.mapTopControls, { top: insets.top + 8 }]}>
             <TouchableOpacity
-              style={styles.circleButton}
+              style={[
+                styles.circleButton,
+                {
+                  backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : theme.colors.border.default,
+                  borderWidth: 1.8,
+                }
+              ]}
               onPress={() => router.back()}
               activeOpacity={0.8}
             >
-              <ChevronLeft size={22} color="#FFFFFF" strokeWidth={2.4} />
+              <ChevronLeft size={22} color={isDark ? '#FFFFFF' : theme.colors.text.primary} strokeWidth={2.4} />
             </TouchableOpacity>
 
             <View style={styles.mapTopRightControls}>
               <TouchableOpacity
-                style={[styles.circleButton, { backgroundColor: alpha('#00F5FF', 0.18), borderWidth: 1, borderColor: '#00F5FF' }]}
+                style={[
+                  styles.circleButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : shieldBg,
+                    borderWidth: 1.8,
+                    borderColor: shieldBorder,
+                  }
+                ]}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setShowSafetyModal(true);
                 }}
                 activeOpacity={0.8}
               >
-                <ShieldCheck size={18} color="#00F5FF" strokeWidth={2.4} />
+                <ShieldCheck size={18} color={shieldColor} strokeWidth={2.4} />
               </TouchableOpacity>
 
               {showDisputeAction && (
                 <TouchableOpacity
-                  style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
+                  style={[
+                    styles.circleButton,
+                    {
+                      backgroundColor: isDark ? alpha('#EF4444', 0.85) : '#FEE2E2',
+                      borderWidth: 1.8,
+                      borderColor: '#EF4444',
+                    }
+                  ]}
                   onPress={handleOpenDispute}
                   activeOpacity={0.8}
                 >
-                  <Scale size={18} color="#FFFFFF" strokeWidth={2.4} />
+                  <Scale size={18} color={isDark ? '#FFFFFF' : '#EF4444'} strokeWidth={2.4} />
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
-                style={styles.circleButton}
-                onPress={openExternalMaps}
-                activeOpacity={0.8}
-              >
-                <Navigation size={17} color="#00E5FF" strokeWidth={2.4} />
-              </TouchableOpacity>
+              {destinationLocation?.latitude && destinationLocation?.longitude ? (
+                <TouchableOpacity
+                  style={[
+                    styles.circleButton,
+                    {
+                      backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : '#FFFFFF',
+                      borderWidth: 1.8,
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : theme.colors.border.default,
+                    }
+                  ]}
+                  onPress={openExternalMaps}
+                  activeOpacity={0.8}
+                >
+                  <Navigation size={17} color={theme.id === 'light' ? theme.colors.brand.primary : (theme.id === 'dark' ? '#38BDF8' : '#00E5FF')} strokeWidth={2.4} />
+                </TouchableOpacity>
+              ) : null}
             </View>
           </View>
 
@@ -1816,11 +1856,22 @@ export default function TransactionDetailsScreen() {
         </View>
       ) : (
         /* Top Navigation Header when map is removed (worker reached workplace) */
-        <View style={[styles.standardHeader, { paddingTop: insets.top + 8 }]}>
+        <View style={[
+          styles.standardHeader,
+          {
+            paddingTop: insets.top + 8,
+            borderBottomColor: theme.colors.border.default,
+            backgroundColor: theme.colors.background.screen,
+          }
+        ]}>
           <TouchableOpacity
             style={[
               styles.circleButton,
-              { backgroundColor: alpha(theme.colors.surface.card, 0.9), borderWidth: 1, borderColor: alpha(theme.colors.border.subtle, 0.5) }
+              {
+                backgroundColor: theme.colors.surface.card,
+                borderWidth: 1.8,
+                borderColor: theme.colors.border.default,
+              }
             ]}
             onPress={() => router.back()}
             activeOpacity={0.8}
@@ -1832,7 +1883,7 @@ export default function TransactionDetailsScreen() {
             <Text style={[styles.standardHeaderTitle, { color: theme.colors.text.primary }]} numberOfLines={1}>
               {serviceTitle}
             </Text>
-            <Text style={[styles.standardHeaderSubtitle, { color: theme.colors.text.muted }]} numberOfLines={1}>
+            <Text style={[styles.standardHeaderSubtitle, { color: theme.colors.text.secondary }]} numberOfLines={1}>
               {statusHeadline}
             </Text>
           </View>
@@ -1841,7 +1892,11 @@ export default function TransactionDetailsScreen() {
             <TouchableOpacity
               style={[
                 styles.circleButton,
-                { backgroundColor: alpha('#00F5FF', 0.15), borderWidth: 1, borderColor: '#00F5FF' }
+                {
+                  backgroundColor: shieldBg,
+                  borderWidth: 1.8,
+                  borderColor: shieldBorder,
+                }
               ]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1849,34 +1904,42 @@ export default function TransactionDetailsScreen() {
               }}
               activeOpacity={0.8}
             >
-              <ShieldCheck size={18} color="#00F5FF" strokeWidth={2.4} />
+              <ShieldCheck size={18} color={shieldColor} strokeWidth={2.4} />
             </TouchableOpacity>
 
             {showDisputeAction && (
               <TouchableOpacity
-                style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
+                style={[
+                  styles.circleButton,
+                  {
+                    backgroundColor: isDark ? alpha('#EF4444', 0.85) : '#FEE2E2',
+                    borderWidth: 1.8,
+                    borderColor: '#EF4444',
+                  }
+                ]}
                 onPress={handleOpenDispute}
                 activeOpacity={0.8}
               >
-                <Scale size={18} color="#FFFFFF" strokeWidth={2.4} />
+                <Scale size={18} color={isDark ? '#FFFFFF' : '#EF4444'} strokeWidth={2.4} />
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.circleButton,
-                {
-                  backgroundColor: isDark ? alpha(theme.colors.surface.card, 0.9) : '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: isDark ? alpha(theme.colors.border.subtle, 0.5) : 'rgba(15, 23, 42, 0.18)',
-                  opacity: 0.35,
-                }
-              ]}
-              disabled={true}
-              activeOpacity={1}
-            >
-              <Navigation size={17} color={theme.colors.text.dim} strokeWidth={2.4} />
-            </TouchableOpacity>
+            {destinationLocation?.latitude && destinationLocation?.longitude ? (
+              <TouchableOpacity
+                style={[
+                  styles.circleButton,
+                  {
+                    backgroundColor: theme.colors.surface.card,
+                    borderWidth: 1.8,
+                    borderColor: theme.colors.border.default,
+                  }
+                ]}
+                onPress={openExternalMaps}
+                activeOpacity={0.8}
+              >
+                <Navigation size={17} color={theme.colors.brand.primary} strokeWidth={2.4} />
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       )}
@@ -2563,12 +2626,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   circleButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(10, 14, 26, 0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
@@ -2578,9 +2639,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    paddingBottom: 14,
+    borderBottomWidth: 1.5,
   },
   standardHeaderContent: {
     flex: 1,
@@ -2614,7 +2674,7 @@ const styles = StyleSheet.create({
   heroCard: {
     width: '100%',
     borderRadius: 22,
-    borderWidth: 1.2,
+    borderWidth: 1.8,
     padding: 18,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 3 },
@@ -2629,8 +2689,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   heroIconBadge: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2645,7 +2705,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heroHeadline: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
     flexShrink: 1,
   },
@@ -2653,18 +2713,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 9,
+    borderWidth: 1.4,
   },
   urgencyPillText: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontWeight: '800',
   },
   heroSubText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13.5,
+    fontWeight: '600',
     marginTop: 3,
   },
   timelineRow: {
@@ -2676,57 +2736,57 @@ const styles = StyleSheet.create({
   timelineStep: {
     alignItems: 'center',
     gap: 5,
-    minWidth: 54,
+    minWidth: 56,
   },
   timelineNode: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timelineNodeCompleted: {
-    borderWidth: 1.5,
+    borderWidth: 1.8,
   },
   timelineNodeCurrent: {
     borderWidth: 2,
   },
   timelineNodePending: {
-    borderWidth: 1.5,
+    borderWidth: 1.6,
   },
   timelineNodeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   timelineLabel: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   timelineLabelActive: {
     fontWeight: '800',
   },
   timelineLabelDim: {
-    fontWeight: '500',
+    fontWeight: '600',
   },
   timelineConnector: {
     flex: 1,
-    height: 2,
+    height: 2.5,
     marginHorizontal: 3,
     marginBottom: 16,
-    borderRadius: 1,
+    borderRadius: 1.5,
   },
   timelineConnectorActive: {
-    height: 2,
+    height: 2.5,
   },
   timelineConnectorDim: {
-    height: 1.5,
+    height: 2,
   },
   cardSection: {
     width: '100%',
     borderRadius: 22,
-    borderWidth: 1.2,
+    borderWidth: 1.8,
     padding: 16,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
@@ -2747,10 +2807,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   partnerAvatarFrame: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    width: 54,
+    height: 54,
+    borderRadius: 17,
+    borderWidth: 1.8,
     overflow: 'hidden',
   },
   partnerAvatarImage: {
@@ -2763,19 +2823,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   partnerAvatarInitials: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
   },
   partnerHubMeta: {
     flex: 1,
   },
   partnerHubName: {
-    fontSize: 16.5,
+    fontSize: 17.5,
     fontWeight: '800',
   },
   partnerHubCategory: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13.5,
+    fontWeight: '600',
     marginTop: 2,
   },
   contactPillsGroup: {
@@ -2787,17 +2847,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   contactPillText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
   },
   hubDivider: {
-    height: 1,
+    height: 1.2,
     marginVertical: 14,
   },
   hubPaymentRow: {
@@ -2806,42 +2866,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   hubPaymentLabel: {
-    fontSize: 9.5,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
     marginBottom: 2,
   },
   hubPaymentAmount: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: '900',
   },
   hubPaymentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 11,
+    borderWidth: 1.5,
   },
   hubPaymentBadgeText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
   },
   sectionHeaderLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 8,
     marginBottom: 12,
   },
   sectionHeaderTitle: {
-    fontSize: 13.5,
+    fontSize: 15,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   specsGrid: {
-    gap: 10,
+    gap: 12,
     marginBottom: 10,
   },
   specTile: {
@@ -2850,27 +2910,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   specIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
   specLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
     marginBottom: 2,
   },
   specValue: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '700',
   },
   noteContainer: {
     borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-    marginTop: 2,
+    borderWidth: 1.6,
+    padding: 13,
+    marginTop: 4,
   },
   noteHeader: {
     flexDirection: 'row',
@@ -2879,14 +2939,14 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   noteHeaderLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
   },
   noteBodyText: {
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '500',
+    fontSize: 14.5,
+    lineHeight: 20,
+    fontWeight: '600',
   },
   galleryBlock: {
     marginTop: 10,

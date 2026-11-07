@@ -166,8 +166,8 @@ export default function PersonalInfoScreen() {
               )}
               <TouchableOpacity style={[styles.cameraBtn, { backgroundColor: theme.colors.brand.secondary, borderColor: theme.isDark ? theme.colors.background.app : '#0F172A' }, shadows.glow]} onPress={pickImage}>
                 {isUploading
-                  ? <ActivityIndicator color={theme.colors.text.inverse} size="small" />
-                  : <Camera size={17} color={theme.colors.text.inverse} />
+                  ? <ActivityIndicator color="#FFFFFF" size="small" />
+                  : <Camera size={17} color="#FFFFFF" />
                 }
               </TouchableOpacity>
             </View>
@@ -295,19 +295,19 @@ const styles = StyleSheet.create({
   // Section heading
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, marginTop: 8 },
   sectionHeadingLine: { height: 2, width: 16, borderRadius: 1 },
-  sectionHeadingText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 },
+  sectionHeadingText: { fontSize: 11.5, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.5 },
 
   // Field
   fieldWrap: { marginBottom: 16 },
   fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7, marginLeft: 2 },
-  fieldLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  fieldLabel: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
 
   // Input card
   inputCard: {
-    borderRadius: 14, borderWidth: 1,
+    borderRadius: 14, borderWidth: 1.6,
     overflow: 'hidden',
   },
-  input: { fontSize: 15, fontWeight: '600', paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
+  input: { fontSize: 15.5, fontWeight: '600', paddingHorizontal: 16, paddingVertical: Platform.OS === 'ios' ? 14 : 12 },
 
   // Footer / Save
   footer: { marginTop: 32 },

@@ -13,22 +13,37 @@ export interface UserLocation {
 let cachedUserLocation: UserLocation | null = null;
 
 export function getCachedUserLocation(): UserLocation | null {
+  if (cachedUserLocation?.address) {
+    return {
+      ...cachedUserLocation,
+      address: cleanAddressString(cachedUserLocation.address),
+    };
+  }
   return cachedUserLocation;
 }
 
 export function setCachedUserLocation(loc: UserLocation | null) {
-  cachedUserLocation = loc;
+  cachedUserLocation = loc
+    ? {
+        ...loc,
+        address: loc.address ? cleanAddressString(loc.address) : loc.address,
+      }
+    : null;
 }
 
 export function useUserLocation() {
   const { user } = useAuth();
-  const [location, setLocation] = useState<UserLocation | null>(() => cachedUserLocation);
+  const [location, setLocation] = useState<UserLocation | null>(() => getCachedUserLocation());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateLocation = (next: UserLocation) => {
-    cachedUserLocation = next;
-    setLocation(next);
+    const cleanedNext: UserLocation = {
+      ...next,
+      address: next.address ? cleanAddressString(next.address) : next.address,
+    };
+    cachedUserLocation = cleanedNext;
+    setLocation(cleanedNext);
   };
 
   useEffect(() => {
@@ -142,6 +157,17 @@ export function extractCityFromAddress(address: string): string {
   return parts[parts.length - 1] || address;
 }
 
+export function cleanAddressString(raw?: string | null): string {
+  if (!raw) return '';
+  const cleaned = raw
+    .replace(/\b[A-Z0-9]{4,}\+[A-Z0-9]{2,}\b,?\s*/gi, '')
+    .replace(/\b-?\d+\.\d{3,}\b,?\s*/g, '')
+    .replace(/^,\s*|\s*,\s*,/g, ', ')
+    .replace(/^,\s*/, '')
+    .trim();
+  return cleaned || raw;
+}
+
 export function formatAddress(geo: Location.LocationGeocodedAddress): string {
   const parts = [
     geo.name,
@@ -154,11 +180,14 @@ export function formatAddress(geo: Location.LocationGeocodedAddress): string {
   const uniqueParts = parts.filter((part) => {
     const trimmed = String(part).trim();
     if (!trimmed) return false;
+    // Skip raw Plus Codes (e.g., J3VF+58G) and raw decimal coordinates (e.g., 73.0733380)
+    if (/^[A-Z0-9]{4,}\+[A-Z0-9]{2,}$/i.test(trimmed)) return false;
+    if (/^-?\d+\.\d{3,}$/.test(trimmed)) return false;
     const lower = trimmed.toLowerCase();
     if (seen.has(lower)) return false;
     seen.add(lower);
     return true;
   });
 
-  return uniqueParts.join(', ');
+  return cleanAddressString(uniqueParts.join(', '));
 }

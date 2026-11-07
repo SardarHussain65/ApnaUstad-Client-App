@@ -2,9 +2,11 @@ import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../constants/Theme';
 
 export default function NotFoundScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { role, token, user, isLoading } = useAuth();
 
   useEffect(() => {
@@ -19,8 +21,8 @@ export default function NotFoundScreen() {
   }, [role, token, user, isLoading, router]);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#0D9488" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background.screen }]}>
+      <ActivityIndicator size="large" color={theme.colors.brand.primary} />
     </View>
   );
 }
@@ -28,7 +30,6 @@ export default function NotFoundScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
   },

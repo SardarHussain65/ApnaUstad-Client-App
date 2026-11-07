@@ -160,8 +160,8 @@ export default function HelpCenterScreen() {
             placeholder={t('helpCenter.subjectPlaceholder')}
           />
 
-          <Text style={styles.messageLabel}>{t('helpCenter.messageLabel')}</Text>
-            <GlassCard style={[styles.messageCard, { borderColor: theme.colors.border.subtle }]} intensity={20} padding={Spacing.m}>
+          <Text style={[styles.messageLabel, { color: theme.colors.text.secondary }]}>{t('helpCenter.messageLabel')}</Text>
+            <GlassCard style={[styles.messageCard, { borderColor: theme.colors.border.default }]} intensity={20} padding={Spacing.m}>
             <TextInput
               value={message}
               onChangeText={setMessage}
@@ -191,14 +191,14 @@ export default function HelpCenterScreen() {
             <Text style={[styles.helperText, { color: theme.colors.text.muted }]}>{t('helpCenter.noRequests')}</Text>
           ) : (
             requests.map((r) => (
-              <GlassCard key={r._id} style={[styles.requestCard, { borderColor: theme.colors.border.subtle }]} intensity={18} padding={Spacing.m}>
+              <GlassCard key={r._id} style={[styles.requestCard, { borderColor: theme.colors.border.default }]} intensity={18} padding={Spacing.m}>
                 <View style={styles.requestHeader}>
                   <Text style={[styles.requestSubject, { color: theme.colors.text.primary }]}>{r.topic || r.subject || t('helpCenter.contactSupport')}</Text>
                   <View style={[
                     styles.statusBadge,
                     {
-                      backgroundColor: r.status === 'closed' ? alpha(theme.colors.text.muted, 0.1) : r.status === 'pending' ? alpha(theme.colors.status.warning, 0.1) : alpha(theme.colors.status.success, 0.1),
-                      borderColor: r.status === 'closed' ? alpha(theme.colors.text.muted, 0.3) : r.status === 'pending' ? alpha(theme.colors.status.warning, 0.3) : alpha(theme.colors.status.success, 0.3),
+                      backgroundColor: r.status === 'closed' ? alpha(theme.colors.text.muted, 0.14) : r.status === 'pending' ? alpha(theme.colors.status.warning, 0.14) : alpha(theme.colors.status.success, 0.14),
+                      borderColor: r.status === 'closed' ? alpha(theme.colors.text.muted, 0.4) : r.status === 'pending' ? alpha(theme.colors.status.warning, 0.4) : alpha(theme.colors.status.success, 0.4),
                     },
                   ]}>
                     <Text style={[styles.statusText, { color: r.status === 'closed' ? theme.colors.text.muted : r.status === 'pending' ? theme.colors.status.warning : theme.colors.status.success }]}>{r.status?.toUpperCase() || 'OPEN'}</Text>
@@ -207,7 +207,7 @@ export default function HelpCenterScreen() {
                 
                 <Text style={[styles.requestDate, { color: theme.colors.text.dim }]}>{t('helpCenter.openedOn', { date: formatDate(r.createdAt) })}</Text>
                 
-                <View style={[styles.originalMsgBox, { backgroundColor: alpha(theme.colors.text.primary, 0.04), borderColor: theme.colors.border.subtle }]}>
+                <View style={[styles.originalMsgBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
                   <Text style={[styles.requestMessage, { color: theme.colors.text.secondary }]}>{r.message}</Text>
                 </View>
 
@@ -223,7 +223,7 @@ export default function HelpCenterScreen() {
                              key={idx} 
                               style={[
                                 styles.replyBubble,
-                                isAdmin ? [styles.adminBubble, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }] : [styles.userBubble, { backgroundColor: alpha(theme.colors.brand.secondary, 0.18), borderColor: alpha(theme.colors.brand.secondary, 0.3) }]
+                                isAdmin ? [styles.adminBubble, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }] : [styles.userBubble, { backgroundColor: alpha(theme.colors.brand.secondary, 0.18), borderColor: alpha(theme.colors.brand.secondary, 0.4) }]
                               ]}
                            >
                             <Text style={[styles.replyAuthor, { color: theme.colors.text.primary }]}>
@@ -240,7 +240,7 @@ export default function HelpCenterScreen() {
 
                 {/* Reply Form */}
                 {r.status !== 'closed' && (
-                  <View style={[styles.quickReplyContainer, { borderTopColor: theme.colors.border.subtle }]}>
+                  <View style={[styles.quickReplyContainer, { borderTopColor: theme.colors.border.default }]}>
                     <Text style={[styles.quickReplyLabel, { color: theme.colors.brand.primary }]}>
                       {t('helpCenter.sendAnotherMessage')}
                     </Text>
@@ -249,7 +249,7 @@ export default function HelpCenterScreen() {
                         styles.quickReplyInput,
                         {
                           color: theme.colors.input.text,
-                          borderColor: theme.colors.border.subtle,
+                          borderColor: theme.colors.border.default,
                           backgroundColor: theme.colors.input.background,
                         },
                       ]}
@@ -305,21 +305,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   screenTitle: {
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: '900',
     marginBottom: 8,
   },
   screenSubtitle: {
     textAlign: 'center',
     paddingHorizontal: 20,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 19,
   },
   formSection: {
     gap: 12,
   },
   messageLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
@@ -327,16 +328,17 @@ const styles = StyleSheet.create({
   },
   messageCard: {
     borderRadius: BorderRadius.l,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   messageInput: {
     minHeight: 110,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     textAlignVertical: 'top',
   },
   helperText: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '600',
     marginTop: 2,
   },
   sendButton: {
@@ -346,7 +348,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     marginBottom: 12,
     textTransform: 'uppercase',
@@ -354,7 +356,7 @@ const styles = StyleSheet.create({
   },
   requestCard: {
     marginVertical: 8,
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderRadius: BorderRadius.l,
   },
   requestHeader: {
@@ -364,43 +366,43 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   requestSubject: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '800',
     flex: 1,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: BorderRadius.s,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   statusText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   requestDate: {
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 2,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   originalMsgBox: {
     borderRadius: BorderRadius.s,
     padding: Spacing.s,
     marginTop: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   requestMessage: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '500',
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   repliesContainer: {
     marginTop: 14,
     paddingTop: 10,
   },
   repliesTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -416,24 +418,25 @@ const styles = StyleSheet.create({
   },
   adminBubble: {
     alignSelf: 'flex-start',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   userBubble: {
     alignSelf: 'flex-end',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   replyAuthor: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   replyText: {
-    fontSize: 12,
+    fontSize: 13.5,
     marginTop: 2,
-    lineHeight: 16,
-    fontWeight: '500',
+    lineHeight: 18,
+    fontWeight: '600',
   },
   replyTime: {
-    fontSize: 8,
+    fontSize: 9.5,
+    fontWeight: '600',
     alignSelf: 'flex-end',
     marginTop: 4,
   },
@@ -441,11 +444,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     marginTop: 14,
     paddingTop: 12,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
     gap: 10,
   },
   quickReplyLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -456,9 +459,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.m,
     paddingHorizontal: Spacing.m,
     paddingVertical: Spacing.s + 2,
-    fontSize: 13,
-    fontWeight: '500',
-    borderWidth: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    borderWidth: 1.6,
     textAlignVertical: 'top',
   },
   quickReplyActions: {

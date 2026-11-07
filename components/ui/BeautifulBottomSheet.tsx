@@ -161,7 +161,7 @@ export function BeautifulBottomSheet({
                   styles.bottomSheetTitle,
                   {
                     color: theme.colors.text.primary,
-                    borderBottomColor: theme.colors.border.subtle,
+                    borderBottomColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -224,7 +224,7 @@ export function BeautifulBottomMenu({
             style={[
               styles.menuOption,
               {
-                borderBottomColor: option === options[options.length - 1] ? 'transparent' : theme.colors.border.subtle,
+                borderBottomColor: option === options[options.length - 1] ? 'transparent' : theme.colors.border.default,
               },
             ]}
             onPress={() => {
@@ -240,7 +240,7 @@ export function BeautifulBottomMenu({
               style={[
                 styles.menuLabel,
                 {
-                  color: option.isDangerous ? colors.error : theme.colors.text.secondary,
+                  color: option.isDangerous ? colors.error : theme.colors.text.primary,
                 },
               ]}
             >
@@ -283,11 +283,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   bottomSheetTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 19,
+    fontWeight: '800',
     marginBottom: Spacing.m,
     paddingBottom: Spacing.m,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
   },
   bottomSheetBody: {
     flex: 1,
@@ -300,19 +300,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.m,
     paddingHorizontal: Spacing.m,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
     gap: Spacing.m,
   },
   menuIconContainer: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuLabel: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     flex: 1,
   },
 });

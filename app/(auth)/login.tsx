@@ -147,12 +147,12 @@ export default function LoginScreen() {
             <GlassCard
               intensity={25}
               padding={Spacing.l}
-              style={[styles.loginCard, { borderColor: theme.colors.border.subtle }]}
+              style={[styles.loginCard, { borderColor: theme.colors.border.default }]}
               gradient={[`${accentColor}16`, alpha(theme.colors.brand.secondary, 0.06)]}
             >
               <View style={[styles.tabContainer, {
                 backgroundColor: theme.colors.surface.subtle,
-                borderColor: theme.colors.border.subtle,
+                borderColor: theme.colors.border.default,
               }]}>
                 <LoginTab
                   active={loginType === 'email'}
@@ -311,15 +311,15 @@ const styles = StyleSheet.create({
   },
   loginCard: {
     borderRadius: BorderRadius.xxl,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   tabContainer: {
     flexDirection: 'row',
     gap: Spacing.s,
-    padding: 4,
+    padding: 5,
     marginBottom: Spacing.l,
     borderRadius: BorderRadius.l,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   tabButton: {
     flex: 1,
@@ -327,9 +327,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    paddingVertical: 11,
+    paddingVertical: 12,
     borderRadius: BorderRadius.m,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   tabText: {
     fontSize: 12,
