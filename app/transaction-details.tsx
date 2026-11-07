@@ -212,15 +212,24 @@ export default function TransactionDetailsScreen() {
       'booking:price_increase_requested',
       'booking:price_increase_approved',
       'booking:price_increase_rejected',
-      'booking:price_updated'
+      'booking:price_updated',
+      'dispute:created',
+      'dispute:updated',
+      'dispute:resolved',
+      'dispute:cancelled',
+      'dispute:message'
     ];
 
     const unsubs = events.map(event =>
       socketService.on(event, (data: any) => {
         const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
-        if (!incomingId || incomingId === String(id)) {
+        if (!incomingId || incomingId === String(id) || event.startsWith('dispute:')) {
           if (timer) clearTimeout(timer);
           setShowStartWorkModal(false);
+
+          if (event === 'dispute:created' || event === 'dispute:updated') {
+            setShowDisputeModal(false);
+          }
 
           if (event === 'booking:price_increase_approved' && isWorker) {
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -263,6 +272,31 @@ export default function TransactionDetailsScreen() {
   const isJobEnded = (status === 'completed' && isPaid) || status === 'cancelled';
   const showDisputeAction = hasActiveDispute || (canRaiseDispute && !isJobEnded);
   const isCommunicationLocked = isJobEnded;
+
+  const handleOpenDispute = useCallback(async () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (disputeMeta?.disputeId) {
+      router.push({ pathname: '/dispute-room' as any, params: { id: disputeMeta.disputeId } });
+      return;
+    }
+
+    // Proactively verify with server in case the other party just submitted a dispute
+    try {
+      const res = await api.get(`/disputes/booking/${id}`);
+      const activeDisputeId = res.data?.data?.dispute?._id;
+      if (activeDisputeId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
+        refetchRef.current();
+        router.push({ pathname: '/dispute-room' as any, params: { id: activeDisputeId } });
+        return;
+      }
+    } catch {
+      // Proceed to show report modal if no dispute found
+    }
+
+    setShowDisputeModal(true);
+  }, [id, disputeMeta?.disputeId, queryClient, router]);
 
   const partner = isWorker ? booking?.customer : booking?.worker;
   const customerId = typeof booking?.customer === 'object' ? booking.customer._id : booking?.customer;
@@ -813,12 +847,12 @@ export default function TransactionDetailsScreen() {
         </Text>
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
           {!!id && (
-              <TouchableOpacity
-                onPress={() => refetch()}
-                style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
-              >
-                <Text style={[styles.emptyButtonText, { color: '#001014', fontWeight: '800' }]}>{t('common.retry', 'Try Again')}</Text>
-              </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => refetch()}
+              style={[styles.emptyButton, { backgroundColor: colors.cyan }]}
+            >
+              <Text style={[styles.emptyButtonText, { color: '#001014', fontWeight: '800' }]}>{t('common.retry', 'Try Again')}</Text>
+            </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={() => {
@@ -860,13 +894,13 @@ export default function TransactionDetailsScreen() {
             backgroundColor: isDone
               ? (isDark ? 'rgba(16, 185, 129, 0.08)' : '#F0FDF4')
               : isWorkerArrived
-              ? (isDark ? 'rgba(14, 165, 233, 0.08)' : '#F0F9FF')
-              : cardBg,
+                ? (isDark ? 'rgba(14, 165, 233, 0.08)' : '#F0F9FF')
+                : cardBg,
             borderColor: isDone
               ? (isDark ? 'rgba(34, 197, 94, 0.32)' : '#86EFAC')
               : isWorkerArrived
-              ? (isDark ? 'rgba(56, 189, 248, 0.32)' : '#7DD3FC')
-              : cardBorder,
+                ? (isDark ? 'rgba(56, 189, 248, 0.32)' : '#7DD3FC')
+                : cardBorder,
           },
         ]}
       >
@@ -878,8 +912,8 @@ export default function TransactionDetailsScreen() {
                 backgroundColor: isDone
                   ? (isDark ? 'rgba(34, 197, 94, 0.22)' : '#DCFCE7')
                   : isWorkerArrived
-                  ? (isDark ? 'rgba(6, 182, 212, 0.22)' : '#E0F2FE')
-                  : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'),
+                    ? (isDark ? 'rgba(6, 182, 212, 0.22)' : '#E0F2FE')
+                    : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'),
               },
             ]}
           >
@@ -926,8 +960,8 @@ export default function TransactionDetailsScreen() {
               {isDone
                 ? `${t('transactionDetails.completedOn', 'Completed on')} ${dateLabel} • ${timeLabel}`
                 : isWorkerArrived
-                ? t('transactionDetails.workInProgressSub', 'Ustad is actively working on site')
-                : t('transactionDetails.enRouteSub', 'Ustad is heading to your location')}
+                  ? t('transactionDetails.workInProgressSub', 'Ustad is actively working on site')
+                  : t('transactionDetails.enRouteSub', 'Ustad is heading to your location')}
             </Text>
           </View>
         </View>
@@ -998,15 +1032,15 @@ export default function TransactionDetailsScreen() {
                       styles.timelineConnector,
                       (isDone || idx < visibleStepIndex)
                         ? [
-                            styles.timelineConnectorActive,
-                            { backgroundColor: isDone ? colors.success : colors.cyan },
-                          ]
+                          styles.timelineConnectorActive,
+                          { backgroundColor: isDone ? colors.success : colors.cyan },
+                        ]
                         : [
-                            styles.timelineConnectorDim,
-                            {
-                              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)',
-                            },
-                          ],
+                          styles.timelineConnectorDim,
+                          {
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)',
+                          },
+                        ],
                     ]}
                   />
                 )}
@@ -1654,7 +1688,7 @@ export default function TransactionDetailsScreen() {
       {canRaiseDispute && !isJobEnded && !hasActiveDispute && (
         <TouchableOpacity
           style={styles.disputeLink}
-          onPress={() => setShowDisputeModal(true)}
+          onPress={handleOpenDispute}
           activeOpacity={0.7}
         >
           <Scale size={13} color={theme.colors.text.muted} strokeWidth={2} />
@@ -1757,14 +1791,7 @@ export default function TransactionDetailsScreen() {
               {showDisputeAction && (
                 <TouchableOpacity
                   style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
-                  onPress={() => {
-                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (disputeMeta?.disputeId) {
-                      router.push({ pathname: '/dispute-room' as any, params: { id: disputeMeta.disputeId } });
-                    } else {
-                      setShowDisputeModal(true);
-                    }
-                  }}
+                  onPress={handleOpenDispute}
                   activeOpacity={0.8}
                 >
                   <Scale size={18} color="#FFFFFF" strokeWidth={2.4} />
@@ -1828,14 +1855,7 @@ export default function TransactionDetailsScreen() {
             {showDisputeAction && (
               <TouchableOpacity
                 style={[styles.circleButton, { backgroundColor: alpha('#FF3B30', 0.85) }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (disputeMeta?.disputeId) {
-                    router.push({ pathname: '/dispute-room' as any, params: { id: disputeMeta.disputeId } });
-                  } else {
-                    setShowDisputeModal(true);
-                  }
-                }}
+                onPress={handleOpenDispute}
                 activeOpacity={0.8}
               >
                 <Scale size={18} color="#FFFFFF" strokeWidth={2.4} />
@@ -3268,13 +3288,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   successModalContainer: {
-    width: '100%',
-    maxWidth: 420,
+    width: '88%',
+    maxWidth: 380,
+    alignSelf: 'center',
   },
   successCard: {
+    width: '100%',
     borderRadius: 24,
     borderWidth: 1,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 10,
   },
   successGradient: {
     padding: 24,

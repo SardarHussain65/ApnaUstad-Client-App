@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { socketService } from '../services/socketService';
 import { useAuth } from './AuthContext';
@@ -10,6 +10,7 @@ import { JobAssignedSuccessModal } from '../components/home/JobAssignedSuccessMo
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeyFactory';
+import { useWorkerHomeSummary } from '../hooks';
 import i18n from '../i18n';
 
 interface IncomingJobContextType {
@@ -68,6 +69,27 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   const savedMasterAvailability = (user as any)?.isAvailable;
   const savedInstantAvailability = (user as any)?.isInstantAvailable;
   const savedScheduledAvailability = (user as any)?.isScheduledAvailable;
+
+  const { data: workerSummary } = useWorkerHomeSummary({ enabled: Boolean(token && role === 'worker') });
+
+  // Determine if worker is currently engaged in an active or ongoing job
+  const isWorkerBusy = useMemo(() => {
+    if (role !== 'worker') return false;
+    const active = workerSummary?.activeBooking;
+    if (active && ['accepted', 'ongoing'].includes(active.status)) {
+      return true;
+    }
+    const recents = workerSummary?.recentBookings;
+    if (Array.isArray(recents) && recents.some(b => ['accepted', 'ongoing'].includes(b.status))) {
+      return true;
+    }
+    return false;
+  }, [role, workerSummary]);
+
+  const isWorkerBusyRef = useRef(false);
+  useEffect(() => {
+    isWorkerBusyRef.current = isWorkerBusy;
+  }, [isWorkerBusy]);
 
   const isJobTypeEnabled = useCallback((job: any) =>
     job?.urgency === 'instant' ? instantOnlineRef.current : scheduledOnlineRef.current, []);
@@ -173,6 +195,18 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!token) return;
 
+    const removeJobIdFromQueues = (targetJobId: any) => {
+      if (!targetJobId) return;
+      const tid = String(targetJobId);
+      setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== tid));
+      setIncomingJobsQueue(prev => {
+        const next = prev.filter(j => String(j._id || j.id) !== tid);
+        incomingJobsQueueRef.current = next;
+        if (next.length === 0) setShowModal(false);
+        return next;
+      });
+    };
+
     // --- WORKER ONLY: New Job Notifications ---
     let unsubscribeNewJob = () => { };
     if (role === 'worker') {
@@ -189,8 +223,35 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           }
         }
 
+        // Validate that job is open and not stale/assigned/cancelled
+        if (jobSignal.status && jobSignal.status !== 'open') {
+          return;
+        }
+
+        // Check if the job has already expired
+        const expiresAt = jobSignal.expiresAt || jobSignal.signalMeta?.expiresAt;
+        if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+          return;
+        }
+        if (jobSignal.urgency === 'instant' && jobSignal.createdAt) {
+          if (Date.now() - new Date(jobSignal.createdAt).getTime() > 15 * 60 * 1000) {
+            return;
+          }
+        }
+
+        // Must have minimal category information
+        if (!jobSignal.category) {
+          return;
+        }
+
         // Invalidate jobs queries across the app so Find Jobs tab has fresh data
         queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+
+        // During an ongoing or active job, do not receive or pop up new instant jobs
+        if (jobSignal.urgency === 'instant' && isWorkerBusyRef.current) {
+          console.log('🚫 [IncomingJobContext] Ignoring instant job because worker has an ongoing/active job');
+          return;
+        }
 
         // Filter by preference
         const isEnabled = availabilityHydrated && isJobTypeEnabled(jobSignal);
@@ -198,7 +259,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
         if (isEnabled) {
           setIncomingJobsQueue(prevQueue => {
             // Avoid adding duplicates
-            if (prevQueue.some(job => job._id === jobSignal._id)) {
+            if (prevQueue.some(job => String(job._id || job.id) === String(jobSignal._id || jobSignal.id))) {
               return prevQueue;
             }
             const next = [...prevQueue, jobSignal];
@@ -215,7 +276,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
       const targetJobId = data?.jobPost?._id || data?.jobPost || data?.booking?.jobPost;
       if (targetJobId) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
       }
 
       // Close the incoming job modal and clear the queue
@@ -232,8 +293,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       console.log('📉 [IncomingJobContext] Mission Lost:', data);
       const targetJobId = data?.jobPost?._id || data?.jobPost;
       if (targetJobId) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
-        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
       }
       Toast.show({
         type: 'info',
@@ -247,8 +307,13 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       const category = data?.category || i18n.t('jobDetails.defaultTitle');
       const targetJobId = data?.jobPost?._id || data?.jobPost;
       if (targetJobId) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
-        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
+      }
+      if (role === 'worker') {
+        isWorkerBusyRef.current = true;
+        setShowModal(false);
+        setIncomingJobsQueue([]);
+        incomingJobsQueueRef.current = [];
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
@@ -266,16 +331,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     const unsubscribeJobAssigned = socketService.on('job:assigned', (data: any) => {
       const targetJobId = data?.jobId || data?._id;
       if (targetJobId) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
-        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
       }
     });
 
     const unsubscribeJobAutoAssigned = socketService.on('job:auto_assigned', (data: any) => {
       const targetJobId = data?.jobPost?._id || data?.jobPost || data?.booking?.jobPost || data?._id;
       if (targetJobId) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
-        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
       }
     });
 
@@ -283,21 +346,28 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       const targetJobId = data?.jobId || data?._id;
       const status = data?.status;
       if (targetJobId && ['assigned', 'closed', 'cancelled'].includes(status)) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
-        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
       }
     });
 
     const unsubscribeJobCancelled = socketService.on('job:cancelled', (data: any) => {
       const targetJobId = data?.jobId || data?._id;
       if (targetJobId) {
-        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
-        setIncomingJobsQueue(prev => prev.filter(j => String(j._id || j.id) !== String(targetJobId)));
+        removeJobIdFromQueues(targetJobId);
       }
     });
 
     const unsubscribeOngoing = socketService.on('booking:ongoing', (data: any) => {
       const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      if (role === 'worker') {
+        isWorkerBusyRef.current = true;
+        setShowModal(false);
+        setIncomingJobsQueue([]);
+        incomingJobsQueueRef.current = [];
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+      }
       Toast.show({
         type: 'info',
         text1: i18n.t('realtimeAlerts.jobStartedTitle'),
@@ -309,7 +379,15 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
     const unsubscribeCompleted = socketService.on('booking:completed', (data: any) => {
       const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      const targetJobId = data?.jobPost?._id || data?.jobPost;
+      if (targetJobId) {
+        removeJobIdFromQueues(targetJobId);
+      }
       if (role === 'worker') {
+        isWorkerBusyRef.current = false;
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
         const earning = Number(data?.workerEarning || data?.agreement?.workerNetIncome || 0);
         const earningText = earning > 0 ? i18n.t('realtimeAlerts.workerEarnedSuffix', { amount: earning.toLocaleString() }) : '';
         Toast.show({
@@ -329,6 +407,12 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
     const unsubscribeCancelled = socketService.on('booking:cancelled', (data: any) => {
       const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      if (role === 'worker') {
+        isWorkerBusyRef.current = false;
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+      }
       Toast.show({
         type: 'error',
         text1: i18n.t('realtimeAlerts.bookingCancelledTitle'),
@@ -600,28 +684,138 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   const openIncomingJobModal = useCallback(async (job: any) => {
     if (!job) return;
 
-    const targetId = job._id || job.id;
+    const targetId = String(job._id || job.id || '');
+    if (!targetId) return;
+
     let jobSignal = { ...job };
 
-    // Immediately put the job in queue and show modal so there is zero latency
+    // 0. If worker currently has an ongoing or active job, do not allow opening instant job modal
+    if (jobSignal.urgency === 'instant' && isWorkerBusyRef.current) {
+      Toast.show({
+        type: 'info',
+        text1: i18n.t('realtimeAlerts.busyTitle', 'Job in Progress'),
+        text2: i18n.t('realtimeAlerts.busyDesc', 'You have an active ongoing job. Complete it before accepting new instant jobs.'),
+      });
+      return;
+    }
+
+    // 1. If job is already known to be non-open, clean up and do not open modal
+    if (jobSignal.status && jobSignal.status !== 'open') {
+      setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== targetId));
+      setIncomingJobsQueue(prev => {
+        const next = prev.filter(j => String(j._id || j.id) !== targetId);
+        incomingJobsQueueRef.current = next;
+        if (next.length === 0) setShowModal(false);
+        return next;
+      });
+      Toast.show({
+        type: 'info',
+        text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+        text2: i18n.t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+      });
+      return;
+    }
+
+    // 2. If the job is already expired, clean up and do not open modal
+    const expiresAt = jobSignal.expiresAt || jobSignal.signalMeta?.expiresAt;
+    if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+      setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== targetId));
+      setIncomingJobsQueue(prev => {
+        const next = prev.filter(j => String(j._id || j.id) !== targetId);
+        incomingJobsQueueRef.current = next;
+        if (next.length === 0) setShowModal(false);
+        return next;
+      });
+      Toast.show({
+        type: 'info',
+        text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+        text2: i18n.t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+      });
+      return;
+    }
+
+    // 3. If job lacks core information (e.g. only passed as { _id } from a link), fetch it first before opening modal
+    const hasCoreDetails = Boolean(jobSignal.category && (jobSignal.createdAt || jobSignal.expiresAt));
+    if (!hasCoreDetails) {
+      try {
+        const response = await api.get(`/jobs/${targetId}`);
+        if (response.data?.data) {
+          const hydrated = response.data.data;
+          if (hydrated.status && hydrated.status !== 'open') {
+            setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== targetId));
+            setIncomingJobsQueue(prev => {
+              const next = prev.filter(j => String(j._id || j.id) !== targetId);
+              incomingJobsQueueRef.current = next;
+              if (next.length === 0) setShowModal(false);
+              return next;
+            });
+            Toast.show({
+              type: 'info',
+              text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+              text2: i18n.t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+            });
+            return;
+          }
+          const hydratedExpiresAt = hydrated.expiresAt || hydrated.signalMeta?.expiresAt;
+          if (hydratedExpiresAt && new Date(hydratedExpiresAt).getTime() <= Date.now()) {
+            setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== targetId));
+            setIncomingJobsQueue(prev => {
+              const next = prev.filter(j => String(j._id || j.id) !== targetId);
+              incomingJobsQueueRef.current = next;
+              if (next.length === 0) setShowModal(false);
+              return next;
+            });
+            Toast.show({
+              type: 'info',
+              text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+              text2: i18n.t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+            });
+            return;
+          }
+          jobSignal = { ...jobSignal, ...hydrated };
+        } else {
+          throw new Error('Job not found');
+        }
+      } catch (error) {
+        setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== targetId));
+        setIncomingJobsQueue(prev => {
+          const next = prev.filter(j => String(j._id || j.id) !== targetId);
+          incomingJobsQueueRef.current = next;
+          if (next.length === 0) setShowModal(false);
+          return next;
+        });
+        Toast.show({
+          type: 'info',
+          text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
+          text2: i18n.t('realtimeAlerts.jobTakenDesc', 'This mission has already been accepted or closed.'),
+        });
+        return;
+      }
+    }
+
+    // 4. Now safe to put into queue and show modal
     setIncomingJobsQueue(prevQueue => {
-      const otherJobs = prevQueue.filter(j => (j._id || j.id) !== targetId);
+      const otherJobs = prevQueue.filter(j => String(j._id || j.id) !== targetId);
       const nextQueue = [jobSignal, ...otherJobs];
       incomingJobsQueueRef.current = nextQueue;
       return nextQueue;
     });
     setShowModal(true);
 
-    // Check full details and verify status in background to update the queue item
-    if (targetId) {
+    // 5. In background, if it already had core details, verify freshness against database
+    if (hasCoreDetails) {
       try {
         const response = await api.get(`/jobs/${targetId}`);
         if (response.data?.data) {
           const hydrated = response.data.data;
           if (hydrated.status && hydrated.status !== 'open') {
-            setDismissedJobs(prev => prev.filter(j => (j._id || j.id) !== targetId));
-            setIncomingJobsQueue(prev => prev.filter(j => (j._id || j.id) !== targetId));
-            setShowModal(false);
+            setDismissedJobs(prev => prev.filter(j => String(j._id || j.id) !== targetId));
+            setIncomingJobsQueue(prev => {
+              const next = prev.filter(j => String(j._id || j.id) !== targetId);
+              incomingJobsQueueRef.current = next;
+              if (next.length === 0) setShowModal(false);
+              return next;
+            });
             Toast.show({
               type: 'info',
               text1: i18n.t('realtimeAlerts.jobTakenTitle', 'Job Taken'),
@@ -631,14 +825,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           }
           setIncomingJobsQueue(prevQueue => {
             const nextQueue = prevQueue.map(item =>
-              (item._id || item.id) === targetId ? { ...item, ...hydrated } : item
+              String(item._id || item.id) === targetId ? { ...item, ...hydrated } : item
             );
             incomingJobsQueueRef.current = nextQueue;
             return nextQueue;
           });
         }
       } catch (error) {
-        console.warn('[IncomingJobContext] Could not hydrate job for modal:', error);
+        console.warn('[IncomingJobContext] Could not refresh job for modal:', error);
       }
     }
   }, []);

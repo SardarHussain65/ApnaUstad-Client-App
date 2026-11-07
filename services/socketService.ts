@@ -5,6 +5,7 @@ class SocketService {
   private socket: Socket | null = null;
   private currentToken: string | null = null;
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private registeredSocketEvents: Set<string> = new Set();
 
   connect(token: string) {
     if (this.socket && this.socket.connected && this.currentToken === token) {
@@ -20,6 +21,7 @@ class SocketService {
     }
 
     this.currentToken = token;
+    this.registeredSocketEvents.clear();
 
     this.socket = io(BASE_URL, {
       auth: { token },
@@ -50,9 +52,9 @@ class SocketService {
     });
 
     // Register all common event forwarders
-    const events = [
+    const defaultEvents = [
       'job:new', 'job:cancelled', 'job:status', 'job:assigned', 'job:auto_assigned', 'job:created',
-      'bid:new', 'bid:submitted', 'bid:withdrawn', 'bid:won', 'bid:lost', 
+      'bid:new', 'bid:submitted', 'bid:withdrawn', 'bid:won', 'bid:lost', 'bid:rejected', 'bid:updated',
       'booking:new', 'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
       'booking:cancelled', 'booking:paid',
@@ -62,11 +64,22 @@ class SocketService {
       'worker:verified', 'worker:updated', 'user:updated'
     ];
 
-    events.forEach(event => {
-      this.socket?.on(event, (data) => {
-        console.log(`📩 Socket Event [${event}]:`, data);
-        this.notify(event, data);
-      });
+    // Combine default events with any dynamically registered listener keys
+    const allEventsToListen = new Set([...defaultEvents, ...this.listeners.keys()]);
+
+    allEventsToListen.forEach(event => {
+      this.attachSocketListener(event);
+    });
+  }
+
+  private attachSocketListener(event: string) {
+    if (!this.socket || this.registeredSocketEvents.has(event) || event.startsWith('socket:')) {
+      return;
+    }
+    this.registeredSocketEvents.add(event);
+    this.socket.on(event, (data) => {
+      console.log(`📩 Socket Event [${event}]:`, data);
+      this.notify(event, data);
     });
   }
 
@@ -75,6 +88,7 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
       this.currentToken = null;
+      this.registeredSocketEvents.clear();
     }
   }
 
@@ -88,13 +102,18 @@ class SocketService {
     }
     this.listeners.get(event)?.add(callback);
 
+    // Dynamically attach socket listener if socket is active
+    if (this.socket) {
+      this.attachSocketListener(event);
+    }
+
     // Return unsubscribe function
     return () => {
       this.listeners.get(event)?.delete(callback);
     };
   }
 
-  private notify(event: string, data: any) {
+  notify(event: string, data: any) {
     this.listeners.get(event)?.forEach(callback => {
       try {
         callback(data);
