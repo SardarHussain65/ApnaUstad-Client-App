@@ -131,10 +131,10 @@ export default function MyDisputesScreen() {
           style={[
             styles.disputeCard,
             {
-              backgroundColor: theme.isDark ? '#0D1322' : '#FFFFFF',
+              backgroundColor: theme.colors.surface.card,
               borderColor: isClosed
-                ? (theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)')
-                : alpha(statusColor, 0.35),
+                ? theme.colors.border.default
+                : alpha(statusColor, theme.isDark ? 0.45 : 0.65),
             },
           ]}
         >
@@ -212,8 +212,8 @@ export default function MyDisputesScreen() {
             style={[
               styles.specsContainer,
               {
-                backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+                backgroundColor: theme.colors.surface.subtle,
+                borderColor: theme.colors.border.subtle,
               },
             ]}
           >
@@ -317,8 +317,8 @@ export default function MyDisputesScreen() {
             style={[
               styles.actionCardButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.035)',
-                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.07)',
+                backgroundColor: theme.colors.surface.subtle,
+                borderColor: theme.colors.border.default,
               },
             ]}
           >
@@ -370,8 +370,8 @@ export default function MyDisputesScreen() {
             style={[
               styles.heroTrustCard,
               {
-                backgroundColor: theme.isDark ? '#0D1322' : '#FFFFFF',
-                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.07)',
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               },
             ]}
           >
@@ -415,8 +415,8 @@ export default function MyDisputesScreen() {
           style={[
             styles.tabBar,
             {
-              backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-              borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+              backgroundColor: theme.colors.surface.subtle,
+              borderColor: theme.colors.border.default,
             },
           ]}
         >
@@ -432,8 +432,8 @@ export default function MyDisputesScreen() {
               activeTab === 'active' && [
                 styles.tabItemActive,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : '#FFFFFF',
-                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
                 },
               ],
             ]}
@@ -489,8 +489,8 @@ export default function MyDisputesScreen() {
               activeTab === 'history' && [
                 styles.tabItemActive,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : '#FFFFFF',
-                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
                 },
               ],
             ]}
@@ -683,20 +683,20 @@ const styles = StyleSheet.create({
   heroTrustCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 15,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.6,
     marginBottom: 16,
     overflow: 'hidden',
     gap: 12,
   },
   heroTrustIconWrap: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 13,
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(16, 185, 129, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -712,7 +712,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heroTrustTitle: {
-    fontSize: 13.5,
+    fontSize: 14.5,
     fontWeight: '800',
     letterSpacing: 0.1,
   },
@@ -721,26 +721,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 999,
   },
   verifiedBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     color: '#10B981',
     letterSpacing: 0.2,
   },
   heroTrustDesc: {
-    fontSize: 11.5,
-    lineHeight: 16,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
 
   /* Segmented Tab Bar */
   tabBar: {
     flexDirection: 'row',
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.6,
     padding: 4,
     marginBottom: 18,
   },
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tabItemActive: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -762,16 +762,16 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   tabLabel: {
-    fontSize: 13,
+    fontSize: 13.5,
     letterSpacing: 0.1,
   },
   tabBadge: {
-    paddingHorizontal: 6.5,
-    paddingVertical: 1.5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 999,
   },
   tabBadgeText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
   },
 
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 14,
   },
 
   /* Cards List */
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
   },
   disputeCard: {
     borderRadius: 22,
-    borderWidth: 1,
+    borderWidth: 1.8,
     padding: 16,
     gap: 12,
     overflow: 'hidden',

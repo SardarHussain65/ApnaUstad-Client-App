@@ -37,7 +37,7 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
         <Animated.View entering={ZoomIn.duration(500)} style={styles.container}>
           <GlassCard
             intensity={50}
-            style={styles.card}
+            style={[styles.card, { borderColor: theme.colors.border.default }]}
             padding={0}
             contentStyle={styles.glassContent}
           >
@@ -46,8 +46,8 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
               style={StyleSheet.absoluteFill}
             />
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <X size={20} color={alpha(theme.colors.text.primary, 0.4)} />
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: theme.colors.surface.subtle }]} onPress={onClose}>
+              <X size={20} color={theme.colors.text.muted} />
             </TouchableOpacity>
 
             <View style={styles.innerContent}>
@@ -56,16 +56,16 @@ export function PaymentReceivedModal({ visible, booking, onClose }: PaymentRecei
                 <CheckCircle2 size={54} color={colors.cyan} strokeWidth={2.5} />
               </View>
 
-              <Text style={[styles.eyebrow, { color: alpha(theme.colors.text.primary, 0.3) }]}>{t('paymentReceivedModal.eyebrow', 'PAYMENT RECEIVED ✅')}</Text>
+              <Text style={[styles.eyebrow, { color: theme.colors.text.muted }]}>{t('paymentReceivedModal.eyebrow', 'PAYMENT RECEIVED ✅')}</Text>
               <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('paymentReceivedModal.title', 'PAYMENT RECEIVED')}</Text>
 
-              <View style={styles.amountBox}>
+              <View style={[styles.amountBox, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
                 <Text style={[styles.currency, { color: colors.cyan }]}>{t('paymentReceivedModal.currency', 'PKR')}</Text>
                 <Text style={[styles.amount, { color: theme.colors.text.primary }]}>{booking.totalAmount || booking.amount || '—'}</Text>
               </View>
 
-              <Text style={[styles.category, { color: alpha(theme.colors.text.primary, 0.85) }]}>{booking.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
-              <Text style={[styles.subtitle, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('paymentReceivedModal.subtitle', 'Payment has been verified and deposited into your wallet.')}</Text>
+              <Text style={[styles.category, { color: theme.colors.text.primary }]}>{booking.category || t('jobDetails.defaultTitle', 'Service request')}</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>{t('paymentReceivedModal.subtitle', 'Payment has been verified and deposited into your wallet.')}</Text>
 
               <View style={styles.footerRow}>
                 <ShieldCheck size={14} color={colors.cyan} />
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 32,
-    borderWidth: 1,
+    borderWidth: 1.8,
     overflow: 'hidden',
   },
   glassContent: {
@@ -124,8 +124,8 @@ const styles = StyleSheet.create({
     top: 20,
     right: 20,
     zIndex: 10,
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     shadowRadius: 25,
   },
   eyebrow: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '800',
     letterSpacing: 4,
     marginBottom: 8,
@@ -170,12 +170,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     paddingVertical: 14,
     borderRadius: 22,
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.1)',
     marginBottom: 18,
   },
   currency: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
   },
   amount: {
@@ -183,13 +183,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   category: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     marginBottom: 10,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 35,
@@ -200,10 +201,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginBottom: 35,
-    opacity: 0.7,
+    opacity: 0.85,
   },
   securityTxt: {
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: '900',
     letterSpacing: 2,
   },

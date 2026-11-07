@@ -52,6 +52,7 @@ import {
 
 import { alpha, useTheme, useThemeColors, useThemeShadows } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
+import { cleanAddressString } from '../../hooks/useUserLocation';
 import api from '../../services/api';
 import Toast from 'react-native-toast-message';
 
@@ -208,8 +209,8 @@ export function IncomingJobModal({
               style={[
                 styles.closeButton,
                 {
-                  backgroundColor: alpha(theme.colors.surface.card, 0.95),
-                  borderColor: alpha(colors.border || theme.colors.text.primary, 0.15),
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
                   top: Math.max(insets.top + 10, 16),
                 },
               ]}
@@ -500,15 +501,15 @@ function JobDecisionCard({
         style={[
           styles.card,
           {
-            borderColor: alpha(accent, 0.28),
+            borderColor: alpha(accent, 0.45),
             backgroundColor: theme.colors.surface.card,
           },
         ]}
       >
         {/* Clean Header Bar */}
-        <View style={[styles.headerBar, { backgroundColor: alpha(accent, 0.08), borderBottomColor: alpha(accent, 0.15) }]}>
+        <View style={[styles.headerBar, { backgroundColor: alpha(accent, 0.1), borderBottomColor: alpha(accent, 0.28) }]}>
           <View style={styles.headerLeft}>
-            <View style={[styles.urgencyBadge, { backgroundColor: alpha(accent, 0.16) }]}>
+            <View style={[styles.urgencyBadge, { backgroundColor: alpha(accent, 0.18) }]}>
               {isInstant ? (
                 <Zap size={13} color={accent} fill={accent} strokeWidth={2.4} />
               ) : (
@@ -520,21 +521,21 @@ function JobDecisionCard({
                   : t('incomingJobModal.newScheduledRequest', 'SCHEDULED')}
               </Text>
             </View>
-            <Text style={[styles.timeAgoText, { color: alpha(theme.colors.text.primary, 0.45) }]}>
+            <Text style={[styles.timeAgoText, { color: theme.colors.text.muted }]}>
               {formatAge(job.createdAt, t)}
             </Text>
           </View>
 
           <View style={styles.headerRight}>
             {totalJobs > 1 && (
-              <View style={[styles.queuePill, { backgroundColor: alpha(theme.colors.text.primary, 0.08) }]}>
-                <Text style={[styles.queuePillText, { color: alpha(theme.colors.text.primary, 0.7) }]}>
+              <View style={[styles.queuePill, { backgroundColor: theme.colors.surface.subtle }]}>
+                <Text style={[styles.queuePillText, { color: theme.colors.text.secondary }]}>
                   {currentIndex}/{totalJobs}
                 </Text>
               </View>
             )}
 
-            <View style={[styles.timerPill, { backgroundColor: alpha(accent, 0.15), borderColor: alpha(accent, 0.3) }]}>
+            <View style={[styles.timerPill, { backgroundColor: alpha(accent, 0.16), borderColor: alpha(accent, 0.4) }]}>
               <Clock3 size={12} color={accent} strokeWidth={2.6} />
               <Text style={[styles.timerPillText, { color: accent }]}>
                 {formatCountdown(secondsRemaining)}
@@ -552,23 +553,23 @@ function JobDecisionCard({
           contentContainerStyle={[styles.cardContent, { paddingBottom: showCounterInput ? 24 : 14 }]}
         >
           {/* Hero Earnings & Distance Card */}
-          <View style={[styles.heroCard, { backgroundColor: alpha(theme.colors.text.primary, 0.03), borderColor: alpha(accent, 0.18) }]}>
+          <View style={[styles.heroCard, { backgroundColor: theme.colors.surface.subtle, borderColor: alpha(accent, 0.35) }]}>
             <View style={styles.heroColumn}>
-              <Text style={[styles.heroLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>
+              <Text style={[styles.heroLabel, { color: theme.colors.text.muted }]}>
                 {primaryAmountLabel}
               </Text>
               <Text style={[styles.heroAmount, { color: isOpenPricing ? colors.cyan : colors.success }]}>
                 {primaryAmountText}
               </Text>
-              <Text style={[styles.heroSubtext, { color: alpha(theme.colors.text.primary, 0.4) }]}>
+              <Text style={[styles.heroSubtext, { color: theme.colors.text.muted }]}>
                 {primaryAmountHint}
               </Text>
             </View>
 
-            <View style={[styles.heroDivider, { backgroundColor: alpha(theme.colors.text.primary, 0.08) }]} />
+            <View style={[styles.heroDivider, { backgroundColor: theme.colors.border.default }]} />
 
             <View style={styles.heroColumn}>
-              <Text style={[styles.heroLabel, { color: alpha(theme.colors.text.primary, 0.5) }]}>
+              <Text style={[styles.heroLabel, { color: theme.colors.text.muted }]}>
                 {t('incomingJobModal.travelDistance', 'Distance')}
               </Text>
               <View style={styles.distanceRow}>
@@ -577,7 +578,7 @@ function JobDecisionCard({
                   {distanceText}
                 </Text>
               </View>
-              <Text style={[styles.heroSubtext, { color: alpha(theme.colors.text.primary, 0.4) }]}>
+              <Text style={[styles.heroSubtext, { color: theme.colors.text.muted }]}>
                 {isInstant ? t('incomingJobModal.respondNearby', 'Near you') : t('incomingJobModal.planVisit', 'Plan visit')}
               </Text>
             </View>
@@ -589,36 +590,36 @@ function JobDecisionCard({
               {job.category || t('jobDetails.defaultTitle', 'Service Request')}
             </Text>
             {job.description ? (
-              <Text style={[styles.descriptionText, { color: alpha(theme.colors.text.primary, 0.72) }]} numberOfLines={3}>
+              <Text style={[styles.descriptionText, { color: theme.colors.text.secondary }]} numberOfLines={3}>
                 {job.description}
               </Text>
             ) : null}
           </View>
 
           {/* Core Info Rows (Location, Timing, Client) in one cohesive box */}
-          <View style={[styles.infoBlock, { backgroundColor: alpha(theme.colors.text.primary, 0.02), borderColor: alpha(theme.colors.text.primary, 0.06) }]}>
+          <View style={[styles.infoBlock, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
             <View style={styles.infoRow}>
-              <View style={[styles.infoIconWrap, { backgroundColor: alpha(accent, 0.1) }]}>
+              <View style={[styles.infoIconWrap, { backgroundColor: alpha(accent, 0.14) }]}>
                 <MapPin size={15} color={accent} strokeWidth={2.4} />
               </View>
               <View style={styles.infoRowContent}>
-                <Text style={[styles.infoRowLabel, { color: alpha(theme.colors.text.primary, 0.45) }]}>
+                <Text style={[styles.infoRowLabel, { color: theme.colors.text.muted }]}>
                   {t('incomingJobModal.serviceLocation', 'Location')}
                 </Text>
                 <Text style={[styles.infoRowValue, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                  {job.address || t('incomingJobModal.nearbyServiceArea', 'Nearby service area')}
+                  {cleanAddressString(job.address) || t('incomingJobModal.nearbyServiceArea', 'Nearby service area')}
                 </Text>
               </View>
             </View>
 
-            <View style={[styles.infoRowDivider, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]} />
+            <View style={[styles.infoRowDivider, { backgroundColor: theme.colors.border.default }]} />
 
             <View style={styles.infoRow}>
-              <View style={[styles.infoIconWrap, { backgroundColor: alpha(isInstant ? colors.success : colors.worker, 0.1) }]}>
+              <View style={[styles.infoIconWrap, { backgroundColor: alpha(isInstant ? colors.success : colors.worker, 0.14) }]}>
                 <CalendarDays size={15} color={isInstant ? colors.success : colors.worker} strokeWidth={2.4} />
               </View>
               <View style={styles.infoRowContent}>
-                <Text style={[styles.infoRowLabel, { color: alpha(theme.colors.text.primary, 0.45) }]}>
+                <Text style={[styles.infoRowLabel, { color: theme.colors.text.muted }]}>
                   {t('incomingJobModal.visitTiming', 'When')}
                 </Text>
                 <Text style={[styles.infoRowValue, { color: theme.colors.text.primary }]} numberOfLines={1}>
@@ -627,14 +628,14 @@ function JobDecisionCard({
               </View>
             </View>
 
-            <View style={[styles.infoRowDivider, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]} />
+            <View style={[styles.infoRowDivider, { backgroundColor: theme.colors.border.default }]} />
 
             {/* Client Context Row */}
             <View style={styles.infoRow}>
               {client?.profileImage ? (
                 <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
               ) : (
-                <View style={[styles.clientAvatarFallback, { backgroundColor: alpha(accent, 0.1) }]}>
+                <View style={[styles.clientAvatarFallback, { backgroundColor: alpha(accent, 0.14) }]}>
                   <UserRound size={15} color={accent} strokeWidth={2.4} />
                 </View>
               )}
@@ -652,7 +653,7 @@ function JobDecisionCard({
                     </View>
                   )}
                 </View>
-                <Text style={[styles.clientSubtext, { color: alpha(theme.colors.text.primary, 0.45) }]}>
+                <Text style={[styles.clientSubtext, { color: theme.colors.text.muted }]}>
                   {completedJobs > 0
                     ? t('incomingJobModal.jobsCompleted', '{{count}} jobs done', { count: completedJobs })
                     : t('incomingJobModal.newClient', 'New customer')}
@@ -736,7 +737,7 @@ function JobDecisionCard({
 
           {/* Inline Quick Counter Row (expanded by default for open pricing or when requested) */}
           {showCounterInput && (
-            <View style={[styles.counterBox, { backgroundColor: alpha(theme.colors.text.primary, 0.04), borderColor: alpha(accent, 0.25) }]}>
+            <View style={[styles.counterBox, { backgroundColor: theme.colors.surface.subtle, borderColor: alpha(accent, 0.4) }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={[styles.counterBoxTitle, { color: theme.colors.text.primary, marginBottom: 0 }]}>
                   {isOpenPricing
@@ -751,7 +752,7 @@ function JobDecisionCard({
                     }}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: theme.colors.text.muted }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: theme.colors.text.muted }}>
                       ✕ {t('common.cancel', 'Cancel')}
                     </Text>
                   </TouchableOpacity>
@@ -769,8 +770,8 @@ function JobDecisionCard({
                       style={[
                         styles.quickIncrementChip,
                         {
-                          backgroundColor: isSelected ? accent : alpha(accent, 0.1),
-                          borderColor: isSelected ? accent : alpha(accent, 0.25),
+                          backgroundColor: isSelected ? accent : alpha(accent, 0.14),
+                          borderColor: isSelected ? accent : alpha(accent, 0.4),
                         },
                       ]}
                       onPress={() => setCounterPrice(String(targetPrice))}
@@ -793,7 +794,7 @@ function JobDecisionCard({
               </View>
 
               <View style={styles.counterInputRow}>
-                <View style={[styles.counterInputWrap, { borderColor: alpha(accent, 0.3) }]}>
+                <View style={[styles.counterInputWrap, { backgroundColor: theme.colors.input.background, borderColor: alpha(accent, 0.45) }]}>
                   <Text style={[styles.counterPrefix, { color: accent }]}>PKR</Text>
                   <TextInput
                     style={[styles.counterInput, { color: theme.colors.text.primary }]}
@@ -801,7 +802,7 @@ function JobDecisionCard({
                     onChangeText={(val) => setCounterPrice(val.replace(/[^\d]/g, ''))}
                     keyboardType="number-pad"
                     placeholder={isOpenPricing ? '500' : String((activeCounterPrice ?? offerAmount) + 200)}
-                    placeholderTextColor={alpha(theme.colors.text.primary, 0.3)}
+                    placeholderTextColor={theme.colors.text.muted}
                     autoFocus={!isOpenPricing}
                   />
                 </View>
@@ -816,7 +817,7 @@ function JobDecisionCard({
             styles.footer,
             {
               backgroundColor: theme.colors.surface.card,
-              borderTopColor: alpha(theme.colors.text.primary, 0.08),
+              borderTopColor: theme.colors.border.default,
               paddingHorizontal: isSmallDevice ? 10 : 12,
               gap: isSmallDevice ? 6 : 8,
             },
@@ -828,7 +829,8 @@ function JobDecisionCard({
               styles.skipBtn,
               {
                 height: btnHeight,
-                borderColor: alpha(theme.colors.text.primary, 0.15),
+                backgroundColor: theme.colors.surface.subtle,
+                borderColor: theme.colors.border.default,
                 paddingHorizontal: hasThreeActions ? (isSmallDevice ? 8 : 10) : 14,
                 gap: isSmallDevice ? 3 : 4,
               },
@@ -848,14 +850,14 @@ function JobDecisionCard({
             accessibilityRole="button"
             accessibilityLabel={isOpenPricing ? t('common.skip', 'Skip') : showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
           >
-            <X size={isSmallDevice ? 14 : 17} color={alpha(theme.colors.text.primary, 0.6)} strokeWidth={2.4} />
+            <X size={isSmallDevice ? 14 : 17} color={theme.colors.text.secondary} strokeWidth={2.4} />
             {(!hasThreeActions || !isVerySmallDevice) && (
               <Text
                 style={[
                   styles.skipBtnText,
                   {
-                    color: alpha(theme.colors.text.primary, 0.7),
-                    fontSize: isSmallDevice ? 11 : 12,
+                    color: theme.colors.text.secondary,
+                    fontSize: isSmallDevice ? 11.5 : 12.5,
                   },
                 ]}
                 numberOfLines={1}
@@ -874,7 +876,8 @@ function JobDecisionCard({
                   height: btnHeight,
                   flex: 1,
                   minWidth: 0,
-                  borderColor: alpha(accent, 0.35),
+                  backgroundColor: alpha(accent, 0.08),
+                  borderColor: alpha(accent, 0.45),
                   paddingHorizontal: isSmallDevice ? 6 : 10,
                   gap: isSmallDevice ? 4 : 5,
                 },
@@ -1206,10 +1209,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 18,
     zIndex: 10,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -1235,12 +1238,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   swipeHintText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -1251,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 22,
-    borderWidth: 1.5,
+    borderWidth: 1.8,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -1265,7 +1268,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -1281,13 +1284,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   urgencyText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   timeAgoText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   headerRight: {
@@ -1296,12 +1299,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   queuePill: {
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   queuePillText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   timerPill: {
@@ -1311,10 +1314,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   timerPillText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '900',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
@@ -1330,7 +1333,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.6,
     paddingVertical: 12,
     paddingHorizontal: 14,
     marginBottom: 12,
@@ -1340,24 +1343,24 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   heroDivider: {
-    width: 1,
+    width: 1.5,
     height: 44,
     marginHorizontal: 12,
   },
   heroLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   heroAmount: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: '900',
     letterSpacing: -0.3,
   },
   heroDistance: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
   },
   distanceRow: {
@@ -1366,7 +1369,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   heroSubtext: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
   },
@@ -1374,19 +1377,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   categoryTitle: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '900',
     letterSpacing: -0.3,
     marginBottom: 4,
   },
   descriptionText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 18,
+    lineHeight: 19,
   },
   infoBlock: {
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     overflow: 'hidden',
     marginBottom: 12,
   },
@@ -1398,13 +1401,13 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   infoRowDivider: {
-    height: 1,
+    height: 1.2,
     marginHorizontal: 12,
   },
   infoIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1413,25 +1416,25 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   infoRowLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   infoRowValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     marginTop: 1,
   },
   clientAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
   },
   clientAvatarFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1446,11 +1449,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ratingText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   clientSubtext: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '600',
     marginTop: 1,
   },
@@ -1464,13 +1467,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sectionCountBadge: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
   },
   mediaRail: {
@@ -1482,7 +1485,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 64,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1505,7 +1508,7 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 64,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 10,
     minWidth: 160,
   },
@@ -1526,11 +1529,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   audioTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   audioDuration: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
   },
@@ -1539,7 +1542,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     padding: 10,
     marginBottom: 10,
   },
@@ -1548,13 +1551,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   walletAlertTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
   },
   walletAlertDesc: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    lineHeight: 15,
+    lineHeight: 16,
     marginTop: 1,
   },
   activeCounterBadge: {
@@ -1562,28 +1565,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     paddingHorizontal: 10,
     paddingVertical: 7,
     marginBottom: 8,
   },
   activeCounterText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
   },
   activeCounterChange: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   counterBox: {
     borderRadius: 14,
-    borderWidth: 1,
-    padding: 10,
+    borderWidth: 1.6,
+    padding: 11,
     marginBottom: 8,
   },
   counterBoxTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     marginBottom: 7,
   },
@@ -1594,14 +1597,14 @@ const styles = StyleSheet.create({
   },
   quickIncrementChip: {
     flex: 1,
-    height: 30,
+    height: 32,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickIncrementText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
   },
   counterInputRow: {
@@ -1613,26 +1616,25 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    height: 42,
+    height: 44,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.6,
     paddingHorizontal: 10,
-    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   counterPrefix: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
     marginRight: 6,
   },
   counterInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     padding: 0,
   },
   counterSubmitBtn: {
     width: 76,
-    height: 42,
+    height: 44,
     borderRadius: 10,
     overflow: 'hidden',
   },
@@ -1642,7 +1644,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   counterSubmitText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -1653,20 +1655,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 6,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
   },
   skipBtn: {
     height: 48,
     paddingHorizontal: 14,
     borderRadius: 13,
-    borderWidth: 1,
+    borderWidth: 1.6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   skipBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -1674,14 +1676,14 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 12,
     borderRadius: 13,
-    borderWidth: 1,
+    borderWidth: 1.6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
   },
   counterToggleBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '900',
     flexShrink: 1,
     textAlign: 'center',
@@ -1701,7 +1703,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   primaryBtnText: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '900',
     letterSpacing: 0.3,
     textTransform: 'uppercase',
@@ -1714,7 +1716,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerNoteText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
   },

@@ -36,14 +36,14 @@ export default function RoleSelectionScreen() {
         >
           <View style={styles.header}>
             <View style={[styles.brandPill, {
-              backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.05),
-              borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.1),
+              backgroundColor: theme.colors.surface.card,
+              borderColor: theme.colors.border.default,
             }]}>
               <Image source={require('../assets/images/logo_premium.png')} style={styles.brandLogo} />
               <Text style={[styles.brandText, { color: colors.cyan }]}>{t('roleSelection.welcome')}</Text>
             </View>
             <Text style={[styles.title, typography.threeD, { color: theme.colors.text.primary }]}>{t('roleSelection.title')}</Text>
-            <Text style={[styles.subtitle, { color: theme.colors.text.muted }]}>{t('roleSelection.subtitle')}</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>{t('roleSelection.subtitle')}</Text>
           </View>
 
           <View style={styles.cardsContainer}>
@@ -100,11 +100,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: Spacing.l,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   brandLogo: {
     width: 22,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     marginRight: 7,
   },
   brandText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 1.2,
   },
@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 23,
     fontWeight: '600',
     maxWidth: 340,
   },

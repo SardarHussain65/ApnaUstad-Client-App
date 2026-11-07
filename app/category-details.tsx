@@ -87,7 +87,16 @@ export default function CategoryDetailsScreen() {
 
         {/* Dynamic Header */}
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={[
+              styles.iconBtn,
+              {
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
+              },
+            ]}
+            onPress={() => router.back()}
+          >
             <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
@@ -104,18 +113,18 @@ export default function CategoryDetailsScreen() {
               styles.glowingOrb,
               {
                 shadowColor: themeColor,
-                borderColor: theme.isDark ? alpha(themeColor, 0.45) : alpha(themeColor, 0.4),
-                backgroundColor: theme.isDark ? alpha(themeColor, 0.20) : alpha(themeColor, 0.15),
+                borderColor: theme.isDark ? alpha(themeColor, 0.55) : themeColor,
+                backgroundColor: theme.isDark ? alpha(themeColor, 0.22) : alpha(themeColor, 0.16),
               }
             ]}>
               <Sparkles color={themeColor} size={40} />
             </View>
-            <Text style={[styles.heroSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.selectMethod')}</Text>
+            <Text style={[styles.heroSub, { color: theme.colors.text.secondary }]}>{t('categoryDetails.selectMethod')}</Text>
             <Text style={[styles.heroTitle, typography.threeD, { color: theme.colors.text.primary }]}>{title.toUpperCase()}</Text>
             {params.description ? (
-              <Text style={[styles.categoryDescription, { color: theme.colors.text.muted }]}>{params.description}</Text>
+              <Text style={[styles.categoryDescription, { color: theme.colors.text.secondary }]}>{params.description}</Text>
             ) : (
-              <Text style={[styles.categoryDescription, { color: theme.colors.text.muted }]}>{t('categoryDetails.selectMethodDesc')}</Text>
+              <Text style={[styles.categoryDescription, { color: theme.colors.text.secondary }]}>{t('categoryDetails.selectMethodDesc')}</Text>
             )}
           </Animated.View>
 
@@ -125,19 +134,25 @@ export default function CategoryDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(200).duration(600)} style={[styles.optionWrapper, pulseStyle]}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.mainOption, { borderColor: theme.colors.brand.primary, backgroundColor: theme.colors.surface.card }]}
+                style={[
+                  styles.mainOption,
+                  {
+                    borderColor: theme.isDark ? theme.colors.brand.primary : '#3B82F6',
+                    backgroundColor: theme.isDark ? theme.colors.surface.card : '#EFF6FF',
+                  },
+                ]}
                 onPress={() => handleRouteToJob('instant')}
               >
                 <LinearGradient
-                  colors={[alpha(theme.colors.brand.primary, 0.15), 'transparent']}
+                  colors={[alpha(theme.colors.brand.primary, 0.16), 'transparent']}
                   style={styles.optionGradient}
                 />
-                <View style={[styles.optionIconBox, { backgroundColor: alpha(theme.colors.brand.primary, 0.12), borderColor: alpha(theme.colors.brand.primary, 0.4) }]}>
+                <View style={[styles.optionIconBox, { backgroundColor: theme.isDark ? alpha(theme.colors.brand.primary, 0.18) : '#DBEAFE', borderColor: theme.isDark ? alpha(theme.colors.brand.primary, 0.45) : '#60A5FA' }]}>
                   <FileText size={28} color={theme.colors.brand.primary} />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={[styles.optionTitle, { color: theme.colors.brand.primary }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.postJob')}</Text>
-                  <Text style={[styles.optionSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.getBids')}</Text>
+                  <Text style={[styles.optionTitle, { color: theme.colors.text.primary }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.postJob')}</Text>
+                  <Text style={[styles.optionSub, { color: theme.colors.text.secondary }]}>{t('categoryDetails.getBids')}</Text>
                 </View>
                 <View style={[styles.deployHint, { backgroundColor: theme.colors.brand.primary, shadowColor: theme.colors.brand.primary }]}>
                   <Text style={[styles.deployHintText, { color: theme.colors.button.primaryText }]}>{t('categoryDetails.postNow')}</Text>
@@ -149,19 +164,25 @@ export default function CategoryDetailsScreen() {
             <Animated.View entering={FadeInDown.delay(300).duration(600)} style={[styles.optionWrapper, pulseStyle]}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.mainOption, { borderColor: theme.colors.brand.worker, backgroundColor: theme.colors.surface.card }]}
+                style={[
+                  styles.mainOption,
+                  {
+                    borderColor: theme.isDark ? theme.colors.brand.worker : '#EA580C',
+                    backgroundColor: theme.isDark ? theme.colors.surface.card : '#FFF7ED',
+                  },
+                ]}
                 onPress={handleBrowseWorkers}
               >
                 <LinearGradient
-                  colors={[alpha(theme.colors.brand.worker, 0.15), 'transparent']}
+                  colors={[alpha(theme.colors.brand.worker, 0.16), 'transparent']}
                   style={styles.optionGradient}
                 />
-                <View style={[styles.optionIconBox, { backgroundColor: alpha(theme.colors.brand.worker, 0.12), borderColor: alpha(theme.colors.brand.worker, 0.4) }]}>
+                <View style={[styles.optionIconBox, { backgroundColor: theme.isDark ? alpha(theme.colors.brand.worker, 0.18) : '#FFEDD5', borderColor: theme.isDark ? alpha(theme.colors.brand.worker, 0.45) : '#FB923C' }]}>
                   <Users size={28} color={theme.colors.brand.worker} />
                 </View>
                 <View style={styles.optionTextContainer}>
-                  <Text style={[styles.optionTitle, { color: theme.colors.brand.worker }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.chooseUstad')}</Text>
-                  <Text style={[styles.optionSub, { color: theme.colors.text.dim }]}>{t('categoryDetails.hireDirectly')}</Text>
+                  <Text style={[styles.optionTitle, { color: theme.colors.text.primary }]} adjustsFontSizeToFit minimumFontScale={0.8}>{t('categoryDetails.chooseUstad')}</Text>
+                  <Text style={[styles.optionSub, { color: theme.colors.text.secondary }]}>{t('categoryDetails.hireDirectly')}</Text>
                 </View>
                 <View style={[styles.deployHint, { backgroundColor: theme.colors.brand.worker, shadowColor: theme.colors.brand.worker }]}>
                   <Text style={[styles.deployHintText, { color: theme.colors.button.primaryText }]}>{t('categoryDetails.browse')}</Text>
@@ -190,19 +211,19 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   placeholderBtn: {
     width: 44,
     height: 44,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
   scrollContent: {
     padding: Spacing.l,
@@ -214,9 +235,9 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   heroSub: {
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 3,
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 2.2,
     marginBottom: 8,
   },
   heroTitle: {
@@ -240,11 +261,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   categoryDescription: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14.5,
+    fontWeight: '600',
     marginTop: 12,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
     paddingHorizontal: 20,
   },
   mainOptionsGrid: {
@@ -256,9 +277,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainOption: {
-    height: 205,
+    height: 216,
     borderRadius: 24,
-    borderWidth: 1.5,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 20,
@@ -269,10 +290,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   optionIconBox: {
-    width: 56,
-    height: 56,
+    width: 58,
+    height: 58,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -283,22 +304,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   optionTitle: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.6,
     marginBottom: 4,
     textAlign: 'center',
     width: '100%',
   },
   optionSub: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
     textAlign: 'center',
   },
   deployHint: {
-    paddingHorizontal: 18,
-    paddingVertical: 7,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: BorderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -308,8 +329,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   deployHintText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
 });

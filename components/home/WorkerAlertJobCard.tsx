@@ -27,6 +27,7 @@ import {
   ChevronLeft,
 } from 'lucide-react-native';
 import { alpha, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { cleanAddressString } from '../../hooks/useUserLocation';
 import { useAuth } from '../../context/AuthContext';
 import { useIsRTL } from '../../context/LanguageContext';
 
@@ -184,21 +185,21 @@ export const WorkerAlertJobCard = React.memo(
 
           {job.address ? (
             <View style={styles.locationRow}>
-              <MapPin size={11} color={alpha(theme.colors.text.primary, 0.4)} />
-              <Text style={[styles.locationText, { color: alpha(theme.colors.text.primary, 0.45) }]} numberOfLines={1}>{job.address}</Text>
+              <MapPin size={13} color={theme.colors.text.secondary} />
+              <Text style={[styles.locationText, { color: theme.colors.text.secondary }]} numberOfLines={1}>{cleanAddressString(job.address)}</Text>
             </View>
           ) : null}
 
-          <View style={[styles.divider, { backgroundColor: alpha(accentColor, 0.13) }]} />
+          <View style={[styles.divider, { backgroundColor: alpha(accentColor, 0.2) }]} />
 
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[styles.dismissBtn, { borderColor: alpha(theme.colors.text.primary, 0.1), backgroundColor: alpha(theme.colors.text.primary, 0.03) }]}
+              style={[styles.dismissBtn, { borderColor: theme.colors.border.default, backgroundColor: theme.colors.surface.subtle }]}
               onPress={() => onDismiss(job._id)}
               disabled={isAccepting}
               activeOpacity={0.7}
             >
-              <X size={16} color={alpha(theme.colors.text.primary, 0.5)} strokeWidth={2.5} />
+              <X size={17} color={theme.colors.text.secondary} strokeWidth={2.5} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -218,12 +219,12 @@ export const WorkerAlertJobCard = React.memo(
                 style={styles.acceptBtn}
               >
                 {isAccepting ? (
-                  <ActivityIndicator color={theme.colors.text.primary} size="small" />
+                  <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <>
-                    <Check size={15} color={theme.colors.text.primary} strokeWidth={3} />
-                    <Text style={[styles.acceptText, { color: theme.colors.text.primary }]}>{t('home.worker.viewDetails', 'VIEW DETAILS')}</Text>
-                    <ChevronRight size={15} color={theme.colors.text.primary} strokeWidth={3} />
+                    <Check size={16} color="#FFFFFF" strokeWidth={3} />
+                    <Text style={[styles.acceptText, { color: '#FFFFFF' }]}>{t('home.worker.viewDetails', 'VIEW DETAILS')}</Text>
+                    <ChevronRight size={16} color="#FFFFFF" strokeWidth={3} />
                   </>
                 )}
               </LinearGradient>
@@ -238,7 +239,7 @@ export const WorkerAlertJobCard = React.memo(
 const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.8,
     overflow: 'hidden',
     marginBottom: 4,
   },
@@ -257,15 +258,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   pulseDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 1,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   timeText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
@@ -407,14 +408,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   budgetText: {
     fontWeight: '900',
-    fontSize: 13,
+    fontSize: 14,
   },
   locationRow: {
     flexDirection: 'row',
@@ -424,12 +425,12 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '600',
     flex: 1,
   },
   divider: {
-    height: 1,
+    height: 1.2,
     marginHorizontal: 14,
     marginBottom: 12,
   },
@@ -441,10 +442,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dismissBtn: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

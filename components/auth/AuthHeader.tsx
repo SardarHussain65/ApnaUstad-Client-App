@@ -21,8 +21,8 @@ export function AuthHeader({ title, onBack, accentColor }: AuthHeaderProps) {
         activeOpacity={0.75}
         onPress={onBack}
         style={[styles.backButton, {
-          backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.05 : 0.07),
-          borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.14),
+          backgroundColor: theme.colors.surface.card,
+          borderColor: theme.colors.border.default,
         }]}
       >
         <ChevronLeft
@@ -34,8 +34,8 @@ export function AuthHeader({ title, onBack, accentColor }: AuthHeaderProps) {
       </TouchableOpacity>
 
       <View style={[styles.titleWrap, {
-        backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.04),
-        borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.1 : 0.08),
+        backgroundColor: theme.colors.surface.subtle,
+        borderColor: theme.colors.border.default,
       }]}>
         <View style={[styles.statusDot, { backgroundColor: resolvedAccentColor, shadowColor: resolvedAccentColor }]} />
         <Text style={[styles.title, { color: theme.colors.text.muted }]}>{title}</Text>
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   statusDot: {
     width: 7,

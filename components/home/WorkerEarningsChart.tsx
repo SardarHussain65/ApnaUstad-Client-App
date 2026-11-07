@@ -135,7 +135,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
         glowColor={colors.cyan}
         gradient={[alpha(colors.cyan, 0.08), alpha(theme.colors.brand.secondary, 0.06), alpha(theme.colors.surface.card, 0.18)]}
         padding={0}
-        style={styles.card}
+        style={[styles.card, { borderColor: theme.colors.border.default }]}
         contentStyle={styles.cardContent}
       >
         {/* ── Header ── */}
@@ -267,7 +267,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
 
         {/* ── Summary Row ── */}
         <View style={[styles.summaryRow, {
-          borderTopColor: alpha(theme.colors.text.primary, 0.06),
+          borderTopColor: theme.colors.border.default,
         }]}>
           <View style={styles.summaryItem}>
             <View style={[styles.summaryIcon, { backgroundColor: alpha(colors.success, 0.1) }]}>
@@ -325,8 +325,7 @@ export const WorkerEarningsChart = React.memo(function WorkerEarningsChart({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 26,
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.12)',
+    borderWidth: 1.8,
     marginTop: 14,
   },
   cardContent: {
@@ -345,20 +344,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '900',
   },
   periodTotal: {
     alignItems: 'flex-end',
   },
   periodTotalLabel: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   periodTotalValue: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     marginTop: 1,
   },
@@ -375,10 +374,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabActive: {
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   tabText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   chartContainer: {
@@ -389,7 +388,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingTop: 10,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
   },
   summaryItem: {
     flexDirection: 'row',
@@ -397,19 +396,19 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   summaryIcon: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   summaryValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
   summaryLabel: {
-    fontSize: 8,
-    fontWeight: '700',
+    fontSize: 9.5,
+    fontWeight: '800',
     textTransform: 'uppercase',
     marginTop: 1,
   },

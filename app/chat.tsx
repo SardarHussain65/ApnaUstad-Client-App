@@ -376,7 +376,7 @@ export default function ChatScreen() {
                   styles.theirBubble,
                   {
                     backgroundColor: theme.isDark ? '#1A1D26' : '#FFFFFF',
-                    borderColor: theme.isDark ? '#2D3240' : '#E2E8F0',
+                    borderColor: theme.colors.border.default,
                   },
                 ],
           ]}
@@ -415,10 +415,10 @@ export default function ChatScreen() {
     <BackgroundWrapper>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         {/* Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border.subtle, backgroundColor: theme.colors.surface.card }]}>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border.default, backgroundColor: theme.colors.surface.card }]}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={[styles.backBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}
+            style={[styles.backBtn, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}
             activeOpacity={0.7}
           >
             {isRTL ? (
@@ -430,7 +430,7 @@ export default function ChatScreen() {
 
           <View style={styles.userInfo}>
             <View style={styles.avatarWrapper}>
-              <View style={[styles.avatar, { backgroundColor: theme.isDark ? '#1E293B' : '#E2E8F0', borderColor: theme.colors.border.subtle }]}>
+              <View style={[styles.avatar, { backgroundColor: theme.isDark ? '#1E293B' : '#E2E8F0', borderColor: theme.colors.border.default }]}>
                 <Text style={[styles.avatarInitial, { color: theme.colors.brand.primary }]}>
                   {recipientName?.[0]?.toUpperCase() || 'U'}
                 </Text>
@@ -486,7 +486,7 @@ export default function ChatScreen() {
           ) : allMessages.length === 0 ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyChat}>
-                <View style={[styles.emptyChatIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+                <View style={[styles.emptyChatIcon, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
                   <MessageCircle size={32} color={theme.colors.brand.primary} />
                 </View>
                 <Text style={[styles.emptyChatTitle, { color: theme.colors.text.primary }]}>
@@ -515,7 +515,7 @@ export default function ChatScreen() {
                             styles.suggestionChip,
                             {
                               backgroundColor: theme.colors.surface.card,
-                              borderColor: theme.colors.border.subtle,
+                              borderColor: theme.colors.border.default,
                             },
                           ]}
                           onPress={() => handleSelectSuggestion(suggestion)}
@@ -585,7 +585,7 @@ export default function ChatScreen() {
                   styles.inputCard,
                   {
                     backgroundColor: theme.colors.surface.card,
-                    borderColor: theme.colors.border.subtle,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -673,7 +673,7 @@ export default function ChatScreen() {
                         style={[
                           styles.micBtn,
                           {
-                            borderColor: theme.colors.border.subtle,
+                            borderColor: theme.colors.border.default,
                             backgroundColor: theme.colors.surface.subtle,
                           },
                         ]}
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1.5,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -719,12 +719,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   userInfo: {
     flex: 1,
@@ -733,21 +733,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   avatarWrapper: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   avatarInitial: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
   },
   userMeta: {
@@ -756,8 +756,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     letterSpacing: -0.2,
   },
   statusRow: {
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#94A3B8',
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#10B981',
     fontWeight: '800',
     letterSpacing: 0.4,
@@ -784,12 +784,12 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   headerAction: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   chatArea: {
     flex: 1,
@@ -856,9 +856,9 @@ const styles = StyleSheet.create({
   },
   suggestionChip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -866,8 +866,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   suggestionChipText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   messageList: {
     paddingHorizontal: 16,
@@ -881,9 +881,9 @@ const styles = StyleSheet.create({
   },
   bubble: {
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
@@ -897,8 +897,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   messageContent: {
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 15.5,
+    lineHeight: 22,
     fontWeight: '500',
   },
   voiceBubble: {
@@ -924,11 +924,11 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   voiceTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   voiceDuration: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     marginTop: 3,
   },
@@ -939,7 +939,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   timeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   inputContainer: {
@@ -948,8 +948,8 @@ const styles = StyleSheet.create({
   },
   inputCard: {
     borderRadius: 26,
-    minHeight: 52,
-    borderWidth: 1,
+    minHeight: 54,
+    borderWidth: 1.6,
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -965,26 +965,26 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 15.5,
     paddingHorizontal: 12,
     paddingVertical: 6,
     maxHeight: 100,
     minHeight: 40,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
   },
   micBtn: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 21,
+    borderWidth: 1.5,
   },
   voiceComposer: {
     minHeight: 52,

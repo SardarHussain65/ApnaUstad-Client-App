@@ -100,29 +100,29 @@ export default function ThemeLanguageScreen() {
     previewColors: [string, string];
   }> = [
     {
-      id: 'current',
-      title: t('themeLanguageSetup.themeCosmic'),
-      description: t('themeLanguageSetup.themeCosmicDesc'),
-      tag: t('themeLanguageSetup.themeCosmicTag'),
-      accentColor: colors.cyan,
-      icon: Sparkles,
-      previewColors: ['#050510', '#0E1A38'],
-    },
-    {
       id: 'dark',
-      title: t('themeLanguageSetup.themeDark'),
-      description: t('themeLanguageSetup.themeDarkDesc'),
-      accentColor: colors.purple,
+      title: t('settings.themeDark', 'Professional Dark'),
+      description: t('settings.themeDarkDesc', 'Deep navy dark mode with vibrant service cards.'),
+      tag: t('themeLanguageSetup.themeCosmicTag', 'POPULAR'),
+      accentColor: '#60A5FA',
       icon: Moon,
-      previewColors: ['#0B0B14', '#171728'],
+      previewColors: ['#080C14', '#1E3A5F'],
     },
     {
       id: 'light',
-      title: t('themeLanguageSetup.themeLight'),
-      description: t('themeLanguageSetup.themeLightDesc'),
-      accentColor: '#0284C7',
+      title: t('settings.themeLight', 'Professional Light'),
+      description: t('settings.themeLightDesc', 'Crisp daylight white with high-contrast service cards.'),
+      accentColor: '#1D4ED8',
       icon: Sun,
-      previewColors: ['#F1F5F9', '#FFFFFF'],
+      previewColors: ['#FFFFFF', '#DBEAFE'],
+    },
+    {
+      id: 'current',
+      title: t('settings.themeCurrent', 'Cosmic Space'),
+      description: t('settings.themeCurrentDesc', 'Classic ApnaUstad cosmic galaxy background with neon accents.'),
+      accentColor: '#00F5FF',
+      icon: Sparkles,
+      previewColors: ['#060914', '#1E1B4B'],
     },
   ];
 

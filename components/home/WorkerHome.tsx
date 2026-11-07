@@ -46,6 +46,7 @@ import {
   useWithdrawBidMutation,
   useWorkerHomeSummary,
   useRefreshOnFocus,
+  cleanAddressString,
   Bid,
 } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
@@ -58,7 +59,7 @@ type WorkerCoordinates = {
 
 const cleanAddressFor = (raw?: string) => {
   if (!raw) return 'Nearby service area';
-  const cleaned = raw.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+  const cleaned = cleanAddressString(raw);
   const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
   if (parts.length > 2) {
     return `${parts[0]}, ${parts[parts.length - 1]}`;
@@ -430,15 +431,21 @@ export function WorkerHome() {
           ) : null}
 
           <TouchableOpacity
-            style={styles.walletInsightsLink}
+            style={[
+              styles.walletInsightsLink,
+              {
+                backgroundColor: theme.isDark ? alpha(colors.cyan, 0.12) : '#EFF6FF',
+                borderColor: theme.isDark ? alpha(colors.cyan, 0.45) : '#60A5FA',
+              },
+            ]}
             onPress={() => router.push('/(tabs)/wallet')}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <BarChart3 size={14} color={colors.cyan} />
+            <BarChart3 size={16} color={colors.cyan} strokeWidth={2.4} />
             <Text style={[styles.walletInsightsLinkText, { color: colors.cyan }]}>
               {t('home.worker.viewWalletCharts', 'View weekly analytics & wallet history')}
             </Text>
-            <ChevronRight size={13} color={colors.cyan} />
+            <ChevronRight size={15} color={colors.cyan} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
 
@@ -570,21 +577,21 @@ export function WorkerHome() {
                       activeOpacity={0.82}
                     >
                       <Text
-                        style={[styles.heroCtaBtnText, { color: '#000', fontWeight: '800' }]}
+                        style={[styles.heroCtaBtnText, { color: theme.isDark ? '#0F172A' : '#FFFFFF', fontWeight: '800' }]}
                         numberOfLines={1}
                       >
                         {t('incomingJobModal.acceptMission', 'Accept Mission')}
                       </Text>
-                      <ArrowRight size={15} color="#000" strokeWidth={2.5} />
+                      <ArrowRight size={15} color={theme.isDark ? '#0F172A' : '#FFFFFF'} strokeWidth={2.5} />
                     </TouchableOpacity>
 
                     <TouchableOpacity
                       style={[
                         styles.heroCtaBtn,
                         {
-                          backgroundColor: alpha(theme.colors.surface.card, 0.5),
-                          borderColor: theme.colors.border.subtle,
-                          borderWidth: 1,
+                          backgroundColor: theme.colors.surface.card,
+                          borderColor: theme.colors.border.default,
+                          borderWidth: 1.6,
                           marginTop: 0,
                           paddingHorizontal: 14,
                         },
@@ -877,12 +884,12 @@ export function WorkerHome() {
                         }
                         activeOpacity={0.82}
                       >
-                        <Text style={styles.heroCtaBtnText}>
+                        <Text style={[styles.heroCtaBtnText, { color: theme.isDark ? '#0F172A' : '#FFFFFF' }]}>
                           {isPaymentPending
                             ? t('home.worker.collectPaymentBtn', 'Collect Cash Payment')
                             : t('home.worker.continueJob', 'Track & Continue Job')}
                         </Text>
-                        <ArrowRight size={15} color="#001014" strokeWidth={2.5} />
+                        <ArrowRight size={15} color={theme.isDark ? '#0F172A' : '#FFFFFF'} strokeWidth={2.5} />
                       </TouchableOpacity>
                     </View>
                   </GlassCard>
@@ -897,10 +904,10 @@ export function WorkerHome() {
               padding={18}
               hasGlow
               glowColor={colors.cyan}
-              style={[styles.heroCard, { borderColor: alpha(colors.cyan, 0.25) }]}
+              style={[styles.heroCard, { borderColor: alpha(colors.cyan, 0.38) }]}
             >
               <View style={styles.radarHeroRow}>
-                <View style={[styles.radarIconWrap, { backgroundColor: alpha(colors.cyan, 0.12), borderColor: alpha(colors.cyan, 0.3) }]}>
+                <View style={[styles.radarIconWrap, { backgroundColor: alpha(colors.cyan, 0.12), borderColor: alpha(colors.cyan, 0.35) }]}>
                   <Compass size={28} color={colors.cyan} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -924,11 +931,11 @@ export function WorkerHome() {
                 onPress={() => router.push('/(tabs)/jobs' as any)}
                 activeOpacity={0.8}
               >
-                <Compass size={16} color="#000" strokeWidth={2.5} style={{ marginRight: 6 }} />
-                <Text style={styles.heroCtaBtnText}>
+                <Compass size={16} color={theme.isDark ? '#0F172A' : '#FFFFFF'} strokeWidth={2.5} style={{ marginRight: 6 }} />
+                <Text style={[styles.heroCtaBtnText, { color: theme.isDark ? '#0F172A' : '#FFFFFF' }]}>
                   {t('home.worker.browseJobsBtn', 'Browse Available Jobs Nearby')}
                 </Text>
-                <ChevronRight size={16} color="#000" strokeWidth={2.5} />
+                <ChevronRight size={16} color={theme.isDark ? '#0F172A' : '#FFFFFF'} strokeWidth={2.5} />
               </TouchableOpacity>
             </GlassCard>
           </View>
@@ -937,10 +944,10 @@ export function WorkerHome() {
             <GlassCard
               intensity={24}
               padding={18}
-              style={[styles.heroCard, { borderColor: alpha(theme.colors.text.muted, 0.2) }]}
+              style={[styles.heroCard, { borderColor: theme.colors.border.default }]}
             >
               <View style={styles.radarHeroRow}>
-                <View style={[styles.radarIconWrap, { backgroundColor: alpha(theme.colors.text.muted, 0.1), borderColor: alpha(theme.colors.text.muted, 0.2) }]}>
+                <View style={[styles.radarIconWrap, { backgroundColor: alpha(theme.colors.text.muted, 0.1), borderColor: theme.colors.border.default }]}>
                   <Power size={26} color={theme.colors.text.muted} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -958,7 +965,7 @@ export function WorkerHome() {
                 onPress={() => toggleOnline(true)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
+                <Text style={[styles.heroCtaBtnText, { color: '#FFFFFF' }]}>
                   {t('home.worker.goOnlineNow', 'Go Online Now')}
                 </Text>
               </TouchableOpacity>
@@ -1059,8 +1066,8 @@ export function WorkerHome() {
             style={[
               styles.historyLinkCard,
               {
-                borderColor: theme.isDark ? theme.colors.border.subtle : 'rgba(15, 23, 42, 0.16)',
-                backgroundColor: theme.isDark ? alpha(theme.colors.surface.card, 0.35) : '#FFFFFF',
+                borderColor: theme.colors.border.default,
+                backgroundColor: theme.colors.surface.card,
               },
             ]}
             onPress={() => router.push('/(tabs)/bookings')}
@@ -1191,13 +1198,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 10,
-    paddingVertical: 4,
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1.6,
   },
   walletInsightsLinkText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   moreUrgentJobsBanner: {
     flexDirection: 'row',
@@ -1207,7 +1217,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: 16,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     marginTop: 4,
     marginBottom: 8,
   },
@@ -1221,7 +1231,7 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     borderRadius: 22,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -1240,32 +1250,32 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   heroStatusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   heroTimeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   urgencyPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   urgencyPillText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   heroJobTitle: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '900',
     marginBottom: 4,
   },
   heroDescription: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13.5,
+    lineHeight: 19,
     fontWeight: '500',
     marginBottom: 8,
   },
@@ -1284,10 +1294,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   customerMiniAvatar: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1298,7 +1308,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   customerMiniText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   heroCustomerRow: {
@@ -1306,7 +1316,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   heroCustomerName: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '700',
   },
   heroLocationRow: {
@@ -1316,7 +1326,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   heroAddressText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '600',
     flexShrink: 1,
   },
@@ -1333,12 +1343,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heroEarningLabel: {
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   heroEarningValue: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '900',
     marginTop: 1,
   },
@@ -1354,7 +1364,7 @@ const styles = StyleSheet.create({
   },
   heroCtaBtnText: {
     color: '#000',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
     letterSpacing: 0.3,
   },
@@ -1370,24 +1380,24 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   heroRadarTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     marginTop: 2,
     marginBottom: 2,
   },
   heroRadarSub: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13.5,
+    lineHeight: 19,
   },
   historyLinkCard: {
     marginHorizontal: Spacing.l,
     marginTop: Spacing.xl,
-    padding: 14,
+    padding: 15,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   historyLinkRow: {
     flexDirection: 'row',
@@ -1395,20 +1405,20 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   historyIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   historyLinkTitle: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '800',
     marginBottom: 2,
   },
   historyLinkSub: {
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   recentSection: {
     marginTop: Spacing.xl,

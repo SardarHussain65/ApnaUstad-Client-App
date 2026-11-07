@@ -57,46 +57,46 @@ export function ActiveBiddingBanner({ job, activeCount = 1, onPress }: ActiveBid
         onPress={() => onPress(job._id)}
         style={styles.touchable}
       >
-        <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
+        <BlurView intensity={60} tint={theme.isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFillObject} />
         
         <LinearGradient
-          colors={[alpha(colors.cyan, 0.15), alpha(theme.colors.surface.card, 0.85)]}
+          colors={[alpha(colors.cyan, theme.isDark ? 0.18 : 0.12), alpha(theme.colors.surface.card, 0.94)]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
 
-        <View style={[styles.borderGlow, { borderColor: alpha(colors.cyan, 0.4) }]} />
+        <View style={[styles.borderGlow, { borderColor: alpha(colors.cyan, theme.isDark ? 0.55 : 0.7) }]} />
 
         <View style={styles.content}>
           <View style={[styles.radarBox, {
-            backgroundColor: alpha(colors.cyan, 0.1),
-            borderColor: alpha(colors.cyan, 0.3),
+            backgroundColor: alpha(colors.cyan, 0.12),
+            borderColor: alpha(colors.cyan, 0.4),
           }]}>
             <Animated.View style={[styles.pulseRing, { borderColor: colors.cyan }, ringStyle]} />
-            <Shield color={colors.cyan} size={18} strokeWidth={2.5} />
+            <Shield color={colors.cyan} size={19} strokeWidth={2.5} />
           </View>
 
           <View style={styles.textStack}>
             <View style={styles.statusRow}>
-              <Radio size={12} color={colors.cyan} />
+              <Radio size={13} color={colors.cyan} />
               <Text style={[styles.statusText, { color: colors.cyan }]}>{statusText}</Text>
             </View>
             <Text style={[styles.title, { color: theme.colors.text.primary }]} numberOfLines={1}>
               {t('activeBiddingBanner.findingNearby', { category: job.category || t('jobDetails.defaultTitle') })}
             </Text>
             <View style={styles.metaRow}>
-              {isInstant ? <Zap size={11} color={colors.pink} /> : <Calendar size={11} color={colors.orange} />}
+              {isInstant ? <Zap size={12} color={colors.pink} /> : <Calendar size={12} color={colors.orange} />}
               <Text style={[styles.metaText, { color: isInstant ? colors.pink : colors.orange }]}>
                 {isInstant ? t('activeBiddingBanner.instantRequest') : t('activeBiddingBanner.scheduledRequest')}
               </Text>
-              {activeCount > 1 && <Text style={[styles.countText, { color: alpha(theme.colors.text.primary, 0.5) }]}>{t('activeBiddingBanner.activeSearches', { count: activeCount })}</Text>}
+              {activeCount > 1 && <Text style={[styles.countText, { color: theme.colors.text.secondary }]}>{t('activeBiddingBanner.activeSearches', { count: activeCount })}</Text>}
             </View>
           </View>
 
           <View style={[styles.actionBtn, { backgroundColor: colors.cyan }]}>
-            <Text style={styles.actionText}>{proposalCount > 0 ? t('activeBiddingBanner.review') : t('activeBiddingBanner.resume')}</Text>
-            <ChevronRight size={14} color={theme.colors.button.primaryText} strokeWidth={3} />
+            <Text style={[styles.actionText, { color: theme.colors.button.primaryText }]}>{proposalCount > 0 ? t('activeBiddingBanner.review') : t('activeBiddingBanner.resume')}</Text>
+            <ChevronRight size={15} color={theme.colors.button.primaryText} strokeWidth={3} />
           </View>
         </View>
       </TouchableOpacity>
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   borderGlow: {
     ...StyleSheet.absoluteFillObject,
-    borderWidth: 1,
+    borderWidth: 1.8,
     borderRadius: 20,
   },
   content: {
@@ -127,19 +127,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   radarBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   pulseRing: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1.5,
   },
   textStack: {
@@ -153,38 +153,38 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   title: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     marginTop: 4,
   },
   metaText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   countText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
     borderRadius: 12,
     gap: 4,
   },
   actionText: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '900',
     letterSpacing: 0.5,
   },

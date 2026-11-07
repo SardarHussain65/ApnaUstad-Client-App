@@ -43,7 +43,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { useCategories, useClientHomeSummary, useMyJobPosts, useRefreshOnFocus, type Booking, type JobPost } from '../../hooks';
-import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography, getCategoryTilePalette } from '../../constants/Theme';
 import { getIconForCategory } from '../../constants/IconRegistry';
 import { HomeHeader } from './HomeHeader';
 import { SearchBar } from './SearchBar';
@@ -56,7 +56,6 @@ import { RecentBookingCard } from './RecentBookingCard';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const GRID_GAP = 12;
-const DEFAULT_GRADIENT: [string, string] = ['#6366f1', '#a855f7'];
 const INITIAL_CATEGORY_LIMIT = 6;
 const RECENT_BOOKINGS_LIMIT = 3;
 
@@ -80,40 +79,35 @@ interface CategoryCardProps {
 const CategoryCard = React.memo(({ cat, index, onPress, animate = true }: CategoryCardProps) => {
   const theme = useTheme();
   const Icon = getIconForCategory(cat);
-  const gradient: [string, string] = cat.color
-    ? [cat.color, `${cat.color}40`]
-    : DEFAULT_GRADIENT;
-
-  const cardBorderColor = cat.color
-    ? alpha(cat.color, theme.isDark ? 0.28 : 0.24)
-    : theme.colors.border.default;
-
-  const iconBgColor = cat.color
-    ? alpha(cat.color, theme.isDark ? 0.20 : 0.15)
-    : (theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)');
-
-  const iconColor = theme.colors.text.primary;
+  const palette = useMemo(
+    () => getCategoryTilePalette(theme, cat.name, index, false),
+    [theme, cat.name, index]
+  );
 
   const card = (
-    <GlassCard
+    <TouchableOpacity
       style={[
         styles.categoryItem,
         {
-          borderColor: cardBorderColor,
-        }
+          backgroundColor: palette.cardBg,
+          borderColor: palette.cardBorder,
+        },
       ]}
-      contentStyle={styles.categoryItemContent}
       onPress={() => onPress(cat)}
-      gradient={gradient}
-      padding={0}
+      activeOpacity={0.82}
     >
-      <View style={[styles.categoryIconBox, { backgroundColor: iconBgColor }]}>
-        <Icon size={22} color={iconColor} strokeWidth={2} />
+      <View style={styles.categoryItemContent}>
+        <View style={[styles.categoryIconBox, { backgroundColor: palette.iconBoxBg }]}>
+          <Icon size={27} color={palette.iconColor} strokeWidth={2.2} />
+        </View>
+        <Text
+          style={[styles.categoryTitle, { color: palette.titleColor }]}
+          numberOfLines={2}
+        >
+          {cat.name}
+        </Text>
       </View>
-      <Text style={[styles.categoryTitle, { color: theme.colors.text.primary }]} numberOfLines={2}>
-        {cat.name}
-      </Text>
-    </GlassCard>
+    </TouchableOpacity>
   );
 
   if (!animate) {
@@ -146,39 +140,46 @@ interface ViewAllCardProps {
 
 const ViewAllCard = React.memo(({ remainingCount, index, onPress, animate = true }: ViewAllCardProps) => {
   const theme = useTheme();
-  const colors = useThemeColors();
   const { t } = useTranslation();
 
-  const cyanAccent = colors.cyan;
-  const gradient: [string, string] = [cyanAccent, `${cyanAccent}40`];
-  const cardBorderColor = alpha(cyanAccent, theme.isDark ? 0.45 : 0.35);
-  const iconBgColor = alpha(cyanAccent, theme.isDark ? 0.22 : 0.16);
+  const palette = useMemo(
+    () => getCategoryTilePalette(theme, '', index, true),
+    [theme, index]
+  );
 
   const card = (
-    <GlassCard
+    <TouchableOpacity
       style={[
         styles.categoryItem,
         {
-          borderColor: cardBorderColor,
-        }
+          backgroundColor: palette.cardBg,
+          borderColor: palette.cardBorder,
+        },
       ]}
-      contentStyle={styles.categoryItemContent}
       onPress={onPress}
-      gradient={gradient}
-      padding={0}
-      hasGlow
-      glowColor={cyanAccent}
+      activeOpacity={0.82}
     >
-      <View style={[styles.categoryIconBox, { backgroundColor: iconBgColor }]}>
-        <LayoutGrid size={22} color={cyanAccent} strokeWidth={2.2} />
+      <View style={styles.categoryItemContent}>
+        <View style={[styles.categoryIconBox, { backgroundColor: palette.iconBoxBg }]}>
+          <LayoutGrid size={25} color={palette.iconColor} strokeWidth={2.3} />
+        </View>
+        <Text
+          style={[styles.categoryTitle, { color: palette.titleColor }]}
+          numberOfLines={1}
+        >
+          {t('home.client.viewAll', 'View all')}
+        </Text>
+        <Text
+          style={[
+            styles.viewAllCardCount,
+            { color: palette.subtitleColor || theme.colors.text.muted },
+          ]}
+          numberOfLines={1}
+        >
+          {`+${remainingCount} more`}
+        </Text>
       </View>
-      <Text style={[styles.categoryTitle, { color: cyanAccent }]} numberOfLines={1}>
-        {t('home.client.viewAll', 'VIEW ALL')}
-      </Text>
-      <Text style={[styles.viewAllCardCount, { color: theme.colors.text.muted }]} numberOfLines={1}>
-        {`+${remainingCount} more`}
-      </Text>
-    </GlassCard>
+    </TouchableOpacity>
   );
 
   if (!animate) {
@@ -700,30 +701,30 @@ export function ClientHome() {
                   style={[
                     styles.showLessButton,
                     {
-                      borderColor: alpha(colors.cyan, 0.35),
-                      backgroundColor: theme.isDark ? 'rgba(0, 240, 255, 0.08)' : 'rgba(0, 180, 200, 0.08)',
+                      borderColor: alpha(theme.colors.brand.primary, 0.35),
+                      backgroundColor: alpha(theme.colors.brand.primary, 0.1),
                     }
                   ]}
                   onPress={handleToggleServices}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.showLessText, { color: colors.cyan }]}>
-                    {t('home.client.showLess', 'SHOW LESS')}
+                  <Text style={[styles.showLessText, { color: theme.colors.brand.primary }]}>
+                    {t('home.client.showLess', 'Show less')}
                   </Text>
-                  <ChevronUp size={15} color={colors.cyan} strokeWidth={2.5} />
+                  <ChevronUp size={15} color={theme.colors.brand.primary} strokeWidth={2.5} />
                 </TouchableOpacity>
               )}
             </View>
           )}
         </View>
 
-        {/* ── 3. Recent Bookings or Trust & Quality Guarantee ── */}
+        {/* ── 3. Recent Bookings ── */}
         {homeSummaryLoading && !isRefreshing ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                  {t('home.client.recentBookings', 'Recent Jobs')}
+                <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
+                  {t('home.client.recentBookings', 'Recent jobs')}
                 </Text>
                 <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
                   {t('home.client.latestActivity', 'Your recent requests and bookings')}
@@ -737,26 +738,23 @@ export function ClientHome() {
           <Animated.View entering={FadeInDown.delay(180).duration(500)} style={styles.section}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={[styles.sectionTitle, typography.threeD, { color: theme.colors.text.primary }]}>
-                  {t('home.client.recentBookings', 'Recent Jobs')}
+                <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>
+                  {t('home.client.recentBookings', 'Recent jobs')}
                 </Text>
                 <Text style={[styles.sectionSub, { color: theme.colors.text.muted }]}>
                   {t('home.client.latestActivity', 'Your recent requests and bookings')}
                 </Text>
               </View>
 
-              {totalBookingsCount > RECENT_BOOKINGS_LIMIT && (
-                <TouchableOpacity
-                  onPress={handleViewAllBookings}
-                  hitSlop={styles.hitSlop}
-                  style={styles.seeAllBtn}
-                >
-                  <Text style={[styles.viewAll, { color: colors.cyan }]}>
-                    {t('home.client.seeAll', 'SEE ALL')}
-                  </Text>
-                  <ChevronRight size={12} color={colors.cyan} strokeWidth={2.5} />
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                onPress={handleViewAllBookings}
+                hitSlop={styles.hitSlop}
+                style={styles.seeAllBtn}
+              >
+                <Text style={[styles.viewAll, { color: theme.colors.brand.primary }]}>
+                  {t('home.client.seeAll', 'See all')}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {recentBookings.map(booking => (
@@ -813,8 +811,8 @@ const styles = StyleSheet.create({
   },
   heroStatusText: {
     fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
   heroTimeText: {
     fontSize: 11,
@@ -822,7 +820,7 @@ const styles = StyleSheet.create({
   },
   heroJobTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     marginBottom: 6,
   },
   heroSubDesc: {
@@ -858,8 +856,8 @@ const styles = StyleSheet.create({
   },
   heroCtaBtnText: {
     fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 
   // ── Section layout
@@ -871,23 +869,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.l,
-    marginBottom: Spacing.m,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: -0.3,
+    fontSize: 25,
+    fontWeight: '800',
+    letterSpacing: -0.4,
   },
   sectionSub: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 3,
   },
   viewAll: {
-    fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '700',
   },
   seeAllBtn: {
     flexDirection: 'row',
@@ -912,52 +908,54 @@ const styles = StyleSheet.create({
     width: '30.5%',
   },
   categoryItem: {
-    height: 116,
+    height: 134,
     width: '100%',
+    borderRadius: 20,
+    borderWidth: 1.8,
+    overflow: 'hidden',
   },
   categoryItemContent: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 14,
+    justifyContent: 'center',
+    paddingVertical: 14,
     paddingHorizontal: 8,
   },
   categoryIconBox: {
-    width: 48,
-    height: 48,
+    width: 54,
+    height: 54,
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   categoryTitle: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 14.5,
+    fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 18,
+    letterSpacing: -0.2,
   },
   viewAllCardCount: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     marginTop: 2,
     textAlign: 'center',
-    letterSpacing: 0.2,
   },
   showLessButton: {
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 20,
-    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    marginTop: 16,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   showLessText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 13.5,
+    fontWeight: '700',
   },
 
   // ── Empty state (no categories / no search results)

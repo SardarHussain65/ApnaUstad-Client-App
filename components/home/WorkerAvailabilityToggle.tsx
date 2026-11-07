@@ -152,14 +152,14 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   statusTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   statusSub: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
-    marginTop: 5,
+    marginTop: 4,
   },
   switch: {
     transform: Platform.OS === 'ios' ? [] : [{ scaleX: 1.1 }, { scaleY: 1.1 }],

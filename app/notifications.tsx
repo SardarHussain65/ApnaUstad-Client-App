@@ -136,8 +136,8 @@ export default function NotificationsScreen() {
             style={[
               styles.backBtn,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.07)' : alpha(theme.colors.text.primary, 0.03),
-                borderColor: theme.isDark ? 'rgba(255,255,255,0.14)' : theme.colors.border.subtle,
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               }
             ]} 
             onPress={() => router.back()} 
@@ -158,7 +158,7 @@ export default function NotificationsScreen() {
           <View style={[
             styles.unreadPill,
             {
-              borderColor: theme.isDark ? 'rgba(0,245,255,0.42)' : theme.colors.border.subtle,
+              borderColor: theme.isDark ? 'rgba(0,245,255,0.42)' : theme.colors.border.default,
             }
           ]}>
             <LinearGradient
@@ -211,8 +211,8 @@ export default function NotificationsScreen() {
                 style={[
                   styles.filterChip,
                   {
-                    borderColor: theme.isDark ? 'rgba(255,255,255,0.10)' : theme.colors.border.subtle,
-                    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : theme.colors.surface.subtle,
+                    borderColor: theme.colors.border.default,
+                    backgroundColor: theme.colors.surface.card,
                   },
                   selected && [styles.filterChipActive, { borderColor: theme.colors.brand.primary }]
                 ]}
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -513,13 +513,13 @@ const styles = StyleSheet.create({
   },
   headerEyebrow: {
     color: 'rgba(255,255,255,0.42)',
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 0,
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '900',
     marginTop: 5,
   },
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     height: 54,
     borderRadius: 18,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(0,245,255,0.42)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 16,
     backgroundColor: 'rgba(0,245,255,0.12)',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(0,245,255,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -570,11 +570,11 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
   },
   summaryText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '700',
     marginTop: 4,
   },
@@ -585,14 +585,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 13,
     backgroundColor: 'rgba(0,245,255,0.13)',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(0,245,255,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
   },
   markAllText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0,
   },
@@ -602,13 +602,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.m,
   },
   filterChip: {
-    height: 38,
-    minWidth: 74,
+    height: 40,
+    minWidth: 76,
     borderRadius: 14,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.10)',
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '900',
   },
   filterTextActive: {
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '800',
     letterSpacing: 0,
   },
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -700,14 +700,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   typeLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   notificationTime: {
     color: 'rgba(255,255,255,0.36)',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0,
   },
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   notificationTitle: {
     flex: 1,
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   unreadDot: {
@@ -730,9 +730,9 @@ const styles = StyleSheet.create({
   },
   notificationMessage: {
     color: 'rgba(255,255,255,0.68)',
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '600',
-    lineHeight: 18,
+    lineHeight: 19,
     marginTop: 4,
   },
   expandToggle: {
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   expandToggleText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   footerRow: {
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: 'rgba(255,255,255,0.34)',
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 0,
   },
@@ -762,16 +762,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
-    paddingLeft: 9,
-    paddingRight: 6,
-    height: 24,
+    paddingLeft: 10,
+    paddingRight: 7,
+    height: 26,
     borderRadius: 9,
     backgroundColor: 'rgba(0,245,255,0.10)',
-    borderWidth: 1,
+    borderWidth: 1.4,
     borderColor: 'rgba(0,245,255,0.22)',
   },
   openHintText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 0,
   },

@@ -188,7 +188,7 @@ export function ReviewModal({
                 styles.modalCard,
                 {
                   backgroundColor: theme.isDark ? '#090C1F' : '#FFFFFF',
-                  borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.22)' : theme.colors.border.subtle,
+                  borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.35)' : theme.colors.border.default,
                   shadowColor: theme.colors.shadow.color,
                 },
               ]}
@@ -285,7 +285,7 @@ export function ReviewModal({
                         );
                       })}
                     </View>
-                    <Text style={[styles.ratingFeedbackLabel, { color: '#FFD700' }]}>
+                    <Text style={[styles.ratingFeedbackLabel, { color: theme.isDark ? '#FFD700' : '#D97706' }]}>
                       {ratingLabel}
                     </Text>
                   </View>
@@ -302,10 +302,10 @@ export function ReviewModal({
                             {
                               backgroundColor: isSelected
                                 ? alpha(colors.cyan, 0.16)
-                                : alpha(theme.colors.text.primary, 0.05),
+                                : theme.colors.surface.subtle,
                               borderColor: isSelected
-                                ? alpha(colors.cyan, 0.5)
-                                : alpha(theme.colors.text.primary, 0.1),
+                                ? alpha(colors.cyan, 0.65)
+                                : theme.colors.border.default,
                             },
                           ]}
                           onPress={() => handleTagToggle(tag)}
@@ -316,7 +316,7 @@ export function ReviewModal({
                               styles.tagText,
                               {
                                 color: isSelected ? colors.cyan : theme.colors.text.secondary,
-                                fontWeight: isSelected ? '700' : '500',
+                                fontWeight: isSelected ? '800' : '600',
                               },
                             ]}
                           >
@@ -333,7 +333,7 @@ export function ReviewModal({
                       styles.commentInput,
                       {
                         backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : theme.colors.surface.subtle,
-                        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.09)' : theme.colors.border.subtle,
+                        borderColor: theme.colors.border.default,
                         color: theme.colors.text.primary,
                       },
                     ]}
@@ -359,9 +359,9 @@ export function ReviewModal({
                       activeOpacity={0.84}
                     >
                       {isSubmitting ? (
-                        <ActivityIndicator size="small" color="#001014" />
+                        <ActivityIndicator size="small" color={theme.isDark ? '#0F172A' : '#FFFFFF'} />
                       ) : (
-                        <Text style={styles.submitBtnText}>
+                        <Text style={[styles.submitBtnText, { color: theme.isDark ? '#0F172A' : '#FFFFFF' }]}>
                           {t('transactionDetails.submitReview', 'Send Rating')}
                         </Text>
                       )}
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     borderRadius: 24,
-    borderWidth: 1.2,
+    borderWidth: 1.8,
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
@@ -430,14 +430,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(52, 199, 89, 0.14)',
   },
   successPillText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.2,
   },
   closeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -451,10 +451,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarShell: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1.6,
     overflow: 'hidden',
   },
   avatarImg: {
@@ -467,34 +467,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
   },
   workerMeta: {
     flex: 1,
   },
   workerName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
   },
   workerCategory: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     marginTop: 1,
   },
   modalTitle: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '900',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 4,
   },
   modalSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13.5,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 17,
+    lineHeight: 18,
   },
   starsWrapper: {
     alignItems: 'center',
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   ratingFeedbackLabel: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     marginTop: 2,
   },
@@ -522,22 +522,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tagChip: {
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 12,
   },
   commentInput: {
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 13,
+    fontSize: 14,
     textAlignVertical: 'top',
-    minHeight: 64,
+    minHeight: 68,
     marginBottom: 16,
   },
   actionRow: {
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     width: '100%',
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     color: '#001014',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.2,
   },
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   skipBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
 });

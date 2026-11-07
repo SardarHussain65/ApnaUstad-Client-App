@@ -14,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { Bid, Job } from '../../hooks/queries/useMessagesAndJobs';
+import { cleanAddressString } from '../../hooks/useUserLocation';
 import { alpha, BorderRadius, useTheme, useThemeColors, useThemeTypography, useThemeShadows, getAccessibleColor } from '../../constants/Theme';
 import { useIsRTL } from '../../context/LanguageContext';
 
@@ -80,16 +81,16 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const rawTimeLabel = meta?.schedule?.timeLabel || job?.scheduledTime || 'ASAP';
   const timeLabel = rawTimeLabel === 'ASAP' ? t('common.asap', 'Right Away') : rawTimeLabel;
 
-  // Clean location by stripping Google plus codes (e.g. "J3VF+58W, Rawalpindi" -> "Rawalpindi")
+  // Clean location by stripping Google plus codes & raw lat/lng coordinates
   const rawAddress = meta?.location?.address || job?.address || '';
   const cleanLocation = useMemo(() => {
     if (!rawAddress) return t('incomingJobModal.serviceLocation', 'Nearby service area');
-    const cleaned = rawAddress.replace(/^[A-Z0-9]{4,8}\+[A-Z0-9]{2,4},\s*/i, '').trim();
+    const cleaned = cleanAddressString(rawAddress);
     const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
     if (parts.length > 2) {
       return `${parts[0]}, ${parts[parts.length - 1]}`;
     }
-    return cleaned || rawAddress;
+    return cleaned || t('incomingJobModal.serviceLocation', 'Nearby service area');
   }, [rawAddress, t]);
 
   const amountText = meta?.financial?.amountText || `Rs. ${Number(bid.proposedPrice || job?.amount || bid.amount || 0).toLocaleString()}`;
@@ -102,11 +103,11 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
   const ChevronIcon = isRTL ? ChevronLeft : ChevronRight;
 
   const cardBorderColor = theme.isDark
-    ? alpha(accentColor, 0.32)
-    : 'rgba(15, 23, 42, 0.20)';
+    ? alpha(accentColor, 0.48)
+    : alpha(accentColor, 0.65);
 
   const cardBg = theme.isDark
-    ? alpha(theme.colors.background.screen, 0.92)
+    ? '#131C31'
     : '#FFFFFF';
 
   const gradientColors: [string, string, string] = [
@@ -256,17 +257,17 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderWidth: 1.8,
     marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginBottom: 9,
+    marginBottom: 10,
   },
   titleArea: {
     flex: 1,
@@ -276,21 +277,21 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   serviceTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
     flexShrink: 1,
   },
   urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.4,
   },
   urgentBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -299,13 +300,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    paddingHorizontal: 8,
+    borderWidth: 1.4,
+    paddingHorizontal: 9,
     paddingVertical: 4,
     flexShrink: 0,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   middleRow: {
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 7,
+    marginBottom: 8,
   },
   customerGroup: {
     flexDirection: 'row',
@@ -323,10 +324,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   avatarShell: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 1,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    borderWidth: 1.5,
     overflow: 'hidden',
     backgroundColor: alpha('#fff', 0.05),
   },
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   customerMeta: {
@@ -348,11 +349,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   customerName: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
   },
   customerHistory: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '600',
     marginTop: 1,
   },
@@ -363,8 +364,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   scheduleText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
   },
   scheduleDot: {
     width: 3,
@@ -373,8 +374,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   descriptionText: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '500',
     marginBottom: 8,
   },
@@ -382,8 +383,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
-    borderTopWidth: 1,
+    paddingTop: 9,
+    borderTopWidth: 1.2,
     gap: 10,
   },
   locationGroup: {
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   footerRight: {
@@ -407,12 +408,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceLabel: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   priceValue: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '900',
   },
 });

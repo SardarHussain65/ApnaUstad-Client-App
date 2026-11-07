@@ -68,7 +68,7 @@ const createStyles = (theme: AppTheme) => {
   const PURPLE = theme.legacy.purple;
 
   const surfaceBg = isDark ? theme.colors.surface.card : '#FFFFFF';
-  const borderCol = isDark ? theme.colors.border.subtle : 'rgba(15, 23, 42, 0.16)';
+  const borderCol = theme.colors.border.default;
   const textPrimary = theme.colors.text.primary;
   const textSecondary = theme.colors.text.secondary;
   const textMuted = theme.colors.text.muted;
@@ -91,13 +91,13 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: alpha(ORANGE, 0.12),
-      borderWidth: 1,
-      borderColor: alpha(ORANGE, 0.32),
+      borderWidth: 1.5,
+      borderColor: alpha(ORANGE, 0.36),
       marginBottom: 4,
     },
     loadingText: {
       color: textMuted,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '800',
     },
     emptyState: {
@@ -110,8 +110,8 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: alpha(ORANGE, 0.12),
-      borderWidth: 1,
-      borderColor: alpha(ORANGE, 0.3),
+      borderWidth: 1.5,
+      borderColor: alpha(ORANGE, 0.34),
     },
     emptyTitle: {
       color: textPrimary,
@@ -121,8 +121,8 @@ const createStyles = (theme: AppTheme) => {
     },
     emptyText: {
       color: textSecondary,
-      fontSize: 14,
-      lineHeight: 21,
+      fontSize: 15,
+      lineHeight: 22,
       textAlign: 'center',
     },
     backHomeButton: {
@@ -136,7 +136,7 @@ const createStyles = (theme: AppTheme) => {
     },
     backHomeText: {
       color: theme.colors.button.primaryText,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '900',
     },
     header: {
@@ -144,7 +144,7 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       paddingHorizontal: Spacing.m,
       paddingBottom: 13,
-      borderBottomWidth: 1,
+      borderBottomWidth: 1.5,
       borderBottomColor: borderCol,
     },
     headerButton: {
@@ -153,21 +153,22 @@ const createStyles = (theme: AppTheme) => {
       borderRadius: 15,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
+      borderWidth: 1.6,
       borderColor: borderCol,
+      backgroundColor: surfaceBg,
     },
     headerCopy: {
       flex: 1,
       alignItems: 'center',
     },
     headerEyebrow: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     headerTitle: {
       color: textPrimary,
-      fontSize: 19,
+      fontSize: 20,
       fontWeight: '900',
       marginTop: 3,
     },
@@ -191,9 +192,9 @@ const createStyles = (theme: AppTheme) => {
       top: 16,
       bottom: 16,
       left: 0,
-      width: 3,
-      borderTopRightRadius: 3,
-      borderBottomRightRadius: 3,
+      width: 4,
+      borderTopRightRadius: 4,
+      borderBottomRightRadius: 4,
       backgroundColor: ORANGE,
     },
     heroTopRow: {
@@ -207,16 +208,16 @@ const createStyles = (theme: AppTheme) => {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 9,
+      paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: BorderRadius.full,
-      borderWidth: 1,
-      borderColor: alpha(ORANGE, 0.34),
-      backgroundColor: alpha(ORANGE, 0.12),
+      borderWidth: 1.4,
+      borderColor: alpha(ORANGE, 0.4),
+      backgroundColor: alpha(ORANGE, 0.14),
     },
     pendingBadgeText: {
       color: ORANGE,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
@@ -230,7 +231,7 @@ const createStyles = (theme: AppTheme) => {
     submittedBadgeText: {
       flexShrink: 1,
       color: CYAN,
-      fontSize: 10,
+      fontSize: 11.5,
       fontWeight: '800',
       textAlign: 'right',
     },
@@ -245,9 +246,9 @@ const createStyles = (theme: AppTheme) => {
       borderRadius: 19,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: alpha(CYAN, 0.08),
-      borderWidth: 1,
-      borderColor: alpha(CYAN, 0.2),
+      backgroundColor: alpha(CYAN, 0.1),
+      borderWidth: 1.5,
+      borderColor: alpha(CYAN, 0.28),
     },
     heroTitleCopy: {
       flex: 1,
@@ -255,7 +256,7 @@ const createStyles = (theme: AppTheme) => {
     },
     heroLabel: {
       color: CYAN,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
@@ -267,8 +268,8 @@ const createStyles = (theme: AppTheme) => {
     },
     heroDescription: {
       color: textSecondary,
-      fontSize: 13,
-      lineHeight: 18,
+      fontSize: 14.5,
+      lineHeight: 21,
       fontWeight: '600',
       marginTop: 6,
     },
@@ -284,13 +285,13 @@ const createStyles = (theme: AppTheme) => {
     },
     heroValueLabel: {
       color: textDim,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     heroValue: {
       color: GREEN,
-      fontSize: 23,
+      fontSize: 24,
       fontWeight: '900',
       marginTop: 4,
     },
@@ -299,15 +300,15 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       gap: 5,
       borderRadius: BorderRadius.full,
-      borderWidth: 1,
-      borderColor: alpha(GREEN, 0.25),
-      backgroundColor: alpha(GREEN, 0.08),
-      paddingHorizontal: 9,
+      borderWidth: 1.4,
+      borderColor: alpha(GREEN, 0.35),
+      backgroundColor: alpha(GREEN, 0.12),
+      paddingHorizontal: 10,
       paddingVertical: 7,
     },
     heroStatusText: {
       color: GREEN,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
@@ -326,42 +327,42 @@ const createStyles = (theme: AppTheme) => {
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1,
+      borderWidth: 1.5,
     },
     sectionHeadingCopy: {
       flex: 1,
     },
     sectionTitle: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     sectionSubtitle: {
       color: textDim,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '600',
-      lineHeight: 15,
+      lineHeight: 17,
       marginTop: 2,
     },
     detailGrid: {
       flexDirection: 'row',
-      gap: 7,
-      marginBottom: 9,
+      gap: 8,
+      marginBottom: 10,
     },
     detailPill: {
       flex: 1,
       minWidth: 0,
-      minHeight: 76,
+      minHeight: 80,
       justifyContent: 'center',
       borderRadius: BorderRadius.l,
-      borderWidth: 1,
+      borderWidth: 1.6,
       borderColor: borderCol,
       backgroundColor: theme.colors.surface.card,
-      padding: 9,
+      padding: 10,
     },
     detailPillIcon: {
-      width: 27,
-      height: 27,
+      width: 28,
+      height: 28,
       borderRadius: 9,
       alignItems: 'center',
       justifyContent: 'center',
@@ -372,13 +373,13 @@ const createStyles = (theme: AppTheme) => {
     },
     detailPillLabel: {
       color: textDim,
-      fontSize: 8,
+      fontSize: 9.5,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     detailPillValue: {
       color: textPrimary,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '800',
       marginTop: 3,
     },
@@ -396,21 +397,21 @@ const createStyles = (theme: AppTheme) => {
       borderRadius: 13,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: alpha(GREEN, 0.08),
+      backgroundColor: alpha(GREEN, 0.1),
     },
     locationCopy: {
       flex: 1,
     },
     locationLabel: {
       color: textDim,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     locationValue: {
       color: textPrimary,
-      fontSize: 13,
-      lineHeight: 18,
+      fontSize: 14.5,
+      lineHeight: 20,
       fontWeight: '800',
       marginTop: 4,
     },
@@ -424,8 +425,8 @@ const createStyles = (theme: AppTheme) => {
       height: 56,
       borderRadius: 19,
       padding: 3,
-      borderWidth: 1.5,
-      borderColor: alpha(ORANGE, 0.35),
+      borderWidth: 1.6,
+      borderColor: alpha(ORANGE, 0.4),
       backgroundColor: alpha(theme.colors.text.primary, 0.03),
     },
     avatarImage: {
@@ -441,7 +442,7 @@ const createStyles = (theme: AppTheme) => {
     },
     avatarText: {
       color: textPrimary,
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '900',
     },
     clientCopy: {
@@ -450,32 +451,32 @@ const createStyles = (theme: AppTheme) => {
     },
     clientRole: {
       color: ORANGE,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     clientName: {
       color: textPrimary,
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '900',
       marginTop: 3,
     },
     clientHistory: {
       color: textSecondary,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '600',
       marginTop: 4,
     },
     profileCue: {
-      height: 36,
-      minWidth: 45,
+      height: 38,
+      minWidth: 46,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 13,
-      borderWidth: 1,
-      borderColor: alpha(CYAN, 0.2),
-      backgroundColor: alpha(CYAN, 0.08),
+      borderWidth: 1.5,
+      borderColor: alpha(CYAN, 0.28),
+      backgroundColor: alpha(CYAN, 0.1),
     },
     mediaRail: {
       gap: 10,
@@ -484,8 +485,8 @@ const createStyles = (theme: AppTheme) => {
       height: 188,
       overflow: 'hidden',
       borderRadius: BorderRadius.l,
-      borderWidth: 1,
-      borderColor: alpha(PURPLE, 0.34),
+      borderWidth: 1.6,
+      borderColor: alpha(PURPLE, 0.4),
       backgroundColor: surfaceBg,
     },
     mediaImage: {
@@ -501,12 +502,12 @@ const createStyles = (theme: AppTheme) => {
     },
     videoTitle: {
       color: textPrimary,
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '900',
     },
     videoHint: {
       color: textSecondary,
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '700',
     },
     mediaFooter: {
@@ -533,7 +534,7 @@ const createStyles = (theme: AppTheme) => {
     },
     mediaTypeText: {
       color: '#FFFFFF',
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
@@ -559,13 +560,13 @@ const createStyles = (theme: AppTheme) => {
     },
     proposalLabel: {
       color: textDim,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       textTransform: 'uppercase',
       textAlign: 'center',
     },
     proposalValue: {
-      fontSize: 18,
+      fontSize: 19,
       fontWeight: '900',
       marginTop: 5,
       textAlign: 'center',
@@ -583,14 +584,14 @@ const createStyles = (theme: AppTheme) => {
     },
     messageLabel: {
       color: CYAN,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     messageText: {
       color: textSecondary,
-      fontSize: 13,
-      lineHeight: 20,
+      fontSize: 14.5,
+      lineHeight: 22,
       fontWeight: '600',
       marginTop: 7,
     },
@@ -628,7 +629,7 @@ const createStyles = (theme: AppTheme) => {
     },
     updateOfferText: {
       color: '#FFFFFF',
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '800',
       letterSpacing: 0.2,
     },
@@ -641,9 +642,9 @@ const createStyles = (theme: AppTheme) => {
       gap: 7,
       overflow: 'hidden',
       borderRadius: BorderRadius.l,
-      borderWidth: 1,
-      borderColor: alpha(RED, 0.34),
-      backgroundColor: isDark ? 'rgba(28,8,18,0.96)' : '#FFF5F5',
+      borderWidth: 1.6,
+      borderColor: alpha(RED, 0.45),
+      backgroundColor: isDark ? 'rgba(28,8,18,0.96)' : '#FEF2F2',
       paddingHorizontal: 10,
     },
     buttonDisabled: {
@@ -651,14 +652,14 @@ const createStyles = (theme: AppTheme) => {
     },
     withdrawTitle: {
       color: RED,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '800',
       textTransform: 'uppercase',
     },
     // Status Notice Card Styles
     statusNoticeCard: {
       borderRadius: BorderRadius.xl,
-      borderWidth: 1.2,
+      borderWidth: 1.6,
       padding: 14,
       gap: 12,
     },
@@ -670,26 +671,26 @@ const createStyles = (theme: AppTheme) => {
       justifyContent: 'center',
     },
     statusNoticeTitle: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '800',
       marginBottom: 3,
     },
     statusNoticeBody: {
-      fontSize: 12,
-      lineHeight: 18,
+      fontSize: 13.5,
+      lineHeight: 20,
     },
     statusNoticeBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      paddingVertical: 10,
+      paddingVertical: 11,
       paddingHorizontal: 16,
       borderRadius: BorderRadius.l,
     },
     statusNoticeBtnText: {
       color: '#FFFFFF',
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '800',
     },
     // Update Rate Modal Styles
@@ -704,7 +705,7 @@ const createStyles = (theme: AppTheme) => {
     modalCard: {
       borderTopLeftRadius: BorderRadius.xl,
       borderTopRightRadius: BorderRadius.xl,
-      borderTopWidth: 1,
+      borderTopWidth: 1.8,
       padding: Spacing.l,
       paddingBottom: Spacing.xl,
     },
@@ -722,18 +723,18 @@ const createStyles = (theme: AppTheme) => {
       justifyContent: 'center',
     },
     modalTitle: {
-      fontSize: 17,
+      fontSize: 18,
       fontWeight: '900',
     },
     modalSubtitle: {
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '600',
       marginTop: 2,
     },
     modalCloseBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: alpha(textPrimary, 0.06),
@@ -750,12 +751,12 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
     },
     modalCompareLabel: {
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '700',
       textTransform: 'uppercase',
     },
     modalCompareVal: {
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '900',
       marginTop: 3,
     },
@@ -771,28 +772,28 @@ const createStyles = (theme: AppTheme) => {
     },
     modalChip: {
       flex: 1,
-      paddingVertical: 9,
+      paddingVertical: 10,
       borderRadius: BorderRadius.m,
-      borderWidth: 1,
+      borderWidth: 1.5,
       alignItems: 'center',
       justifyContent: 'center',
     },
     modalChipText: {
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '800',
     },
     modalInputWrap: {
       flexDirection: 'row',
       alignItems: 'center',
       borderRadius: BorderRadius.m,
-      borderWidth: 1.5,
+      borderWidth: 1.8,
       backgroundColor: alpha(textPrimary, 0.04),
       paddingHorizontal: 14,
-      height: 52,
+      height: 54,
       marginBottom: 12,
     },
     modalInputPrefix: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '900',
       marginRight: 10,
     },
@@ -1438,97 +1439,6 @@ export default function PendingBidDetailsScreen() {
             </GlassCard>
           </Animated.View>
 
-          {/* Prominent Status Callout Banners */}
-          {isHiredOther && (
-            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
-              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.orange || '#F59E0B', 0.35), backgroundColor: alpha(colors.orange || '#F59E0B', 0.07) }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.orange || '#F59E0B', 0.16) }]}>
-                    <BriefcaseBusiness size={22} color={colors.orange || '#F59E0B'} strokeWidth={2.4} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.statusNoticeTitle, { color: theme.colors.text.primary }]}>
-                      Customer Hired Another Ustad
-                    </Text>
-                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
-                      The customer accepted another proposal for this service request. This offer has been closed. Keep an eye on the Live Radar for new nearby jobs!
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[styles.statusNoticeBtn, { backgroundColor: colors.cyan }]}
-                  onPress={() => router.replace('/(tabs)')}
-                  activeOpacity={0.84}
-                >
-                  <Radio size={15} color="#001014" strokeWidth={2.4} />
-                  <Text style={[styles.statusNoticeBtnText, { color: '#001014' }]}>View Open Jobs on Radar</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
-
-          {isJobCancelled && (
-            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
-              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.error || '#EF4444', 0.35), backgroundColor: alpha(colors.error || '#EF4444', 0.07) }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.error || '#EF4444', 0.16) }]}>
-                    <X size={22} color={colors.error || '#EF4444'} strokeWidth={2.4} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.statusNoticeTitle, { color: colors.error || '#EF4444' }]}>
-                      Job Request Cancelled
-                    </Text>
-                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
-                      The customer cancelled this service request. Your offer has been automatically closed.
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[styles.statusNoticeBtn, { backgroundColor: colors.cyan }]}
-                  onPress={() => router.replace('/(tabs)')}
-                  activeOpacity={0.84}
-                >
-                  <Radio size={15} color="#001014" strokeWidth={2.4} />
-                  <Text style={[styles.statusNoticeBtnText, { color: '#001014' }]}>Return to Live Radar</Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
-
-          {isWon && (
-            <Animated.View entering={FadeInDown.duration(360)} style={{ marginTop: 14 }}>
-              <View style={[styles.statusNoticeCard, { borderColor: alpha(colors.green || '#10B981', 0.4), backgroundColor: alpha(colors.green || '#10B981', 0.08) }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                  <View style={[styles.statusNoticeIcon, { backgroundColor: alpha(colors.green || '#10B981', 0.16) }]}>
-                    <CheckCircle2 size={22} color={colors.green || '#10B981'} strokeWidth={2.4} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.statusNoticeTitle, { color: colors.green || '#10B981' }]}>
-                      You Were Hired! 🎉
-                    </Text>
-                    <Text style={[styles.statusNoticeBody, { color: theme.colors.text.secondary }]}>
-                      The customer accepted your proposal. Tap below to navigate directly to your active booking details!
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={[styles.statusNoticeBtn, { backgroundColor: colors.green || '#10B981' }]}
-                  onPress={() => {
-                    const bId = (displayJob as any)?.bookingId || (displayJob as any)?.booking?._id;
-                    if (bId) {
-                      router.push({ pathname: '/transaction-details', params: { id: bId } });
-                    } else {
-                      router.replace('/(tabs)');
-                    }
-                  }}
-                  activeOpacity={0.84}
-                >
-                  <Text style={[styles.statusNoticeBtnText, { color: '#001014' }]}>Open Active Booking</Text>
-                  <ArrowRight size={15} color="#001014" strokeWidth={2.6} />
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          )}
 
           <Animated.View entering={FadeInDown.delay(70).duration(460)} style={styles.section}>
             <SectionHeader

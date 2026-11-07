@@ -76,12 +76,12 @@ const createStyles = (theme: AppTheme) => {
   const PURPLE = theme.legacy.purple;
 
   const surfaceBg = theme.colors.surface.card;
-  const borderCol = theme.colors.border.subtle;
+  const borderCol = theme.colors.border.default;
   const textPrimary = theme.colors.text.primary;
   const textSecondary = theme.colors.text.secondary;
   const textMuted = theme.colors.text.muted;
   const inputBg = theme.colors.input.background;
-  const inputBorder = theme.colors.input.border;
+  const inputBorder = theme.colors.border.default;
   const inputText = theme.colors.input.text;
 
   return StyleSheet.create({
@@ -101,9 +101,9 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 16,
-      backgroundColor: alpha(CYAN, 0.1),
-      borderWidth: 1,
-      borderColor: alpha(CYAN, 0.28),
+      backgroundColor: alpha(CYAN, 0.12),
+      borderWidth: 1.5,
+      borderColor: alpha(CYAN, 0.34),
     },
     loadingTitle: {
       color: textPrimary,
@@ -114,8 +114,8 @@ const createStyles = (theme: AppTheme) => {
     },
     loadingText: {
       color: textSecondary,
-      fontSize: 13,
-      lineHeight: 19,
+      fontSize: 14,
+      lineHeight: 20,
       textAlign: 'center',
       fontWeight: '600',
     },
@@ -125,12 +125,12 @@ const createStyles = (theme: AppTheme) => {
       paddingVertical: 11,
       borderRadius: 8,
       backgroundColor: alpha(CYAN, 0.12),
-      borderWidth: 1,
-      borderColor: alpha(CYAN, 0.3),
+      borderWidth: 1.5,
+      borderColor: alpha(CYAN, 0.34),
     },
     returnButtonText: {
       color: CYAN,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '900',
     },
     header: {
@@ -141,44 +141,44 @@ const createStyles = (theme: AppTheme) => {
       paddingHorizontal: 16,
       paddingBottom: 10,
       overflow: 'hidden',
-      borderBottomWidth: 1,
+      borderBottomWidth: 1.5,
       borderBottomColor: borderCol,
     },
     backButton: {
-      width: 42,
-      height: 42,
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: isDark ? 'rgba(255,255,255,0.13)' : theme.colors.border.subtle,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.colors.text.primary, 0.03),
+      borderRadius: 10,
+      borderWidth: 1.6,
+      borderColor: borderCol,
+      backgroundColor: surfaceBg,
     },
     headerCopy: {
       flex: 1,
     },
     headerEyebrow: {
       color: textMuted,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       marginBottom: 3,
     },
     headerTitle: {
       color: textPrimary,
-      fontSize: 20,
+      fontSize: 21,
       fontWeight: '900',
     },
     headerBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      paddingHorizontal: 9,
+      paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 999,
-      borderWidth: 1,
+      borderWidth: 1.5,
     },
     headerBadgeText: {
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
     },
     scrollContent: {
@@ -190,8 +190,8 @@ const createStyles = (theme: AppTheme) => {
     surface: {
       position: 'relative',
       overflow: 'hidden',
-      borderRadius: 14,
-      borderWidth: 1,
+      borderRadius: 16,
+      borderWidth: 1.8,
       backgroundColor: surfaceBg,
     },
     requestSurface: {
@@ -208,7 +208,7 @@ const createStyles = (theme: AppTheme) => {
       flex: 1,
     },
     requestEyebrow: {
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       marginBottom: 5,
     },
@@ -223,26 +223,26 @@ const createStyles = (theme: AppTheme) => {
       gap: 7,
       paddingHorizontal: 10,
       paddingVertical: 8,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: alpha(GREEN, 0.24),
-      backgroundColor: alpha(GREEN, 0.08),
+      borderRadius: 9,
+      borderWidth: 1.5,
+      borderColor: alpha(GREEN, 0.34),
+      backgroundColor: alpha(GREEN, 0.1),
     },
     budgetLabel: {
       color: textMuted,
-      fontSize: 8,
+      fontSize: 9.5,
       fontWeight: '900',
       marginBottom: 2,
     },
     budgetValue: {
       color: GREEN,
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '900',
     },
     requestDescription: {
       color: textSecondary,
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 15,
+      lineHeight: 22,
       fontWeight: '600',
       marginBottom: 15,
     },
@@ -264,13 +264,13 @@ const createStyles = (theme: AppTheme) => {
     },
     factLabel: {
       color: textMuted,
-      fontSize: 8,
+      fontSize: 9.5,
       fontWeight: '900',
       marginBottom: 3,
     },
     factValue: {
       color: textPrimary,
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '800',
     },
     factDivider: {
@@ -287,8 +287,8 @@ const createStyles = (theme: AppTheme) => {
     locationText: {
       flex: 1,
       color: textSecondary,
-      fontSize: 12,
-      lineHeight: 17,
+      fontSize: 13.5,
+      lineHeight: 19,
       fontWeight: '700',
     },
     evidenceSection: {
@@ -305,21 +305,21 @@ const createStyles = (theme: AppTheme) => {
       marginBottom: 12,
     },
     sectionIcon: {
-      width: 28,
-      height: 28,
+      width: 30,
+      height: 30,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
-      borderWidth: 1,
+      borderRadius: 9,
+      borderWidth: 1.5,
     },
     sectionTitle: {
       flex: 1,
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '900',
     },
     sectionDetail: {
       color: textMuted,
-      fontSize: 10,
+      fontSize: 11.5,
       fontWeight: '800',
     },
     evidenceList: {
@@ -330,8 +330,8 @@ const createStyles = (theme: AppTheme) => {
       height: 82,
       overflow: 'hidden',
       borderRadius: 8,
-      borderWidth: 1,
-      borderColor: alpha(PURPLE, 0.32),
+      borderWidth: 1.5,
+      borderColor: alpha(PURPLE, 0.38),
       backgroundColor: alpha(PURPLE, 0.1),
     },
     evidenceImage: {
@@ -351,7 +351,7 @@ const createStyles = (theme: AppTheme) => {
     },
     evidenceIndexText: {
       color: '#FFFFFF',
-      fontSize: 10,
+      fontSize: 10.5,
       fontWeight: '900',
     },
     evidenceExpand: {
@@ -374,7 +374,7 @@ const createStyles = (theme: AppTheme) => {
     },
     videoTileText: {
       color: PURPLE,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
     },
     audioTile: {
@@ -383,12 +383,12 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      borderColor: alpha(ORANGE, 0.34),
+      borderColor: alpha(ORANGE, 0.38),
       backgroundColor: alpha(ORANGE, 0.1),
     },
     audioTileText: {
       color: ORANGE,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: '900',
     },
     previewBackdrop: {
@@ -428,26 +428,26 @@ const createStyles = (theme: AppTheme) => {
     clientAvatar: {
       width: 50,
       height: 50,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: alpha(GREEN, 0.35),
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: alpha(GREEN, 0.4),
     },
     clientAvatarFallback: {
       width: 50,
       height: 50,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: alpha(GREEN, 0.28),
-      backgroundColor: alpha(GREEN, 0.09),
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: alpha(GREEN, 0.34),
+      backgroundColor: alpha(GREEN, 0.12),
     },
     clientCopy: {
       flex: 1,
     },
     clientName: {
       color: textPrimary,
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '900',
       marginBottom: 5,
     },
@@ -458,26 +458,26 @@ const createStyles = (theme: AppTheme) => {
     },
     clientStatusText: {
       color: textSecondary,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '700',
     },
     reliabilityBadge: {
       alignItems: 'center',
       paddingHorizontal: 10,
       paddingVertical: 7,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: alpha(GREEN, 0.22),
-      backgroundColor: alpha(GREEN, 0.07),
+      borderRadius: 9,
+      borderWidth: 1.5,
+      borderColor: alpha(GREEN, 0.32),
+      backgroundColor: alpha(GREEN, 0.1),
     },
     reliabilityValue: {
       color: GREEN,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '900',
     },
     reliabilityLabel: {
       color: textMuted,
-      fontSize: 8,
+      fontSize: 9.5,
       fontWeight: '900',
       marginTop: 2,
     },
@@ -489,14 +489,14 @@ const createStyles = (theme: AppTheme) => {
     },
     instantText: {
       color: textSecondary,
-      fontSize: 13,
-      lineHeight: 19,
+      fontSize: 14,
+      lineHeight: 20,
       fontWeight: '600',
       marginBottom: 14,
     },
     formLabel: {
       color: textMuted,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '900',
       marginBottom: 7,
     },
@@ -507,22 +507,22 @@ const createStyles = (theme: AppTheme) => {
     },
     quoteSuggestion: {
       flex: 1,
-      minHeight: 38,
+      minHeight: 40,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 5,
-      borderRadius: 8,
-      borderWidth: 1,
+      borderRadius: 9,
+      borderWidth: 1.5,
       borderColor: inputBorder,
       backgroundColor: alpha(theme.colors.text.primary, 0.035),
     },
     quoteSuggestionSelected: {
-      borderColor: alpha(CYAN, 0.42),
-      backgroundColor: alpha(CYAN, 0.12),
+      borderColor: CYAN,
+      backgroundColor: alpha(CYAN, 0.14),
     },
     quoteSuggestionText: {
       color: textSecondary,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '800',
     },
     quoteSuggestionTextSelected: {
@@ -536,19 +536,19 @@ const createStyles = (theme: AppTheme) => {
     },
     quickNoteChip: {
       paddingHorizontal: 10,
-      paddingVertical: 7,
-      borderRadius: 8,
-      borderWidth: 1,
+      paddingVertical: 8,
+      borderRadius: 9,
+      borderWidth: 1.5,
       borderColor: inputBorder,
       backgroundColor: alpha(theme.colors.text.primary, 0.035),
     },
     quickNoteChipSelected: {
-      borderColor: alpha(CYAN, 0.42),
-      backgroundColor: alpha(CYAN, 0.12),
+      borderColor: CYAN,
+      backgroundColor: alpha(CYAN, 0.14),
     },
     quickNoteText: {
       color: textSecondary,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '700',
     },
     quickNoteTextSelected: {
@@ -567,25 +567,25 @@ const createStyles = (theme: AppTheme) => {
       flex: 1,
     },
     inputShell: {
-      minHeight: 50,
+      minHeight: 52,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      paddingHorizontal: 11,
-      borderRadius: 8,
-      borderWidth: 1,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1.6,
       borderColor: inputBorder,
       backgroundColor: inputBg,
     },
     inputPrefix: {
       color: GREEN,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '900',
     },
     input: {
       flex: 1,
       color: inputText,
-      fontSize: 14,
+      fontSize: 15.5,
       fontWeight: '700',
     },
     messageShell: {
@@ -599,14 +599,14 @@ const createStyles = (theme: AppTheme) => {
     },
     messageInput: {
       minHeight: 80,
-      lineHeight: 19,
+      lineHeight: 20,
     },
     messageCount: {
       position: 'absolute',
       right: 9,
       bottom: 7,
       color: textMuted,
-      fontSize: 9,
+      fontSize: 10,
       fontWeight: '800',
     },
     settlementBlock: {
@@ -624,13 +624,13 @@ const createStyles = (theme: AppTheme) => {
     },
     settlementTitle: {
       color: textPrimary,
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '900',
     },
     settlementHint: {
       flex: 1,
       color: textMuted,
-      fontSize: 9,
+      fontSize: 10.5,
       textAlign: 'right',
       fontWeight: '700',
     },
@@ -648,12 +648,12 @@ const createStyles = (theme: AppTheme) => {
     },
     settlementLabel: {
       color: textMuted,
-      fontSize: 8,
+      fontSize: 9.5,
       fontWeight: '900',
       marginBottom: 5,
     },
     settlementValue: {
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '900',
     },
     walletStrip: {
@@ -662,38 +662,38 @@ const createStyles = (theme: AppTheme) => {
       alignItems: 'center',
       gap: 10,
       padding: 12,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: alpha(GREEN, 0.22),
-      backgroundColor: alpha(GREEN, 0.07),
+      borderRadius: 12,
+      borderWidth: 1.6,
+      borderColor: alpha(GREEN, 0.34),
+      backgroundColor: alpha(GREEN, 0.08),
     },
     walletStripBlocked: {
-      borderColor: alpha(RED, 0.24),
-      backgroundColor: alpha(RED, 0.07),
+      borderColor: alpha(RED, 0.36),
+      backgroundColor: alpha(RED, 0.08),
     },
     walletStripCopy: {
       flex: 1,
     },
     walletStripTitle: {
       color: textPrimary,
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '900',
       marginBottom: 4,
     },
     walletStripText: {
       color: textSecondary,
-      fontSize: 10,
+      fontSize: 11.5,
       fontWeight: '700',
     },
     topUpButton: {
-      paddingHorizontal: 10,
-      paddingVertical: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
       borderRadius: 8,
       backgroundColor: RED,
     },
     topUpButtonText: {
       color: '#FFFFFF',
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '900',
     },
     actionDock: {
@@ -710,13 +710,13 @@ const createStyles = (theme: AppTheme) => {
       left: 0,
       right: 0,
       top: 0,
-      height: 1,
+      height: 1.5,
       backgroundColor: borderCol,
     },
     submitButton: {
       minHeight: 62,
       overflow: 'hidden',
-      borderRadius: 10,
+      borderRadius: 12,
     },
     submitButtonDisabled: {
       opacity: 0.5,
@@ -733,19 +733,19 @@ const createStyles = (theme: AppTheme) => {
       flex: 1,
     },
     submitTitle: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '900',
       marginBottom: 3,
     },
     submitSubtitle: {
-      fontSize: 10,
+      fontSize: 11.5,
       fontWeight: '800',
     },
     modeToggleRow: {
       flexDirection: 'row',
-      backgroundColor: alpha(surfaceBg, 0.5),
+      backgroundColor: surfaceBg,
       borderRadius: 14,
-      borderWidth: 1,
+      borderWidth: 1.6,
       borderColor: borderCol,
       padding: 4,
       marginBottom: 12,
@@ -764,11 +764,11 @@ const createStyles = (theme: AppTheme) => {
       backgroundColor: CYAN,
     },
     modeToggleText: {
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '800',
     },
     modeToggleTextActive: {
-      color: '#000',
+      color: isDark ? '#000000' : '#FFFFFF',
       fontWeight: '900',
     },
     switchOfferLink: {
@@ -783,7 +783,7 @@ const createStyles = (theme: AppTheme) => {
     },
     switchOfferLinkText: {
       color: CYAN,
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: '800',
     },
     quickIncrementsRow: {
@@ -793,9 +793,9 @@ const createStyles = (theme: AppTheme) => {
     },
     quickIncrementChip: {
       flex: 1,
-      paddingVertical: 8,
+      paddingVertical: 9,
       borderRadius: 9,
-      borderWidth: 1,
+      borderWidth: 1.5,
       alignItems: 'center',
       justifyContent: 'center',
       borderColor: alpha(CYAN, 0.35),
@@ -803,7 +803,7 @@ const createStyles = (theme: AppTheme) => {
     },
     quickIncrementText: {
       color: CYAN,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '900',
     },
     dockButtonRow: {
@@ -813,10 +813,10 @@ const createStyles = (theme: AppTheme) => {
     },
     dockSecondaryBtn: {
       minHeight: 62,
-      borderRadius: 10,
-      borderWidth: 1.2,
-      borderColor: alpha(CYAN, 0.45),
-      backgroundColor: alpha(surfaceBg, 0.7),
+      borderRadius: 12,
+      borderWidth: 1.6,
+      borderColor: alpha(CYAN, 0.5),
+      backgroundColor: surfaceBg,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 14,
@@ -824,13 +824,13 @@ const createStyles = (theme: AppTheme) => {
     },
     dockSecondaryBtnText: {
       color: CYAN,
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: '900',
       textTransform: 'uppercase',
     },
     dockSecondaryBtnSub: {
       color: textMuted,
-      fontSize: 9,
+      fontSize: 10.5,
       fontWeight: '700',
     },
   });
@@ -858,8 +858,8 @@ function Surface({
       ];
 
   const borderColor = theme.id === 'current'
-    ? `${resolvedAccent}38`
-    : alpha(resolvedAccent, theme.id === 'light' ? 0.18 : 0.28);
+    ? `${resolvedAccent}42`
+    : theme.colors.border.default;
 
   return (
     <View style={[styles.surface, { borderColor, backgroundColor: theme.colors.surface.card }, style]}>

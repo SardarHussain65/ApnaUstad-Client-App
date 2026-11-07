@@ -219,7 +219,7 @@ export function RaiseDisputeModal({ visible, onClose, bookingId, jobAmount = 0, 
                       {
                         borderColor: active
                           ? theme.colors.brand.primary
-                          : (theme.isDark ? 'rgba(255, 255, 255, 0.12)' : theme.colors.border.default),
+                          : theme.colors.border.default,
                         backgroundColor: active
                           ? alpha(theme.colors.brand.primary, theme.isDark ? 0.2 : 0.14)
                           : (theme.isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC'),
@@ -231,7 +231,7 @@ export function RaiseDisputeModal({ visible, onClose, bookingId, jobAmount = 0, 
                         styles.reasonChipText,
                         {
                           color: active ? theme.colors.brand.primary : theme.colors.text.secondary,
-                          fontWeight: active ? '800' : '600',
+                          fontWeight: active ? '800' : '700',
                         },
                       ]}
                     >
@@ -259,7 +259,7 @@ export function RaiseDisputeModal({ visible, onClose, bookingId, jobAmount = 0, 
                 styles.input,
                 {
                   color: theme.colors.text.primary,
-                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : theme.colors.border.default,
+                  borderColor: theme.colors.border.default,
                   backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : '#FFFFFF',
                 },
               ]}
@@ -278,7 +278,7 @@ export function RaiseDisputeModal({ visible, onClose, bookingId, jobAmount = 0, 
               style={[
                 styles.uploadBtn,
                 {
-                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.12)' : theme.colors.border.default,
+                  borderColor: theme.colors.border.default,
                   backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
                 },
               ]}
@@ -374,14 +374,14 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'flex-start',
   },
   infoText: {
     flex: 1,
-    fontSize: 12.5,
-    lineHeight: 18,
-    fontWeight: '500',
+    fontSize: 13.5,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   stepsRow: {
     flexDirection: 'row',
@@ -394,49 +394,49 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   stepDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDotText: {
     fontWeight: '900',
-    fontSize: 12,
+    fontSize: 13,
   },
   stepLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
   },
   amountBanner: {
-    borderWidth: 1.2,
+    borderWidth: 1.6,
     borderRadius: 14,
     padding: 14,
   },
   amountLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   amountValue: {
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: '900',
     marginTop: 2,
     letterSpacing: -0.3,
   },
   amountHint: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     marginTop: 3,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   sectionWrap: {
     gap: 8,
   },
   sectionHeading: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
@@ -447,39 +447,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reasonChip: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 999,
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     paddingVertical: 8,
   },
   reasonChipText: {
-    fontSize: 12,
+    fontSize: 13,
   },
   input: {
     minHeight: 100,
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderRadius: 14,
     padding: 12,
     textAlignVertical: 'top',
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 14.5,
+    lineHeight: 20,
   },
   minCharsText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderRadius: 14,
-    padding: 12,
+    padding: 13,
   },
   uploadBtnText: {
-    fontWeight: '700',
-    fontSize: 13,
+    fontWeight: '800',
+    fontSize: 14,
   },
   thumbnailsRow: {
     flexDirection: 'row',
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 10,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   thumbnailImg: {
     width: '100%',
@@ -510,21 +510,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   proofHintText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   footer: {
     paddingTop: 10,
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
   },
   submitBtn: {
-    height: 48,
+    height: 50,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.3,
   },

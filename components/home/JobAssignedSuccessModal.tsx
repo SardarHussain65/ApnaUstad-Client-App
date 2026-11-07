@@ -32,7 +32,7 @@ export function JobAssignedSuccessModal({ visible, booking, onClose, onContinue 
         <Animated.View entering={FadeInDown.duration(260)} exiting={FadeOut.duration(160)} style={styles.container}>
           <GlassCard
             intensity={50}
-            style={[styles.card, { borderColor: theme.isDark ? 'rgba(0, 255, 127, 0.3)' : 'rgba(0, 168, 107, 0.25)' }]}
+            style={[styles.card, { borderColor: theme.isDark ? 'rgba(0, 255, 127, 0.4)' : theme.colors.border.default }]}
             padding={0}
             contentStyle={styles.glassContent}
           >
@@ -43,8 +43,8 @@ export function JobAssignedSuccessModal({ visible, booking, onClose, onContinue 
               style={StyleSheet.absoluteFill}
             />
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-              <X size={20} color={alpha(theme.colors.text.primary, 0.4)} />
+            <TouchableOpacity style={[styles.closeBtn, { backgroundColor: theme.colors.surface.subtle }]} onPress={onClose}>
+              <X size={20} color={theme.colors.text.muted} />
             </TouchableOpacity>
 
             <View style={styles.innerContent}>
@@ -67,23 +67,23 @@ export function JobAssignedSuccessModal({ visible, booking, onClose, onContinue 
                 {t('jobAssignedModal.title', 'JOB ASSIGNED TO YOU')}
               </Text>
 
-              <Text style={[styles.subtitle, { color: alpha(theme.colors.text.primary, 0.8) }]}>
+              <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
                 {t('jobAssignedModal.desc', 'This job has been assigned to you by {{clientName}} at your offered price!', { clientName })}
               </Text>
 
               <View style={[
                 styles.detailsBox,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.02)',
-                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'
+                  backgroundColor: theme.colors.surface.subtle,
+                  borderColor: theme.colors.border.default
                 }
               ]}>
                 <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('jobAssignedModal.serviceCategory', 'WORK TYPE:')}</Text>
+                  <Text style={[styles.detailLabel, { color: theme.colors.text.muted }]}>{t('jobAssignedModal.serviceCategory', 'WORK TYPE:')}</Text>
                   <Text style={[styles.detailVal, { color: theme.colors.text.primary }]}>{booking.category || t('jobDetails.defaultTitle', 'Home Service')}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, { color: alpha(theme.colors.text.primary, 0.4) }]}>{t('jobAssignedModal.agreedPrice', 'AGREED RATE:')}</Text>
+                  <Text style={[styles.detailLabel, { color: theme.colors.text.muted }]}>{t('jobAssignedModal.agreedPrice', 'AGREED RATE:')}</Text>
                   <Text style={[styles.detailVal, { color: theme.colors.text.primary, fontWeight: '900' }]}>
                     Rs. {Number(booking.totalAmount || booking.amount || booking.subtotal || 0).toLocaleString()}
                   </Text>
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 32,
-    borderWidth: 1,
+    borderWidth: 1.8,
     overflow: 'hidden',
   },
   glassContent: {
@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
     top: 20,
     right: 20,
     zIndex: 10,
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -176,30 +176,31 @@ const styles = StyleSheet.create({
     shadowRadius: 25,
   },
   eyebrow: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 4,
     marginBottom: 8,
     textAlign: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
     letterSpacing: 0.5,
     marginBottom: 16,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 19,
     marginBottom: 20,
     paddingHorizontal: 10,
   },
   detailsBox: {
     width: '100%',
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 1.6,
     padding: 16,
     marginBottom: 24,
     gap: 12,
@@ -210,12 +211,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   detailVal: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
   footerRow: {
@@ -223,10 +224,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 25,
-    opacity: 0.8,
+    opacity: 0.85,
   },
   securityTxt: {
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: '900',
     letterSpacing: 2,
   },
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
     letterSpacing: 1.5,
   },

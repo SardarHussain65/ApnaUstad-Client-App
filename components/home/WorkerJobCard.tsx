@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Zap, Calendar, MapPin, ChevronRight, Clock, Banknote } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { calculateDistance, formatDistanceKm } from '../../utils/mapUtils';
+import { cleanAddressString } from '../../hooks/useUserLocation';
 
 interface WorkerJobCardProps {
   job: any;
@@ -101,11 +102,11 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
             </View>
           </View>
 
-          <View style={styles.footerRow}>
+          <View style={[styles.footerRow, { borderTopColor: theme.colors.border.subtle }]}>
             <View style={styles.metaItem}>
-              <MapPin size={12} color={alpha(theme.colors.text.primary, 0.5)} />
-              <Text style={[styles.addressText, { color: alpha(theme.colors.text.primary, 0.5) }]} numberOfLines={1}>
-                {job.address || 'Location Hidden'}
+              <MapPin size={13} color={theme.colors.text.secondary} />
+              <Text style={[styles.addressText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
+                {cleanAddressString(job.address) || 'Location Hidden'}
               </Text>
             </View>
             
@@ -114,7 +115,7 @@ export const WorkerJobCard = React.memo(({ job, index, onPress, workerCoordinate
               <Text style={[styles.distanceText, { color: urgencyColor }]}>
                 {distance}
               </Text>
-              <ChevronRight size={14} color={alpha(theme.colors.text.primary, 0.3)} />
+              <ChevronRight size={15} color={theme.colors.text.secondary} />
             </View>
           </View>
         </View>
@@ -142,15 +143,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 12,
     gap: 6,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   urgencyText: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -158,8 +159,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   timeText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11.5,
+    fontWeight: '700',
   },
   mainContent: {
     flexDirection: 'row',
@@ -172,14 +173,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryText: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '900',
     marginBottom: 6,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   descriptionText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 13.5,
+    lineHeight: 19,
     fontWeight: '500',
   },
   budgetSection: {
@@ -188,22 +189,22 @@ const styles = StyleSheet.create({
   budgetBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 14,
     gap: 6,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   budgetText: {
     fontWeight: '900',
-    fontSize: 14,
+    fontSize: 14.5,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 12,
-    borderTopWidth: 1,
+    borderTopWidth: 1.2,
   },
   metaItem: {
     flexDirection: 'row',
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   addressText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '600',
   },
   distanceBadge: {
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   distanceText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
   },
 });

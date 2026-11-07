@@ -218,7 +218,7 @@ export function ConfirmModal({
               isConfirmLong && styles.cancelBtnCompact,
               {
                 backgroundColor: theme.colors.surface.subtle,
-                borderColor: theme.colors.border.subtle,
+                borderColor: theme.colors.border.default,
               },
             ]}
             onPress={onCancel}
@@ -226,7 +226,7 @@ export function ConfirmModal({
             activeOpacity={0.7}
           >
             <Text
-              style={[styles.cancelBtnText, { color: theme.colors.text.muted }]}
+              style={[styles.cancelBtnText, { color: theme.colors.text.secondary }]}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.8}
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     borderRadius: 28,
     zIndex: 1000,
-    borderWidth: 1,
+    borderWidth: 1.8,
     shadowOffset: { width: 0, height: 20 },
     shadowRadius: 40,
     elevation: 30,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: 16, zIndex: 10, height: 30,
   },
   modalTitle: {
-    fontSize: 14, fontWeight: '900',
+    fontSize: 15.5, fontWeight: '900',
     letterSpacing: 1.5, textAlign: 'center',
   },
   closeBtn: {
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     shadowRadius: 15, elevation: 20,
   },
   modalMessage: {
-    fontSize: 15, lineHeight: 22,
+    fontSize: 16, lineHeight: 23,
     textAlign: 'center',
     marginBottom: IS_SMALL_DEVICE ? 24 : 32,
     fontWeight: '600',
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   solidBtnText: {
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: '800',
     letterSpacing: 0.5,
     textAlign: 'center',
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 52,
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: 1.6,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     minWidth: 76,
   },
   cancelBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.5,
     textAlign: 'center',

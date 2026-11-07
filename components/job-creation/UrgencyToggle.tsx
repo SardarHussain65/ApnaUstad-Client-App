@@ -68,10 +68,10 @@ const styles = StyleSheet.create({
   toggleTrack: {
     flexDirection: 'row',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.6,
     padding: 4,
     position: 'relative',
-    height: 46,
+    height: 48,
   },
   toggleHighlight: {
     position: 'absolute',
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     bottom: 4,
     width: '50%',
     borderRadius: 11,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   toggleOption: {
     flex: 1,
@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   toggleText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     letterSpacing: 0.3,
   },
 });

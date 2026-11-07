@@ -135,18 +135,19 @@ const styles = StyleSheet.create({
   iconCircle: {
     flex: 1,
     borderRadius: 44,
-    borderWidth: 1,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 26,
     marginBottom: 6,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   subtitle: {
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '500',
   },
   formCard: {
     borderRadius: BorderRadius.l,

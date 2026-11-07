@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Search, X } from 'lucide-react-native';
-import { Spacing, BorderRadius, useTheme } from '../../constants/Theme';
+import { Spacing, useTheme } from '../../constants/Theme';
 import { useIsRTL } from '../../context/LanguageContext';
 
 interface SearchBarProps {
@@ -22,12 +22,10 @@ export const SearchBar = React.memo(function SearchBar({
   const [localText, setLocalText] = useState(value);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep local text in sync if parent clears or changes value externally
   useEffect(() => {
     setLocalText(value);
   }, [value]);
 
-  // Clean up debounce timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimer.current) {
@@ -44,7 +42,6 @@ export const SearchBar = React.memo(function SearchBar({
         clearTimeout(debounceTimer.current);
       }
 
-      // 120ms debounce prevents parent re-renders from interrupting native typing
       debounceTimer.current = setTimeout(() => {
         onChangeText(text);
       }, 120);
@@ -60,15 +57,12 @@ export const SearchBar = React.memo(function SearchBar({
     onChangeText('');
   }, [onChangeText]);
 
-  // Clean theme styling
-  const isDark = theme.isDark;
   const isHeader = variant === 'header';
-
-  const containerBg = isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.98)';
-  const borderColor = isDark ? 'rgba(0, 245, 255, 0.35)' : 'rgba(0, 0, 0, 0.14)';
-  const textColor = isDark ? '#FFFFFF' : '#0F172A';
-  const placeholderColor = isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(15, 23, 42, 0.45)';
-  const iconColor = isDark ? '#00F5FF' : theme.colors.brand.primary;
+  const containerBg = theme.colors.input.background;
+  const borderColor = theme.colors.input.border;
+  const textColor = theme.colors.input.text;
+  const placeholderColor = theme.colors.input.placeholder;
+  const iconColor = theme.colors.brand.primary;
 
   return (
     <View style={isHeader ? styles.headerContainer : styles.container}>
@@ -82,7 +76,7 @@ export const SearchBar = React.memo(function SearchBar({
           },
         ]}
       >
-        <Search size={18} color={iconColor} strokeWidth={2.2} />
+        <Search size={20} color={iconColor} strokeWidth={2.4} />
 
         <TextInput
           style={[
@@ -107,8 +101,13 @@ export const SearchBar = React.memo(function SearchBar({
             style={styles.clearBtn}
             activeOpacity={0.7}
           >
-            <View style={styles.clearBadge}>
-              <X size={12} color="#000" strokeWidth={2.5} />
+            <View
+              style={[
+                styles.clearBadge,
+                { backgroundColor: theme.colors.brand.primary },
+              ]}
+            >
+              <X size={13} color={theme.colors.text.onBrand} strokeWidth={2.5} />
             </View>
           </TouchableOpacity>
         )}
@@ -123,22 +122,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.l,
   },
   container: {
-    marginBottom: Spacing.l,
+    marginBottom: Spacing.m,
     marginHorizontal: Spacing.l,
   },
   inner: {
     alignItems: 'center',
-    paddingHorizontal: 14,
-    height: 48,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.2,
+    paddingHorizontal: 16,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 2,
   },
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '500',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 8 : 0,
   },
   clearBtn: {
@@ -147,10 +146,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clearBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#00F5FF',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { GlassCard } from '../components/home/GlassCard';
-import { useNearbyJobs, useUserLocation } from '../hooks';
+import { useNearbyJobs, useUserLocation, cleanAddressString } from '../hooks';
 import { useIncomingJob } from '../context/IncomingJobContext';
 
 const { width } = Dimensions.get('window');
@@ -50,18 +50,18 @@ export default function JobsNearbyScreen() {
           entering={SlideInDown.duration(400)}
           style={[styles.header, { paddingTop: insets.top + 12 }]}
         >
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
             <ChevronLeft color={theme.colors.text.primary} size={24} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, typography.threeD, { color: theme.colors.text.primary }]}>{t('jobsNearby.title').toUpperCase()}</Text>
-            <Text style={[styles.headerSub, { color: theme.colors.text.dim }]}>
+            <Text style={[styles.headerSub, { color: theme.colors.text.secondary }]}>
               {isLoading ? t('jobsNearby.scanning') : t('jobsNearby.activeOpportunities', { count: jobs.length })}
             </Text>
           </View>
 
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => refetch()}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} onPress={() => refetch()}>
             <Filter color={theme.colors.text.primary} size={20} />
           </TouchableOpacity>
         </Animated.View>
@@ -74,7 +74,7 @@ export default function JobsNearbyScreen() {
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color={theme.colors.brand.primary} size="large" />
-              <Text style={[styles.loadingText, { color: theme.colors.text.dim }]}>{t('jobsNearby.scanningLocalFrequency')}</Text>
+              <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>{t('jobsNearby.scanningLocalFrequency')}</Text>
             </View>
           ) : jobs.length > 0 ? (
             <View style={styles.list}>
@@ -84,8 +84,8 @@ export default function JobsNearbyScreen() {
                   entering={FadeInDown.delay(index * 100).duration(600)}
                 >
                   <GlassCard
-                    style={styles.jobCard}
-                    borderColor={theme.colors.border.subtle}
+                    style={[styles.jobCard, { borderColor: theme.colors.border.default }]}
+                    borderColor={theme.colors.border.default}
                     hasGlow={job.urgency === 'instant'}
                     glowColor={job.urgency === 'instant' ? colors.cyan : colors.primary}
                     onPress={() => {
@@ -100,11 +100,11 @@ export default function JobsNearbyScreen() {
                     }}
                   >
                     <View style={styles.jobRow}>
-                      <View style={[styles.typeCluster, { borderRightColor: theme.colors.border.subtle }]}>
+                      <View style={[styles.typeCluster, { borderRightColor: theme.colors.border.default }]}>
                         {job.urgency === 'instant' ? (
-                          <Zap size={20} color={colors.cyan} />
+                          <Zap size={22} color={colors.cyan} />
                         ) : (
-                          <Calendar size={20} color={colors.worker} />
+                          <Calendar size={22} color={colors.worker} />
                         )}
                         <Text style={[styles.jobTypeLabel, { color: job.urgency === 'instant' ? colors.cyan : colors.worker }]}>
                           {job.urgency === 'instant' ? t('jobsNearby.urgentBadge', 'URGENT') : t('jobsNearby.scheduledBadge', 'LATER')}
@@ -115,15 +115,17 @@ export default function JobsNearbyScreen() {
                         <Text style={[styles.jobTitle, typography.threeD, { color: theme.colors.text.primary }]}>{job.category}</Text>
                         <Text style={[styles.jobDesc, { color: theme.colors.text.secondary }]} numberOfLines={2}>{job.description}</Text>
                         <View style={styles.jobMeta}>
-                          <MapPin size={12} color={theme.colors.text.dim} />
-                          <Text style={[styles.metaText, { color: theme.colors.text.dim }]}>{job.address || t('common.nearby')}</Text>
-                          <View style={[styles.dot, { backgroundColor: theme.colors.border.subtle }]} />
+                          <MapPin size={13} color={theme.colors.text.muted} />
+                          <Text style={[styles.metaText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
+                            {cleanAddressString(job.address || '') || t('common.nearby')}
+                          </Text>
+                          <View style={[styles.dot, { backgroundColor: theme.colors.border.default }]} />
                           <Text style={[styles.distanceText, { color: theme.colors.brand.primary }]}>{t('jobsNearby.distanceAway', { defaultValue: '1.2 km away' })}</Text>
                         </View>
                       </View>
 
                       <View style={styles.actionArea}>
-                        <ChevronRight size={20} color={theme.colors.text.muted} />
+                        <ChevronRight size={20} color={theme.colors.text.secondary} />
                       </View>
                     </View>
                   </GlassCard>
@@ -132,11 +134,11 @@ export default function JobsNearbyScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
-                <Briefcase size={48} color={theme.colors.text.dim} />
+              <View style={[styles.emptyIconContainer, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
+                <Briefcase size={48} color={theme.colors.text.muted} />
               </View>
               <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>{t('jobsNearby.noMissionsFound')}</Text>
-              <Text style={[styles.emptySub, { color: theme.colors.text.dim }]}>
+              <Text style={[styles.emptySub, { color: theme.colors.text.secondary }]}>
                 {t('jobsNearby.emptyDescription')}
               </Text>
               <TouchableOpacity style={[styles.refreshBtn, { backgroundColor: theme.colors.brand.primary }]} onPress={() => refetch()}>
@@ -163,28 +165,25 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1.6,
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 2,
+    letterSpacing: 1.8,
   },
   headerSub: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
     marginTop: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   scrollContent: {
     paddingHorizontal: Spacing.l,
@@ -198,8 +197,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 1,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   list: {
     gap: 16,
@@ -207,9 +206,8 @@ const styles = StyleSheet.create({
   jobCard: {
     padding: 0,
     overflow: 'hidden',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 22,
+    borderWidth: 1.8,
   },
   jobRow: {
     flexDirection: 'row',
@@ -219,13 +217,12 @@ const styles = StyleSheet.create({
   typeCluster: {
     alignItems: 'center',
     paddingRight: 16,
-    borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.1)',
-    minWidth: 70,
-    gap: 4,
+    borderRightWidth: 1.5,
+    minWidth: 72,
+    gap: 5,
   },
   jobTypeLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
@@ -234,15 +231,14 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
   },
   jobTitle: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
     marginBottom: 4,
   },
   jobDesc: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
     marginBottom: 8,
   },
   jobMeta: {
@@ -251,17 +247,17 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
+    flexShrink: 1,
   },
   dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
   },
   distanceText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   actionArea: {
@@ -270,29 +266,27 @@ const styles = StyleSheet.create({
   emptyState: {
     marginTop: 80,
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 32,
   },
   emptyIconContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.03)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1.8,
   },
   emptyTitle: {
-    color: '#fff',
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   emptySub: {
-    fontSize: 14,
+    fontSize: 14.5,
     textAlign: 'center',
     lineHeight: 22,
+    fontWeight: '600',
     marginBottom: 32,
   },
   refreshBtn: {
@@ -301,9 +295,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   refreshBtnText: {
-    color: '#000',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
 });

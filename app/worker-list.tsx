@@ -124,7 +124,7 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
       {/* ── Accent glow border behind the card ─────────────────────────── */}
       <View style={[styles.cardGlow, { shadowColor: themeColor }]} />
 
-      <View style={[styles.workerCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]}>
+      <View style={[styles.workerCard, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]}>
         {/* ── Top gradient strip ─────────────────────────────────────────── */}
         <LinearGradient
           colors={[alpha(accessibleAccent, 0.12), 'transparent']}
@@ -229,21 +229,21 @@ const WorkerCard = React.memo(({ worker, themeColor, index, isFavorite, onHire, 
           </View>
 
           {/* ── ROW 2: Stats Bar ────────────────────────────────────────── */}
-          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.subtle }]}>
+          <View style={[styles.statsBar, { backgroundColor: theme.colors.surface.subtle, borderColor: theme.colors.border.default }]}>
             <View style={styles.statItem}>
-              <TrendingUp size={12} color={accessibleAccent} />
+              <TrendingUp size={13} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalJobs ?? 0}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.jobsLabel')}</Text>
             </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
             <View style={styles.statItem}>
-              <Award size={12} color={accessibleAccent} />
+              <Award size={13} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: theme.colors.text.primary }]}>{worker.totalReviews ?? 0}</Text>
               <Text style={[styles.statLabel, { color: theme.colors.text.muted }]}>{t('workerDetails.reviews')}</Text>
             </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
             <View style={styles.statItem}>
-              <Zap size={12} color={accessibleAccent} />
+              <Zap size={13} color={accessibleAccent} />
               <Text style={[styles.statValue, { color: worker.isAvailable ? statusSuccessColor : statusBusyColor }]}>
                 {worker.isAvailable ? t('workerList.open') : t('workerList.busy')}
               </Text>
@@ -423,7 +423,7 @@ export default function WorkerListScreen() {
           // ──────────────────────────────────────────────────────────────
           style={[styles.header, { paddingTop: insets.top + 16 }]}
         >
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.subtle }]} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
             <ChevronLeft color={theme.colors.text.primary} size={22} />
           </TouchableOpacity>
 
@@ -442,8 +442,8 @@ export default function WorkerListScreen() {
 
         {/* ── SEARCH BAR ────────────────────────────────────────────────── */}
         <Animated.View entering={FadeInDown.delay(180).duration(450)} style={styles.searchRow}>
-          <View style={[styles.searchContainer, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.border.subtle }]}>
-            <Search size={15} color={theme.colors.text.muted} />
+          <View style={[styles.searchContainer, { backgroundColor: theme.colors.input.background, borderColor: theme.colors.border.default }]}>
+            <Search size={17} color={theme.colors.text.muted} />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text.primary }]}
               placeholder={t('workerList.searchPlaceholder')}
@@ -559,34 +559,34 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   iconBtn: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.12)',
   },
   iconBtnPlaceholder: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
     color: '#fff',
-    letterSpacing: 3,
+    letterSpacing: 2,
   },
   headerSub: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
     marginTop: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
 
   // ── Search ────────────────────────────────────────────────────────────────
@@ -601,16 +601,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 11,
-    borderWidth: 1,
+    paddingVertical: 12,
+    borderWidth: 1.6,
     borderColor: 'rgba(255,255,255,0.10)',
     gap: 10,
   },
   searchInput: {
     flex: 1,
     color: '#fff',
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     padding: 0,
   },
 
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   workerCard: {
     borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
+    borderWidth: 1.8,
     borderColor: 'rgba(255,255,255,0.09)',
     overflow: 'hidden',
     flexDirection: 'row',
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
 
   // ─── Left color accent stripe ─────────────────────────────────────────────
   leftStripe: {
-    width: 3,
+    width: 4,
     borderTopLeftRadius: 24,
     borderBottomLeftRadius: 24,
   },
@@ -712,9 +712,9 @@ const styles = StyleSheet.create({
   },
   workerName: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
     flexShrink: 1,
   },
   metaRow: {
@@ -727,13 +727,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 7,
   },
   metaChipText: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '800',
     letterSpacing: 0.3,
   },
   starsRow: {
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     color: '#FFD700',
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
     marginLeft: 4,
   },
@@ -753,9 +753,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.07)',
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
   statItem: {
     flex: 1,
@@ -769,13 +769,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '800',
   },
   statLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
 
   // ── Skills ────────────────────────────────────────────────────────────────
@@ -785,25 +785,26 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   skillPill: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
-    borderWidth: 1,
+    borderWidth: 1.4,
     backgroundColor: 'rgba(255,255,255,0.03)',
   },
   skillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontSize: 11.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   skillTextMore: {
-    fontSize: 10,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   bioText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: -4,
+    fontSize: 13.5,
+    lineHeight: 20,
+    fontWeight: '500',
+    marginTop: -2,
   },
 
   // ── Deploy Button ─────────────────────────────────────────────────────────
@@ -814,20 +815,20 @@ const styles = StyleSheet.create({
   deployBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
+    height: 54,
   },
   deployBtnLeft: {
     flex: 1,
     paddingLeft: 16,
   },
   deployRateLabel: {
-    fontSize: 8,
-    fontWeight: '700',
+    fontSize: 9.5,
+    fontWeight: '800',
     color: 'rgba(0,0,0,0.55)',
     letterSpacing: 0.5,
   },
   deployRateValue: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '900',
     color: '#000',
   },
@@ -841,10 +842,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   deployBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
     color: '#000',
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
 
   // ── Empty State ───────────────────────────────────────────────────────────

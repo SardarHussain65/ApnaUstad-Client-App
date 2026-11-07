@@ -23,8 +23,8 @@ export const ProfileHeader = ({ title }: ProfileHeaderProps) => {
         style={[
           styles.backBtn,
           {
-            backgroundColor: theme.colors.surface.subtle,
-            borderColor: theme.colors.border.subtle,
+            backgroundColor: theme.colors.surface.card,
+            borderColor: theme.colors.border.default,
             alignItems: 'center',
           },
         ]}
@@ -55,11 +55,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 18.5,
+    fontWeight: '800',
     letterSpacing: 0.5,
     textAlign: 'center',
     flex: 1,

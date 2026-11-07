@@ -107,10 +107,10 @@ export default function OnboardingScreen() {
           </View>
           {currentIndex < DATA.length - 1 && (
             <TouchableOpacity activeOpacity={0.7} onPress={completeOnboarding} style={[styles.skipButton, {
-              backgroundColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.04 : 0.05),
-              borderColor: alpha(theme.colors.text.primary, theme.id === 'light' ? 0.08 : 0.1),
+              backgroundColor: theme.colors.surface.card,
+              borderColor: theme.colors.border.default,
             }]}>
-              <Text style={[styles.skipText, { color: theme.colors.text.muted }]}>{t('common.skip')}</Text>
+              <Text style={[styles.skipText, { color: theme.colors.text.secondary }]}>{t('common.skip')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -153,7 +153,7 @@ export default function OnboardingScreen() {
           </View>
 
           <AnimatedButton
-            icon={<ArrowRight size={18} color={colors.cyan} strokeWidth={2.8} />}
+            icon={<ArrowRight size={18} color={theme.colors.button.primaryText} strokeWidth={2.8} />}
             onPress={handleNext}
             style={styles.nextButton}
             title={currentIndex === DATA.length - 1 ? t('common.getStarted') : t('common.continue')}
@@ -225,10 +225,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   skipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
   },
   slides: {

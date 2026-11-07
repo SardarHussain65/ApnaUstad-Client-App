@@ -23,7 +23,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 
-import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, BorderRadius, Spacing, useTheme, useThemeColors, useThemeTypography, getBookingCardPalette } from '../../constants/Theme';
 import { GlassCard } from '../home/GlassCard';
 import { Skeleton, useShimmerTranslateX } from '../ui/Skeleton';
 
@@ -145,47 +145,73 @@ export function ClientWalletView({
         </View>
       ) : (
         <Animated.View entering={FadeInDown.duration(450)} style={styles.heroSection}>
-          <GlassCard
-            style={styles.heroCard}
-            intensity={36}
-            glowColor={colors.success}
-            borderColor={theme.isDark ? alpha(colors.success, 0.35) : '#86EFAC'}
-            hasGlow
-            gradient={[alpha(colors.success, theme.isDark ? 0.22 : 0.12), alpha(theme.colors.surface.card, 0.95), alpha(colors.cyan, 0.05)]}
+          <View
+            style={[
+              styles.heroCard,
+              {
+                backgroundColor: theme.id === 'current'
+                  ? 'rgba(8, 38, 28, 0.86)'
+                  : theme.isDark
+                    ? '#0B2B1E'
+                    : '#DCFCE7',
+                borderColor: '#22C55E',
+              },
+            ]}
           >
             <View style={styles.heroContent}>
               <View style={styles.heroLeft}>
                 <View style={styles.heroLabelRow}>
-                  <Receipt size={14} color={theme.isDark ? colors.success : '#15803D'} strokeWidth={2.4} />
-                  <Text style={[styles.heroLabel, { color: theme.isDark ? colors.success : '#15803D' }]}>
+                  <Receipt size={15} color={theme.isDark ? '#4ADE80' : '#064E3B'} strokeWidth={2.4} />
+                  <Text style={[styles.heroLabel, { color: theme.isDark ? '#4ADE80' : '#064E3B' }]}>
                     {t('wallet.totalPaidLabel', 'TOTAL SPENT ON SERVICES')}
                   </Text>
                 </View>
 
-                <Text style={[styles.heroAmount, typography.threeD, { color: theme.colors.text.primary }]}>
+                <Text style={[styles.heroAmount, { color: theme.colors.text.primary }]}>
                   Rs. {totalSpent.toLocaleString()}
                 </Text>
 
                 {/* Sub-metrics pill row */}
                 <View style={styles.heroMetricsRow}>
-                  <View style={[styles.metricPill, { backgroundColor: alpha(colors.success, theme.isDark ? 0.12 : 0.16) }]}>
-                    <CheckCircle2 size={11} color={theme.isDark ? colors.success : '#15803D'} strokeWidth={2.5} />
-                    <Text style={[styles.metricText, { color: theme.isDark ? colors.success : '#15803D' }]}>
+                  <View
+                    style={[
+                      styles.metricPill,
+                      {
+                        backgroundColor: theme.isDark ? 'rgba(34, 197, 94, 0.22)' : '#A7F3D0',
+                      },
+                    ]}
+                  >
+                    <CheckCircle2 size={12} color={theme.isDark ? '#4ADE80' : '#064E3B'} strokeWidth={2.5} />
+                    <Text style={[styles.metricText, { color: theme.isDark ? '#4ADE80' : '#064E3B' }]}>
                       {paidCount} {t('wallet.paidServices', 'Jobs Paid')}
                     </Text>
                   </View>
 
                   {pendingAmount > 0 ? (
-                    <View style={[styles.metricPill, { backgroundColor: alpha(colors.worker, 0.14) }]}>
-                      <Clock size={11} color={colors.worker} strokeWidth={2.5} />
-                      <Text style={[styles.metricText, { color: colors.worker }]}>
+                    <View
+                      style={[
+                        styles.metricPill,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(245, 158, 11, 0.24)' : '#FDE68A',
+                        },
+                      ]}
+                    >
+                      <Clock size={12} color={theme.isDark ? '#FBBF24' : '#78350F'} strokeWidth={2.5} />
+                      <Text style={[styles.metricText, { color: theme.isDark ? '#FBBF24' : '#78350F' }]}>
                         Rs. {pendingAmount.toLocaleString()} {t('wallet.due', 'Due')}
                       </Text>
                     </View>
                   ) : (
-                    <View style={[styles.metricPill, { backgroundColor: alpha(theme.colors.text.primary, 0.05) }]}>
-                      <Sparkles size={11} color={theme.colors.text.muted} strokeWidth={2.2} />
-                      <Text style={[styles.metricText, { color: theme.colors.text.muted }]}>
+                    <View
+                      style={[
+                        styles.metricPill,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF',
+                        },
+                      ]}
+                    >
+                      <Sparkles size={12} color={theme.colors.text.secondary} strokeWidth={2.2} />
+                      <Text style={[styles.metricText, { color: theme.colors.text.secondary }]}>
                         {t('wallet.allSettled', 'All settled')}
                       </Text>
                     </View>
@@ -193,11 +219,19 @@ export function ClientWalletView({
                 </View>
               </View>
 
-              <View style={[styles.walletIconWrap, { backgroundColor: alpha(colors.success, 0.12), borderColor: alpha(colors.success, 0.25) }]}>
-                <Banknote size={26} color={theme.isDark ? colors.success : '#15803D'} strokeWidth={2} />
+              <View
+                style={[
+                  styles.walletIconWrap,
+                  {
+                    backgroundColor: theme.isDark ? '#164E35' : '#A7F3D0',
+                    borderColor: '#22C55E',
+                  },
+                ]}
+              >
+                <Banknote size={27} color={theme.isDark ? '#4ADE80' : '#064E3B'} strokeWidth={2.2} />
               </View>
             </View>
-          </GlassCard>
+          </View>
         </Animated.View>
       )}
 
@@ -206,12 +240,12 @@ export function ClientWalletView({
         <View style={styles.filterRow}>
           {FILTERS.map((filter) => {
             const isActive = activeFilter === filter || (filter === 'Pending' && activeFilter === 'Payable');
-            const activeBg = theme.isDark ? alpha(colors.cyan, 0.22) : '#0284C7';
-            const activeBorder = theme.isDark ? colors.cyan : '#0284C7';
+            const activeBg = theme.isDark ? theme.colors.tabBar.activeBackground : '#1D4ED8';
+            const activeBorder = theme.isDark ? colors.cyan : '#1D4ED8';
             const activeText = theme.isDark ? colors.cyan : '#FFFFFF';
-            const inactiveBg = theme.isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9';
-            const inactiveBorder = theme.isDark ? 'rgba(255,255,255,0.14)' : '#CBD5E1';
-            const inactiveText = theme.isDark ? '#CBD5E1' : '#475569';
+            const inactiveBg = theme.isDark ? theme.colors.surface.card : '#F1F5F9';
+            const inactiveBorder = theme.colors.border.default;
+            const inactiveText = theme.colors.text.secondary;
 
             return (
               <TouchableOpacity
@@ -297,6 +331,8 @@ export function ClientWalletView({
                 year: 'numeric',
               });
 
+              const palette = getBookingCardPalette(theme, isPaid ? 'completed' : 'pending', !isPaid);
+
               return (
                 <Animated.View
                   key={payment._id}
@@ -316,17 +352,15 @@ export function ClientWalletView({
                     style={[
                       styles.receiptCard,
                       {
-                        backgroundColor: theme.isDark ? alpha(theme.colors.background.screen, 0.9) : theme.colors.surface.card,
-                        borderColor: isPaid ? alpha(colors.success, 0.25) : alpha(colors.worker, 0.3),
-                        borderLeftWidth: 3.5,
-                        borderLeftColor: isPaid ? colors.success : colors.worker,
+                        backgroundColor: palette.cardBg,
+                        borderColor: palette.cardBorder,
                       },
                     ]}
                   >
                     {/* Top Row: Service Category & Status Pill */}
                     <View style={styles.cardTopRow}>
                       <Text
-                        style={[styles.serviceTitle, typography.threeD, { color: theme.colors.text.primary }]}
+                        style={[styles.serviceTitle, { color: theme.colors.text.primary }]}
                         numberOfLines={1}
                       >
                         {serviceTitle}
@@ -336,20 +370,14 @@ export function ClientWalletView({
                         style={[
                           styles.statusBadge,
                           {
-                            backgroundColor: isPaid ? alpha(colors.success, 0.12) : alpha(colors.worker, 0.12),
-                            borderColor: isPaid ? alpha(colors.success, 0.3) : alpha(colors.worker, 0.3),
+                            backgroundColor: palette.statusPillBg,
                           },
                         ]}
                       >
-                        {isPaid ? (
-                          <CheckCircle2 size={11} color={colors.success} strokeWidth={2.5} />
-                        ) : (
-                          <Clock size={11} color={colors.worker} strokeWidth={2.5} />
-                        )}
                         <Text
                           style={[
                             styles.statusBadgeText,
-                            { color: isPaid ? colors.success : colors.worker },
+                            { color: palette.statusPillText },
                           ]}
                         >
                           {isPaid ? t('wallet.paid', 'Paid') : t('wallet.payable', 'Cash to Pay')}
@@ -360,42 +388,36 @@ export function ClientWalletView({
                     {/* Middle Row: Ustad Info & Date */}
                     <View style={styles.cardMiddleRow}>
                       <View style={styles.workerInfo}>
-                        <View style={[styles.workerAvatarWrap, { borderColor: alpha(theme.colors.text.primary, 0.12) }]}>
+                        <View style={[styles.workerAvatarWrap, { backgroundColor: palette.avatarBg }]}>
                           {workerAvatar ? (
                             <Image source={{ uri: workerAvatar }} style={styles.workerAvatarImg} />
                           ) : (
-                            <Text style={[styles.workerInitials, { color: colors.cyan }]}>
+                            <Text style={[styles.workerInitials, { color: palette.avatarText }]}>
                               {initialsFor(workerName)}
                             </Text>
                           )}
                         </View>
-                        <Text style={[styles.workerName, { color: theme.colors.text.secondary }]} numberOfLines={1}>
+                        <Text style={[styles.workerName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                           {t('wallet.paidTo', 'Paid to')} {workerName}
                         </Text>
                       </View>
 
-                      <View style={styles.dateInfo}>
-                        <CalendarDays size={11} color={theme.colors.text.muted} strokeWidth={2} />
-                        <Text style={[styles.dateText, { color: theme.colors.text.muted }]}>
-                          {paymentDate}
-                        </Text>
-                      </View>
+                      <Text style={[styles.dateText, { color: theme.colors.text.secondary }]}>
+                        {paymentDate}
+                      </Text>
                     </View>
 
                     {/* Bottom Row: Cash Payment Method & Amount */}
-                    <View style={[styles.cardFooterRow, { borderTopColor: alpha(theme.colors.text.primary, 0.06) }]}>
-                      <View style={styles.paymentMethodGroup}>
-                        <CreditCard size={13} color={theme.colors.text.muted} strokeWidth={2.2} />
-                        <Text style={[styles.paymentMethodText, { color: theme.colors.text.muted }]}>
-                          {payment.paymentMethod === 'online' ? t('wallet.onlinePayment', 'Online') : t('wallet.cashPayment', 'Cash Settlement')}
-                        </Text>
-                      </View>
+                    <View style={[styles.cardFooterRow, { borderTopColor: palette.dividerColor }]}>
+                      <Text style={[styles.paymentMethodText, { color: theme.colors.text.secondary }]}>
+                        {payment.paymentMethod === 'online' ? t('wallet.onlinePayment', 'Online') : t('wallet.cashPayment', 'Cash Settlement')}
+                      </Text>
 
                       <View style={styles.amountRightGroup}>
-                        <Text style={[styles.amountValue, { color: isPaid ? colors.success : colors.worker }]}>
+                        <Text style={[styles.amountValue, { color: theme.colors.text.primary }]}>
                           Rs. {Number(payment.amount || 0).toLocaleString()}
                         </Text>
-                        <ChevronRight size={15} color={alpha(theme.colors.text.primary, 0.35)} strokeWidth={2.4} />
+                        <ChevronRight size={17} color={theme.colors.text.secondary} strokeWidth={2.4} />
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -418,12 +440,12 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.m,
   },
   headerTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+    fontSize: 27,
+    fontWeight: '800',
+    letterSpacing: -0.4,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '500',
     marginTop: 3,
   },
@@ -431,15 +453,15 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.m,
   },
   heroCard: {
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderRadius: 22,
+    borderWidth: 1.8,
     overflow: 'hidden',
   },
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 18,
     gap: 12,
   },
   heroLeft: {
@@ -452,15 +474,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   heroLabel: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 11.5,
+    fontWeight: '800',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   heroAmount: {
-    fontSize: 26,
-    fontWeight: '900',
-    marginBottom: 10,
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 12,
   },
   heroMetricsRow: {
     flexDirection: 'row',
@@ -470,51 +492,52 @@ const styles = StyleSheet.create({
   metricPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: BorderRadius.full,
   },
   metricText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
   },
   walletIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filterSection: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   filterRow: {
     flexDirection: 'row',
     gap: 8,
   },
   filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   filterText: {
-    fontSize: 11,
+    fontSize: 13.5,
     fontWeight: '700',
   },
   listSection: {
     marginTop: 4,
   },
   cardsContainer: {
-    gap: 10,
+    gap: 14,
   },
   receiptCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: 14,
-    gap: 10,
+    borderRadius: 20,
+    borderWidth: 1.8,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    gap: 12,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -523,23 +546,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   serviceTitle: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '800',
     flex: 1,
+    letterSpacing: -0.2,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
     flexShrink: 0,
   },
   statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   cardMiddleRow: {
     flexDirection: 'row',
@@ -550,59 +573,46 @@ const styles = StyleSheet.create({
   workerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 10,
     flex: 1,
     minWidth: 0,
   },
   workerAvatarWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   workerAvatarImg: {
     width: '100%',
     height: '100%',
   },
   workerInitials: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   workerName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     flexShrink: 1,
   },
-  dateInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flexShrink: 0,
-  },
   dateText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
   },
   cardFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 8,
-    borderTopWidth: 1,
+    paddingTop: 12,
+    borderTopWidth: 1.2,
     gap: 8,
   },
-  paymentMethodGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
   paymentMethodText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 14.5,
+    fontWeight: '500',
   },
   amountRightGroup: {
     flexDirection: 'row',
@@ -610,8 +620,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   amountValue: {
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 16.5,
+    fontWeight: '800',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -629,24 +639,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: 12,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 20,
   },
   emptyBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
     borderRadius: BorderRadius.full,
-    marginTop: 10,
+    marginTop: 12,
   },
   emptyBtnText: {
     color: '#001014',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
 });

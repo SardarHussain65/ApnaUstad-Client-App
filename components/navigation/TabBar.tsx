@@ -1,13 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  interpolateColor,
-  withTiming
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Home, ClipboardList, Wallet, User, Compass } from 'lucide-react-native';
@@ -15,6 +12,11 @@ import { useTheme } from '../../constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsRTL } from '../../context/LanguageContext';
+
+const HORIZONTAL_MARGIN = 20;
+const BAR_HEIGHT = 74;
+const PILL_MARGIN_H = 6;
+const PILL_HEIGHT = 58;
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const theme = useTheme();
@@ -28,14 +30,13 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   });
 
   const numTabs = visibleRoutes.length || 4;
-  const tabBarWidth = screenWidth - 40;
+  const tabBarWidth = screenWidth - HORIZONTAL_MARGIN * 2;
   const tabWidth = tabBarWidth / numTabs;
   const activeRoute = state.routes[state.index];
   const activeVisibleIndex = visibleRoutes.findIndex((r) => r.key === activeRoute?.key);
 
-  const INDICATOR_WIDTH = Math.min(tabWidth - 8, 44);
-  const INDICATOR_HEIGHT = 36;
-  const indicatorOffset = (tabWidth - INDICATOR_WIDTH) / 2;
+  const indicatorWidth = Math.max(48, tabWidth - PILL_MARGIN_H * 2);
+  const indicatorOffset = (tabWidth - indicatorWidth) / 2;
 
   const getTargetX = (index: number) => {
     const safeIndex = Math.max(0, index);
@@ -48,8 +49,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   useEffect(() => {
     translateX.value = withSpring(getTargetX(activeVisibleIndex), {
       damping: 20,
-      stiffness: 150,
-      mass: 0.8
+      stiffness: 160,
+      mass: 0.8,
     });
   }, [activeVisibleIndex, tabWidth, isRTL]);
 
@@ -71,8 +72,8 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   };
 
   const bottomMargin = Platform.OS === 'ios'
-    ? (insets.bottom > 0 ? insets.bottom : 16)
-    : (insets.bottom > 0 ? insets.bottom + 12 : 16);
+    ? (insets.bottom > 0 ? insets.bottom : 14)
+    : (insets.bottom > 0 ? insets.bottom + 10 : 14);
 
   return (
     <View
@@ -82,47 +83,41 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
           bottom: bottomMargin,
           backgroundColor: theme.colors.tabBar.background,
           borderColor: theme.colors.tabBar.border,
-          shadowColor: theme.colors.tabBar.shadow,
         },
       ]}
     >
-      <BlurView
-        intensity={theme.id === 'current' ? 60 : 18}
-        tint={theme.blurTint}
-        style={styles.blurContainer}
-      >
-        {/* Active Indicator on Icon (Glowing Pill around the active tab's icon) */}
-        <Animated.View
-          style={[
-            styles.activeIndicator,
-            {
-              width: INDICATOR_WIDTH,
-              height: INDICATOR_HEIGHT,
-              borderRadius: INDICATOR_HEIGHT / 2,
-              backgroundColor: theme.colors.tabBar.activeBackground,
-              borderColor: theme.colors.tabBar.activeBorder,
-            },
-            indicatorStyle,
-          ]}
-        />
+      {/* Wide Rounded-Rectangle Active Pill Indicator covering both icon + label */}
+      <Animated.View
+        style={[
+          styles.activeIndicator,
+          {
+            width: indicatorWidth,
+            height: PILL_HEIGHT,
+            borderRadius: 20,
+            backgroundColor: theme.colors.tabBar.activeBackground,
+            borderColor: theme.colors.tabBar.activeBorder,
+            borderWidth: theme.colors.tabBar.activeBorder !== 'transparent' ? 1 : 0,
+          },
+          indicatorStyle,
+        ]}
+      />
 
-        <View style={styles.tabsRow}>
-          {visibleRoutes.map((route) => {
-            const isFocused = activeRoute?.key === route.key;
+      <View style={styles.tabsRow}>
+        {visibleRoutes.map((route) => {
+          const isFocused = activeRoute?.key === route.key;
 
-            return (
-              <TabItem
-                key={route.key}
-                isFocused={isFocused}
-                onPress={() => handlePress(route, isFocused)}
-                routeName={route.name}
-                activeColor={theme.colors.tabBar.activeIcon}
-                inactiveColor={theme.colors.tabBar.inactiveIcon}
-              />
-            );
-          })}
-        </View>
-      </BlurView>
+          return (
+            <TabItem
+              key={route.key}
+              isFocused={isFocused}
+              onPress={() => handlePress(route, isFocused)}
+              routeName={route.name}
+              activeColor={theme.colors.tabBar.activeIcon}
+              inactiveColor={theme.colors.tabBar.inactiveIcon}
+            />
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -134,73 +129,74 @@ function TabItem({
   activeColor,
   inactiveColor,
 }: {
-  isFocused: boolean,
-  onPress: () => void,
-  routeName: string,
-  activeColor: string,
-  inactiveColor: string,
+  isFocused: boolean;
+  onPress: () => void;
+  routeName: string;
+  activeColor: string;
+  inactiveColor: string;
 }) {
   const { t } = useTranslation();
-  const prog = useSharedValue(isFocused ? 1 : 0);
-
-  useEffect(() => {
-    prog.value = withTiming(isFocused ? 1 : 0, { duration: 220 });
-  }, [isFocused]);
-
-  const animatedIconStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: withSpring(isFocused ? 1.12 : 1, { damping: 12 }) }],
-    };
-  });
-
-  const animatedTextStyle = useAnimatedStyle(() => {
-    return {
-      opacity: prog.value,
-      transform: [{ translateY: withSpring(isFocused ? 0 : 4, { damping: 14 }) }],
-      color: interpolateColor(prog.value, [0, 1], [inactiveColor, activeColor])
-    };
-  });
 
   const Icon = ({ color }: { color: string }) => {
-    const size = 20;
+    const size = 23;
+    const strokeWidth = isFocused ? 2.4 : 2.1;
     switch (routeName) {
-      case 'index': return <Home size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
-      case 'jobs': return <Compass size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
-      case 'bookings': return <ClipboardList size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
-      case 'wallet': return <Wallet size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
-      case 'profile': return <User size={size} color={color} strokeWidth={isFocused ? 2.5 : 2} />;
-      default: return <Home size={size} color={color} />;
+      case 'index':
+        return <Home size={size} color={color} strokeWidth={strokeWidth} />;
+      case 'jobs':
+        return <Compass size={size} color={color} strokeWidth={strokeWidth} />;
+      case 'bookings':
+        return <ClipboardList size={size} color={color} strokeWidth={strokeWidth} />;
+      case 'wallet':
+        return <Wallet size={size} color={color} strokeWidth={strokeWidth} />;
+      case 'profile':
+        return <User size={size} color={color} strokeWidth={strokeWidth} />;
+      default:
+        return <Home size={size} color={color} strokeWidth={strokeWidth} />;
     }
   };
 
   const getLabel = () => {
     switch (routeName) {
-      case 'index': return t('tabs.home');
-      case 'jobs': return t('tabs.jobs', 'Find Jobs');
-      case 'bookings': return t('tabs.bookings');
-      case 'wallet': return t('tabs.wallet');
-      case 'profile': return t('tabs.profile');
-      default: return '';
+      case 'index':
+        return t('tabs.home', 'Home');
+      case 'jobs':
+        return t('tabs.jobs', 'Find Jobs');
+      case 'bookings':
+        return t('tabs.bookings', 'Bookings');
+      case 'wallet':
+        return t('tabs.wallet', 'Wallet');
+      case 'profile':
+        return t('tabs.profile', 'Profile');
+      default:
+        return '';
     }
-  }
+  };
 
-  const iconColor = isFocused ? activeColor : inactiveColor;
+  const itemColor = isFocused ? activeColor : inactiveColor;
 
   return (
     <TouchableOpacity
       onPress={onPress}
       style={styles.tabItem}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
       accessibilityRole="button"
       accessibilityState={{ selected: isFocused }}
     >
       <View style={styles.tabInner}>
-        <Animated.View style={[styles.iconWrapper, animatedIconStyle]}>
-          <Icon color={iconColor} />
-        </Animated.View>
-        <Animated.Text style={[styles.tabLabel, animatedTextStyle]} numberOfLines={1}>
+        <Icon color={itemColor} />
+        <Text
+          style={[
+            styles.tabLabel,
+            {
+              color: itemColor,
+              fontWeight: isFocused ? '700' : '600',
+            },
+          ]}
+          numberOfLines={1}
+        >
           {getLabel()}
-        </Animated.Text>
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -209,21 +205,13 @@ function TabItem({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 20,
-    right: 20,
-    height: 68,
-    borderRadius: 34,
+    left: HORIZONTAL_MARGIN,
+    right: HORIZONTAL_MARGIN,
+    height: BAR_HEIGHT,
+    borderRadius: 28,
     overflow: 'hidden',
-    borderWidth: 1,
-    elevation: 10,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-  },
-  blurContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderWidth: 1.6,
+    justifyContent: 'center',
   },
   tabsRow: {
     flex: 1,
@@ -233,9 +221,8 @@ const styles = StyleSheet.create({
   },
   activeIndicator: {
     position: 'absolute',
-    top: 8,
+    top: (BAR_HEIGHT - PILL_HEIGHT) / 2 - 1.5,
     left: 0,
-    borderWidth: 1.5,
   },
   tabItem: {
     flex: 1,
@@ -246,19 +233,10 @@ const styles = StyleSheet.create({
   tabInner: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 8,
-    paddingBottom: 6,
-  },
-  iconWrapper: {
-    width: 44,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
   tabLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    marginTop: 2,
+    fontSize: 13,
     textAlign: 'center',
-  }
+  },
 });

@@ -28,7 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
-import { useNearbyJobs, useUserLocation, useWorkerBids } from '../../hooks';
+import { useNearbyJobs, useUserLocation, useWorkerBids, cleanAddressString } from '../../hooks';
 import { socketService } from '../../services/socketService';
 import { useIsRTL } from '../../context/LanguageContext';
 import { useIncomingJob } from '../../context/IncomingJobContext';
@@ -186,8 +186,8 @@ export default function WorkerJobsTab() {
               style={[
                 styles.refreshIconBtn,
                 {
-                  backgroundColor: alpha(theme.colors.surface.card, 0.4),
-                  borderColor: theme.colors.border.subtle,
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
                 },
               ]}
               onPress={handleRefresh}
@@ -202,8 +202,8 @@ export default function WorkerJobsTab() {
             style={[
               styles.searchBar,
               {
-                backgroundColor: alpha(theme.colors.surface.card, 0.35),
-                borderColor: theme.colors.border.subtle,
+                backgroundColor: theme.colors.surface.card,
+                borderColor: theme.colors.border.default,
               },
             ]}
           >
@@ -227,6 +227,10 @@ export default function WorkerJobsTab() {
             <TouchableOpacity
               style={[
                 styles.filterPill,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
+                },
                 urgencyFilter === 'all' && [
                   styles.filterPillActive,
                   { backgroundColor: colors.cyan, borderColor: colors.cyan },
@@ -238,8 +242,8 @@ export default function WorkerJobsTab() {
                 style={[
                   styles.filterPillText,
                   urgencyFilter === 'all'
-                    ? { color: '#000', fontWeight: '800' }
-                    : { color: theme.colors.text.muted },
+                    ? { color: theme.isDark ? '#0F172A' : '#FFFFFF', fontWeight: '800' }
+                    : { color: theme.colors.text.secondary },
                 ]}
               >
                 {t('common.all', 'All Jobs')} ({rawJobs.length})
@@ -249,6 +253,10 @@ export default function WorkerJobsTab() {
             <TouchableOpacity
               style={[
                 styles.filterPill,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
+                },
                 urgencyFilter === 'instant' && [
                   styles.filterPillActive,
                   { backgroundColor: alpha(colors.error, 0.2), borderColor: colors.error },
@@ -257,15 +265,15 @@ export default function WorkerJobsTab() {
               onPress={() => setUrgencyFilter('instant')}
             >
               <Zap
-                size={13}
-                color={urgencyFilter === 'instant' ? colors.error : theme.colors.text.muted}
+                size={14}
+                color={urgencyFilter === 'instant' ? colors.error : theme.colors.text.secondary}
               />
               <Text
                 style={[
                   styles.filterPillText,
                   urgencyFilter === 'instant'
                     ? { color: colors.error, fontWeight: '800' }
-                    : { color: theme.colors.text.muted },
+                    : { color: theme.colors.text.secondary },
                 ]}
               >
                 {t('jobsNearby.urgentOnly', 'Urgent')}
@@ -275,6 +283,10 @@ export default function WorkerJobsTab() {
             <TouchableOpacity
               style={[
                 styles.filterPill,
+                {
+                  backgroundColor: theme.colors.surface.card,
+                  borderColor: theme.colors.border.default,
+                },
                 urgencyFilter === 'scheduled' && [
                   styles.filterPillActive,
                   { backgroundColor: alpha(colors.worker, 0.2), borderColor: colors.worker },
@@ -283,15 +295,15 @@ export default function WorkerJobsTab() {
               onPress={() => setUrgencyFilter('scheduled')}
             >
               <Calendar
-                size={13}
-                color={urgencyFilter === 'scheduled' ? colors.worker : theme.colors.text.muted}
+                size={14}
+                color={urgencyFilter === 'scheduled' ? colors.worker : theme.colors.text.secondary}
               />
               <Text
                 style={[
                   styles.filterPillText,
                   urgencyFilter === 'scheduled'
                     ? { color: colors.worker, fontWeight: '800' }
-                    : { color: theme.colors.text.muted },
+                    : { color: theme.colors.text.secondary },
                 ]}
               >
                 {t('jobsNearby.scheduledOnly', 'Scheduled')}
@@ -334,7 +346,7 @@ export default function WorkerJobsTab() {
                   >
                     <GlassCard
                       style={styles.jobCard}
-                      borderColor={theme.colors.border.subtle}
+                      borderColor={theme.colors.border.default}
                       hasGlow={isUrgent}
                       glowColor={isUrgent ? colors.cyan : colors.worker}
                       onPress={() => {
@@ -357,7 +369,7 @@ export default function WorkerJobsTab() {
                         <View
                           style={[
                             styles.typeCluster,
-                            { borderRightColor: theme.colors.border.subtle },
+                            { borderRightColor: theme.colors.border.default },
                           ]}
                         >
                           {isUrgent ? (
@@ -365,7 +377,7 @@ export default function WorkerJobsTab() {
                               <View
                                 style={[
                                   styles.iconBubble,
-                                  { backgroundColor: alpha(colors.error, 0.15) },
+                                  { backgroundColor: alpha(colors.error, 0.16) },
                                 ]}
                               >
                                 <Zap size={18} color={colors.error} />
@@ -379,7 +391,7 @@ export default function WorkerJobsTab() {
                               <View
                                 style={[
                                   styles.iconBubble,
-                                  { backgroundColor: alpha(colors.worker, 0.15) },
+                                  { backgroundColor: alpha(colors.worker, 0.16) },
                                 ]}
                               >
                                 <Calendar size={18} color={colors.worker} />
@@ -410,25 +422,25 @@ export default function WorkerJobsTab() {
                           </Text>
 
                           <View style={styles.jobMeta}>
-                            <MapPin size={12} color={theme.colors.text.muted} />
+                            <MapPin size={13} color={theme.colors.text.muted} />
                             <Text
                               style={[styles.metaText, { color: theme.colors.text.muted }]}
                               numberOfLines={1}
                             >
-                              {job.address || t('common.nearby', 'Nearby')}
+                              {cleanAddressString(job.address) || t('common.nearby', 'Nearby')}
                             </Text>
                             {(job.budget || job.amount || job.signalMeta?.amount) ? (
                               <>
                                 <View
                                   style={[
                                     styles.dot,
-                                    { backgroundColor: theme.colors.border.subtle },
+                                    { backgroundColor: theme.colors.border.default },
                                   ]}
                                 />
                                 <Text
                                   style={[
                                     styles.budgetText,
-                                    { color: colors.success, fontWeight: '700' },
+                                    { color: colors.success, fontWeight: '800' },
                                   ]}
                                 >
                                   Rs. {Number(job.budget || job.amount || job.signalMeta?.amount).toLocaleString()}
@@ -444,8 +456,8 @@ export default function WorkerJobsTab() {
                             style={[
                               styles.bidCtaPill,
                               {
-                                backgroundColor: isUrgent ? alpha(colors.error, 0.18) : alpha(colors.cyan, 0.15),
-                                borderColor: isUrgent ? alpha(colors.error, 0.4) : alpha(colors.cyan, 0.35),
+                                backgroundColor: isUrgent ? alpha(colors.error, 0.18) : alpha(colors.cyan, 0.18),
+                                borderColor: isUrgent ? alpha(colors.error, 0.5) : alpha(colors.cyan, 0.45),
                               },
                             ]}
                           >
@@ -467,8 +479,8 @@ export default function WorkerJobsTab() {
                 style={[
                   styles.emptyIconContainer,
                   {
-                    backgroundColor: alpha(theme.colors.surface.card, 0.5),
-                    borderColor: theme.colors.border.subtle,
+                    backgroundColor: theme.colors.surface.card,
+                    borderColor: theme.colors.border.default,
                   },
                 ]}
               >
@@ -489,7 +501,7 @@ export default function WorkerJobsTab() {
                 style={[styles.refreshBtn, { backgroundColor: colors.cyan }]}
                 onPress={handleRefresh}
               >
-                <Text style={styles.refreshBtnText}>
+                <Text style={[styles.refreshBtnText, { color: theme.isDark ? '#0F172A' : '#FFFFFF' }]}>
                   {t('jobsNearby.refreshScan', 'Scan Again')}
                 </Text>
               </TouchableOpacity>
@@ -527,38 +539,39 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   screenEyebrow: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 1.2,
   },
   screenTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
   },
   refreshIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.6,
     gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14.5,
+    fontWeight: '600',
     paddingVertical: 0,
   },
   clearBtn: {
-    fontSize: 14,
+    fontSize: 15,
     paddingHorizontal: 6,
   },
   filterPillsRow: {
@@ -568,18 +581,16 @@ const styles = StyleSheet.create({
   filterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1.6,
   },
   filterPillActive: {},
   filterPillText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   scrollContent: {
     paddingHorizontal: Spacing.l,
@@ -592,8 +603,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   loadingText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
   list: {
     gap: 12,
@@ -602,29 +613,29 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: 'hidden',
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.8,
   },
   jobRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 15,
   },
   typeCluster: {
     alignItems: 'center',
     paddingRight: 12,
-    borderRightWidth: 1,
-    minWidth: 64,
+    borderRightWidth: 1.5,
+    minWidth: 66,
     gap: 4,
   },
   iconBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
   jobTypeLabel: {
-    fontSize: 9,
+    fontSize: 10.5,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
@@ -633,13 +644,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   jobTitle: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '800',
     marginBottom: 2,
   },
   jobDesc: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13.5,
+    fontWeight: '600',
+    lineHeight: 18,
     marginBottom: 6,
   },
   jobMeta: {
@@ -648,16 +660,17 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   metaText: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '600',
     maxWidth: 140,
   },
   dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
+    width: 3.5,
+    height: 3.5,
+    borderRadius: 2,
   },
   budgetText: {
-    fontSize: 11,
+    fontSize: 12.5,
   },
   actionArea: {
     paddingLeft: 4,
@@ -665,14 +678,14 @@ const styles = StyleSheet.create({
   bidCtaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 3,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   bidCtaText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
@@ -688,28 +701,28 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.6,
     marginBottom: 4,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '800',
     textAlign: 'center',
   },
   emptySub: {
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
     textAlign: 'center',
     marginBottom: 8,
   },
   refreshBtn: {
-    paddingHorizontal: 22,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
     borderRadius: 24,
   },
   refreshBtnText: {
-    color: '#000',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
 });

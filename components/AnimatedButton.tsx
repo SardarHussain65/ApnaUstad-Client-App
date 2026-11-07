@@ -89,8 +89,9 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
           opacity: disabled ? 0.4 : 1,
         },
         variant === 'outline' && {
-          borderWidth: 1,
+          borderWidth: 1.8,
           borderColor: theme.colors.border.default,
+          backgroundColor: theme.colors.surface.card,
           shadowOpacity: 0,
           elevation: 0,
         },

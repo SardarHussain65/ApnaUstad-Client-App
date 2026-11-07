@@ -147,9 +147,9 @@ export function GoogleSignInButton({ accentColor }: GoogleSignInButtonProps) {
     <View style={styles.container}>
       {/* Divider with "or" */}
       <View style={styles.dividerRow}>
-        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border.subtle }]} />
-        <Text style={[styles.dividerText, { color: theme.colors.text.dim }]}>or continue with</Text>
-        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border.subtle }]} />
+        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border.default }]} />
+        <Text style={[styles.dividerText, { color: theme.colors.text.muted }]}>or continue with</Text>
+        <View style={[styles.dividerLine, { backgroundColor: theme.colors.border.default }]} />
       </View>
 
       {/* Google Button */}
@@ -161,7 +161,8 @@ export function GoogleSignInButton({ accentColor }: GoogleSignInButtonProps) {
           styles.googleButton,
           { 
             backgroundColor: theme.colors.surface.subtle,
-            borderColor: `${resolvedAccentColor}30` 
+            borderColor: theme.colors.border.default,
+            borderWidth: 1.8,
           },
           isLoading && styles.googleButtonDisabled,
         ]}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
-import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
+import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography, getBookingCardPalette } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
 import Animated, { FadeInDown, LinearTransition, Layout } from 'react-native-reanimated';
@@ -242,8 +242,8 @@ export default function BookingsTab() {
           style={[
             styles.tabContainer,
             {
-              backgroundColor: theme.colors.surface.subtle,
-              borderColor: theme.colors.border.subtle,
+              backgroundColor: theme.isDark ? theme.colors.surface.card : '#F1F5F9',
+              borderColor: theme.colors.border.default,
             },
           ]}
         >
@@ -253,33 +253,26 @@ export default function BookingsTab() {
             return (
               <TouchableOpacity
                 key={tab}
-                style={styles.tabButton}
+                style={[
+                  styles.tabButton,
+                  isActive && {
+                    backgroundColor: theme.colors.tabBar.activeBackground,
+                    borderColor: theme.colors.tabBar.activeBorder,
+                    borderWidth: theme.colors.tabBar.activeBorder !== 'transparent' ? 1 : 0,
+                  },
+                ]}
                 onPress={() => setActiveTab(tab)}
+                activeOpacity={0.8}
               >
-                {isActive && (
-                  <Animated.View
-                    layout={LinearTransition.springify().damping(15)}
-                    style={StyleSheet.absoluteFillObject}
-                  >
-                    <LinearGradient
-                      colors={theme.id === 'current'
-                        ? ['rgba(0,245,255,0.4)', 'rgba(255,20,147,0.4)']
-                        : [alpha(theme.colors.brand.primary, 0.16), alpha(theme.colors.brand.secondary, 0.12)]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.activeTabGradient}
-                    />
-                  </Animated.View>
-                )}
                 <Text style={[
                   styles.tabText,
-                  { color: isActive ? theme.colors.text.primary : theme.colors.text.muted },
+                  { color: isActive ? theme.colors.tabBar.activeIcon : theme.colors.text.secondary },
                   isActive && styles.activeTabText
                 ]}>
                   {t(`bookings.${tabKey}`)}
                 </Text>
               </TouchableOpacity>
-            )
+            );
           })}
         </View>
 
@@ -391,137 +384,114 @@ export default function BookingsTab() {
                 }
               };
 
+              const palette = getBookingCardPalette(
+                theme,
+                isDisputed ? 'cancelled' : status,
+                isPaymentPending
+              );
+
               return (
                 <Animated.View
                   key={item._id}
-                  entering={FadeInDown.delay(index * 100).duration(500)}
+                  entering={FadeInDown.delay(index * 80).duration(400)}
                   layout={Layout.springify()}
                 >
-                  <GlassCard
-                    style={styles.bookingCard}
-                    intensity={30}
-                    glowColor={statusColor}
-                    hasGlow
-                    gradient={getMissionCardGradient(status, isInstant, statusColor, isDisputed)}
-                    padding={0}
+                  <TouchableOpacity
+                    style={[
+                      styles.bookingCard,
+                      {
+                        backgroundColor: palette.cardBg,
+                        borderColor: palette.cardBorder,
+                      },
+                    ]}
+                    activeOpacity={0.85}
                     onPress={openDetails}
                   >
-                    <LinearGradient
-                      colors={[statusColor, colors.cyan, alpha(statusColor, 0.4)]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.cardAccentLine}
-                    />
-                    <LinearGradient
-                      pointerEvents="none"
-                      colors={[alpha(statusColor, 0.22), 'rgba(0,0,0,0)', alpha(colors.cyan, 0.06)]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.cardAtmosphere}
-                    />
-                    <View style={[styles.cardSideAccent, { backgroundColor: statusColor }]} />
-
                     <View style={styles.cardBody}>
                       {/* Top Header: Service Title + Urgent Badge + Status Badge */}
                       <View style={styles.topRow}>
-                        <View style={styles.titleArea}>
-                          <Text style={[styles.categoryTitle, themedTypography.threeD, { color: theme.colors.text.primary }]} numberOfLines={1}>
-                            {title}
-                          </Text>
+                        <Text
+                          style={[styles.categoryTitle, { color: theme.colors.text.primary }]}
+                          numberOfLines={1}
+                        >
+                          {title}
+                        </Text>
+
+                        <View style={styles.badgesGroup}>
                           {isInstant && (
-                            <View style={[styles.instantBadge, { backgroundColor: alpha(colors.worker, 0.12), borderColor: alpha(colors.worker, 0.25) }]}>
-                              <Zap size={10} color={colors.worker} strokeWidth={2.5} />
-                              <Text style={[styles.instantBadgeText, { color: colors.worker }]}>
+                            <View
+                              style={[
+                                styles.pillBadge,
+                                { backgroundColor: palette.urgentPillBg },
+                              ]}
+                            >
+                              <Text style={[styles.pillBadgeText, { color: palette.urgentPillText }]}>
                                 {t('home.worker.instant', 'Urgent')}
                               </Text>
                             </View>
                           )}
-                        </View>
 
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            {
-                              backgroundColor: alpha(statusColor, theme.isDark ? 0.12 : 0.08),
-                              borderColor: alpha(statusColor, theme.isDark ? 0.32 : 0.24),
-                            },
-                          ]}
-                        >
-                          {isDisputed ? (
-                            <Scale size={11} color={statusColor} />
-                          ) : isPaymentPending ? (
-                            <Clock size={11} color={statusColor} />
-                          ) : (
-                            getStatusIcon(status, statusColor)
-                          )}
-                          <Text style={[styles.statusText, { color: statusColor }]} numberOfLines={1}>
-                            {isDisputed
-                              ? t('bookings.disputed', 'DISPUTED')
-                              : isPaymentPending
-                              ? t('bookingStatus.paymentDue.label', 'Payment Due')
-                              : t(`bookingStatus.${status}.label`, statusLabel(status))}
-                          </Text>
+                          <View
+                            style={[
+                              styles.pillBadge,
+                              { backgroundColor: palette.statusPillBg },
+                            ]}
+                          >
+                            <Text style={[styles.pillBadgeText, { color: palette.statusPillText }]} numberOfLines={1}>
+                              {isDisputed
+                                ? t('bookings.disputed', 'Disputed')
+                                : isPaymentPending
+                                ? t('bookingStatus.paymentDue.label', 'Payment Due')
+                                : t(`bookingStatus.${status}.label`, statusLabel(status))}
+                            </Text>
+                          </View>
                         </View>
                       </View>
 
                       {/* Middle Row: Counterparty info + Date & Time */}
                       <View style={styles.middleRow}>
                         <View style={styles.personContainer}>
-                          <View style={[styles.avatarShell, { borderColor: alpha(statusColor, 0.35) }]}>
+                          <View style={[styles.avatarShell, { backgroundColor: palette.avatarBg }]}>
                             {counterPartyImage ? (
                               <Image source={{ uri: counterPartyImage }} style={styles.avatarImage} />
                             ) : (
-                              <LinearGradient
-                                colors={[alpha(statusColor, 0.35), alpha(colors.cyan, 0.2)]}
-                                style={styles.avatarFallback}
-                              >
-                                <Text style={[styles.avatarText, { color: theme.colors.text.primary }]}>
-                                  {initialsFor(counterPartyName)}
-                                </Text>
-                              </LinearGradient>
+                              <Text style={[styles.avatarText, { color: palette.avatarText }]}>
+                                {initialsFor(counterPartyName)}
+                              </Text>
                             )}
                           </View>
                           <View style={styles.personTextGroup}>
                             <Text style={[styles.personName, { color: theme.colors.text.primary }]} numberOfLines={1}>
                               {counterPartyName}
                             </Text>
-                            <Text style={[styles.personRole, { color: theme.colors.text.dim }]} numberOfLines={1}>
+                            <Text style={[styles.personRole, { color: theme.colors.text.muted }]} numberOfLines={1}>
                               {counterPartyRole}
                             </Text>
                           </View>
                         </View>
 
-                        <View style={styles.scheduleRow}>
-                          <Calendar size={12} color={theme.colors.text.muted} />
-                          <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{dateLabel}</Text>
-                          <View style={styles.scheduleDot} />
-                          <Clock size={12} color={theme.colors.text.muted} />
-                          <Text style={[styles.scheduleText, { color: theme.colors.text.muted }]}>{timeLabel}</Text>
-                        </View>
+                        <Text style={[styles.scheduleText, { color: theme.colors.text.secondary }]}>
+                          {`${dateLabel} · ${timeLabel}`}
+                        </Text>
                       </View>
 
                       {/* Footer Row: Clean Location on Left, Price & Action Button on Right */}
-                      <View style={[styles.footerRow, { borderTopColor: alpha(theme.colors.text.primary, 0.08) }]}>
-                        <View style={styles.locationGroup}>
-                          <MapPin size={12} color={theme.colors.text.muted} />
-                          <Text style={[styles.locationText, { color: theme.colors.text.muted }]} numberOfLines={1}>
-                            {cleanLocation}
-                          </Text>
-                        </View>
+                      <View style={[styles.footerRow, { borderTopColor: palette.dividerColor }]}>
+                        <Text style={[styles.locationText, { color: theme.colors.text.secondary }]} numberOfLines={1}>
+                          {cleanLocation}
+                        </Text>
 
                         <View style={styles.footerRight}>
                           {!!amountDisplay && (
-                            <Text style={[styles.amountValue, { color: colors.success }]}>
+                            <Text style={[styles.amountValue, { color: theme.colors.text.primary }]}>
                               {amountDisplay}
                             </Text>
                           )}
-                          <View style={[styles.openIconBtn, { backgroundColor: alpha(statusColor, 0.14), borderColor: alpha(statusColor, 0.28) }]}>
-                            {isRTL ? (
-                              <ChevronLeft size={13} color={statusColor} strokeWidth={2.8} />
-                            ) : (
-                              <ChevronRight size={13} color={statusColor} strokeWidth={2.8} />
-                            )}
-                          </View>
+                          {isRTL ? (
+                            <ChevronLeft size={18} color={theme.colors.text.secondary} strokeWidth={2.4} />
+                          ) : (
+                            <ChevronRight size={18} color={theme.colors.text.secondary} strokeWidth={2.4} />
+                          )}
                         </View>
                       </View>
 
@@ -537,18 +507,18 @@ export default function BookingsTab() {
                           }}
                         >
                           <LinearGradient
-                            colors={['#FFD700', '#FFB300']}
+                            colors={['#F59E0B', '#D97706']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.reviewGradient}
                           >
-                            <Star size={13} color="#000" fill="#000" />
+                            <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
                             <Text style={styles.reviewBtnText}>{t('bookings.rateUstad', 'RATE USTAD')}</Text>
                           </LinearGradient>
                         </TouchableOpacity>
                       )}
                     </View>
-                  </GlassCard>
+                  </TouchableOpacity>
                 </Animated.View>
               );
             })}
@@ -584,75 +554,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.l,
   },
   header: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.l,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    fontSize: 27,
+    fontWeight: '800',
+    letterSpacing: -0.4,
   },
   headerSubtitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
     marginTop: 4,
   },
   tabContainer: {
     flexDirection: 'row',
     borderRadius: 20,
-    padding: 4,
+    padding: 5,
     marginBottom: Spacing.l,
-    borderWidth: 1,
+    borderWidth: 1.6,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 15,
     overflow: 'hidden',
     position: 'relative',
   },
-  activeTabGradient: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 16,
-  },
   tabText: {
-    fontWeight: '700',
-    fontSize: 13,
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    fontSize: 14,
     zIndex: 1,
   },
   activeTabText: {
-    fontWeight: '900',
+    fontWeight: '800',
   },
   scrollContent: {
-    gap: 16,
+    gap: 14,
     paddingBottom: 40,
     flexGrow: 1,
   },
   bookingCard: {
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.8,
     overflow: 'hidden',
   },
-  cardAccentLine: {
-    height: 3,
-  },
-  cardAtmosphere: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cardSideAccent: {
-    position: 'absolute',
-    top: 16,
-    bottom: 16,
-    left: 0,
-    width: 3,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
-  },
   cardBody: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   topRow: {
     flexDirection: 'row',
@@ -660,75 +610,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  titleArea: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   categoryTitle: {
-    fontSize: 16,
+    fontSize: 18.5,
     fontWeight: '800',
-    flexShrink: 1,
+    flex: 1,
+    letterSpacing: -0.3,
   },
-  instantBadge: {
+  badgesGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
+    gap: 6,
   },
-  instantBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  pillBadge: {
     borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statusText: {
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.2,
+  pillBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   middleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 12,
     gap: 8,
   },
   personContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flex: 1,
   },
   avatarShell: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 1,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
     height: '100%',
   },
-  avatarFallback: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   avatarText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
   personTextGroup: {
@@ -736,82 +666,59 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   personName: {
-    fontSize: 13,
+    fontSize: 15.5,
     fontWeight: '700',
     flexShrink: 1,
   },
   personRole: {
-    fontSize: 9,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     marginTop: 1,
   },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
   scheduleText: {
-    fontSize: 11,
+    fontSize: 14.5,
     fontWeight: '600',
-  },
-  scheduleDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.25)',
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-  },
-  locationGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-    marginRight: 10,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1.2,
   },
   locationText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 10,
   },
   footerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   amountValue: {
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  openIconBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontSize: 16.5,
+    fontWeight: '800',
   },
   reviewBtn: {
-    marginTop: 10,
+    marginTop: 12,
     borderRadius: 12,
     overflow: 'hidden',
   },
   reviewGradient: {
-    height: 38,
+    height: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
   reviewBtnText: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.8,
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
   emptyContainer: {
     flex: 1,
@@ -825,26 +732,22 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    borderWidth: 1.5,
+    borderWidth: 1.8,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   emptySub: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
-    fontWeight: '600',
-    lineHeight: 20,
+    fontWeight: '500',
+    lineHeight: 22,
     maxWidth: 280,
   }
 });

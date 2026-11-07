@@ -66,27 +66,26 @@ function StatsRow({ jobs, rating, successRate }: { jobs: number; rating: number;
       style={[
         styles.statsCard,
         {
-          backgroundColor: theme.colors.surface.subtle,
-          borderColor: theme.colors.border.subtle,
+          backgroundColor: theme.isDark ? theme.colors.surface.raised : '#F1F5F9',
+          borderColor: theme.colors.border.default,
         },
       ]}
     >
-      <LinearGradient colors={theme.id === 'current' ? ['rgba(255,255,255,0.04)', 'transparent'] : [alpha(theme.colors.surface.raised, 0.5), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: colors.cyan }]}>{jobs}</Text>
-        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.jobs')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.secondary }]}>{t('profile.jobs')}</Text>
       </View>
-      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: colors.yellow }]}>
           {rating > 0 ? rating.toFixed(1) : '—'}
         </Text>
-        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.rating')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.secondary }]}>{t('profile.rating')}</Text>
       </View>
-      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: colors.success }]}>{successRate}%</Text>
-        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.success')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.secondary }]}>{t('profile.success')}</Text>
       </View>
     </Animated.View>
   );
@@ -103,25 +102,24 @@ function ClientStatsRow({ total, ongoing, completed }: { total: number; ongoing:
       style={[
         styles.statsCard,
         {
-          backgroundColor: theme.colors.surface.subtle,
-          borderColor: theme.colors.border.subtle,
+          backgroundColor: theme.isDark ? theme.colors.surface.raised : '#F1F5F9',
+          borderColor: theme.colors.border.default,
         },
       ]}
     >
-      <LinearGradient colors={theme.id === 'current' ? ['rgba(255,255,255,0.04)', 'transparent'] : [alpha(theme.colors.surface.raised, 0.5), 'transparent']} style={[StyleSheet.absoluteFillObject, { borderRadius: 18 }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: colors.cyan }]}>{total}</Text>
-        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.bookings')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.secondary }]}>{t('profile.bookings')}</Text>
       </View>
-      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: colors.orange }]}>{ongoing}</Text>
-        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.ongoing')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.secondary }]}>{t('profile.ongoing')}</Text>
       </View>
-      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.subtle }]} />
+      <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
       <View style={styles.statItem}>
         <Text style={[styles.statNum, { color: colors.success }]}>{completed}</Text>
-        <Text style={[styles.statLbl, { color: theme.colors.text.dim }]}>{t('profile.completed')}</Text>
+        <Text style={[styles.statLbl, { color: theme.colors.text.secondary }]}>{t('profile.completed')}</Text>
       </View>
     </Animated.View>
   );
@@ -137,18 +135,21 @@ function MenuItem({ icon: Icon, label, sublabel, badge, delay, accent, onPress }
   return (
     <Animated.View entering={FadeInRight.delay(delay).springify()} style={anim}>
       <Pressable
-        style={styles.menuItem}
+        style={[
+          styles.menuItem,
+          {
+            backgroundColor: theme.isDark ? theme.colors.surface.raised : '#FFFFFF',
+            borderColor: theme.colors.border.default,
+          },
+        ]}
         onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
       >
-        {Platform.OS === 'ios'
-          ? <BlurView intensity={theme.id === 'current' ? 16 : 8} tint={theme.blurTint} style={StyleSheet.absoluteFill} />
-          : <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.surface.card }]} />}
         <View style={[styles.menuAccentBar, { backgroundColor: accessibleAccent }]} />
         <View style={styles.menuLeft}>
-          <View style={[styles.menuIconBox, { backgroundColor: `${accessibleAccent}18`, borderColor: `${accessibleAccent}30` }]}>
-            <Icon size={17} color={accessibleAccent} strokeWidth={2.2} />
+          <View style={[styles.menuIconBox, { backgroundColor: `${accessibleAccent}20`, borderColor: `${accessibleAccent}45` }]}>
+            <Icon size={19} color={accessibleAccent} strokeWidth={2.2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.menuLabel, { color: theme.colors.text.primary }]}>{label}</Text>
@@ -156,14 +157,14 @@ function MenuItem({ icon: Icon, label, sublabel, badge, delay, accent, onPress }
           </View>
         </View>
         {badge ? (
-          <View style={[styles.menuBadgePill, { backgroundColor: `${accessibleAccent}18`, borderColor: `${accessibleAccent}35` }]}>
+          <View style={[styles.menuBadgePill, { backgroundColor: `${accessibleAccent}18`, borderColor: `${accessibleAccent}40` }]}>
             <Text style={[styles.menuBadgeText, { color: accessibleAccent }]}>{badge}</Text>
           </View>
         ) : null}
         {isRTL ? (
-          <ChevronLeft size={15} color={theme.colors.text.dim} />
+          <ChevronLeft size={18} color={theme.colors.text.secondary} strokeWidth={2.2} />
         ) : (
-          <ChevronRight size={15} color={theme.colors.text.dim} />
+          <ChevronRight size={18} color={theme.colors.text.secondary} strokeWidth={2.2} />
         )}
       </Pressable>
     </Animated.View>
@@ -433,9 +434,7 @@ export default function ProfileTab() {
             styles.card,
             {
               backgroundColor: theme.colors.surface.card,
-              borderColor: theme.colors.border.subtle,
-              shadowColor: theme.colors.shadow.color,
-              shadowOpacity: theme.colors.shadow.cardOpacity,
+              borderColor: theme.colors.border.default,
             },
           ]}
         >
@@ -683,45 +682,44 @@ const styles = StyleSheet.create({
   // Main card
   card: {
     marginHorizontal: 14, marginTop: 10, borderRadius: 26, overflow: 'hidden',
-    borderWidth: 1,
-    paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8, ...Shadows.depth,
+    borderWidth: 1.6,
+    paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12,
   },
-
 
   // Stats
   statsCard: {
     flexDirection: 'row', alignItems: 'center', borderRadius: 18, overflow: 'hidden',
-    borderWidth: 1, paddingVertical: 16,
-    marginBottom: 14,
+    borderWidth: 1.6, paddingVertical: 18,
+    marginBottom: 16,
   },
-  statItem: { flex: 1, alignItems: 'center', gap: 3 },
-  statNum: { fontSize: 22, fontWeight: '900', letterSpacing: -0.8 },
-  statLbl: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  statDivider: { width: 1, height: 36 },
+  statItem: { flex: 1, alignItems: 'center', gap: 4 },
+  statNum: { fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
+  statLbl: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  statDivider: { width: 1.2, height: 38 },
 
   // Section label
-  sectionLabel: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 10 },
+  sectionLabel: { fontSize: 11.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.8, marginBottom: 10 },
 
   // Menu
   menuSection: { marginBottom: 18 },
   menuItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 14, marginBottom: 8, overflow: 'hidden', borderWidth: 1,
-    paddingHorizontal: 12, paddingVertical: 12, position: 'relative',
+    borderRadius: 16, marginBottom: 10, overflow: 'hidden', borderWidth: 1.5,
+    paddingHorizontal: 14, paddingVertical: 14, position: 'relative',
   },
-  menuAccentBar: { position: 'absolute', start: 0, top: 8, bottom: 8, width: 3, borderRadius: 2 },
+  menuAccentBar: { position: 'absolute', start: 0, top: 8, bottom: 8, width: 3.5, borderRadius: 2 },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingStart: 8 },
-  menuIconBox: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  menuLabel: { fontSize: 14, fontWeight: '700' },
-  menuSub: { fontSize: 11, fontWeight: '500', marginTop: 1 },
+  menuIconBox: { width: 40, height: 40, borderRadius: 12, borderWidth: 1.2, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  menuLabel: { fontSize: 15.5, fontWeight: '700' },
+  menuSub: { fontSize: 13, fontWeight: '500', marginTop: 2 },
 
   // Logout
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
-    paddingVertical: 14, borderRadius: 16, borderWidth: 1,
+    paddingVertical: 15, borderRadius: 16, borderWidth: 1.6,
     marginBottom: 20,
   },
-  logoutText: { fontSize: 14, fontWeight: '800' },
+  logoutText: { fontSize: 15, fontWeight: '800' },
 
   // Version
   version: { textAlign: 'center', fontSize: 11, fontWeight: '600', paddingBottom: 14 },
