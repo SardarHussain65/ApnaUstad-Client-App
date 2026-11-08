@@ -121,7 +121,20 @@ export function WorkerHome() {
   const translateX = useShimmerTranslateX();
 
   const pendingBids = useMemo(() => {
-    return workerBids?.filter((bid) => bid.status === 'pending' || bid.status === 'rejected') || [];
+    return workerBids?.filter((bid) => {
+      if (bid.status !== 'pending' && bid.status !== 'rejected') return false;
+
+      // Extract linked job post
+      const job = bid.jobPost && typeof bid.jobPost === 'object' ? (bid.jobPost as any) : null;
+      if (!job) return false;
+
+      // If the job was cancelled, assigned to someone else, or closed, delete/hide from Sent Offers
+      const jobStatus = String(job.status || '').toLowerCase();
+      if (jobStatus === 'cancelled' || jobStatus === 'closed' || jobStatus === 'assigned') return false;
+      if (jobStatus && !['open', 'reviewing'].includes(jobStatus)) return false;
+
+      return true;
+    }) || [];
   }, [workerBids]);
 
   const activeBookings = useMemo(() => {
@@ -159,7 +172,7 @@ export function WorkerHome() {
     const appliedJobIds = new Set<string>();
 
     // Exclude jobs where worker has already placed an active proposal/bid (displayed under "Sent Offers")
-    workerBids?.forEach((bid: any) => {
+    pendingBids.forEach((bid: any) => {
       const jId = typeof bid.jobPost === 'object' ? bid.jobPost?._id : bid.jobPost;
       if (jId) appliedJobIds.add(String(jId));
     });
@@ -340,7 +353,7 @@ export function WorkerHome() {
     };
     const events = [
       'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
-      'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn',
+      'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn', 'bid:rejected', 'bid:deleted', 'bid:updated',
       'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled', 'booking:paid'
     ];
     const unsubs = events.map((event) => socketService.on(event, debouncedRefresh));

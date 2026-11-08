@@ -54,7 +54,7 @@ class SocketService {
     // Register all common event forwarders
     const defaultEvents = [
       'job:new', 'job:cancelled', 'job:status', 'job:assigned', 'job:auto_assigned', 'job:created',
-      'bid:new', 'bid:submitted', 'bid:withdrawn', 'bid:won', 'bid:lost', 'bid:rejected', 'bid:updated',
+      'bid:new', 'bid:submitted', 'bid:withdrawn', 'bid:won', 'bid:lost', 'bid:rejected', 'bid:deleted', 'bid:updated',
       'booking:new', 'booking:status', 'booking:accepted', 
       'booking:ongoing', 'booking:completed', 
       'booking:cancelled', 'booking:paid',
