@@ -68,6 +68,7 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
     };
 
     // ─── 4. WORKER PROFILE & VERIFICATION EVENTS ────────────────────────────
@@ -120,6 +121,7 @@ export function useRealtimeSync(enabled: boolean = true) {
       socketService.on('bid:updated', handleBidUpdate),
       socketService.on('bid:withdrawn', handleBidUpdate),
       socketService.on('bid:rejected', handleBidUpdate),
+      socketService.on('bid:deleted', handleBidUpdate),
       socketService.on('bid:won', (data) => {
         handleBidUpdate(data);
         handleBookingUpdate(data);

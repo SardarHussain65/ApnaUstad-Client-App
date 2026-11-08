@@ -1003,6 +1003,7 @@ export default function PendingBidDetailsScreen() {
   );
   const isHiredOther = !isWon && (
     bidStatus === 'lost' ||
+    bidStatus === 'deleted' ||
     (
       ['assigned', 'closed'].includes(displayJob?.status || '') &&
       Boolean(rawJob?.assignedWorker || rawJob?.bookingId || rawJob?.acceptedBid)
@@ -1101,9 +1102,31 @@ export default function PendingBidDetailsScreen() {
       }
     };
 
+    const onBidDeleted = (data: any) => {
+      const targetJobId = data?.jobPost?._id?.toString() || data?.jobId?.toString();
+      const targetBidId = data?.bidId?.toString();
+      const isMatchingJob = Boolean(targetJobId && targetJobId === jobId);
+      const isMatchingBid = Boolean(targetBidId && (targetBidId === params.pendingBidId || targetBidId === bid?._id?.toString()));
+      if (isMatchingJob || isMatchingBid) {
+        setLiveBidStatus('deleted');
+        void refetchDirectBid?.();
+        void refetchBids();
+        void refetchJob?.();
+        void queryClient.invalidateQueries({ queryKey: ['bid'] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+        const reasonMsg = data?.reason === 'job_cancelled'
+          ? 'This job was cancelled by the customer.'
+          : 'This job was assigned to another Ustad.';
+        toast.info('Offer Removed', reasonMsg);
+      }
+    };
+
     const unsubs = [
       socketService.on('bid:rejected', onBidRejected),
       socketService.on('bid:lost', onBidLost),
+      socketService.on('bid:deleted', onBidDeleted),
       socketService.on('bid:won', onBidWon),
       socketService.on('job:assigned', onJobAssigned),
       socketService.on('job:cancelled', onBidLost),
@@ -1116,6 +1139,8 @@ export default function PendingBidDetailsScreen() {
         onBidRejected(notifData);
       } else if (notifData?.type === 'bid_lost') {
         onBidLost(notifData);
+      } else if (notifData?.type === 'bid_deleted') {
+        onBidDeleted(notifData);
       } else if (notifData?.type === 'bid_won' || notifData?.type === 'job_assigned') {
         onBidWon(notifData);
       }

@@ -121,7 +121,20 @@ export function WorkerHome() {
   const translateX = useShimmerTranslateX();
 
   const pendingBids = useMemo(() => {
-    return workerBids?.filter((bid) => bid.status === 'pending' || bid.status === 'rejected') || [];
+    return workerBids?.filter((bid) => {
+      if (bid.status !== 'pending' && bid.status !== 'rejected') return false;
+
+      // Extract linked job post
+      const job = bid.jobPost && typeof bid.jobPost === 'object' ? (bid.jobPost as any) : null;
+      if (!job) return false;
+
+      // If the job was cancelled, assigned to someone else, or closed, delete/hide from Sent Offers
+      const jobStatus = String(job.status || '').toLowerCase();
+      if (jobStatus === 'cancelled' || jobStatus === 'closed' || jobStatus === 'assigned') return false;
+      if (jobStatus && !['open', 'reviewing'].includes(jobStatus)) return false;
+
+      return true;
+    }) || [];
   }, [workerBids]);
 
   const activeBookings = useMemo(() => {
@@ -159,7 +172,7 @@ export function WorkerHome() {
     const appliedJobIds = new Set<string>();
 
     // Exclude jobs where worker has already placed an active proposal/bid (displayed under "Sent Offers")
-    workerBids?.forEach((bid: any) => {
+    pendingBids.forEach((bid: any) => {
       const jId = typeof bid.jobPost === 'object' ? bid.jobPost?._id : bid.jobPost;
       if (jId) appliedJobIds.add(String(jId));
     });
@@ -300,7 +313,7 @@ export function WorkerHome() {
     if (!token || !user?._id) return;
     resolveWorkerLocation().then((coords) => {
       if (coords) syncWorkerLocation(coords);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [token, user?._id, resolveWorkerLocation, syncWorkerLocation]);
 
   // ─── Refresh Helpers ──────────────────────────────────────────────────────────
@@ -308,7 +321,7 @@ export function WorkerHome() {
     setIsRefreshing(true);
     resolveWorkerLocation().then((coords) => {
       if (coords) syncWorkerLocation(coords);
-    }).catch(() => {});
+    }).catch(() => { });
     await Promise.allSettled([
       refetchSummary(),
       refetchBids(),
@@ -340,7 +353,7 @@ export function WorkerHome() {
     };
     const events = [
       'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
-      'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn',
+      'bid:won', 'bid:lost', 'bid:submitted', 'bid:withdrawn', 'bid:rejected', 'bid:deleted', 'bid:updated',
       'booking:new', 'booking:status', 'booking:accepted', 'booking:ongoing', 'booking:completed', 'booking:cancelled', 'booking:paid'
     ];
     const unsubs = events.map((event) => socketService.on(event, debouncedRefresh));
@@ -687,9 +700,9 @@ export function WorkerHome() {
                 );
                 const earningAmount = Number(
                   booking.workerEarning ||
-                    booking.cardMeta?.financial?.amount ||
-                    booking.totalAmount ||
-                    0
+                  booking.cardMeta?.financial?.amount ||
+                  booking.totalAmount ||
+                  0
                 );
 
                 return (
@@ -735,8 +748,8 @@ export function WorkerHome() {
                           {isPaymentPending
                             ? t('bookingStatus.awaitingPayment.title', 'AWAITING CASH PAYMENT')
                             : isOngoing
-                            ? t('bookingStatus.ongoing.title', 'WORK IN PROGRESS')
-                            : t('bookingStatus.accepted.title', 'BOOKED / ASSIGNED')}
+                              ? t('bookingStatus.ongoing.title', 'WORK IN PROGRESS')
+                              : t('bookingStatus.accepted.title', 'BOOKED / ASSIGNED')}
                         </Text>
                       </View>
 
@@ -792,62 +805,67 @@ export function WorkerHome() {
                       </Text>
                     )}
 
-                    {/* Customer & Location Row */}
+                    {/* Customer & Location Block */}
                     <View style={styles.heroCustomerBlock}>
-                      <View style={styles.heroCustomerLeft}>
-                        <View
-                          style={[
-                            styles.customerMiniAvatar,
-                            {
-                              borderColor: alpha(
-                                isOngoing ? colors.success : colors.cyan,
-                                0.3
-                              ),
-                            },
-                          ]}
-                        >
-                          {customerAvatar ? (
-                            <Image
-                              source={{ uri: customerAvatar }}
-                              style={styles.customerMiniImg}
-                            />
-                          ) : (
-                            <Text
-                              style={[
-                                styles.customerMiniText,
-                                { color: theme.colors.text.primary },
-                              ]}
-                            >
-                              {initialsFor(customerName)}
-                            </Text>
-                          )}
-                        </View>
+                      <View
+                        style={[
+                          styles.customerMiniAvatar,
+                          {
+                            borderColor: alpha(
+                              isOngoing ? colors.success : colors.cyan,
+                              0.35
+                            ),
+                          },
+                        ]}
+                      >
+                        {customerAvatar ? (
+                          <Image
+                            source={{ uri: customerAvatar }}
+                            style={styles.customerMiniImg}
+                          />
+                        ) : (
+                          <Text
+                            style={[
+                              styles.customerMiniText,
+                              { color: theme.colors.text.primary },
+                            ]}
+                          >
+                            {initialsFor(customerName)}
+                          </Text>
+                        )}
+                      </View>
+
+                      <View style={styles.heroCustomerDetails}>
                         <Text
                           style={[
                             styles.heroCustomerName,
                             { color: theme.colors.text.primary },
                           ]}
                           numberOfLines={1}
+                          ellipsizeMode="tail"
                         >
                           {customerName}
                         </Text>
-                      </View>
 
-                      <View style={styles.heroLocationRow}>
-                        <MapPin
-                          size={12}
-                          color={theme.colors.text.muted}
-                          strokeWidth={2.2}
-                        />
-                        <Text
-                          style={[
-                            styles.heroAddressText,
-                            { color: theme.colors.text.muted },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {bookingAddress}
-                        </Text>
+                        {Boolean(bookingAddress) && (
+                          <View style={styles.heroLocationRow}>
+                            <MapPin
+                              size={12}
+                              color={theme.colors.text.muted}
+                              strokeWidth={2.2}
+                            />
+                            <Text
+                              style={[
+                                styles.heroAddressText,
+                                { color: theme.colors.text.muted },
+                              ]}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                            >
+                              {bookingAddress}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
 
@@ -1282,53 +1300,49 @@ const styles = StyleSheet.create({
   heroCustomerBlock: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 10,
-  },
-  heroCustomerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    flex: 1,
-    minWidth: 0,
+    gap: 10,
+    marginBottom: 12,
   },
   customerMiniAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1.5,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
+    flexShrink: 0,
   },
   customerMiniImg: {
     width: '100%',
     height: '100%',
   },
   customerMiniText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
-  heroCustomerRow: {
-    marginBottom: 14,
-    gap: 4,
+  heroCustomerDetails: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+    justifyContent: 'center',
   },
   heroCustomerName: {
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '700',
+    letterSpacing: 0.1,
   },
   heroLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    flexShrink: 1,
+    minWidth: 0,
   },
   heroAddressText: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
   },
   heroFooterRow: {
     flexDirection: 'row',
