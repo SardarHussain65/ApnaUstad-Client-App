@@ -43,6 +43,7 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { Skeleton, useShimmerTranslateX } from '../components/ui/Skeleton';
 import { useBookingDetails, useWorker, useWorkerReviews, useToggleFavoriteMutation } from '../hooks';
 import { useAuth } from '../context/AuthContext';
+import { useVoiceCall } from '../context/CallContext';
 import { useIsRTL } from '../context/LanguageContext';
 import { queryKeys } from '../lib/queryKeyFactory';
 import api from '../services/api';
@@ -215,16 +216,31 @@ export default function WorkerDetailsScreen() {
     });
   };
 
+  const { startCall } = useVoiceCall();
+
   const callWorker = async () => {
-    if (!workerPhone) {
+    if (!hasActiveBooking || !bookingId) {
       Toast.show({
         type: 'info',
         text1: t('workerDetails.phoneUnavailable'),
-        text2: t('workerDetails.phoneUnavailableDesc'),
+        text2: 'Voice calls are available once a booking is confirmed.',
       });
       return;
     }
-    await Linking.openURL(`tel:${workerPhone}`);
+    try {
+      await startCall({
+        bookingId,
+        recipientName: worker?.fullName || 'Worker',
+        recipientAvatar: worker?.profileImage,
+        recipientRole: worker?.category || 'Worker',
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Call Failed',
+        text2: err?.message || 'Unable to place in-app call.',
+      });
+    }
   };
 
   const openChat = () => {

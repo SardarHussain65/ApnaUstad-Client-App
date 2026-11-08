@@ -33,6 +33,7 @@ import {
 import { Colors, useTheme } from '../constants/Theme';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useAuth } from '../context/AuthContext';
+import { useVoiceCall } from '../context/CallContext';
 import { useLanguage, useIsRTL } from '../context/LanguageContext';
 import { socketService } from '../services/socketService';
 import { useBookingDetails, useMessages, useSendMessageMutation, type Message } from '../hooks';
@@ -133,15 +134,26 @@ export default function ChatScreen() {
 
   const bookingWorker = typeof booking?.worker === 'object' ? booking.worker : null;
   const bookingCustomer = typeof booking?.customer === 'object' ? booking.customer : null;
-  const contactPhone = role === 'client' ? (bookingWorker as any)?.phone : (bookingCustomer as any)?.phone;
+  const { startCall } = useVoiceCall();
 
-  const handleCall = () => {
-    if (contactPhone) {
-      void Linking.openURL(`tel:${contactPhone}`);
-    } else {
+  const handleCall = async () => {
+    if (!bookingId) return;
+    try {
+      const partnerName = role === 'client' ? (bookingWorker as any)?.fullName : (bookingCustomer as any)?.fullName;
+      const partnerAvatar = role === 'client' ? (bookingWorker as any)?.profileImage : (bookingCustomer as any)?.profileImage;
+      const partnerRole = role === 'client' ? ((bookingWorker as any)?.category || 'Worker') : 'Client';
+
+      await startCall({
+        bookingId,
+        recipientName: partnerName || recipientName || 'User',
+        recipientAvatar: partnerAvatar,
+        recipientRole: partnerRole,
+      });
+    } catch (err: any) {
       Toast.show({
-        type: 'info',
-        text1: language === 'ur' ? 'فون نمبر دستیاب نہیں' : t('workerDetails.phoneUnavailable', 'Phone not available'),
+        type: 'error',
+        text1: 'Call Failed',
+        text2: err?.message || 'Unable to place in-app call.',
       });
     }
   };
@@ -458,7 +470,7 @@ export default function ChatScreen() {
             </View>
           </View>
 
-          {contactPhone && canSendMessages ? (
+          {canSendMessages ? (
             <TouchableOpacity
               onPress={handleCall}
               style={[

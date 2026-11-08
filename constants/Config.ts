@@ -9,15 +9,22 @@ import Constants from 'expo-constants';
  */
 const rawBaseUrl =
   process.env.EXPO_PUBLIC_API_URL ||
-  Constants.expoConfig?.extra?.apiUrl ||
-  (!__DEV__ ? 'https://api.apnaustad.app' : 'http://192.168.18.96:5001');
+  (__DEV__
+    ? 'http://192.168.0.108:5001'
+    : (Constants.expoConfig?.extra?.apiUrl || 'https://api.apnaustad.app'));
 
 export const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
+console.log('🌐 Active API BASE_URL:', BASE_URL);
 
 export const MAPTILER_API_KEY =
   Constants.expoConfig?.extra?.maptilerApiKey ||
   process.env.MAPTILER_API_KEY ||
   'o3cm0oM4Yn3L4Nyf1ydh';
+
+export const AGORA_APP_ID =
+  process.env.EXPO_PUBLIC_AGORA_APP_ID ||
+  Constants.expoConfig?.extra?.agoraAppId ||
+  'e537fd5b737642d79399d4c550d0887e';
 
 
 /**
