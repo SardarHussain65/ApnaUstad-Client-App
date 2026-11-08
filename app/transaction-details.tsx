@@ -63,6 +63,7 @@ import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@mapl
 
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useVoiceCall } from '../context/CallContext';
 import { socketService } from '../services/socketService';
 import { startBackgroundLocationTracking, stopBackgroundLocationTracking } from '../services/backgroundLocationService';
 import { useQueryClient } from '@tanstack/react-query';
@@ -143,6 +144,7 @@ export default function TransactionDetailsScreen() {
     autoAssigned?: string;
   }>();
   const { role, user } = useAuth();
+  const { startCall } = useVoiceCall();
   const isWorker = role === 'worker';
 
   const shieldColor = theme.id === 'light'
@@ -617,10 +619,23 @@ export default function TransactionDetailsScreen() {
     });
   };
 
-  const callPartner = () => {
-    if (isCommunicationLocked || !partnerPhone) return;
+  const callPartner = async () => {
+    if (isCommunicationLocked || !id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Linking.openURL(`tel:${partnerPhone}`);
+    try {
+      await startCall({
+        bookingId: id,
+        recipientName: partnerName || 'Partner',
+        recipientAvatar: partnerImage,
+        recipientRole: isWorker ? 'Client' : 'Worker',
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Call Failed',
+        text2: err?.message || 'Unable to place in-app call.',
+      });
+    }
   };
 
   const openExternalMaps = () => {

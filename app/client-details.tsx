@@ -31,6 +31,7 @@ import {
 } from 'lucide-react-native';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { useBookingDetails, cleanAddressString } from '../hooks';
+import { useVoiceCall } from '../context/CallContext';
 import api from '../services/api';
 import { alpha, useTheme, useThemeColors } from '../constants/Theme';
 
@@ -134,17 +135,31 @@ export default function ClientDetailsScreen() {
   const canContactClient = Boolean(bookingId && !isCommunicationLocked);
   const bookingClient = typeof contextBooking?.customer === 'object' ? contextBooking.customer : null;
   const clientPhone = canContactClient && bookingClient?._id === clientId ? bookingClient?.phone : '';
+  const { startCall } = useVoiceCall();
 
   const callClient = async () => {
-    if (!clientPhone) {
+    if (!bookingId) {
       Toast.show({
         type: 'info',
         text1: t('clientDetails.phoneUnavailable'),
-        text2: t('clientDetails.noPhoneNumber'),
+        text2: 'Active booking ID is required to call.',
       });
       return;
     }
-    await Linking.openURL(`tel:${clientPhone}`);
+    try {
+      await startCall({
+        bookingId,
+        recipientName: client?.fullName || 'Client',
+        recipientAvatar: client?.profileImage,
+        recipientRole: 'Client',
+      });
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Call Failed',
+        text2: err?.message || 'Unable to place in-app call.',
+      });
+    }
   };
 
   const openChat = () => {

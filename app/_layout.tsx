@@ -8,6 +8,7 @@ import { QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { queryClient } from "../lib/queryClient";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";
+import { CallProvider } from "../context/CallContext";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useRealtimeSync } from '../hooks/useRealtimeSync';
@@ -112,19 +113,21 @@ function RootLayoutNav() {
 
   return (
     <ErrorBoundary>
-      <IncomingJobProvider>
-        <AccountRestrictionGate />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="splash" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="role-selection" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-        </Stack>
-        <BeautifulToastConfig />
-      </IncomingJobProvider>
+      <CallProvider>
+        <IncomingJobProvider>
+          <AccountRestrictionGate />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="splash" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="role-selection" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+          </Stack>
+          <BeautifulToastConfig />
+        </IncomingJobProvider>
+      </CallProvider>
     </ErrorBoundary>
   );
 }

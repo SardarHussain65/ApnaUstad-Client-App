@@ -78,13 +78,29 @@ export const requestNotificationPermissions = async () => {
     return 'denied';
   }
 
-  // For Android, set notification channel (Required for Android 8.0+)
+  // For Android, set notification channels (Required for Android 8.0+)
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
       name: 'Default',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#00F5FF',
+    });
+
+    await Notifications.setNotificationChannelAsync('voice_calls', {
+      name: 'Voice Calls',
+      description: 'Incoming in-app voice calls from clients or workers',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'default',
+      vibrationPattern: [0, 1000, 500, 1000, 500, 1000],
+      enableVibrate: true,
+      bypassDnd: true,
+      lightColor: '#10B981',
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.VOICE_COMMUNICATION_SIGNALLING,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
     });
   }
 
