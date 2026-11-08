@@ -250,26 +250,38 @@ export default function BookingsTab() {
           {TABS.map((tab) => {
             const isActive = activeTab === tab;
             const tabKey = tab === 'Active' ? 'activeTab' : tab === 'Completed' ? 'completedTab' : 'cancelledTab';
+            const defaultLabel = tab === 'Active' ? 'Ongoing' : tab === 'Completed' ? 'Done' : 'Cancelled';
+            const inactiveColor = theme.isDark ? '#CBD5E1' : '#334155';
+
             return (
               <TouchableOpacity
                 key={tab}
                 style={[
                   styles.tabButton,
-                  isActive && {
-                    backgroundColor: theme.colors.tabBar.activeBackground,
-                    borderColor: theme.colors.tabBar.activeBorder,
-                    borderWidth: theme.colors.tabBar.activeBorder !== 'transparent' ? 1 : 0,
-                  },
+                  isActive
+                    ? {
+                        backgroundColor: theme.colors.tabBar.activeBackground,
+                        borderColor: theme.colors.tabBar.activeBorder,
+                        borderWidth: theme.colors.tabBar.activeBorder !== 'transparent' ? 1 : 0,
+                      }
+                    : {
+                        backgroundColor: 'transparent',
+                      },
                 ]}
                 onPress={() => setActiveTab(tab)}
                 activeOpacity={0.8}
               >
-                <Text style={[
-                  styles.tabText,
-                  { color: isActive ? theme.colors.tabBar.activeIcon : theme.colors.text.secondary },
-                  isActive && styles.activeTabText
-                ]}>
-                  {t(`bookings.${tabKey}`)}
+                <Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color: isActive ? theme.colors.tabBar.activeIcon : inactiveColor,
+                    },
+                    isActive && styles.activeTabText,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t(`bookings.${tabKey}`, defaultLabel)}
                 </Text>
               </TouchableOpacity>
             );
@@ -579,13 +591,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 15,
-    overflow: 'hidden',
-    position: 'relative',
   },
   tabText: {
     fontWeight: '600',
     fontSize: 14,
-    zIndex: 1,
+    textAlign: 'center',
   },
   activeTabText: {
     fontWeight: '800',
