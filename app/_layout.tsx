@@ -24,7 +24,7 @@ SplashScreen.preventAutoHideAsync().catch(() => { });
 initCrashReporting();
 
 export const unstable_settings = {
-  initialRouteName: 'splash',
+  initialRouteName: 'index',
 };
 
 
