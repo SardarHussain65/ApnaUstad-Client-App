@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { Image } from 'expo-image';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography, getBookingCardPalette } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { GlassCard } from '../../components/home/GlassCard';
@@ -465,7 +466,13 @@ export default function BookingsTab() {
                         <View style={styles.personContainer}>
                           <View style={[styles.avatarShell, { backgroundColor: palette.avatarBg }]}>
                             {counterPartyImage ? (
-                              <Image source={{ uri: counterPartyImage }} style={styles.avatarImage} />
+                              <Image
+                                source={{ uri: counterPartyImage }}
+                                style={styles.avatarImage}
+                                contentFit="cover"
+                                transition={150}
+                                cachePolicy="memory-disk"
+                              />
                             ) : (
                               <Text style={[styles.avatarText, { color: palette.avatarText }]}>
                                 {initialsFor(counterPartyName)}

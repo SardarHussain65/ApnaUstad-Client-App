@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -183,7 +184,13 @@ export const WorkerPendingBidCard = React.memo(function WorkerPendingBidCard({
           <View style={styles.customerGroup}>
             <View style={[styles.avatarShell, { borderColor: theme.isDark ? alpha(accentColor, 0.35) : 'rgba(15, 23, 42, 0.18)' }]}>
               {clientAvatar ? (
-                <Image source={{ uri: clientAvatar }} style={styles.avatarImage} />
+                <Image
+                  source={{ uri: clientAvatar }}
+                  style={styles.avatarImage}
+                  contentFit="cover"
+                  transition={150}
+                  cachePolicy="memory-disk"
+                />
               ) : (
                 <LinearGradient
                   colors={[alpha(accentColor, 0.4), alpha(theme.colors.brand.primary, 0.18)]}

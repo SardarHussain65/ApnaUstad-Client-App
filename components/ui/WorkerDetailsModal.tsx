@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { MapPin, Phone, Mail, Award, Zap, Briefcase, Star, TrendingUp, BadgeCheck } from 'lucide-react-native';
 import { BeautifulModal } from './BeautifulModal';
 import { useWorker } from '../../hooks';
@@ -68,6 +69,9 @@ export function WorkerDetailsModal({
                 <Image
                   source={{ uri: avatarUri }}
                   style={styles.avatar}
+                  contentFit="cover"
+                  transition={150}
+                  cachePolicy="memory-disk"
                   onError={() => setImageError(true)}
                 />
               </View>
