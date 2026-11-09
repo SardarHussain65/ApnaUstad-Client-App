@@ -10,6 +10,7 @@ import {
   Text,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import Animated, {
   FadeIn,
@@ -246,14 +247,18 @@ export function ConfirmModal({
             activeOpacity={0.85}
           >
             <LinearGradient colors={[resolvedConfirmColor, resolvedConfirmColor]} style={styles.solidBtnGradient}>
-              <Text
-                style={[styles.solidBtnText, { color: confirmTextColor }]}
-                numberOfLines={2}
-                adjustsFontSizeToFit
-                minimumFontScale={0.72}
-              >
-                {isLoading ? '...' : confirmText.toUpperCase()}
-              </Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={confirmTextColor} />
+              ) : (
+                <Text
+                  style={[styles.solidBtnText, { color: confirmTextColor }]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                >
+                  {confirmText.toUpperCase()}
+                </Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>

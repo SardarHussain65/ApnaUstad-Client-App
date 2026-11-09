@@ -133,7 +133,7 @@ export default function BookingsTab() {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         handleRefreshRef.current?.();
-      }, 800);
+      }, 120);
     };
 
     // Listen for real-time socket updates

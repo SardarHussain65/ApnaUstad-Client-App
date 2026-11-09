@@ -1455,6 +1455,7 @@ export default function FindingWorkerScreen() {
           confirmText={confirmModal.confirmText}
           cancelText={confirmModal.cancelText}
           confirmColor={confirmModal.confirmColor}
+          isLoading={isCancelling}
         />
 
       </SafeAreaView>

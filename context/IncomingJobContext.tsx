@@ -358,7 +358,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     });
 
     const unsubscribeOngoing = socketService.on('booking:ongoing', (data: any) => {
-      const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      const category = data?.category || data?.booking?.category || i18n.t('jobDetails.defaultTitle');
+      const bId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+      if (bId) {
+        queryClient.setQueryData(queryKeys.bookings.detail(bId), (prev: any) => {
+          if (!prev) return prev;
+          return { ...prev, status: 'ongoing', ...(data?.booking || {}) };
+        });
+      }
       if (role === 'worker') {
         isWorkerBusyRef.current = true;
         setShowModal(false);
@@ -378,10 +385,17 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     });
 
     const unsubscribeCompleted = socketService.on('booking:completed', (data: any) => {
-      const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      const category = data?.category || data?.booking?.category || i18n.t('jobDetails.defaultTitle');
       const targetJobId = data?.jobPost?._id || data?.jobPost;
       if (targetJobId) {
         removeJobIdFromQueues(targetJobId);
+      }
+      const bId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+      if (bId) {
+        queryClient.setQueryData(queryKeys.bookings.detail(bId), (prev: any) => {
+          if (!prev) return prev;
+          return { ...prev, status: 'completed', isCompleted: true, ...(data?.booking || {}) };
+        });
       }
       if (role === 'worker') {
         isWorkerBusyRef.current = false;
@@ -406,7 +420,14 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
     });
 
     const unsubscribeCancelled = socketService.on('booking:cancelled', (data: any) => {
-      const category = data?.category || i18n.t('jobDetails.defaultTitle');
+      const category = data?.category || data?.booking?.category || i18n.t('jobDetails.defaultTitle');
+      const bId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+      if (bId) {
+        queryClient.setQueryData(queryKeys.bookings.detail(bId), (prev: any) => {
+          if (!prev) return prev;
+          return { ...prev, status: 'cancelled', ...(data?.booking || {}) };
+        });
+      }
       if (role === 'worker') {
         isWorkerBusyRef.current = false;
         queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
@@ -422,13 +443,24 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
 
     const unsubscribePaid = socketService.on('booking:paid', (data: any) => {
       console.log('💰 [IncomingJobContext] Payment Received Event:', data);
+      const bId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
+      if (bId) {
+        queryClient.setQueryData(queryKeys.bookings.detail(bId), (prev: any) => {
+          if (!prev) return prev;
+          return { ...prev, isPaid: true, paymentStatus: 'paid', status: 'completed', ...(data?.booking || {}) };
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.transactions() });
 
       if (role === 'worker') {
         setPaidBooking(data);
         setShowPaidModal(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        const category = data.category || i18n.t('jobDetails.defaultTitle');
+        const category = data?.category || i18n.t('jobDetails.defaultTitle');
         Toast.show({
           type: 'success',
           text1: i18n.t('realtimeAlerts.paymentConfirmedTitle'),

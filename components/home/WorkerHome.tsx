@@ -349,7 +349,7 @@ export function WorkerHome() {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         refreshWorkerActivityRef.current?.();
-      }, 800);
+      }, 120);
     };
     const events = [
       'job:new', 'job:cancelled', 'job:assigned', 'job:auto_assigned',
