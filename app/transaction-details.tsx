@@ -2121,8 +2121,14 @@ export default function TransactionDetailsScreen() {
         visible={showDisputeModal}
         onClose={() => setShowDisputeModal(false)}
         bookingId={id as string}
+        bookingStatus={status}
         jobAmount={amountValue}
+        isWorker={isWorker}
         onSubmitted={() => refetch()}
+        onCancelled={() => {
+          refetch();
+          router.replace('/(tabs)' as any);
+        }}
       />
 
       <AlertModal
