@@ -60,7 +60,18 @@
             "buildArchs": [
               "armeabi-v7a",
               "arm64-v8a"
-            ]
+            ],
+            "packagingOptions": {
+              "exclude": [
+                "**/libagora_segmentation_extension.so",
+                "**/libagora_spatial_audio_extension.so",
+                "**/libagora_face_detection_extension.so",
+                "**/libagora_screen_sharing_extension.so",
+                "**/libagora_video_quality_analyzer_extension.so",
+                "**/libagora_content_inspect_extension.so",
+                "**/libagora_ai_denoise_extension.so"
+              ]
+            }
           },
           "ios": {
             "useFrameworks": "static",

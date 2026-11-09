@@ -10,7 +10,7 @@ import Constants from 'expo-constants';
 const rawBaseUrl =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__
-    ? 'http://192.168.0.108:5001'
+    ? 'http://192.168.18.96:5001'
     : (Constants.expoConfig?.extra?.apiUrl || 'https://api.apnaustad.app'));
 
 export const BASE_URL = rawBaseUrl.replace(/\/+$/, '');
