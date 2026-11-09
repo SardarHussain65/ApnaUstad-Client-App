@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, ScrollView } from 'react-native';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeTypography } from '../constants/Theme';
 import { GlassCard } from '../components/home/GlassCard';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';

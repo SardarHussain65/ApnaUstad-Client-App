@@ -12,6 +12,8 @@ import { useTheme } from '../../constants/Theme';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIsRTL } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
+import { useWorkerHomeSummary, useClientHomeSummary, useNotifications } from '../../hooks';
 
 const HORIZONTAL_MARGIN = 20;
 const BAR_HEIGHT = 74;
@@ -23,6 +25,16 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const insets = useSafeAreaInsets();
   const isRTL = useIsRTL();
   const { width: screenWidth } = useWindowDimensions();
+
+  const { role, token, user } = useAuth();
+  const isWorker = role === 'worker';
+  const { data: workerSummary } = useWorkerHomeSummary({ enabled: Boolean(token && isWorker) });
+  const { data: clientSummary } = useClientHomeSummary({ enabled: Boolean(token && !isWorker) });
+  const { data: notifData } = useNotifications({ enabled: Boolean(token && user?._id) });
+
+  const activeBooking = isWorker ? workerSummary?.activeBooking : clientSummary?.activeBooking;
+  const hasActiveBooking = Boolean(activeBooking && ['accepted', 'ongoing'].includes(activeBooking.status));
+  const unreadNotifCount = notifData?.unreadCount || 0;
 
   const visibleRoutes = state.routes.filter((route) => {
     const opts = descriptors[route.key]?.options as any;
@@ -105,6 +117,12 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
       <View style={styles.tabsRow}>
         {visibleRoutes.map((route) => {
           const isFocused = activeRoute?.key === route.key;
+          const badge =
+            route.name === 'bookings' && hasActiveBooking
+              ? 'dot'
+              : route.name === 'profile' && unreadNotifCount > 0
+              ? unreadNotifCount
+              : null;
 
           return (
             <TabItem
@@ -112,6 +130,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               isFocused={isFocused}
               onPress={() => handlePress(route, isFocused)}
               routeName={route.name}
+              badge={badge}
               activeColor={theme.colors.tabBar.activeIcon}
               inactiveColor={theme.colors.tabBar.inactiveIcon}
             />
@@ -126,16 +145,19 @@ function TabItem({
   isFocused,
   onPress,
   routeName,
+  badge,
   activeColor,
   inactiveColor,
 }: {
   isFocused: boolean;
   onPress: () => void;
   routeName: string;
+  badge?: 'dot' | number | null;
   activeColor: string;
   inactiveColor: string;
 }) {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const Icon = ({ color }: { color: string }) => {
     const size = 23;
@@ -184,7 +206,16 @@ function TabItem({
       accessibilityState={{ selected: isFocused }}
     >
       <View style={styles.tabInner}>
-        <Icon color={itemColor} />
+        <View style={styles.iconWrapper}>
+          <Icon color={itemColor} />
+          {badge === 'dot' ? (
+            <View style={[styles.badgeDot, { backgroundColor: theme.colors.brand.primary }]} />
+          ) : typeof badge === 'number' && badge > 0 ? (
+            <View style={styles.badgeCount}>
+              <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text
           style={[
             styles.tabLabel,
@@ -234,6 +265,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+  },
+  iconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  badgeCount: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    lineHeight: 11,
   },
   tabLabel: {
     fontSize: 13,
