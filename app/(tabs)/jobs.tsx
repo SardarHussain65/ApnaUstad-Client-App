@@ -22,7 +22,7 @@ import {
   Flame,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
@@ -165,8 +165,7 @@ export default function WorkerJobsTab() {
     <BackgroundWrapper>
       <View style={styles.container}>
         {/* Header */}
-        <Animated.View
-          entering={SlideInDown.duration(350)}
+        <View
           style={[styles.header, { paddingTop: insets.top + Spacing.m }]}
         >
           <View style={styles.headerTitleRow}>
@@ -310,11 +309,12 @@ export default function WorkerJobsTab() {
               </Text>
             </TouchableOpacity>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Content List */}
         <ScrollView
           showsVerticalScrollIndicator={false}
+          style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
             { paddingBottom: insets.bottom + 100 },
@@ -515,6 +515,9 @@ export default function WorkerJobsTab() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   header: {

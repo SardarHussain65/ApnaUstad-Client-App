@@ -183,6 +183,9 @@ export default function TransactionDetailsScreen() {
   const [truthFeedback, setTruthFeedback] = useState('');
   const [isSubmittingTruth, setIsSubmittingTruth] = useState(false);
 
+  // Chat Unread State
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+
   // Map state
   const cameraRef = useRef<CameraRef>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -212,6 +215,21 @@ export default function TransactionDetailsScreen() {
   // Auto-refresh when TransactionDetails screen regains focus
   useRefreshOnFocus(refetch);
 
+  // Check for existing unread chat messages for this active booking
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    api.get(`/messages/${id}?limit=20`)
+      .then(res => {
+        if (!active) return;
+        const msgs = res.data?.data || [];
+        const hasUnread = msgs.some((m: any) => m.sender !== user?._id && !m.readAt);
+        if (hasUnread) setHasUnreadChat(true);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [id, user?._id]);
+
   useEffect(() => {
     const events = [
       'booking:status',
@@ -228,11 +246,26 @@ export default function TransactionDetailsScreen() {
       'dispute:updated',
       'dispute:resolved',
       'dispute:cancelled',
-      'dispute:message'
+      'dispute:message',
+      'chat:receive'
     ];
 
     const unsubs = events.map(event =>
       socketService.on(event, (data: any) => {
+        if (event === 'chat:receive') {
+          const msgBookingId = String(data?.booking?._id || data?.booking || '');
+          if (msgBookingId === String(id) && data?.sender !== user?._id) {
+            setHasUnreadChat(true);
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            Toast.show({
+              type: 'info',
+              text1: `💬 ${partnerName || t('common.chat', 'Chat')}`,
+              text2: data?.messageType === 'audio' ? '🎤 Voice message' : (data?.content || 'New message'),
+              onPress: navigateToChat,
+            });
+          }
+          return;
+        }
         const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
         if (!incomingId || incomingId === String(id) || event.startsWith('dispute:')) {
           setShowStartWorkModal(false);
@@ -623,6 +656,7 @@ export default function TransactionDetailsScreen() {
 
   // Handlers
   const navigateToChat = () => {
+    setHasUnreadChat(false);
     if (!partnerProfileId || isCommunicationLocked) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
@@ -1544,7 +1578,10 @@ export default function TransactionDetailsScreen() {
               disabled={isCommunicationLocked || !partnerProfileId}
               activeOpacity={0.8}
             >
-              <MessageCircle size={15} color={colors.cyan} strokeWidth={2.4} />
+              <View style={styles.chatIconWrapper}>
+                <MessageCircle size={15} color={colors.cyan} strokeWidth={2.4} />
+                {hasUnreadChat && <View style={styles.unreadChatDot} />}
+              </View>
               <Text style={[styles.contactPillText, { color: colors.cyan }]}>
                 {t('common.chat', 'Chat')}
               </Text>
@@ -2935,6 +2972,22 @@ const styles = StyleSheet.create({
   contactPillText: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  chatIconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadChatDot: {
+    position: 'absolute',
+    top: -3,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   hubDivider: {
     height: 1.2,
