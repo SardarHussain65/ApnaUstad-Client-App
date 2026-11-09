@@ -5,10 +5,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Dimensions,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import {
   Phone,
   PhoneOff,
@@ -121,7 +121,13 @@ export const VoiceCallModal: React.FC<VoiceCallModalProps> = ({
         <View style={styles.profileSection}>
           <View style={[styles.avatarWrapper, isConnected && styles.avatarConnected]}>
             {partnerAvatar ? (
-              <Image source={{ uri: partnerAvatar }} style={styles.avatarImage} />
+              <Image
+                source={{ uri: partnerAvatar }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                transition={150}
+                cachePolicy="memory-disk"
+              />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>

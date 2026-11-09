@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, ScrollView, TextInput, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Modal, ActivityIndicator, ScrollView, TextInput, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Shield, Star, MapPin, Check, Briefcase, Award, Clock, Eye, ChevronRight, MessageSquare, ArrowLeft, Search, Users, Radio, Image as ImageIcon, CalendarDays, Tag, Percent, Zap } from 'lucide-react-native';
@@ -848,6 +849,9 @@ export default function FindingWorkerScreen() {
                           <Image
                             source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
                             style={styles.satelliteImage}
+                            contentFit="cover"
+                            transition={150}
+                            cachePolicy="memory-disk"
                           />
                           <View style={styles.priceBadge}>
                             <Text style={styles.priceText}>{formatMoney(app.proposedPrice)}</Text>
@@ -1275,6 +1279,9 @@ export default function FindingWorkerScreen() {
                           <Image
                             source={{ uri: applicant.worker?.profileImage || 'https://via.placeholder.com/150' }}
                             style={styles.responseProfileImage}
+                            contentFit="cover"
+                            transition={150}
+                            cachePolicy="memory-disk"
                           />
                           <View style={styles.responseProfileCopy}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
