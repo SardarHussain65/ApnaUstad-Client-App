@@ -282,6 +282,7 @@ export default function TransactionDetailsScreen() {
   const canRaiseDispute = disputeMeta?.canRaiseDispute === true;
   const isPaid = booking?.paymentStatus === 'paid';
   const isJobEnded = (status === 'completed' && isPaid) || status === 'cancelled';
+  const isJobCompletedOrEnded = status === 'completed' || status === 'cancelled';
   const showDisputeAction = hasActiveDispute || (canRaiseDispute && !isJobEnded);
   const isCommunicationLocked = isJobEnded;
 
@@ -1816,12 +1817,14 @@ export default function TransactionDetailsScreen() {
                     backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : shieldBg,
                     borderWidth: 1.8,
                     borderColor: shieldBorder,
-                  }
+                  },
+                  isJobCompletedOrEnded && styles.buttonDisabled,
                 ]}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setShowSafetyModal(true);
                 }}
+                disabled={isJobCompletedOrEnded}
                 activeOpacity={0.8}
               >
                 <ShieldCheck size={18} color={shieldColor} strokeWidth={2.4} />
@@ -1852,9 +1855,11 @@ export default function TransactionDetailsScreen() {
                       backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : '#FFFFFF',
                       borderWidth: 1.8,
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : theme.colors.border.default,
-                    }
+                    },
+                    isJobCompletedOrEnded && styles.buttonDisabled,
                   ]}
                   onPress={openExternalMaps}
+                  disabled={isJobCompletedOrEnded}
                   activeOpacity={0.8}
                 >
                   <Navigation size={17} color={theme.id === 'light' ? theme.colors.brand.primary : (theme.id === 'dark' ? '#38BDF8' : '#00E5FF')} strokeWidth={2.4} />
@@ -1911,12 +1916,14 @@ export default function TransactionDetailsScreen() {
                   backgroundColor: shieldBg,
                   borderWidth: 1.8,
                   borderColor: shieldBorder,
-                }
+                },
+                isJobCompletedOrEnded && styles.buttonDisabled,
               ]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setShowSafetyModal(true);
               }}
+              disabled={isJobCompletedOrEnded}
               activeOpacity={0.8}
             >
               <ShieldCheck size={18} color={shieldColor} strokeWidth={2.4} />
@@ -1947,9 +1954,11 @@ export default function TransactionDetailsScreen() {
                     backgroundColor: theme.colors.surface.card,
                     borderWidth: 1.8,
                     borderColor: theme.colors.border.default,
-                  }
+                  },
+                  isJobCompletedOrEnded && styles.buttonDisabled,
                 ]}
                 onPress={openExternalMaps}
+                disabled={isJobCompletedOrEnded}
                 activeOpacity={0.8}
               >
                 <Navigation size={17} color={theme.colors.brand.primary} strokeWidth={2.4} />

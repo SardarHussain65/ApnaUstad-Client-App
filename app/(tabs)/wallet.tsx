@@ -1,12 +1,14 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Share, Platform, View, Text } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useThemeTypography } from '../../constants/Theme';
 import { BackgroundWrapper } from '../../components/common/BackgroundWrapper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { socketService } from '../../services/socketService';
 import {
   useMyPayments,
   useWorkerWallet,
@@ -16,6 +18,7 @@ import {
   useCreateWalletTopUpMutation,
   useToast,
   useUserWallet,
+  useRefreshOnFocus,
 } from '../../hooks';
 import { useWorkerAnalytics } from '../../hooks/useWorkerAnalytics';
 
@@ -159,6 +162,73 @@ export default function WalletTab() {
       setIsWorkerRefreshing(false);
     }
   }, [refetchWallet, refetchTransactions, refetchPayments, refetchPaymentMethods, refetchTopUps, refetchAnalytics]);
+
+  // Automatically refresh when screen gains navigation focus
+  const handleActiveRefresh = useCallback(() => {
+    if (isWorker) {
+      return handleWorkerRefresh();
+    } else {
+      return handleClientRefresh();
+    }
+  }, [isWorker, handleWorkerRefresh, handleClientRefresh]);
+
+  useRefreshOnFocus(handleActiveRefresh);
+
+  // Live real-time socket listener for direct UI updates when admin approves/rejects payment requests
+  useEffect(() => {
+    const handleLiveWalletUpdate = (data: any) => {
+      console.log('⚡ [WalletTab] Direct live socket update received:', data);
+      if (isWorker) {
+        handleWorkerRefresh();
+
+        try {
+          if (Platform.OS !== 'web') {
+            const isApproved = data?.status === 'approved' || data?.type === 'topup_approved';
+            const isRejected = data?.status === 'rejected' || data?.type === 'topup_rejected';
+            if (isApproved) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else if (isRejected) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            } else {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
+          }
+        } catch {}
+
+        if (data?.type === 'topup_approved' || data?.status === 'approved') {
+          const amt = data?.amount ? `Rs. ${Number(data.amount).toLocaleString('en-PK')}` : '';
+          toast.success(
+            t('wallet.topUpApproved', 'Top-up Approved!'),
+            amt
+              ? t('wallet.topUpApprovedDesc', { amount: amt, defaultValue: `Your top-up of ${amt} has been approved and added to your wallet.` })
+              : t('wallet.topUpApprovedDefault', 'Your payment top-up has been approved and added to your wallet.')
+          );
+        } else if (data?.type === 'topup_rejected' || data?.status === 'rejected') {
+          const reason = data?.rejectionReason || data?.topUpRequest?.rejectionReason;
+          toast.error(
+            t('wallet.topUpRejected', 'Top-up Request Rejected'),
+            reason
+              ? t('wallet.topUpRejectedReason', { reason, defaultValue: `Payment proof was rejected: ${reason}` })
+              : t('wallet.topUpRejectedDesc', 'Your payment proof was reviewed and rejected.')
+          );
+        }
+      } else {
+        handleClientRefresh();
+      }
+    };
+
+    const unsub1 = socketService.on('wallet:updated', handleLiveWalletUpdate);
+    const unsub2 = socketService.on('wallet:topup_updated', handleLiveWalletUpdate);
+    const unsub3 = socketService.on('wallet:topup_approved', handleLiveWalletUpdate);
+    const unsub4 = socketService.on('wallet:topup_rejected', handleLiveWalletUpdate);
+
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+      unsub4();
+    };
+  }, [isWorker, handleWorkerRefresh, handleClientRefresh, toast, t]);
 
   const handleCopy = async (label: string, value?: string) => {
     if (!value) return;
