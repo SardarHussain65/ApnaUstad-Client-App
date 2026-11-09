@@ -9,6 +9,7 @@ import { queryClient } from "../lib/queryClient";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { IncomingJobProvider } from "../context/IncomingJobContext";
 import { CallProvider } from "../context/CallContext";
+import { NetworkStatusBar } from "../components/common/NetworkStatusBar";
 import { BeautifulToastConfig } from "../components/ui/BeautifulToast";
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useRealtimeSync } from '../hooks/useRealtimeSync';
@@ -125,6 +126,7 @@ function RootLayoutNav() {
             <Stack.Screen name="role-selection" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" options={{ headerShown: false }} />
           </Stack>
+          <NetworkStatusBar />
           <BeautifulToastConfig />
         </IncomingJobProvider>
       </CallProvider>

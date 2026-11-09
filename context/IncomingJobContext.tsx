@@ -8,6 +8,7 @@ import Toast from 'react-native-toast-message';
 import { PaymentReceivedModal } from '../components/home/PaymentReceivedModal';
 import { JobAssignedSuccessModal } from '../components/home/JobAssignedSuccessModal';
 import * as Haptics from 'expo-haptics';
+import { createAudioPlayer } from 'expo-audio';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeyFactory';
 import { useWorkerHomeSummary } from '../hooks';
@@ -64,6 +65,57 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
   // Job assignment success modal state
   const [assignedBooking, setAssignedBooking] = useState<any>(null);
   const [showAssignedModal, setShowAssignedModal] = useState(false);
+
+  // Job alert sound player and haptics timer
+  const jobAlertPlayerRef = useRef<any>(null);
+  const jobAlertVibrationRef = useRef<any>(null);
+
+  // Play audio ringtone and pulse vibration while incoming job modal is open
+  useEffect(() => {
+    if (showModal && incomingJobsQueue.length > 0) {
+      try {
+        const player = createAudioPlayer(require('../assets/sounds/ringtone.wav'));
+        player.loop = true;
+        player.volume = 1.0;
+        player.play();
+        jobAlertPlayerRef.current = player;
+      } catch (e) {
+        console.warn('Failed to start incoming job ringtone:', e);
+      }
+
+      // Start initial haptic alert and rhythmic pulse
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      jobAlertVibrationRef.current = setInterval(() => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      }, 1500);
+    } else {
+      if (jobAlertPlayerRef.current) {
+        try {
+          jobAlertPlayerRef.current.pause();
+          jobAlertPlayerRef.current.remove();
+        } catch (e) {}
+        jobAlertPlayerRef.current = null;
+      }
+      if (jobAlertVibrationRef.current) {
+        clearInterval(jobAlertVibrationRef.current);
+        jobAlertVibrationRef.current = null;
+      }
+    }
+
+    return () => {
+      if (jobAlertPlayerRef.current) {
+        try {
+          jobAlertPlayerRef.current.pause();
+          jobAlertPlayerRef.current.remove();
+        } catch (e) {}
+        jobAlertPlayerRef.current = null;
+      }
+      if (jobAlertVibrationRef.current) {
+        clearInterval(jobAlertVibrationRef.current);
+        jobAlertVibrationRef.current = null;
+      }
+    };
+  }, [showModal, incomingJobsQueue.length]);
 
   const workerId = user?._id;
   const savedMasterAvailability = (user as any)?.isAvailable;
@@ -287,6 +339,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
       // Set booking details and display the custom success modal
       setAssignedBooking(data.booking);
       setShowAssignedModal(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     });
 
     const unsubscribeLost = socketService.on('bid:lost', (data: any) => {
@@ -528,6 +581,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           Toast.show({
             type: 'success',
             text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
@@ -655,6 +709,7 @@ export function IncomingJobProvider({ children }: { children: React.ReactNode })
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.byWorker() });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
           Toast.show({
             type: 'success',
             text1: i18n.t('realtimeAlerts.jobAcceptedTitle'),
