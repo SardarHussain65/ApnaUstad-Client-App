@@ -24,7 +24,7 @@ SplashScreen.preventAutoHideAsync().catch(() => { });
 initCrashReporting();
 
 export const unstable_settings = {
-  initialRouteName: 'index',
+  initialRouteName: 'splash',
 };
 
 
@@ -120,7 +120,7 @@ function RootLayoutNav() {
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="splash" options={{ headerShown: false }} />
+            <Stack.Screen name="splash" options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
             <Stack.Screen name="role-selection" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" options={{ headerShown: false }} />
@@ -136,8 +136,10 @@ export default function RootLayout() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', onAppStateChange);
 
-    // Dismiss native splash screen smoothly now that root layout is ready
-    SplashScreen.hideAsync().catch(() => { });
+    // Safety fallback: ensure native splash screen is dismissed even in edge cases
+    const splashFallback = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => { });
+    }, 3000);
 
     // Silent background check for Over-The-Air (OTA) updates in release builds
     if (!__DEV__) {
@@ -153,7 +155,10 @@ export default function RootLayout() {
         });
     }
 
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+      clearTimeout(splashFallback);
+    };
   }, []);
 
   return (
