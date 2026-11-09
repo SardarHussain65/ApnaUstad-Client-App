@@ -123,6 +123,8 @@ export const requestNotificationPermissions = async () => {
   return 'granted';
 };
 
+export const FCM_TOKEN_STORAGE_KEY = 'fcm_push_token_cached';
+
 export const getPushToken = async (): Promise<string | null> => {
   try {
     let token: string | null = null;
@@ -146,17 +148,51 @@ export const getPushToken = async (): Promise<string | null> => {
     }
 
     // 2. Both iOS and Android require the FCM registration token to send via Firebase Admin SDK
-    token = await messaging().getToken();
+    // On Android, Google Play Services may transiently throw SERVICE_NOT_AVAILABLE
+    // during cold boot or when device network socket is still negotiating with Google servers.
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        token = await messaging().getToken();
+        if (token) break;
+      } catch (err: any) {
+        const errMsg = err?.message || String(err);
+        const isTransient =
+          errMsg.includes('SERVICE_NOT_AVAILABLE') ||
+          errMsg.includes('NETWORK_ERROR') ||
+          errMsg.includes('TIMEOUT') ||
+          errMsg.includes('ExecutionException') ||
+          errMsg.includes('java.io.IOException');
+
+        if (isTransient && attempt < MAX_RETRIES) {
+          const delay = attempt * 1500; // 1.5s, 3.0s backoff
+          console.warn(`⏳ FCM service initializing (${errMsg}). Retrying in ${delay}ms (attempt ${attempt}/${MAX_RETRIES})...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw err;
+      }
+    }
 
     if (!token) {
       console.warn('Failed to get FCM push token');
-      return null;
+      const cachedToken = await AsyncStorage.getItem(FCM_TOKEN_STORAGE_KEY).catch(() => null);
+      return cachedToken;
     }
+
+    // Cache the verified token for offline / cold-start fallback
+    await AsyncStorage.setItem(FCM_TOKEN_STORAGE_KEY, token).catch(() => { });
 
     console.log('✅ FCM Push Token obtained successfully:', token);
     return token;
-  } catch (error) {
-    console.error('Error getting push token:', error);
+  } catch (error: any) {
+    // If all retries failed, check if we have a cached token from a previous run
+    const cachedToken = await AsyncStorage.getItem(FCM_TOKEN_STORAGE_KEY).catch(() => null);
+    if (cachedToken) {
+      console.log('ℹ️ Using cached FCM push token fallback:', cachedToken.substring(0, 15) + '...');
+      return cachedToken;
+    }
+    console.warn('⚠️ Could not obtain FCM push token:', error?.message || error);
     return null;
   }
 };
@@ -237,7 +273,7 @@ export const cleanupListeners = (subscriptions: any[]) => {
     // Expo-style listeners expose a .remove() method
     if (typeof subscription.remove === 'function') {
       subscription.remove();
-    // Firebase onMessage returns a plain unsubscribe function
+      // Firebase onMessage returns a plain unsubscribe function
     } else if (typeof subscription === 'function') {
       subscription();
     }

@@ -20,7 +20,7 @@ import {
   Filter,
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 
 import { Spacing, useTheme, useThemeTypography } from '../constants/Theme';
@@ -46,8 +46,7 @@ export default function JobsNearbyScreen() {
     <BackgroundWrapper>
       <View style={styles.container}>
         {/* Header */}
-        <Animated.View
-          entering={SlideInDown.duration(400)}
+        <View
           style={[styles.header, { paddingTop: insets.top + 12 }]}
         >
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} onPress={() => router.back()}>
@@ -64,11 +63,12 @@ export default function JobsNearbyScreen() {
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface.card, borderColor: theme.colors.border.default }]} onPress={() => refetch()}>
             <Filter color={theme.colors.text.primary} size={20} />
           </TouchableOpacity>
-        </Animated.View>
+        </View>
 
         {/* Content */}
         <ScrollView
           showsVerticalScrollIndicator={false}
+          style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
         >
           {isLoading ? (
@@ -154,6 +154,9 @@ export default function JobsNearbyScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   header: {

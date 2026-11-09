@@ -176,11 +176,18 @@ export default function ChatScreen() {
   }, [localMessages, messages]);
 
   useEffect(() => {
+    if (!bookingId) return;
+
+    // Mark messages as read upon entering chat
+    api.patch(`/messages/${bookingId}/read`).catch(() => {});
+
     // Listen for real-time messages
     const unsubscribe = socketService.on('chat:receive', (newMessage: Message) => {
       if (newMessage.booking === bookingId && newMessage.sender !== user?._id) {
         setLocalMessages(prev => [newMessage, ...prev]);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Mark as read in real-time since user is currently on the screen
+        api.patch(`/messages/${bookingId}/read`).catch(() => {});
       }
     });
 

@@ -61,7 +61,8 @@ class SocketService {
       'booking:price_increase_requested', 'booking:price_increase_approved',
       'booking:price_increase_rejected', 'booking:price_updated',
       'chat:receive', 'worker:location', 'notification:new',
-      'worker:verified', 'worker:updated', 'user:updated'
+      'worker:verified', 'worker:updated', 'user:updated',
+      'wallet:updated', 'wallet:topup_updated', 'wallet:topup_approved', 'wallet:topup_rejected'
     ];
 
     // Combine default events with any dynamically registered listener keys

@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Dimensions, Image, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import * as SplashScreen from 'expo-splash-screen';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -15,42 +16,46 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing, Typography, useTheme, useThemeColors } from '../constants/Theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
+import { useAuth } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
-export default function SplashScreen() {
+export default function AppSplashScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
   const colors = useThemeColors();
+  const { role, token, user } = useAuth();
   
-  // Animation values
-  const logoScale = useSharedValue(0.2);
-  const logoOpacity = useSharedValue(0);
+  // Keep auth state in refs to access current values inside async timeout
+  const authRef = useRef({ role, token, user });
+  useEffect(() => {
+    authRef.current = { role, token, user };
+  }, [role, token, user]);
+
+  // Seamless animation values matching native splash position & size
+  const backdropOpacity = useSharedValue(0);
+  const logoScale = useSharedValue(1);
+  const logoOpacity = useSharedValue(1);
   const logoTranslateY = useSharedValue(0);
   const brandOpacity = useSharedValue(0);
-  const brandTranslateY = useSharedValue(18);
+  const brandTranslateY = useSharedValue(14);
   const taglineOpacity = useSharedValue(0);
-  const taglineTranslateY = useSharedValue(14);
-  const glowScale = useSharedValue(0.6);
+  const taglineTranslateY = useSharedValue(12);
+  const glowScale = useSharedValue(0.7);
   const glowOpacity = useSharedValue(0);
   const loadingWidth = useSharedValue(0);
 
   useEffect(() => {
-    // 1. Logo Entrance - Snappy & High Impact
-    logoOpacity.value = withDelay(80, withTiming(1, { duration: 420 }));
-    logoScale.value = withDelay(
-      80,
-      withSpring(1, { 
-        damping: 14, 
-        stiffness: 95,
-        mass: 0.8,
-      } as any)
-    );
+    // 0. Dismiss native splash immediately once this component is ready to paint
+    SplashScreen.hideAsync().catch(() => {});
 
-    // 2. Floating Idle 
+    // 1. Smoothly fade in the cosmic background artwork so it blooms seamlessly from native splash
+    backdropOpacity.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) });
+
+    // 2. Subtle, elegant logo floating animation
     logoTranslateY.value = withDelay(
-      500,
+      300,
       withRepeat(
         withTiming(-8, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
         -1,
@@ -58,46 +63,62 @@ export default function SplashScreen() {
       )
     );
 
-    // 3. Brand Text Entrance
-    brandOpacity.value = withDelay(250, withTiming(1, { duration: 450 }));
-    brandTranslateY.value = withDelay(
-      250,
-      withSpring(0, { damping: 15, stiffness: 100 })
-    );
-
-    // 4. Tagline Entrance
-    taglineOpacity.value = withDelay(400, withTiming(1, { duration: 450 }));
-    taglineTranslateY.value = withDelay(
-      400,
-      withSpring(0, { damping: 15, stiffness: 100 })
-    );
-
-    // 5. Pulsing Glow
-    glowOpacity.value = withDelay(150, withTiming(0.65, { duration: 550 }));
+    // 3. Cosmic ambient glow blooms out from the logo
+    glowOpacity.value = withTiming(0.65, { duration: 600 });
     glowScale.value = withDelay(
-      150,
+      100,
       withRepeat(
-        withTiming(1.35, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.3, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       )
     );
 
-    // 6. Loading Progress (1.3s)
-    loadingWidth.value = withTiming(100, { duration: 1300 });
+    // 4. Brand Text & Kicker Entrance
+    brandOpacity.value = withDelay(180, withTiming(1, { duration: 500 }));
+    brandTranslateY.value = withDelay(
+      180,
+      withSpring(0, { damping: 16, stiffness: 100 })
+    );
 
-    // 7. Navigation Logic (1.5s transition)
+    // 5. Tagline & Badge Entrance
+    taglineOpacity.value = withDelay(320, withTiming(1, { duration: 500 }));
+    taglineTranslateY.value = withDelay(
+      320,
+      withSpring(0, { damping: 16, stiffness: 100 })
+    );
+
+    // 6. Smooth loading progress bar (2.0s duration)
+    loadingWidth.value = withTiming(100, {
+      duration: 2000,
+      easing: Easing.out(Easing.quad),
+    });
+
+    // 7. Polished 2.2s transition - gives full cinematic experience
     const timeout = setTimeout(async () => {
+      const { role: currentRole, token: currentToken, user: currentUser } = authRef.current;
+
+      // If user is already fully authenticated -> direct to dashboard
+      if (currentToken && currentUser && currentRole) {
+        router.replace('/(tabs)' as any);
+        return;
+      }
+
+      // First-time vs returning unauthenticated user
       const onboarded = await AsyncStorage.getItem('onboarding_completed');
       if (onboarded === 'true') {
         router.replace('/role-selection');
       } else {
         router.replace('/onboarding');
       }
-    }, 1500);
+    }, 2200);
 
     return () => clearTimeout(timeout);
   }, []);
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
 
   const logoStyle = useAnimatedStyle(() => ({
     transform: [
@@ -127,7 +148,14 @@ export default function SplashScreen() {
   }));
 
   return (
-    <BackgroundWrapper>
+    <View style={styles.root}>
+      {/* Seamless cosmic background bloom from solid native splash color */}
+      <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+        <BackgroundWrapper>
+          <View style={StyleSheet.absoluteFill} />
+        </BackgroundWrapper>
+      </Animated.View>
+
       <View style={styles.container}>
         {/* Ambient Cosmic Backlight Glow */}
         <Animated.View style={[styles.glowCyan, glowStyle]} />
@@ -181,11 +209,15 @@ export default function SplashScreen() {
           <Text style={styles.versionText}>{t('splash.version', 'APNAUSTAD • VERIFIED SERVICES')}</Text>
         </View>
       </View>
-    </BackgroundWrapper>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#0F172A',
+  },
   container: {
     flex: 1,
     alignItems: 'center',

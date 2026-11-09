@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { socketService } from '../services/socketService';
 import { queryKeys } from '../lib/queryKeyFactory';
+import { userWalletKeys } from './queries/useUserWallet';
 
 /**
  * useRealtimeSync
@@ -79,7 +80,16 @@ export function useRealtimeSync(enabled: boolean = true) {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
     };
 
-    // ─── 5. RECONNECTION RE-SYNCHRONIZATION (DEBOUNCED & RATE-LIMITED) ──────
+    // ─── 5. WALLET & TOP-UP EVENTS ──────────────────────────────────────────
+    const handleWalletUpdate = (data: any) => {
+      console.log('🔄 [RealtimeSync] Surgical wallet update for event:', data?.type || data?.status || 'wallet:updated');
+      queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all });
+      queryClient.invalidateQueries({ queryKey: userWalletKeys.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.workerHomeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+    };
+
+    // ─── 6. RECONNECTION RE-SYNCHRONIZATION (DEBOUNCED & RATE-LIMITED) ──────
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let lastReconnectSyncTime = 0;
     const handleReconnected = () => {
@@ -131,6 +141,12 @@ export function useRealtimeSync(enabled: boolean = true) {
       // Worker profile updates
       socketService.on('worker:verified', handleWorkerUpdate),
       socketService.on('worker:updated', handleWorkerUpdate),
+
+      // Wallet updates
+      socketService.on('wallet:updated', handleWalletUpdate),
+      socketService.on('wallet:topup_updated', handleWalletUpdate),
+      socketService.on('wallet:topup_approved', handleWalletUpdate),
+      socketService.on('wallet:topup_rejected', handleWalletUpdate),
 
       // Reconnect
       socketService.on('socket:reconnected', handleReconnected),

@@ -12,6 +12,7 @@ import * as Notifications from 'expo-notifications';
 import messaging from '@react-native-firebase/messaging';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { socketService } from '../services/socketService';
 import {
   initializePushNotifications,
@@ -20,6 +21,7 @@ import {
   setupFCMMessageListener,
   cleanupListeners,
   getDeviceId,
+  FCM_TOKEN_STORAGE_KEY,
 } from '../services/notificationService';
 import api from '../services/api';
 
@@ -375,6 +377,7 @@ export const usePushNotifications = () => {
           
           // Only save if token actually changed
           if (newToken !== lastSavedTokenRef.current) {
+            await AsyncStorage.setItem(FCM_TOKEN_STORAGE_KEY, newToken).catch(() => {});
             const saveResult = await savePushTokenWithRetry(
               newToken,
               user._id,

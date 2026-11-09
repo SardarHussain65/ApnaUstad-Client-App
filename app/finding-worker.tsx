@@ -1,12 +1,42 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, Modal, ActivityIndicator, ScrollView, TextInput, Platform } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+  TextInput,
+  Platform,
+} from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Shield, Star, MapPin, Check, Briefcase, Award, Clock, Eye, ChevronRight, MessageSquare, ArrowLeft, Search, Users, Radio, Image as ImageIcon, CalendarDays, Tag, Percent, Zap } from 'lucide-react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming, 
+import {
+  X,
+  Star,
+  MapPin,
+  Check,
+  Briefcase,
+  Clock,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ArrowLeft,
+  Search,
+  Users,
+  Radio,
+  Image as ImageIcon,
+  CalendarDays,
+  Tag,
+  Zap,
+  Sparkles,
+  ShieldCheck,
+} from 'lucide-react-native';
+import Animated, {
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
   useSharedValue,
   interpolate,
   FadeIn,
@@ -19,9 +49,12 @@ import { BackgroundWrapper } from '../components/common/BackgroundWrapper';
 import { ConfirmModal } from '../components/ui';
 import { useConfirmModal } from '../hooks';
 import { socketService } from '../services/socketService';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAcceptBidMutation, useCancelJobMutation, useRejectBidMutation } from '../hooks/mutations/useMutations';
+import {
+  useAcceptBidMutation,
+  useCancelJobMutation,
+  useRejectBidMutation,
+} from '../hooks/mutations/useMutations';
 import { useBidsByJob, useJobDetails } from '../hooks/queries/useMessagesAndJobs';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/queryKeyFactory';
@@ -39,12 +72,6 @@ const formatMoney = (value?: number | string) => {
   return Number.isFinite(amount) && amount > 0 ? `Rs. ${amount.toLocaleString()}` : 'Open';
 };
 
-const formatElapsedTime = (seconds: number) => {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
-};
-
 export default function FindingWorkerScreen() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -56,20 +83,16 @@ export default function FindingWorkerScreen() {
   const colors = theme.colors;
   const legacyColors = theme.legacy;
   const typography = useThemeTypography();
-  const [status, setStatus] = useState(t('findingWorker.searchingUstads'));
-  const [applicants, setApplicants] = useState<any[]>([]);
-  const [selectedWorker, setSelectedWorker] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
-  const confirmModal = useConfirmModal();
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  
-  const [promoCodeInput, setPromoCodeInput] = useState('');
-  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState<any>(null);
-  
 
-  
-  const pulse = useSharedValue(1);
+  const [applicants, setApplicants] = useState<any[]>([]);
+  const confirmModal = useConfirmModal();
+
+  // Collapsible Job Request Brief state
+  const [isRequestExpanded, setIsRequestExpanded] = useState(false);
+
+  // Radar Animation Shared Values
+  const pulse1 = useSharedValue(1);
+  const pulse2 = useSharedValue(1);
   const rotation = useSharedValue(0);
 
   const bypassBeforeRemoveRef = useRef(false);
@@ -98,7 +121,7 @@ export default function FindingWorkerScreen() {
 
   const basePrice = Number(job?.amount ?? job?.budget ?? 1000);
 
-  const effectiveNewPrice = React.useMemo(() => {
+  const effectiveNewPrice = useMemo(() => {
     if (customPriceInput && Number(customPriceInput) > 0) {
       return Number(customPriceInput);
     }
@@ -111,38 +134,25 @@ export default function FindingWorkerScreen() {
   const isDark = theme.isDark;
 
   const decisionTheme = useMemo(() => ({
-    expiredCardBg: isDark ? 'rgba(4, 9, 29, 0.95)' : '#FFFFFF',
-    expiredCardBorder: isDark ? 'rgba(255, 59, 48, 0.4)' : '#FCA5A5',
-    expiredGradient: isDark 
-      ? ['rgba(255, 59, 48, 0.16)', 'rgba(255, 140, 0, 0.08)', 'rgba(10, 16, 32, 0.95)']
-      : ['#FFF5F5', '#FFFFFF', '#FFFBF0'],
-    boosterCardBg: isDark ? 'rgba(4, 9, 29, 0.92)' : '#FFFFFF',
+    boosterCardBg: isDark ? 'rgba(8, 14, 30, 0.95)' : '#FFFFFF',
     boosterCardBorder: isDark ? 'rgba(255, 140, 0, 0.35)' : '#FCD34D',
     boosterGradient: isDark
-      ? ['rgba(255, 140, 0, 0.16)', 'rgba(255, 59, 48, 0.08)', 'rgba(10, 16, 32, 0.95)']
+      ? ['rgba(255, 140, 0, 0.12)', 'rgba(255, 59, 48, 0.05)', 'rgba(10, 16, 32, 0.95)']
       : ['#FFFBF0', '#FFFFFF', '#FFF5F5'],
     urduTitle: isDark ? '#FFD700' : '#B45309',
     chipBg: isDark ? 'rgba(255, 140, 0, 0.08)' : '#F8FAFC',
-    chipBorder: isDark ? 'rgba(255, 140, 0, 0.35)' : '#CBD5E1',
+    chipBorder: isDark ? 'rgba(255, 140, 0, 0.3)' : '#CBD5E1',
     chipText: isDark ? '#FF9A24' : '#334155',
     chipSelectedBg: isDark ? '#FF8C00' : '#EA580C',
     chipSelectedBorder: isDark ? '#FFA033' : '#C2410C',
     chipSelectedText: '#FFFFFF',
     inputWrapBg: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F8FAFC',
-    inputWrapBorder: isDark ? 'rgba(255, 255, 255, 0.2)' : '#94A3B8',
+    inputWrapBorder: isDark ? 'rgba(255, 255, 255, 0.18)' : '#94A3B8',
     inputPrefix: isDark ? '#00F0FF' : '#0284C7',
     inputText: isDark ? '#FFFFFF' : '#0F172A',
     inputPlaceholder: isDark ? 'rgba(255, 255, 255, 0.35)' : '#64748B',
     submitBtnBg: isDark ? '#FF8C00' : '#EA580C',
     submitBtnText: '#FFFFFF',
-    extendBtnBg: isDark ? 'rgba(0, 240, 255, 0.08)' : '#F0F9FF',
-    extendBtnBorder: isDark ? 'rgba(0, 240, 255, 0.35)' : '#38BDF8',
-    extendBtnText: isDark ? '#00F0FF' : '#0369A1',
-    stopBtnBg: isDark ? 'rgba(255, 59, 48, 0.08)' : '#FEF2F2',
-    stopBtnBorder: isDark ? 'rgba(255, 59, 48, 0.35)' : '#FCA5A5',
-    stopBtnText: isDark ? '#FF453A' : '#DC2626',
-    divider: isDark ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.08)',
-    title: isDark ? '#FFFFFF' : '#0F172A',
     desc: isDark ? 'rgba(255, 255, 255, 0.72)' : '#334155',
     subtext: isDark ? 'rgba(255, 255, 255, 0.5)' : '#475569',
   }), [isDark]);
@@ -236,7 +246,7 @@ export default function FindingWorkerScreen() {
     bypassBeforeRemoveRef.current = true;
     router.replace({
       pathname: '/transaction-details',
-      params: { id: bookingId, autoAssigned: 'true' }
+      params: { id: bookingId, autoAssigned: 'true' },
     });
   };
 
@@ -260,31 +270,18 @@ export default function FindingWorkerScreen() {
       if (bypassBeforeRemoveRef.current) {
         return;
       }
-      // Prevent default behavior of leaving the screen
       e.preventDefault();
-
-      // Prevent infinite loop during replacement navigation
       bypassBeforeRemoveRef.current = true;
 
-      // Invalidate queries so Home screen immediately reflects active job
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });
 
-      // Redirect to home screen directly
       router.replace('/(tabs)' as any);
     });
 
     return unsubscribe;
   }, [navigation, router]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedSeconds((current) => current + 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   const [acceptingBidId, setAcceptingBidId] = useState<string | null>(null);
   const [rejectingBidId, setRejectingBidId] = useState<string | null>(null);
@@ -292,16 +289,12 @@ export default function FindingWorkerScreen() {
   const { mutate: acceptBid, isPending: isAccepting } = useAcceptBidMutation({
     onSuccess: (data) => {
       setAcceptingBidId(null);
-      setStatus(t('findingWorker.verified'));
-      setShowModal(false);
-      
       Toast.show({
         type: 'success',
-        text1: t('findingWorker.ustadsReady'),
+        text1: t('findingWorker.ustadsReady', 'Ustad Selected!'),
         text2: t('findingWorker.bookingSuccess', 'Your booking has been created successfully.'),
       });
 
-      // Redirect to booking details after a brief delay for UX
       if (assignedTimerRef.current) {
         clearTimeout(assignedTimerRef.current);
       }
@@ -309,7 +302,7 @@ export default function FindingWorkerScreen() {
         if (data?._id) {
           handleRedirectToBooking(data._id);
         }
-      }, 1500);
+      }, 1200);
     },
     onError: (err: any) => {
       setAcceptingBidId(null);
@@ -318,19 +311,13 @@ export default function FindingWorkerScreen() {
         text1: t('findingWorker.selectUstadError', 'Could Not Select Ustad'),
         text2: err.response?.data?.message || 'Please try again.',
       });
-    }
+    },
   });
 
   const { mutate: rejectBid, isPending: isRejecting } = useRejectBidMutation({
     onSuccess: (_, variables) => {
       setRejectingBidId(null);
-      setApplicants(prev => {
-        const next = prev.filter(app => app._id !== variables.bidId);
-        if (next.length === 0) {
-          setStatus(t('findingWorker.searchingUstads'));
-        }
-        return next;
-      });
+      setApplicants((prev) => prev.filter((app) => app._id !== variables.bidId));
       Toast.show({
         type: 'info',
         text1: t('findingWorker.offerDeclined', 'Offer Declined'),
@@ -344,7 +331,7 @@ export default function FindingWorkerScreen() {
         text1: t('common.error', 'Error'),
         text2: err?.response?.data?.message || 'Could not decline offer.',
       });
-    }
+    },
   });
 
   const handleHireApplicant = (applicant: any) => {
@@ -358,10 +345,14 @@ export default function FindingWorkerScreen() {
   const handleRejectApplicant = (applicant: any) => {
     confirmModal.showConfirm(
       t('findingWorker.declineOfferTitle', 'Decline Offer?'),
-      t('findingWorker.declineOfferPrompt', 'Decline {{name}}\'s quote of {{price}}? They will be notified and can submit an updated rate.', {
-        name: applicant.worker?.fullName || 'Ustad',
-        price: formatMoney(applicant.proposedPrice),
-      }),
+      t(
+        'findingWorker.declineOfferPrompt',
+        "Decline {{name}}'s quote of {{price}}? They will be notified and can submit an updated rate.",
+        {
+          name: applicant.worker?.fullName || 'Ustad',
+          price: formatMoney(applicant.proposedPrice),
+        }
+      ),
       () => {
         confirmModal.closeConfirm();
         setRejectingBidId(applicant._id);
@@ -379,7 +370,7 @@ export default function FindingWorkerScreen() {
 
   const { data: initialBids, isLoading: isBidsLoading } = useBidsByJob(jobId as string, {
     enabled: !!jobId,
-    refetchInterval: 30000, // Reduced polling frequency to 30 seconds
+    refetchInterval: 20000,
   });
 
   const { mutate: cancelJob, isPending: isCancelling } = useCancelJobMutation({
@@ -398,7 +389,7 @@ export default function FindingWorkerScreen() {
         text1: t('findingWorker.cancelError', 'Could Not Cancel Request'),
         text2: err.response?.data?.message || 'Please try again.',
       });
-    }
+    },
   });
 
   const handleCancelJob = () => {
@@ -418,71 +409,62 @@ export default function FindingWorkerScreen() {
 
   useEffect(() => {
     if (initialBids && initialBids.length > 0) {
-      // Sync state with fetched bids, avoiding duplicates, and only showing pending counter-offers
-      const pendingBids = initialBids.filter(bid => bid.status === 'pending');
-      setApplicants(prev => {
+      const pendingBids = initialBids.filter((bid) => bid.status === 'pending');
+      setApplicants((prev) => {
         const combined = [...prev];
-        pendingBids.forEach(bid => {
-          if (!combined.some(a => a._id === bid._id)) {
+        pendingBids.forEach((bid) => {
+          if (!combined.some((a) => a._id === bid._id)) {
             combined.push(bid);
           }
         });
-        return combined.filter(bid => bid.status === 'pending');
+        return combined.filter((bid) => bid.status === 'pending');
       });
-      
-      if (pendingBids.length > 0) {
-        setStatus(t('findingWorker.offersLabel'));
-      }
     }
   }, [initialBids]);
 
   useEffect(() => {
-    // Animations - always keep live pulse and rotation running
-    pulse.value = withRepeat(withTiming(1.2, { duration: 1500 }), -1, true);
-    rotation.value = withRepeat(withTiming(360, { duration: 8000 }), -1, false);
-  }, [pulse, rotation]);
+    // Multi-layer radar wave pulse animations
+    pulse1.value = withRepeat(withTiming(1.35, { duration: 2200 }), -1, true);
+    pulse2.value = withRepeat(withTiming(1.65, { duration: 3200 }), -1, true);
+    rotation.value = withRepeat(withTiming(360, { duration: 9000 }), -1, false);
+  }, [pulse1, pulse2, rotation]);
 
   useEffect(() => {
-    // Socket Listeners
     const unsubscribeAssigned = socketService.on('job:assigned', (data: any) => {
       const incomingJobId = (data?.jobId || data?.jobPost?._id || data?.jobPost)?.toString();
       if (incomingJobId && jobId && String(incomingJobId) !== String(jobId)) {
-        return; // Ignore assignments of other jobs
+        return;
       }
 
       const bookingId = (data?.bookingId || data?.booking?._id || data?._id)?.toString();
       if (!bookingId || hasRedirectedRef.current) return;
 
-      setStatus(t('findingWorker.verified'));
-      
       Toast.show({
         type: 'success',
-        text1: t('findingWorker.ustadsReady'),
-        text2: 'Your booking is ready.',
+        text1: t('findingWorker.ustadsReady', 'Ustad Assigned!'),
+        text2: 'Your booking is confirmed.',
       });
-      
+
       if (assignedTimerRef.current) {
         clearTimeout(assignedTimerRef.current);
       }
       assignedTimerRef.current = setTimeout(() => {
         handleRedirectToBooking(bookingId);
-      }, 1500);
+      }, 1200);
     });
 
     const unsubscribeAutoAssigned = socketService.on('job:auto_assigned', (data: any) => {
       const incomingJobId = (data?.jobPost?._id || data?.jobPost || data?.jobId)?.toString();
       if (incomingJobId && jobId && String(incomingJobId) !== String(jobId)) {
-        return; // Ignore if not for this job
+        return;
       }
 
-      setStatus('Ustad assigned');
-      
       Toast.show({
         type: 'success',
         text1: t('findingWorker.assignedTitle', 'USTAD ASSIGNED! ⚡'),
         text2: t('findingWorker.assignedDesc', 'An Ustad has accepted your urgent request.'),
       });
-      
+
       const bookingId = (data?._id || data?.booking?._id || data?.bookingId)?.toString();
       if (bookingId) {
         handleRedirectToBooking(bookingId);
@@ -491,7 +473,7 @@ export default function FindingWorkerScreen() {
 
     const unsubscribeSearchExtended = socketService.on('job:search_extended', (data: any) => {
       if (data?.jobId && String(data.jobId) !== String(jobId)) return;
-      
+
       if (data?.suggestEscalation || data?.timeout || data?.expired) {
         setShowBoosterPrompt(true);
         refetchJob();
@@ -510,13 +492,12 @@ export default function FindingWorkerScreen() {
 
       if (newBid.status !== 'pending') return;
 
-      setApplicants(prev => {
-        if (prev.some(a => a._id === newBid._id)) {
-          return prev.map(a => a._id === newBid._id ? newBid : a);
+      setApplicants((prev) => {
+        if (prev.some((a) => a._id === newBid._id)) {
+          return prev.map((a) => (a._id === newBid._id ? newBid : a));
         }
         return [...prev, newBid];
       });
-      setStatus(t('findingWorker.offersLabel'));
     });
 
     const unsubscribeBidUpdated = socketService.on('bid:updated', (updatedBid: any) => {
@@ -525,31 +506,22 @@ export default function FindingWorkerScreen() {
 
       if (updatedBid.status !== 'pending') return;
 
-      setApplicants(prev => {
-        if (prev.some(a => a._id === updatedBid._id)) {
-          return prev.map(a => a._id === updatedBid._id ? updatedBid : a);
+      setApplicants((prev) => {
+        if (prev.some((a) => a._id === updatedBid._id)) {
+          return prev.map((a) => (a._id === updatedBid._id ? updatedBid : a));
         }
         return [...prev, updatedBid];
       });
-      setStatus(t('findingWorker.offersLabel'));
     });
 
     const unsubscribeWithdrawn = socketService.on('bid:withdrawn', (payload: any) => {
       if (payload?.jobId && String(payload.jobId) !== String(jobId)) return;
-      setApplicants(prev => {
-        const nextApplicants = prev.filter(app => app._id !== payload?.bidId);
-        if (nextApplicants.length === 0) setStatus(t('findingWorker.searchingUstads'));
-        return nextApplicants;
-      });
+      setApplicants((prev) => prev.filter((app) => app._id !== payload?.bidId));
     });
 
     const unsubscribeRejected = socketService.on('bid:rejected', (payload: any) => {
       if (payload?.jobId && String(payload.jobId) !== String(jobId)) return;
-      setApplicants(prev => {
-        const nextApplicants = prev.filter(app => app._id !== payload?.bidId);
-        if (nextApplicants.length === 0) setStatus(t('findingWorker.searchingUstads'));
-        return nextApplicants;
-      });
+      setApplicants((prev) => prev.filter((app) => app._id !== payload?.bidId));
     });
 
     const unsubscribeCancelled = socketService.on('job:cancelled', (data: any) => {
@@ -579,11 +551,16 @@ export default function FindingWorkerScreen() {
       unsubscribeRejected();
       unsubscribeCancelled();
     };
-  }, [jobId, pulse, rotation, router, t]);
+  }, [jobId, pulse1, pulse2, rotation, router, t]);
 
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: interpolate(pulse.value, [1, 1.2], [0.6, 0.1]),
+  const ringStyle1 = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse1.value }],
+    opacity: interpolate(pulse1.value, [1, 1.35], [0.55, 0.04]),
+  }));
+
+  const ringStyle2 = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse2.value }],
+    opacity: interpolate(pulse2.value, [1, 1.65], [0.35, 0.02]),
   }));
 
   const orbitStyle = useAnimatedStyle(() => ({
@@ -602,12 +579,7 @@ export default function FindingWorkerScreen() {
           proposedPrice: String(worker.proposedPrice || ''),
         },
       });
-      return;
     }
-    setSelectedWorker(worker);
-    setPromoCodeInput('');
-    setAppliedPromo(null);
-    setShowModal(true);
   };
 
   const handleViewAllBids = () => {
@@ -615,15 +587,6 @@ export default function FindingWorkerScreen() {
       pathname: '/bids-list' as any,
       params: { jobId: jobId as string },
     });
-  };
-
-  const handleDirectSelectFirst = () => {
-    if (applicants.length > 0 && !isAccepting) {
-      acceptBid({
-        jobId: jobId as string,
-        bidId: applicants[0]._id,
-      });
-    }
   };
 
   const handleBackHome = () => {
@@ -634,152 +597,90 @@ export default function FindingWorkerScreen() {
     router.replace('/(tabs)' as any);
   };
 
-  const handleApplyPromo = async () => {
-    if (!promoCodeInput.trim() || !selectedWorker) return;
-    setIsApplyingPromo(true);
-    const workerProfile = selectedWorker?.worker || {};
-    const selectedPrice = selectedWorker?.proposedPrice || workerProfile?.hourlyRate || 0;
-    try {
-      const response = await api.post('/promos/validate', {
-        code: promoCodeInput.trim(),
-        bookingAmount: Number(selectedPrice),
-      });
-
-      if (response.data?.success && response.data?.data) {
-        const valData = response.data.data;
-        if (valData.isValid) {
-          setAppliedPromo({
-            isValid: true,
-            code: promoCodeInput.trim().toUpperCase(),
-            discountAmount: valData.discountAmount,
-            finalAmount: valData.finalAmount,
-            message: valData.message,
-          });
-          Toast.show({
-            type: 'success',
-            text1: 'Promo Code Applied!',
-            text2: valData.message || 'Discount has been subtracted.',
-          });
-        } else {
-          setAppliedPromo({
-            isValid: false,
-            message: valData.message,
-          });
-          Toast.show({
-            type: 'error',
-            text1: 'Invalid Promo Code',
-            text2: valData.message || 'Please check code constraints.',
-          });
-        }
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Validation Failed',
-          text2: 'Could not apply promo code.',
-        });
-      }
-    } catch (err: any) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error Applying Promo',
-        text2: err.response?.data?.message || 'Something went wrong.',
-      });
-    } finally {
-      setIsApplyingPromo(false);
-    }
-  };
-
-  const handleHire = () => {
-    if (!selectedWorker) return;
-    acceptBid({ 
-      jobId: jobId as string, 
-      bidId: selectedWorker._id,
-      promoCode: appliedPromo?.isValid ? appliedPromo.code : undefined
-    });
-  };
-
-  const handleViewWorkerProfile = () => {
-    const workerId = selectedWorker?.worker?._id;
-    if (!workerId) return;
-    setShowModal(false);
-    router.push({
-      pathname: '/worker-details' as any,
-      params: {
-        id: workerId,
-        bidId: selectedWorker._id,
-        jobId: jobId as string,
-      },
-    });
-  };
-
-  const selectedProfile = selectedWorker?.worker || {};
-  const selectedRating = getWorkerRating(selectedProfile);
-  const selectedReviews = Number(selectedProfile.totalReviews || 0);
-  const selectedJobs = Number(selectedProfile.totalJobs || 0);
-  const selectedSkills = Array.isArray(selectedProfile.skills) ? selectedProfile.skills.slice(0, 4) : [];
-  const selectedPrice = selectedWorker?.proposedPrice || selectedProfile.hourlyRate;
-  const selectedExperience = Number(selectedProfile.experience || 0);
-  const selectedEstimatedDays = Number(selectedWorker?.estimatedDays || 0);
-  const selectedAvailabilityLabel = selectedProfile.isAvailable === false ? t('findingWorker.busy') : t('findingWorker.available');
-  const ratedApplicants = applicants
-    .map((applicant) => getWorkerRating(applicant.worker))
-    .filter((rating) => rating > 0);
-  const averageApplicantRating = ratedApplicants.length > 0
-    ? ratedApplicants.reduce((sum, rating) => sum + rating, 0) / ratedApplicants.length
-    : null;
   const evidenceCount = Number(
-    job?.detailMeta?.media?.totalCount
-    || job?.media?.totalCount
-    || (job?.imageUrls?.length || 0) + (job?.videoUrls?.length || 0)
+    job?.detailMeta?.media?.totalCount ||
+      job?.media?.totalCount ||
+      (job?.imageUrls?.length || 0) + (job?.videoUrls?.length || 0)
   );
-  const isSearching = applicants.length === 0;
-  const scheduledDateLabel = job?.detailMeta?.schedule?.fullDateLabel
-    || (job?.scheduledDate
-      ? new Date(job.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  const scheduledDateLabel =
+    job?.detailMeta?.schedule?.fullDateLabel ||
+    (job?.scheduledDate
+      ? new Date(job.scheduledDate).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
       : 'Date pending');
-  const scheduledTimeLabel = job?.detailMeta?.schedule?.timeLabel || job?.scheduledTime || 'Time pending';
+  const scheduledTimeLabel =
+    job?.detailMeta?.schedule?.timeLabel || job?.scheduledTime || 'Time pending';
+
+  const hasOffers = applicants.length > 0;
 
   return (
     <BackgroundWrapper>
       <SafeAreaView style={styles.container}>
-        <View style={[
-          styles.header,
-          {
-            borderBottomColor: theme.colors.border.default,
-            backgroundColor: theme.isDark ? 'rgba(5,5,16,0.88)' : colors.background.screen,
-          }
-        ]}>
-          <TouchableOpacity 
+        {/* Modern App Header */}
+        <View
+          style={[
+            styles.header,
+            {
+              borderBottomColor: theme.colors.border.subtle,
+              backgroundColor: theme.isDark ? 'rgba(5, 10, 24, 0.92)' : colors.background.screen,
+            },
+          ]}
+        >
+          <TouchableOpacity
             style={[
               styles.headerButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : colors.surface.card,
-                borderColor: theme.colors.border.default,
-              }
-            ]} 
-            onPress={handleBackHome} 
-            activeOpacity={0.75}
+                backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : colors.surface.card,
+                borderColor: theme.colors.border.subtle,
+              },
+            ]}
+            onPress={handleBackHome}
+            activeOpacity={0.7}
           >
             <ArrowLeft
-              size={20}
+              size={18}
               color={colors.text.primary}
               strokeWidth={2.4}
               style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
             />
           </TouchableOpacity>
+
           <View style={styles.headerCopy}>
-            <Text style={[styles.headerEyebrow, { color: colors.text.secondary }]}>{t('findingWorker.requestSent')}</Text>
-            <Text style={[styles.headerTitle, { color: colors.text.primary }]}>{t('findingWorker.findingUstad')}</Text>
+            <Text style={[styles.headerEyebrow, { color: colors.text.muted }]}>
+              {t('findingWorker.requestSent', 'REQUEST SENT')}
+            </Text>
+            <Text style={[styles.headerTitle, { color: colors.text.primary }]}>
+              {t('findingWorker.findingUstad', 'Finding Your Ustad')}
+            </Text>
           </View>
-          <View style={[
-            styles.liveBadge,
-            {
-              backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : '#DBEAFE',
-              borderColor: theme.isDark ? 'rgba(0,245,255,0.35)' : '#3B82F6',
-            }
-          ]}>
-            <View style={[styles.liveDot, { backgroundColor: theme.isDark ? Colors.cyan : colors.brand.primary }]} />
-            <Text style={[styles.liveText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>{t('findingWorker.live')}</Text>
+
+          <View
+            style={[
+              styles.liveBadge,
+              {
+                backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.08)' : '#DBEAFE',
+                borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.25)' : '#93C5FD',
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.liveDot,
+                { backgroundColor: theme.isDark ? Colors.cyan : colors.brand.primary },
+              ]}
+            />
+            <Text
+              style={[
+                styles.liveText,
+                { color: theme.isDark ? Colors.cyan : colors.brand.primary },
+              ]}
+            >
+              {hasOffers ? `${applicants.length} OFFER${applicants.length > 1 ? 'S' : ''}` : 'SEARCHING'}
+            </Text>
           </View>
         </View>
 
@@ -787,51 +688,52 @@ export default function FindingWorkerScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Modern Radar Searching Hero for all jobs */}
-          <Animated.View 
-            entering={FadeIn.duration(500)} 
+          {/* Modern Searching Hero Card */}
+          <Animated.View
+            entering={FadeIn.duration(400)}
             style={[
               styles.searchHero,
               {
-                backgroundColor: theme.isDark ? 'rgba(2,8,26,0.86)' : colors.surface.card,
-                borderColor: theme.isDark ? 'rgba(0,245,255,0.35)' : theme.colors.border.default,
-              }
+                backgroundColor: theme.isDark ? 'rgba(8, 14, 32, 0.88)' : colors.surface.card,
+                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+              },
             ]}
           >
             <LinearGradient
-              colors={theme.isDark 
-                ? ['rgba(0,245,255,0.14)', 'rgba(7,13,35,0.92)', 'rgba(191,90,242,0.10)']
-                : [alpha(colors.brand.primary, 0.05), colors.surface.card, alpha(colors.brand.secondary, 0.04)]
+              colors={
+                theme.isDark
+                  ? ['rgba(0, 245, 255, 0.08)', 'rgba(6, 12, 28, 0.95)', 'rgba(30, 41, 59, 0.5)']
+                  : [alpha(colors.brand.primary, 0.04), colors.surface.card, '#FFFFFF']
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.searchHeroGradient}
             >
-              <View style={[
-                styles.searchStatusBadge,
-                {
-                  backgroundColor: theme.isDark ? 'rgba(0,245,255,0.07)' : alpha(colors.brand.primary, 0.06),
-                  borderColor: theme.isDark ? 'rgba(0,245,255,0.18)' : alpha(colors.brand.primary, 0.15),
-                }
-              ]}>
-                <Radio size={13} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
-                <Text style={[styles.searchStatusText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
-                  {isSearching 
-                    ? t('findingWorker.searchingStatus') 
-                    : (applicants.length === 1 ? t('findingWorker.offersReceived', { count: applicants.length }) : t('findingWorker.offersReceivedPlural', { count: applicants.length }))}
-                </Text>
-              </View>
+              {/* Radar Scanner Animation */}
+              <View style={[styles.animationContainer, hasOffers && styles.animationContainerSmall]}>
+                {/* Secondary outer pulse ring */}
+                <Animated.View
+                  style={[
+                    styles.pulseRingOuter,
+                    ringStyle2,
+                    { borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.35)' : alpha(colors.brand.primary, 0.25) },
+                  ]}
+                />
+                {/* Primary pulse ring */}
+                <Animated.View
+                  style={[
+                    styles.pulseRing,
+                    ringStyle1,
+                    { borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.75)' : alpha(colors.brand.primary, 0.45) },
+                  ]}
+                />
 
-              <View style={styles.animationContainer}>
-                <Animated.View style={[
-                  styles.pulseRing, 
-                  ringStyle,
-                  { borderColor: theme.isDark ? 'rgba(0,245,255,0.85)' : alpha(colors.brand.primary, 0.6) }
-                ]} />
+                {/* Satellite Ustad Pins on Radar */}
                 <View style={styles.satelliteOrbit}>
                   {applicants.slice(0, 6).map((app, index) => {
-                    const angle = (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
-                    const radius = 91;
+                    const angle =
+                      (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
+                    const radius = hasOffers ? 68 : 84;
                     const tx = radius * Math.cos(angle);
                     const ty = radius * Math.sin(angle);
 
@@ -841,154 +743,172 @@ export default function FindingWorkerScreen() {
                         onPress={() => handleWorkerPress(app)}
                         style={[
                           styles.satelliteContainer,
-                          { transform: [{ translateX: tx }, { translateY: ty }] }
+                          { transform: [{ translateX: tx }, { translateY: ty }] },
                         ]}
+                        activeOpacity={0.8}
                       >
-                        <Animated.View entering={FadeIn.delay(180 * index).duration(450)} style={styles.satelliteGlow}>
+                        <Animated.View entering={FadeIn.delay(120 * index).duration(350)} style={styles.satelliteGlow}>
                           <Image
                             source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
                             style={styles.satelliteImage}
+                            contentFit="cover"
+                            transition={150}
+                            cachePolicy="memory-disk"
                           />
-                          <View style={styles.priceBadge}>
-                            <Text style={styles.priceText}>{formatMoney(app.proposedPrice)}</Text>
+                          <View style={styles.satellitePricePill}>
+                            <Text style={styles.satellitePriceText}>{formatMoney(app.proposedPrice)}</Text>
                           </View>
                         </Animated.View>
                       </TouchableOpacity>
                     );
                   })}
                 </View>
-                <Animated.View style={[styles.orbitContainer, orbitStyle]}>
-                  <View style={[
-                    styles.orbitNode,
-                    {
-                      backgroundColor: colors.brand.primary,
-                      shadowColor: colors.brand.primary,
-                    }
-                  ]} />
+
+                {/* Orbit beacon rotating */}
+                <Animated.View style={[styles.orbitContainer, orbitStyle, hasOffers && styles.orbitContainerSmall]}>
+                  <View
+                    style={[
+                      styles.orbitNode,
+                      {
+                        backgroundColor: theme.isDark ? Colors.cyan : colors.brand.primary,
+                        shadowColor: theme.isDark ? Colors.cyan : colors.brand.primary,
+                      },
+                    ]}
+                  />
                 </Animated.View>
-                <View style={[
-                  styles.centerNode,
-                  {
-                    backgroundColor: theme.isDark 
-                      ? 'rgba(0,245,255,0.12)' 
-                      : alpha(colors.brand.primary, 0.1),
-                    borderColor: theme.isDark 
-                      ? 'rgba(0,245,255,0.4)' 
-                      : alpha(colors.brand.primary, 0.3),
-                    shadowColor: colors.brand.primary,
-                  }
-                ]}>
+
+                {/* Central Radar Disc */}
+                <View
+                  style={[
+                    styles.centerNode,
+                    hasOffers && styles.centerNodeSmall,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.12)' : alpha(colors.brand.primary, 0.08),
+                      borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.35)' : alpha(colors.brand.primary, 0.25),
+                    },
+                  ]}
+                >
                   {isBidsLoading ? (
                     <ActivityIndicator size="small" color={colors.brand.primary} />
                   ) : (
-                    <Search color={colors.brand.primary} size={28} />
+                    <Search color={theme.isDark ? Colors.cyan : colors.brand.primary} size={hasOffers ? 20 : 26} />
                   )}
                 </View>
               </View>
 
-              {/* Job indicators - sleek pills preserving essential details */}
-              {isInstant ? (
-                <View style={styles.instantBadgesRow}>
-                  <View style={[
-                    styles.instantChip,
-                    {
-                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.08)' : alpha(colors.brand.primary, 0.08),
-                      borderColor: theme.isDark ? 'rgba(0,245,255,0.22)' : alpha(colors.brand.primary, 0.18),
-                    }
-                  ]}>
-                    <Zap size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} fill={theme.isDark ? Colors.cyan : colors.brand.primary} />
-                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
-                      Fixed Rate: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={[
-                    styles.instantChip,
-                    {
-                      backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
-                      borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
-                    }
-                  ]}>
-                    <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
-                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
-                      {remainingSeconds > 0 ? `${formatCountdown(remainingSeconds)} left` : t('findingWorker.liveSearching', 'Searching live...')}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.instantBadgesRow}>
-                  {Number(job?.amount ?? job?.budget ?? 0) > 0 && (
-                    <View style={[
-                      styles.instantChip,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(0,245,255,0.08)' : alpha(colors.brand.primary, 0.08),
-                        borderColor: theme.isDark ? 'rgba(0,245,255,0.22)' : alpha(colors.brand.primary, 0.18),
-                      }
-                    ]}>
-                      <Tag size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
-                      <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
-                        {t('findingWorker.budget', 'Budget')}: Rs. {Number(job?.amount ?? job?.budget ?? 0).toLocaleString()}
+              {/* Status Title & Subtitle */}
+              <Text style={[styles.statusText, { color: colors.text.primary }]}>
+                {hasOffers
+                  ? t('findingWorker.offersReceivedTitle', 'Offers Received!')
+                  : t('findingWorker.searchingUstads', 'Broadcasting Request...')}
+              </Text>
+              <Text style={[styles.subText, { color: colors.text.secondary }]}>
+                {hasOffers
+                  ? t('findingWorker.offersReviewSubtext', 'Review quotes below and tap Hire to confirm your Ustad.')
+                  : isInstant
+                  ? t('findingWorker.broadcastDesc', 'We sent your request to nearby verified Ustads at this fixed price.')
+                  : t('findingWorker.searchDesc', 'Matching your scheduled request with top rated Ustads nearby.')}
+              </Text>
+
+              {/* Status Chips Row */}
+              <View style={styles.chipsRow}>
+                {isInstant ? (
+                  <>
+                    <View
+                      style={[
+                        styles.chipPill,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.08)' : alpha(colors.brand.primary, 0.07),
+                          borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.2)' : alpha(colors.brand.primary, 0.2),
+                        },
+                      ]}
+                    >
+                      <Zap size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                      <Text style={[styles.chipPillText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
+                        Fixed Rate: Rs. {basePrice.toLocaleString()}
                       </Text>
                     </View>
-                  )}
-                  <View style={[
-                    styles.instantChip,
-                    {
-                      backgroundColor: theme.isDark ? 'rgba(255,140,0,0.08)' : alpha(colors.brand.worker, 0.08),
-                      borderColor: theme.isDark ? 'rgba(255,140,0,0.22)' : alpha(colors.brand.worker, 0.18),
-                    }
-                  ]}>
-                    <CalendarDays size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
-                    <Text style={[styles.instantChipText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
-                      {scheduledDateLabel}
-                    </Text>
-                  </View>
-                </View>
-              )}
+                    <View
+                      style={[
+                        styles.chipPill,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(255, 140, 0, 0.08)' : alpha(colors.brand.worker, 0.07),
+                          borderColor: theme.isDark ? 'rgba(255, 140, 0, 0.2)' : alpha(colors.brand.worker, 0.2),
+                        },
+                      ]}
+                    >
+                      <Clock size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                      <Text style={[styles.chipPillText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                        {remainingSeconds > 0 ? `${formatCountdown(remainingSeconds)} left` : 'Searching...'}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View
+                      style={[
+                        styles.chipPill,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.08)' : alpha(colors.brand.primary, 0.07),
+                          borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.2)' : alpha(colors.brand.primary, 0.2),
+                        },
+                      ]}
+                    >
+                      <Tag size={12} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                      <Text style={[styles.chipPillText, { color: theme.isDark ? Colors.cyan : colors.brand.primary }]}>
+                        Budget: Rs. {basePrice.toLocaleString()}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.chipPill,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(255, 140, 0, 0.08)' : alpha(colors.brand.worker, 0.07),
+                          borderColor: theme.isDark ? 'rgba(255, 140, 0, 0.2)' : alpha(colors.brand.worker, 0.2),
+                        },
+                      ]}
+                    >
+                      <CalendarDays size={12} color={theme.isDark ? Colors.orange : colors.brand.worker} />
+                      <Text style={[styles.chipPillText, { color: theme.isDark ? Colors.orange : colors.brand.worker }]}>
+                        {scheduledDateLabel}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </View>
 
+              {/* Notified Nearby Badge */}
               {!!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
-                <View style={[
-                  styles.notifiedContainer,
-                  {
-                    backgroundColor: theme.isDark ? 'rgba(0,255,127,0.05)' : alpha(colors.status.success, 0.06),
-                    borderColor: theme.isDark ? 'rgba(0,255,127,0.12)' : alpha(colors.status.success, 0.15),
-                    marginTop: 4,
-                    marginBottom: 10,
-                  }
-                ]}>
-                  <View style={[styles.pulsingGreenDot, { backgroundColor: theme.isDark ? '#34C759' : colors.status.success }]} />
-                  <Text style={[styles.notifiedText, { color: theme.isDark ? '#00FF7F' : colors.status.success }]}>
-                    {t('findingWorker.notifiedCount', 'Notified {{count}} active Ustads nearby...', { count: job.notifiedWorkersCount })}
+                <View
+                  style={[
+                    styles.notifiedPill,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(52, 199, 89, 0.08)' : alpha(colors.status.success, 0.08),
+                      borderColor: theme.isDark ? 'rgba(52, 199, 89, 0.22)' : alpha(colors.status.success, 0.25),
+                    },
+                  ]}
+                >
+                  <View style={[styles.greenPulseDot, { backgroundColor: '#34C759' }]} />
+                  <Text style={[styles.notifiedPillText, { color: theme.isDark ? '#34C759' : colors.status.success }]}>
+                    {t('findingWorker.notifiedCount', 'Notified {{count}} active Ustads nearby', {
+                      count: job.notifiedWorkersCount,
+                    })}
                   </Text>
                 </View>
               )}
-
-              <Text style={[styles.statusText, typography.threeD, { color: colors.text.primary }]}>
-                {status}
-              </Text>
-              <Text style={[styles.subText, { color: colors.text.secondary }]}>
-                {isInstant
-                  ? t('findingWorker.broadcastDesc')
-                  : (isSearching
-                    ? t('findingWorker.searchDesc')
-                    : t('findingWorker.compareProfiles'))}
-              </Text>
             </LinearGradient>
           </Animated.View>
 
+          {/* Quick Rate Booster Prompt (if active) */}
           {showBoosterPrompt && isInstant && (
-            <Animated.View 
-              entering={FadeIn.duration(400)} 
+            <Animated.View
+              entering={FadeIn.duration(350)}
               style={[
                 styles.boosterCard,
                 {
                   backgroundColor: decisionTheme.boosterCardBg,
                   borderColor: decisionTheme.boosterCardBorder,
-                  elevation: isDark ? 0 : 3,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: isDark ? 0 : 0.08,
-                  shadowRadius: 8,
-                }
+                },
               ]}
             >
               <LinearGradient
@@ -998,18 +918,20 @@ export default function FindingWorkerScreen() {
                 style={styles.boosterGradient}
               >
                 <View style={styles.boosterHeadingRow}>
-                  <View style={[
-                    styles.boosterIconContainer, 
-                    { 
-                      backgroundColor: isDark ? addAlpha(legacyColors.orange, '20') : '#FEF3C7',
-                      borderColor: isDark ? 'rgba(255,140,0,0.4)' : '#FCD34D',
-                    }
-                  ]}>
-                    <Zap size={18} color={isDark ? legacyColors.orange : '#D97706'} fill={isDark ? legacyColors.orange : '#D97706'} />
+                  <View
+                    style={[
+                      styles.boosterIconWrap,
+                      {
+                        backgroundColor: isDark ? addAlpha(legacyColors.orange, '20') : '#FEF3C7',
+                        borderColor: isDark ? 'rgba(255, 140, 0, 0.4)' : '#FCD34D',
+                      },
+                    ]}
+                  >
+                    <Zap size={16} color={isDark ? legacyColors.orange : '#D97706'} fill={isDark ? legacyColors.orange : '#D97706'} />
                   </View>
                   <View style={styles.boosterHeadingCopy}>
                     <Text style={[styles.boosterEyebrow, { color: isDark ? '#FF8C00' : '#D97706' }]}>
-                      🔥 {t('findingWorker.boosterTitle', "Want an Ustad Faster?")}
+                      {t('findingWorker.boosterTitle', 'Want an Ustad Faster?')}
                     </Text>
                     <Text style={[styles.boosterUrduTitle, { color: decisionTheme.urduTitle }]}>
                       استاد اس ریٹ پر راضی نہیں ہیں
@@ -1018,7 +940,10 @@ export default function FindingWorkerScreen() {
                 </View>
 
                 <Text style={[styles.boosterDescription, { color: decisionTheme.desc }]}>
-                  {t('findingWorker.boosterDesc', "Nearby Ustads haven't accepted this rate yet. Increase your offer to attract Ustads faster!")}
+                  {t(
+                    'findingWorker.boosterDesc',
+                    "Nearby Ustads haven't accepted this rate yet. Increase your offer to attract Ustads faster!"
+                  )}
                 </Text>
 
                 {/* Quick Increment Chips */}
@@ -1042,13 +967,15 @@ export default function FindingWorkerScreen() {
                         }}
                         activeOpacity={0.75}
                       >
-                        <Text style={[
-                          styles.quickIncrementText,
-                          {
-                            color: isSelected ? decisionTheme.chipSelectedText : decisionTheme.chipText,
-                            fontWeight: isSelected ? '900' : '800',
-                          }
-                        ]}>
+                        <Text
+                          style={[
+                            styles.quickIncrementText,
+                            {
+                              color: isSelected ? decisionTheme.chipSelectedText : decisionTheme.chipText,
+                              fontWeight: isSelected ? '900' : '700',
+                            },
+                          ]}
+                        >
                           +{inc} (Rs. {target.toLocaleString()})
                         </Text>
                       </TouchableOpacity>
@@ -1058,13 +985,15 @@ export default function FindingWorkerScreen() {
 
                 {/* Custom Price Input & Submit */}
                 <View style={styles.customPriceRow}>
-                  <View style={[
-                    styles.customPriceInputWrap,
-                    {
-                      backgroundColor: decisionTheme.inputWrapBg,
-                      borderColor: decisionTheme.inputWrapBorder,
-                    }
-                  ]}>
+                  <View
+                    style={[
+                      styles.customPriceInputWrap,
+                      {
+                        backgroundColor: decisionTheme.inputWrapBg,
+                        borderColor: decisionTheme.inputWrapBorder,
+                      },
+                    ]}
+                  >
                     <Text style={[styles.customPricePrefix, { color: decisionTheme.inputPrefix }]}>PKR</Text>
                     <TextInput
                       style={[styles.customPriceInput, { color: decisionTheme.inputText }]}
@@ -1079,11 +1008,12 @@ export default function FindingWorkerScreen() {
                       keyboardType="number-pad"
                     />
                   </View>
+
                   <TouchableOpacity
                     style={[
                       styles.boostSubmitBtn,
                       { backgroundColor: decisionTheme.submitBtnBg },
-                      isBoosting && { opacity: 0.6 }
+                      isBoosting && { opacity: 0.6 },
                     ]}
                     onPress={() => handleBoostPrice()}
                     disabled={isBoosting}
@@ -1093,19 +1023,20 @@ export default function FindingWorkerScreen() {
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <Text style={[styles.boostSubmitBtnText, { color: decisionTheme.submitBtnText }]}>
-                        {t('findingWorker.boosterBtn', 'Set Rs. {{amount}} & Search', { amount: effectiveNewPrice.toLocaleString() })}
+                        {t('findingWorker.boosterBtn', 'Set Rs. {{amount}} & Search', {
+                          amount: effectiveNewPrice.toLocaleString(),
+                        })}
                       </Text>
                     )}
                   </TouchableOpacity>
                 </View>
 
-                {/* Option to continue at current rate */}
                 <TouchableOpacity
-                  style={{ marginTop: 14, alignItems: 'center', paddingVertical: 6 }}
+                  style={styles.keepSearchingLink}
                   onPress={handleDismissBooster}
                   activeOpacity={0.7}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: decisionTheme.subtext, textDecorationLine: 'underline' }}>
+                  <Text style={[styles.keepSearchingLinkText, { color: decisionTheme.subtext }]}>
                     ⏱ {t('findingWorker.keepCurrentRate', 'Keep searching at Rs. {{amount}}', { amount: basePrice.toLocaleString() })}
                   </Text>
                 </TouchableOpacity>
@@ -1113,147 +1044,53 @@ export default function FindingWorkerScreen() {
             </Animated.View>
           )}
 
-          {job && (
-            <Animated.View 
-              entering={FadeIn.delay(200)} 
+          {/* OFFERS RECEIVED HERO SECTION (Placed directly after radar when offers arrive!) */}
+          {hasOffers && (
+            <Animated.View
+              entering={SlideInDown.springify().damping(18)}
               style={[
-                styles.jobBriefCard,
+                styles.offersSection,
                 {
-                  backgroundColor: theme.isDark ? 'rgba(4,9,29,0.86)' : colors.surface.card,
-                  borderColor: theme.colors.border.default,
-                }
+                  backgroundColor: theme.isDark ? 'rgba(6, 16, 28, 0.94)' : colors.surface.card,
+                  borderColor: theme.isDark ? 'rgba(52, 199, 89, 0.3)' : '#86EFAC',
+                },
               ]}
             >
               <LinearGradient
-                colors={theme.isDark 
-                  ? ['rgba(0,245,255,0.10)', 'rgba(255,255,255,0.025)']
-                  : [alpha(colors.brand.primary, 0.06), colors.surface.card]
+                colors={
+                  theme.isDark
+                    ? ['rgba(52, 199, 89, 0.12)', 'rgba(8, 20, 32, 0.95)']
+                    : ['#F0FDF4', '#FFFFFF']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.jobBriefGradient}
+                style={styles.offersSectionGradient}
               >
-                <View style={styles.sectionHeadingRow}>
-                  <View style={[
-                    styles.sectionIcon,
-                    {
-                      backgroundColor: theme.isDark ? 'rgba(0,245,255,0.12)' : alpha(colors.brand.primary, 0.12),
-                      borderColor: theme.isDark ? 'rgba(0,245,255,0.3)' : alpha(colors.brand.primary, 0.35),
-                    }
-                  ]}>
-                    <Briefcase size={16} color={colors.brand.primary} />
-                  </View>
-                  <View style={styles.sectionHeadingCopy}>
-                    <Text style={[styles.sectionEyebrow, { color: colors.text.secondary }]}>{t('findingWorker.yourJob')}</Text>
-                    <Text style={[styles.jobTitle, { color: colors.text.primary }]}>{job.category || 'Service Request'}</Text>
-                  </View>
-                  <View style={[
-                    styles.requestTypeBadge, 
-                    job.urgency !== 'instant' && styles.scheduledBadge,
-                    {
-                      backgroundColor: isInstant 
-                        ? (theme.isDark ? 'rgba(0,245,255,0.15)' : '#DBEAFE')
-                        : (theme.isDark ? 'rgba(255,140,0,0.15)' : '#FFEDD5'),
-                      borderColor: isInstant
-                        ? (theme.isDark ? 'rgba(0,245,255,0.35)' : '#3B82F6')
-                        : (theme.isDark ? 'rgba(255,140,0,0.35)' : '#F97316'),
-                    }
-                  ]}>
-                    <Text style={[
-                      styles.requestTypeText, 
-                      !isInstant && styles.scheduledText,
-                      {
-                        color: isInstant
-                          ? (theme.isDark ? Colors.cyan : colors.brand.primary)
-                          : (theme.isDark ? Colors.orange : colors.brand.worker)
-                      }
-                    ]}>
-                      {isInstant ? t('home.worker.instant').toUpperCase() : t('home.worker.scheduled').toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={[styles.jobDescription, { color: colors.text.secondary }]} numberOfLines={2}>
-                  {job.description || 'Service details are being loaded...'}
-                </Text>
-
-                {!isInstant && (
-                  <View style={[styles.scheduleRow, { borderColor: theme.colors.border.default, backgroundColor: theme.isDark ? 'rgba(255,149,0,0.08)' : '#FFF7ED' }]}>
-                    <View style={styles.scheduleItem}>
-                      <CalendarDays size={15} color={colors.brand.worker} />
-                      <View style={styles.scheduleCopy}>
-                        <Text style={[styles.scheduleLabel, { color: colors.text.secondary }]}>{t('findingWorker.visitDate')}</Text>
-                        <Text style={[styles.scheduleValue, { color: colors.text.primary }]}>{scheduledDateLabel}</Text>
-                      </View>
-                    </View>
-                    <View style={[styles.scheduleDivider, { backgroundColor: theme.colors.border.default }]} />
-                    <View style={styles.scheduleItem}>
-                      <Clock size={15} color={colors.brand.worker} />
-                      <View style={styles.scheduleCopy}>
-                        <Text style={[styles.scheduleLabel, { color: colors.text.secondary }]}>{t('findingWorker.visitTime')}</Text>
-                        <Text style={[styles.scheduleValue, { color: colors.text.primary }]}>{scheduledTimeLabel}</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                <View style={[styles.requestMetaRow, { borderColor: theme.colors.border.default }]}>
-                  <View style={styles.requestMetaItem}>
-                    <Text style={[styles.requestMetaLabel, { color: colors.text.secondary }]}>{t('findingWorker.budget')}</Text>
-                    <Text style={[styles.requestMetaValue, { color: colors.text.primary }]}>{formatMoney(job.detailMeta?.financial?.amount ?? job.budget ?? job.amount)}</Text>
-                  </View>
-                  <View style={[styles.requestMetaDivider, { backgroundColor: theme.colors.border.default }]} />
-                  <View style={styles.requestMetaItem}>
-                    <Text style={[styles.requestMetaLabel, { color: colors.text.secondary }]}>{t('findingWorker.photosVideos')}</Text>
-                    <View style={styles.inlineMeta}>
-                      <ImageIcon size={14} color={colors.brand.secondary} />
-                      <Text style={[styles.requestMetaValue, { color: colors.text.primary }]}>
-                        {evidenceCount === 1 ? t('findingWorker.photosAdded', { count: evidenceCount }) : t('findingWorker.photosAddedPlural', { count: evidenceCount })}
+                {/* Header row with count */}
+                <View style={styles.offersSectionHeader}>
+                  <View style={styles.offersHeaderTitleRow}>
+                    <View style={styles.offersBadgePill}>
+                      <Text style={styles.offersBadgePillText}>
+                        {applicants.length === 1 ? '1 NEW OFFER' : `${applicants.length} NEW OFFERS`}
                       </Text>
                     </View>
+                    <Text style={[styles.offersSectionTitle, { color: colors.text.primary }]}>
+                      {t('findingWorker.reviewOffers', { count: applicants.length, defaultValue: 'Available Ustads' })}
+                    </Text>
                   </View>
+                  <Text style={[styles.offersSectionSubtitle, { color: colors.text.secondary }]}>
+                    {t('findingWorker.compareProfiles', 'Review ratings and tap Hire to confirm.')}
+                  </Text>
                 </View>
 
-                {!!job.address && (
-                  <View style={[styles.locationRow, { borderTopColor: theme.colors.border.default }]}>
-                    <MapPin size={15} color={colors.brand.worker} />
-                    <Text style={[styles.locationText, { color: colors.text.secondary }]} numberOfLines={1}>{job.address}</Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </Animated.View>
-          )}
-
-          {applicants.length > 0 ? (
-            <Animated.View 
-              entering={SlideInDown.springify().damping(16)} 
-              style={[
-                styles.responseCard,
-                {
-                  backgroundColor: theme.isDark ? 'rgba(2,18,26,0.92)' : colors.surface.card,
-                  borderColor: theme.isDark ? 'rgba(0,255,127,0.35)' : '#22C55E',
-                }
-              ]}
-            >
-              <LinearGradient
-                colors={theme.isDark
-                  ? ['rgba(0,255,127,0.15)', 'rgba(0,245,255,0.08)']
-                  : ['#F0FDF4', '#FFFFFF']
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.responseGradient}
-              >
-                <View style={styles.responseCopy}>
-                  <Text style={[styles.responseEyebrow, { color: colors.status.success }]}>{t('findingWorker.ustadsReady')}</Text>
-                  <Text style={[styles.responseTitle, { color: colors.text.primary }]}>{applicants.length === 1 ? t('findingWorker.reviewOffers', { count: applicants.length }) : t('findingWorker.reviewOffersPlural', { count: applicants.length })}</Text>
-                  <Text style={[styles.responseText, { color: colors.text.secondary }]}>{t('findingWorker.compareProfiles')}</Text>
-                </View>
-                <View style={styles.responseProfiles}>
+                {/* List of Offers */}
+                <View style={styles.applicantCardsList}>
                   {applicants.slice(0, 3).map((applicant) => {
                     const isAcceptingThis = isAccepting && acceptingBidId === applicant._id;
                     const isRejectingThis = isRejecting && rejectingBidId === applicant._id;
                     const workerRating = getWorkerRating(applicant.worker);
+                    const proposed = Number(applicant.proposedPrice || 0);
+                    const priceDiff = basePrice - proposed;
 
                     return (
                       <View
@@ -1261,51 +1098,89 @@ export default function FindingWorkerScreen() {
                         style={[
                           styles.applicantCard,
                           {
-                            backgroundColor: theme.isDark ? 'rgba(0,0,0,0.35)' : '#FFFFFF',
-                            borderColor: theme.colors.border.default,
+                            backgroundColor: theme.isDark ? 'rgba(15, 23, 42, 0.75)' : '#FFFFFF',
+                            borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
                           },
                         ]}
                       >
-                        {/* Profile Row (Tappable to view Ustad profile details) */}
+                        {/* Worker Identity Row (Tap opens Profile) */}
                         <TouchableOpacity
                           style={styles.applicantHeaderRow}
                           onPress={() => handleWorkerPress(applicant)}
-                          activeOpacity={0.78}
+                          activeOpacity={0.75}
                         >
-                          <Image
-                            source={{ uri: applicant.worker?.profileImage || 'https://via.placeholder.com/150' }}
-                            style={styles.responseProfileImage}
-                          />
-                          <View style={styles.responseProfileCopy}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={[styles.responseProfileName, { color: colors.text.primary }]} numberOfLines={1}>
-                                {applicant.worker?.fullName || 'Available Ustad'}
+                          <View style={styles.applicantAvatarWrapper}>
+                            <Image
+                              source={{
+                                uri: applicant.worker?.profileImage || 'https://via.placeholder.com/150',
+                              }}
+                              style={styles.applicantAvatar}
+                              contentFit="cover"
+                              transition={150}
+                              cachePolicy="memory-disk"
+                            />
+                            <View style={styles.verifiedCheckBadge}>
+                              <ShieldCheck size={11} color="#FFFFFF" strokeWidth={2.5} />
+                            </View>
+                          </View>
+
+                          <View style={styles.applicantInfo}>
+                            <View style={styles.applicantNameRow}>
+                              <Text
+                                style={[styles.applicantName, { color: colors.text.primary }]}
+                                numberOfLines={1}
+                              >
+                                {applicant.worker?.fullName || 'Verified Ustad'}
                               </Text>
+
                               {workerRating > 0 && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                <View style={styles.ratingBadge}>
                                   <Star size={11} color="#FFD700" fill="#FFD700" />
-                                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.text.secondary }}>
-                                    {workerRating.toFixed(1)}
+                                  <Text style={styles.ratingBadgeText}>{workerRating.toFixed(1)}</Text>
+                                </View>
+                              )}
+                            </View>
+
+                            <View style={styles.priceRow}>
+                              <Text style={styles.quotedPriceText}>
+                                {formatMoney(applicant.proposedPrice)}
+                              </Text>
+
+                              {priceDiff > 0 && (
+                                <View style={styles.savingsTag}>
+                                  <Sparkles size={10} color="#10B981" />
+                                  <Text style={styles.savingsTagText}>
+                                    Save Rs. {priceDiff.toLocaleString()}
+                                  </Text>
+                                </View>
+                              )}
+                              {priceDiff < 0 && (
+                                <View style={styles.counterOfferTag}>
+                                  <Text style={styles.counterOfferTagText}>
+                                    Counter-offer (+Rs. {Math.abs(priceDiff).toLocaleString()})
                                   </Text>
                                 </View>
                               )}
                             </View>
-                            <Text style={[styles.responseProfilePrice, { color: colors.status.success }]}>
-                              {formatMoney(applicant.proposedPrice)}
-                            </Text>
                           </View>
+
                           <ChevronRight
-                            size={16}
+                            size={18}
                             color={colors.text.muted}
                             style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
                           />
                         </TouchableOpacity>
 
-                        {/* Actions Row: Hire & Reject */}
-                        <View style={styles.applicantActionsRow}>
+                        {/* Actions Row: Accept / Decline */}
+                        <View
+                          style={[
+                            styles.applicantActionsRow,
+                            { borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' },
+                          ]}
+                        >
                           <TouchableOpacity
                             style={[
-                              styles.applicantHireBtn,
+                              styles.hireButton,
                               { backgroundColor: colors.status.success },
                               (isAccepting || isRejecting) && { opacity: 0.65 },
                             ]}
@@ -1317,9 +1192,9 @@ export default function FindingWorkerScreen() {
                               <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
                               <View style={styles.btnContentRow}>
-                                <Check size={14} color="#FFFFFF" strokeWidth={2.8} />
-                                <Text style={styles.applicantHireBtnText}>
-                                  {t('common.hire', 'Hire')} ({formatMoney(applicant.proposedPrice)})
+                                <Check size={15} color="#FFFFFF" strokeWidth={2.8} />
+                                <Text style={styles.hireButtonText}>
+                                  {t('common.hire', 'Accept & Hire')} ({formatMoney(applicant.proposedPrice)})
                                 </Text>
                               </View>
                             )}
@@ -1327,24 +1202,24 @@ export default function FindingWorkerScreen() {
 
                           <TouchableOpacity
                             style={[
-                              styles.applicantRejectBtn,
+                              styles.declineButton,
                               {
-                                borderColor: alpha(colors.status.error, 0.4),
-                                backgroundColor: alpha(colors.status.error, 0.1),
+                                borderColor: alpha(colors.status.error, 0.35),
+                                backgroundColor: alpha(colors.status.error, 0.08),
                               },
                               (isAccepting || isRejecting) && { opacity: 0.65 },
                             ]}
                             onPress={() => handleRejectApplicant(applicant)}
                             disabled={isAccepting || isRejecting}
-                            activeOpacity={0.82}
+                            activeOpacity={0.8}
                           >
                             {isRejectingThis ? (
                               <ActivityIndicator size="small" color={colors.status.error} />
                             ) : (
                               <View style={styles.btnContentRow}>
-                                <X size={14} color={colors.status.error} strokeWidth={2.5} />
-                                <Text style={[styles.applicantRejectBtnText, { color: colors.status.error }]}>
-                                  {t('common.reject', 'Reject')}
+                                <X size={14} color={colors.status.error} strokeWidth={2.4} />
+                                <Text style={[styles.declineButtonText, { color: colors.status.error }]}>
+                                  {t('common.reject', 'Decline')}
                                 </Text>
                               </View>
                             )}
@@ -1355,83 +1230,226 @@ export default function FindingWorkerScreen() {
                   })}
                 </View>
 
-                {/* Compare All Offers Button (shown when multiple offers exist) */}
+                {/* Compare All Offers Button (when multiple) */}
                 {applicants.length > 1 && (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[
-                      styles.reviewButton, 
-                      { backgroundColor: colors.brand.primary, marginTop: 4 },
-                    ]} 
-                    onPress={handleViewAllBids} 
-                    activeOpacity={0.82}
+                      styles.compareOffersBtn,
+                      {
+                        backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.12)' : alpha(colors.brand.primary, 0.1),
+                        borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.3)' : alpha(colors.brand.primary, 0.3),
+                      },
+                    ]}
+                    onPress={handleViewAllBids}
+                    activeOpacity={0.8}
                   >
-                    <Users size={16} color={theme.isDark ? "#001014" : "#FFFFFF"} />
-                    <Text style={[styles.reviewButtonText, { color: theme.isDark ? "#001014" : "#FFFFFF" }]}>
-                      {t('findingWorker.compareOffersBtn', { count: applicants.length, defaultValue: `Compare All Offers (${applicants.length})` })}
+                    <Users size={15} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                    <Text
+                      style={[
+                        styles.compareOffersBtnText,
+                        { color: theme.isDark ? Colors.cyan : colors.brand.primary },
+                      ]}
+                    >
+                      {t('findingWorker.compareOffersBtn', {
+                        count: applicants.length,
+                        defaultValue: `Compare All ${applicants.length} Offers`,
+                      })}
                     </Text>
                     <ChevronRight
-                      size={17}
-                      color={theme.isDark ? "#001014" : "#FFFFFF"}
-                      strokeWidth={2.8}
+                      size={16}
+                      color={theme.isDark ? Colors.cyan : colors.brand.primary}
                       style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
                     />
                   </TouchableOpacity>
                 )}
               </LinearGradient>
             </Animated.View>
-          ) : (
-            <View style={[
-              styles.waitingNote,
-              {
-                backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : colors.surface.card,
-                borderColor: theme.colors.border.default,
-              }
-            ]}>
-              <Clock size={16} color={colors.text.secondary} />
-              <Text style={[styles.waitingText, { color: colors.text.secondary }]}>{t('findingWorker.safeToLeave')}</Text>
+          )}
+
+          {/* Compact / Collapsible Job Brief Card */}
+          {job && (
+            <Animated.View
+              entering={FadeIn.delay(150)}
+              style={[
+                styles.jobCard,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(10, 16, 32, 0.85)' : colors.surface.card,
+                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                },
+              ]}
+            >
+              {/* Header: Title + Category + Urgent Tag + Toggle */}
+              <TouchableOpacity
+                style={styles.jobCardHeader}
+                onPress={() => setIsRequestExpanded((prev) => !prev)}
+                activeOpacity={0.75}
+              >
+                <View
+                  style={[
+                    styles.jobCategoryIconWrap,
+                    {
+                      backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.1)' : alpha(colors.brand.primary, 0.1),
+                      borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.25)' : alpha(colors.brand.primary, 0.25),
+                    },
+                  ]}
+                >
+                  <Briefcase size={16} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
+                </View>
+
+                <View style={styles.jobCardHeaderCopy}>
+                  <Text style={[styles.jobCardEyebrow, { color: colors.text.muted }]}>
+                    {t('findingWorker.yourJob', 'YOUR REQUEST')}
+                  </Text>
+                  <Text style={[styles.jobCardTitle, { color: colors.text.primary }]} numberOfLines={1}>
+                    {job.category || 'Service Request'}
+                  </Text>
+                </View>
+
+                <View style={styles.jobCardHeaderRight}>
+                  <View
+                    style={[
+                      styles.urgencyBadge,
+                      {
+                        backgroundColor: isInstant
+                          ? (theme.isDark ? 'rgba(0, 245, 255, 0.12)' : '#DBEAFE')
+                          : (theme.isDark ? 'rgba(255, 140, 0, 0.12)' : '#FFEDD5'),
+                        borderColor: isInstant
+                          ? (theme.isDark ? 'rgba(0, 245, 255, 0.28)' : '#93C5FD')
+                          : (theme.isDark ? 'rgba(255, 140, 0, 0.28)' : '#FDBA74'),
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.urgencyBadgeText,
+                        {
+                          color: isInstant
+                            ? (theme.isDark ? Colors.cyan : colors.brand.primary)
+                            : (theme.isDark ? Colors.orange : colors.brand.worker),
+                        },
+                      ]}
+                    >
+                      {isInstant ? 'URGENT' : 'SCHEDULED'}
+                    </Text>
+                  </View>
+
+                  {isRequestExpanded ? (
+                    <ChevronUp size={16} color={colors.text.muted} />
+                  ) : (
+                    <ChevronDown size={16} color={colors.text.muted} />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              {/* Quick Info Strip (Always visible) */}
+              <View
+                style={[
+                  styles.jobQuickStrip,
+                  { borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9' },
+                ]}
+              >
+                <View style={styles.jobQuickItem}>
+                  <Tag size={13} color={colors.brand.primary} />
+                  <Text style={[styles.jobQuickText, { color: colors.text.secondary }]}>
+                    {formatMoney(job.detailMeta?.financial?.amount ?? job.budget ?? job.amount)}
+                  </Text>
+                </View>
+
+                {evidenceCount > 0 && (
+                  <View style={styles.jobQuickItem}>
+                    <ImageIcon size={13} color={colors.brand.secondary} />
+                    <Text style={[styles.jobQuickText, { color: colors.text.secondary }]}>
+                      {evidenceCount} photo{evidenceCount > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                )}
+
+                {!!job.address && (
+                  <View style={[styles.jobQuickItem, { flex: 1 }]}>
+                    <MapPin size={13} color={colors.brand.worker} />
+                    <Text
+                      style={[styles.jobQuickText, { color: colors.text.secondary }]}
+                      numberOfLines={1}
+                    >
+                      {job.address}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Expanded Description & Details */}
+              {isRequestExpanded && (
+                <View
+                  style={[
+                    styles.jobExpandedSection,
+                    { borderTopColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9' },
+                  ]}
+                >
+                  {!!job.description && (
+                    <Text style={[styles.jobDescriptionText, { color: colors.text.secondary }]}>
+                      {job.description}
+                    </Text>
+                  )}
+
+                  {!isInstant && (
+                    <View
+                      style={[
+                        styles.scheduleBox,
+                        {
+                          backgroundColor: theme.isDark ? 'rgba(255, 149, 0, 0.07)' : '#FFF7ED',
+                          borderColor: theme.isDark ? 'rgba(255, 149, 0, 0.18)' : '#FDBA74',
+                        },
+                      ]}
+                    >
+                      <View style={styles.scheduleItem}>
+                        <CalendarDays size={14} color={colors.brand.worker} />
+                        <Text style={[styles.scheduleValue, { color: colors.text.primary }]}>
+                          {scheduledDateLabel}
+                        </Text>
+                      </View>
+                      <View style={styles.scheduleItem}>
+                        <Clock size={14} color={colors.brand.worker} />
+                        <Text style={[styles.scheduleValue, { color: colors.text.primary }]}>
+                          {scheduledTimeLabel}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+            </Animated.View>
+          )}
+
+          {/* Safe to Leave App Reassurance Box (When searching) */}
+          {!hasOffers && (
+            <View
+              style={[
+                styles.reassuranceCard,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.03)' : colors.surface.card,
+                  borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.06)' : theme.colors.border.subtle,
+                },
+              ]}
+            >
+              <Clock size={16} color={colors.text.muted} />
+              <Text style={[styles.reassuranceText, { color: colors.text.muted }]}>
+                {t(
+                  'findingWorker.safeToLeave',
+                  "Safe to close the app — we'll notify you via push notification as soon as an Ustad responds."
+                )}
+              </Text>
             </View>
           )}
 
-          <View style={[
-            styles.statsRow,
-            {
-              backgroundColor: theme.isDark ? 'rgba(3,8,25,0.82)' : colors.surface.card,
-              borderColor: theme.colors.border.default,
-            }
-          ]}>
-            <View style={styles.statItem}>
-              <Users size={16} color={colors.brand.primary} />
-              <Text style={[styles.statVal, { color: colors.text.primary }]}>{applicants.length}</Text>
-              <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.offersLabel')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
-            <View style={styles.statItem}>
-              <Radio size={16} color={colors.brand.worker} />
-              <Text style={[styles.statVal, { color: colors.text.primary }]}>{isInstant ? t('home.worker.instant') : t('home.worker.scheduled')}</Text>
-              <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.jobTypeLabel')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: theme.colors.border.default }]} />
-            <View style={styles.statItem}>
-              <Clock size={16} color={colors.brand.worker} />
-              <Text style={[styles.statVal, { color: colors.text.primary }]}>{formatElapsedTime(elapsedSeconds)}</Text>
-              <Text style={[styles.statLab, { color: colors.text.secondary }]}>{t('findingWorker.elapsedLabel')}</Text>
-            </View>
-          </View>
-
-          {averageApplicantRating !== null && (
-            <Text style={[styles.ratingSummary, { color: colors.text.secondary }]}>
-              {t('findingWorker.avgRating', { rating: averageApplicantRating.toFixed(1) })}
-            </Text>
-          )}
-
+          {/* Cancel Request Button */}
           <TouchableOpacity
             style={[
-              styles.cancelBtn,
+              styles.cancelButton,
               {
-                backgroundColor: theme.isDark ? 'rgba(255,59,48,0.1)' : '#FEF2F2',
-                borderColor: theme.isDark ? 'rgba(255,59,48,0.35)' : '#EF4444',
+                backgroundColor: theme.isDark ? 'rgba(255, 59, 48, 0.06)' : '#FEF2F2',
+                borderColor: theme.isDark ? 'rgba(255, 59, 48, 0.2)' : '#FCA5A5',
               },
-              isCancelling && { opacity: 0.5 }
+              isCancelling && { opacity: 0.5 },
             ]}
             onPress={handleCancelJob}
             disabled={isCancelling}
@@ -1440,12 +1458,17 @@ export default function FindingWorkerScreen() {
             {isCancelling ? (
               <ActivityIndicator color={colors.status.error} size="small" />
             ) : (
-              <X color={colors.status.error} size={17} />
+              <X color={colors.status.error} size={15} strokeWidth={2.4} />
             )}
-            <Text style={[styles.cancelText, { color: colors.status.error }]}>{isCancelling ? t('findingWorker.cancelling') : t('findingWorker.cancelRequest')}</Text>
+            <Text style={[styles.cancelButtonText, { color: colors.status.error }]}>
+              {isCancelling
+                ? t('findingWorker.cancelling', 'Cancelling...')
+                : t('findingWorker.cancelRequest', 'Cancel Service Request')}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
 
+        {/* Confirmation Modal */}
         <ConfirmModal
           visible={confirmModal.visible}
           onConfirm={confirmModal.onConfirm}
@@ -1455,802 +1478,144 @@ export default function FindingWorkerScreen() {
           confirmText={confirmModal.confirmText}
           cancelText={confirmModal.cancelText}
           confirmColor={confirmModal.confirmColor}
+          isLoading={isCancelling}
         />
-
       </SafeAreaView>
     </BackgroundWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  countdownContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 18,
-    padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    width: '85%',
-  },
-  countdownValue: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
-    letterSpacing: 2,
-  },
-  countdownLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.cyan,
-    textTransform: 'uppercase',
-    marginTop: 6,
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
-  notifiedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: -8,
-    marginBottom: 20,
-    backgroundColor: 'rgba(52, 199, 89, 0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(52, 199, 89, 0.25)',
-    alignSelf: 'center',
-  },
-  pulsingGreenDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#34C759',
-  },
-  notifiedText: {
-    color: '#00FF7F',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  fixedPriceContainer: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: addAlpha(Colors.cyan, '10'),
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: addAlpha(Colors.cyan, '30'),
-    marginBottom: 20,
-  },
-  fixedPriceLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: Colors.cyan,
-    letterSpacing: 1,
-  },
-  fixedPriceAmount: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: Colors.cyan,
-    marginTop: 2,
-  },
   container: {
     flex: 1,
   },
   header: {
-    minHeight: 68,
-    paddingHorizontal: 18,
+    minHeight: 64,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
   },
   headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.045)',
-    borderWidth: 1.6,
-    borderColor: 'rgba(0,245,255,0.2)',
+    borderWidth: 1,
   },
   headerCopy: {
     flex: 1,
   },
   headerEyebrow: {
-    color: Colors.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     marginBottom: 2,
+    textTransform: 'uppercase',
   },
   headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 21,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,245,255,0.08)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,245,255,0.24)',
+    borderWidth: 1,
   },
   liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.cyan,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   liveText: {
-    color: Colors.cyan,
-    fontSize: 11,
-    fontWeight: '900',
+    fontSize: 10.5,
+    fontWeight: '800',
     letterSpacing: 0.8,
   },
   scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 36,
   },
   searchHero: {
-    borderRadius: 20,
+    borderRadius: 22,
     overflow: 'hidden',
-    borderWidth: 1.8,
-    borderColor: 'rgba(0,245,255,0.28)',
-    backgroundColor: 'rgba(2,8,26,0.82)',
+    borderWidth: 1,
   },
   searchHeroGradient: {
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingTop: 18,
     paddingBottom: 20,
   },
-  searchStatusBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,245,255,0.07)',
-    borderWidth: 1.4,
-    borderColor: 'rgba(0,245,255,0.18)',
-  },
-  searchStatusText: {
-    color: Colors.cyan,
-    fontSize: 11.5,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-  },
   animationContainer: {
-    width: 220,
-    height: 220,
+    width: 210,
+    height: 210,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginVertical: 4,
+  },
+  animationContainerSmall: {
+    width: 170,
+    height: 170,
+    marginVertical: 0,
+  },
+  pulseRingOuter: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 1.2,
   },
   pulseRing: {
     position: 'absolute',
-    width: 184,
-    height: 184,
-    borderRadius: 92,
-    borderWidth: 1.8,
-    borderColor: 'rgba(0,245,255,0.85)',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1.5,
   },
   centerNode: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(0,245,255,0.12)',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.6,
-    borderColor: 'rgba(0,245,255,0.4)',
+    borderWidth: 1.5,
     shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  centerNodeSmall: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   orbitContainer: {
     position: 'absolute',
-    width: 196,
-    height: 196,
+    width: 176,
+    height: 176,
     alignItems: 'center',
+  },
+  orbitContainerSmall: {
+    width: 144,
+    height: 144,
   },
   orbitNode: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.cyan,
-    shadowColor: Colors.cyan,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-  },
-  statusText: {
-    fontSize: 21,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    textAlign: 'center',
-  },
-  subText: {
-    fontSize: 14,
-    color: Colors.textDim,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20,
-    fontWeight: '600',
-    maxWidth: 310,
-  },
-  instantBadgesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 6,
-    flexWrap: 'wrap',
-  },
-  instantChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1.4,
-    gap: 6,
-  },
-  instantChipText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
-  boosterCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1.8,
-    borderColor: 'rgba(255,140,0,0.3)',
-    backgroundColor: 'rgba(4,9,29,0.85)',
-    shadowColor: Colors.orange,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  boosterGradient: {
-    padding: 16,
-  },
-  boosterHeadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    marginBottom: 10,
-  },
-  boosterIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,140,0,0.4)',
-  },
-  boosterHeadingCopy: {
-    flex: 1,
-  },
-  boosterEyebrow: {
-    color: '#FF8C00',
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  boosterUrduTitle: {
-    color: '#FFD700',
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 1,
-  },
-  boosterDescription: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '500',
-    marginBottom: 14,
-  },
-  boostButton: {
-    backgroundColor: '#FF8C00',
-    height: 48,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FF8C00',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  boostButtonText: {
-    color: '#050510',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  decisionOptionSection: {
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  decisionOptionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginBottom: 6,
-  },
-  decisionOptionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  decisionOptionSubtext: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  decisionDivider: {
-    height: 1,
-    marginVertical: 12,
-  },
-  quickIncrementsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  quickIncrementChip: {
-    flex: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickIncrementChipSelected: {
-  },
-  quickIncrementText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  quickIncrementTextSelected: {
-    fontWeight: '900',
-  },
-  customPriceRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
-  customPriceInputWrap: {
-    flex: 1,
-    height: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1.2,
-    paddingHorizontal: 10,
-    gap: 6,
-  },
-  customPricePrefix: {
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  customPriceInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  boostSubmitBtn: {
-    paddingHorizontal: 14,
-    height: 46,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  boostSubmitBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  extendSearchBtn: {
-    height: 46,
-    borderRadius: 10,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  extendSearchBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  stopSearchBtn: {
-    height: 46,
-    borderRadius: 10,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  stopSearchBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  expiredDecisionCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1.2,
-    borderColor: 'rgba(255,59,48,0.35)',
-    backgroundColor: 'rgba(4,9,29,0.92)',
-  },
-  jobBriefCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1.8,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: 'rgba(4,9,29,0.82)',
-  },
-  jobBriefGradient: {
-    padding: 16,
-  },
-  sectionHeadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    marginBottom: 13,
-  },
-  sectionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,245,255,0.1)',
-    borderWidth: 1.4,
-    borderColor: 'rgba(0,245,255,0.22)',
-  },
-  sectionHeadingCopy: {
-    flex: 1,
-  },
-  sectionEyebrow: {
-    color: Colors.textMuted,
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
-  jobTitle: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  requestTypeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,20,147,0.08)',
-    borderWidth: 1.4,
-    borderColor: 'rgba(255,20,147,0.24)',
-  },
-  scheduledBadge: {
-    backgroundColor: 'rgba(255,149,0,0.08)',
-    borderColor: 'rgba(255,149,0,0.24)',
-  },
-  requestTypeText: {
-    color: Colors.pink,
-    fontSize: 10.5,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-  },
-  scheduledText: {
-    color: Colors.orange,
-  },
-  jobDescription: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.76)',
-    lineHeight: 21,
-    fontWeight: '600',
-    marginBottom: 14,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginBottom: 12,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,149,0,0.07)',
-    borderWidth: 1.4,
-    borderColor: 'rgba(255,149,0,0.18)',
-  },
-  scheduleItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  scheduleCopy: {
-    flex: 1,
-  },
-  scheduleDivider: {
-    width: 1,
-    alignSelf: 'stretch',
-    marginHorizontal: 10,
-    backgroundColor: 'rgba(255,149,0,0.18)',
-  },
-  scheduleLabel: {
-    color: 'rgba(255,255,255,0.42)',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.7,
-    marginBottom: 2,
-  },
-  scheduleValue: {
-    color: Colors.orange,
-    fontSize: 13.5,
-    fontWeight: '900',
-  },
-  requestMetaRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    borderTopWidth: 1.2,
-    borderBottomWidth: 1.2,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  requestMetaItem: {
-    flex: 1,
-  },
-  requestMetaDivider: {
-    width: 1,
-    marginHorizontal: 14,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-  },
-  requestMetaLabel: {
-    color: Colors.textMuted,
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.9,
-    marginBottom: 4,
-  },
-  requestMetaValue: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  inlineMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 13,
-  },
-  locationText: {
-    flex: 1,
-    color: 'rgba(255,255,255,0.68)',
-    fontSize: 13.5,
-    fontWeight: '700',
-  },
-  responseCard: {
-    marginTop: 14,
-    borderRadius: 18,
-    overflow: 'hidden',
-    borderWidth: 1.8,
-    borderColor: 'rgba(0,255,127,0.25)',
-    backgroundColor: 'rgba(2,18,26,0.88)',
-  },
-  responseGradient: {
-    padding: 16,
-  },
-  responseCopy: {
-    marginBottom: 12,
-  },
-  responseEyebrow: {
-    color: Colors.green,
-    fontSize: 10.5,
-    fontWeight: '900',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  responseTitle: {
-    color: '#FFFFFF',
-    fontSize: 19,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  responseText: {
-    color: 'rgba(255,255,255,0.62)',
-    fontSize: 13.5,
-    lineHeight: 19,
-    fontWeight: '600',
-  },
-  responseProfiles: {
-    gap: 10,
-    marginBottom: 10,
-  },
-  applicantCard: {
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1.6,
-    overflow: 'hidden',
-  },
-  applicantHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingBottom: 8,
-  },
-  responseProfileImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    borderWidth: 1.4,
-    borderColor: 'rgba(0,245,255,0.35)',
-  },
-  responseProfileCopy: {
-    flex: 1,
-  },
-  responseProfileName: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  responseProfilePrice: {
-    color: Colors.green,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  applicantActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingTop: 8,
-    borderTopWidth: 1.2,
-    borderTopColor: 'rgba(148, 163, 184, 0.25)',
-  },
-  applicantHireBtn: {
-    flex: 1.4,
-    minHeight: 40,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  applicantHireBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    fontWeight: '800',
-  },
-  applicantRejectBtn: {
-    flex: 0.9,
-    minHeight: 40,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  applicantRejectBtnText: {
-    fontSize: 13.5,
-    fontWeight: '800',
-  },
-  btnContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-  reviewButton: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    borderRadius: 14,
-    backgroundColor: Colors.cyan,
-  },
-  reviewButtonText: {
-    color: '#001014',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  waitingNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    marginTop: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.035)',
-    borderWidth: 1.6,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  waitingText: {
-    flex: 1,
-    color: Colors.textDim,
-    fontSize: 13.5,
-    lineHeight: 19,
-    fontWeight: '600',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: 14,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1.6,
-    borderColor: 'rgba(255,255,255,0.07)',
-    backgroundColor: 'rgba(3,8,25,0.76)',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  statVal: {
-    color: '#FFFFFF',
-    fontSize: 15.5,
-    fontWeight: '900',
-  },
-  statLab: {
-    color: Colors.textDim,
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  ratingSummary: {
-    color: Colors.textDim,
-    fontSize: 12.5,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  cancelBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 18,
-    alignSelf: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,59,48,0.06)',
-    borderWidth: 1.6,
-    borderColor: 'rgba(255,59,48,0.16)',
-  },
-  cancelText: {
-    color: Colors.error,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.6,
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
   },
   satelliteOrbit: {
     ...StyleSheet.absoluteFillObject,
@@ -2259,703 +1624,525 @@ const styles = StyleSheet.create({
   },
   satelliteContainer: {
     position: 'absolute',
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   satelliteGlow: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     borderColor: Colors.cyan,
-    backgroundColor: '#000',
-    overflow: 'visible',
+    backgroundColor: '#0F172A',
     shadowColor: Colors.cyan,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.6,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 8,
   },
   satelliteImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 21,
+    borderRadius: 20,
   },
-  priceBadge: {
+  satellitePricePill: {
     position: 'absolute',
-    bottom: -9,
-    backgroundColor: Colors.cyan,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+    bottom: -8,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 6,
     alignSelf: 'center',
     borderWidth: 1,
-    borderColor: '#000',
+    borderColor: Colors.cyan,
   },
-  priceText: {
+  satellitePriceText: {
     fontSize: 8,
     fontWeight: '900',
-    color: '#000',
-  },
-  // Modal Styles
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  modalContent: {
-    width: '100%',
-    maxHeight: '88%',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    overflow: 'hidden',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 240, 255, 0.3)',
-  },
-  modalGradient: {
-    maxHeight: '100%',
-    paddingTop: 9,
-    paddingBottom: 16,
-  },
-  modalHandle: {
-    width: 42,
-    height: 4,
-    alignSelf: 'center',
-    marginBottom: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  modalBody: {
-    flexShrink: 1,
-  },
-  modalScroll: {
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 18,
-    marginBottom: 14,
-  },
-  modalHeaderCopy: {
-    flex: 1,
-  },
-  modalTitle: {
-    fontSize: 12,
-    fontWeight: '900',
     color: Colors.cyan,
-    letterSpacing: 1.8,
-    marginBottom: 4,
   },
-  modalSubtitle: {
-    color: Colors.textDim,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600',
+  statusText: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 6,
+    letterSpacing: -0.2,
   },
-  closeBtn: {
-    width: 38,
-    height: 38,
+  subText: {
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 5,
+    lineHeight: 18,
+    fontWeight: '500',
+    maxWidth: 290,
+  },
+  chipsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  identityCard: {
-    minHeight: 92,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 13,
-    marginBottom: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.18)',
-    overflow: 'hidden',
-  },
-  identityImageWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    padding: 3,
-    borderWidth: 2,
-    borderColor: 'rgba(0,245,255,0.72)',
-    backgroundColor: 'rgba(0,245,255,0.08)',
-  },
-  identityImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 16,
-  },
-  identityCopy: {
-    flex: 1,
-    paddingRight: 74,
-  },
-  statusGlow: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 13,
-    height: 13,
-    borderRadius: 999,
-    backgroundColor: '#00FF00',
-    borderWidth: 2,
-    borderColor: '#08101C',
-  },
-  statusOffline: {
-    backgroundColor: Colors.textMuted,
-  },
-  workerName: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-  workerCategory: {
-    color: Colors.cyan,
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 7,
-  },
-  identityMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
     flexWrap: 'wrap',
-    gap: 6,
   },
-  ratingRow: {
+  chipPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-  },
-  ratingText: {
-    fontSize: 10,
-    color: Colors.textDim,
-    fontWeight: '800',
-  },
-  identityMetaDivider: {
-    width: 1,
-    height: 11,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  availabilityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  availabilityDot: {
-    width: 7,
-    height: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: Colors.green,
+    borderWidth: 1,
+    gap: 5,
   },
-  availabilityText: {
-    color: Colors.green,
-    fontSize: 10,
+  chipPillText: {
+    fontSize: 11.5,
     fontWeight: '800',
   },
-  availabilityTextBusy: {
-    color: Colors.textMuted,
-  },
-  verificationBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
+  notifiedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 10,
+    paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,230,118,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,230,118,0.24)',
-  },
-  verificationBadgePending: {
-    backgroundColor: 'rgba(255,149,0,0.08)',
-    borderColor: 'rgba(255,149,0,0.24)',
-  },
-  verificationBadgeText: {
-    color: Colors.green,
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  verificationBadgeTextPending: {
-    color: Colors.orange,
-  },
-  proposalCard: {
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 12,
-    backgroundColor: 'rgba(0, 245, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.16)',
-  },
-  proposalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  proposalTitle: {
-    color: Colors.cyan,
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  proposalText: {
-    color: 'rgba(255,255,255,0.76)',
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: '600',
-  },
-  proposalDivider: {
-    height: 1,
-    marginVertical: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  proposalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  proposalLabel: {
-    color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-    marginBottom: 3,
-  },
-  proposalAmount: {
-    color: Colors.green,
-    fontSize: 22,
-    fontWeight: '900',
-  },
-  proposalTimeline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 96,
-  },
-  proposalTimelineLabel: {
-    color: Colors.textMuted,
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-  },
-  proposalTimelineValue: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
-    marginTop: 3,
-  },
-  trustStrip: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    paddingVertical: 12,
-    marginBottom: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  trustMetric: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 0,
-  },
-  trustDivider: {
-    width: 1,
-    marginVertical: 4,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  trustValue: {
-    maxWidth: '100%',
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '900',
-    marginTop: 6,
-    paddingHorizontal: 5,
-  },
-  trustLabel: {
-    color: Colors.textMuted,
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-    marginTop: 4,
-  },
-  bioCard: {
-    borderRadius: 16,
-    padding: 13,
-    marginBottom: 12,
-    backgroundColor: 'rgba(255,255,255,0.035)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
-  },
-  bioLabel: {
-    color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-    marginBottom: 7,
-  },
-  bioText: {
-    color: 'rgba(255,255,255,0.66)',
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: '600',
-  },
-  skillsSection: {
-    marginBottom: 3,
-  },
-  skillsLabel: {
-    color: Colors.textMuted,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-    marginBottom: 8,
-  },
-  skillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  skillPill: {
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.045)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  skillText: {
-    color: 'rgba(255,255,255,0.68)',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 18,
-    paddingTop: 13,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.07)',
-  },
-  profileBtn: {
-    width: 104,
-    height: 52,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.28)',
-    backgroundColor: 'rgba(0,240,255,0.07)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  profileBtnText: {
-    color: Colors.cyan,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-  },
-  hireBtn: {
-    flex: 1,
-    height: 52,
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: Colors.cyan,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  hireGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  hireText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: 0.8,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  strikethroughAmount: {
-    color: '#646B7E',
-    fontSize: 14,
-    fontWeight: '700',
-    textDecorationLine: 'line-through',
-  },
-  promoContainer: {
-    borderRadius: 16,
-    padding: 13,
-    marginBottom: 12,
-    backgroundColor: 'rgba(0, 245, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 245, 255, 0.1)',
-  },
-  promoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginBottom: 10,
-  },
-  promoHeaderTitle: {
-    color: Colors.cyan,
-    fontSize: 9,
-    fontWeight: '900',
-    letterSpacing: 1.4,
-  },
-  promoInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  promoInput: {
-    flex: 1,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.035)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 12,
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  promoApplyBtn: {
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: Colors.cyan,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  promoApplyBtnDisabled: {
-    opacity: 0.5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  promoApplyText: {
-    color: '#001014',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  promoCancelBtn: {
-    height: 40,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  promoCancelText: {
-    color: Colors.error,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  promoFeedbackCard: {
-    marginTop: 8,
-    borderRadius: 8,
-    padding: 8,
     borderWidth: 1,
   },
-  promoFeedbackSuccess: {
-    backgroundColor: 'rgba(0, 255, 127, 0.05)',
-    borderColor: 'rgba(0, 255, 127, 0.15)',
-  },
-  promoFeedbackError: {
-    backgroundColor: 'rgba(255, 59, 48, 0.05)',
-    borderColor: 'rgba(255, 59, 48, 0.15)',
-  },
-  promoFeedbackSuccessRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  promoFeedbackDot: {
+  greenPulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.green,
   },
-  promoFeedbackSuccessText: {
-    color: Colors.green,
+  notifiedPillText: {
     fontSize: 11,
-    fontWeight: '600',
-    flex: 1,
-  },
-  promoFeedbackErrorText: {
-    color: Colors.error,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  successModalContainer: {
-    width: '90%',
-    maxWidth: 360,
-    borderRadius: 24,
-    overflow: 'hidden',
-    alignSelf: 'center',
-    justifyContent: 'center',
-  },
-  successCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  successGradient: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  successBadgeOutline: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    padding: 3,
-    backgroundColor: 'rgba(0, 255, 127, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: '#00FF7F',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
-  },
-  successBadgeCircle: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#00FF7F',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  successSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 8,
-    marginBottom: 24,
-  },
-  assignedWorkerCard: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 18,
-    padding: 12,
-    gap: 12,
-    marginBottom: 20,
-  },
-  assignedWorkerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-  },
-  assignedWorkerDetails: {
-    flex: 1,
-  },
-  assignedWorkerName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  assignedWorkerCategory: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 2,
-  },
-  assignedWorkerRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  assignedWorkerRating: {
-    fontSize: 10,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.7)',
   },
-  successPriceRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    marginBottom: 24,
+  // Offers Received Section
+  offersSection: {
+    marginTop: 14,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1.2,
   },
-  successPriceLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 0.4)',
-    letterSpacing: 0.8,
+  offersSectionGradient: {
+    padding: 16,
   },
-  successPriceValue: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0284C7',
+  offersSectionHeader: {
+    marginBottom: 12,
   },
-  redirectProgressContainer: {
+  offersHeaderTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 3,
   },
-  redirectProgressText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.5)',
+  offersBadgePill: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  successActionBtn: {
-    width: '100%',
-    height: 50,
-    borderRadius: 14,
+  offersBadgePillText: {
+    color: '#FFFFFF',
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  offersSectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  offersSectionSubtitle: {
+    fontSize: 12.5,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  applicantCardsList: {
+    gap: 10,
+  },
+  applicantCard: {
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  successActionGradient: {
+  applicantHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingBottom: 10,
+  },
+  applicantAvatarWrapper: {
+    position: 'relative',
+    width: 44,
+    height: 44,
+  },
+  applicantAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+  },
+  verifiedCheckBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#0F172A',
+  },
+  applicantInfo: {
     flex: 1,
+  },
+  applicantNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  applicantName: {
+    fontSize: 14.5,
+    fontWeight: '800',
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+  },
+  ratingBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#FFD700',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  quotedPriceText: {
+    fontSize: 14.5,
+    fontWeight: '900',
+    color: '#10B981',
+  },
+  savingsTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  savingsTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  counterOfferTag: {
+    backgroundColor: 'rgba(249, 115, 22, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  counterOfferTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#F97316',
+  },
+  applicantActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  hireButton: {
+    flex: 1.4,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  hireButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  declineButton: {
+    flex: 0.8,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  declineButtonText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  btnContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  compareOffersBtn: {
+    marginTop: 10,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  compareOffersBtnText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  // Collapsible Job Request Brief Card
+  jobCard: {
+    marginTop: 14,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  jobCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 10,
+  },
+  jobCategoryIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  jobCardHeaderCopy: {
+    flex: 1,
+  },
+  jobCardEyebrow: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  jobCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  jobCardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  urgencyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  urgencyBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  jobQuickStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  jobQuickItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  jobQuickText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  jobExpandedSection: {
+    padding: 14,
+    borderTopWidth: 1,
+  },
+  jobDescriptionText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+    marginBottom: 10,
+  },
+  scheduleBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 14,
+  },
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scheduleValue: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  // Booster Card
+  boosterCard: {
+    marginTop: 14,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1.2,
+  },
+  boosterGradient: {
+    padding: 16,
+  },
+  boosterHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  boosterIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  boosterHeadingCopy: {
+    flex: 1,
+  },
+  boosterEyebrow: {
+    fontSize: 13.5,
+    fontWeight: '800',
+  },
+  boosterUrduTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  boosterDescription: {
+    fontSize: 12.5,
+    lineHeight: 17,
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  quickIncrementsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  quickIncrementChip: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickIncrementText: {
+    fontSize: 10.5,
+  },
+  customPriceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  customPriceInputWrap: {
+    flex: 1,
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  customPricePrefix: {
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  customPriceInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  boostSubmitBtn: {
+    paddingHorizontal: 12,
+    height: 42,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boostSubmitBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  keepSearchingLink: {
+    marginTop: 12,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  keepSearchingLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  // Reassurance & Cancel
+  reassuranceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  reassuranceText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '500',
+  },
+  cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    marginTop: 16,
+    alignSelf: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
   },
-  successActionText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#000000',
-    letterSpacing: 0.5,
-  }
+  cancelButtonText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
 });

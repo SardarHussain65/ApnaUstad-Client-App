@@ -7,8 +7,8 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { XCircle, Copy, Upload, Smartphone, Landmark, Banknote, FileImage } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { alpha, Spacing, useTheme, useThemeColors, useThemeTypography } from '../../constants/Theme';
@@ -212,7 +212,12 @@ export function RechargeModal({
             <Text style={[styles.sectionLabel, { color: theme.colors.text.muted }]}>{t('wallet.depositScreenshot')}</Text>
             {proofImageUri ? (
               <View style={[styles.proofPreviewWrapper, { borderColor: theme.colors.border.default }]}>
-                <Image source={{ uri: proofImageUri }} style={styles.proofPreview} />
+                <Image
+                  source={{ uri: proofImageUri }}
+                  style={styles.proofPreview}
+                  contentFit="cover"
+                  transition={150}
+                />
                 <TouchableOpacity style={styles.changeProofBtn} onPress={onPickProofImage}>
                   <Upload size={14} color="#fff" style={{ marginRight: 6 }} />
                   <Text style={styles.changeProofText}>{t('wallet.replaceScreenshot')}</Text>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Bell, MapPin, BadgeCheck } from 'lucide-react-native';
 import { alpha, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
@@ -102,6 +103,9 @@ export function HomeHeader() {
               <Image
                 source={{ uri: user!.profileImage }}
                 style={styles.avatarImage}
+                contentFit="cover"
+                transition={150}
+                cachePolicy="memory-disk"
                 onError={() => setImageError(true)}
               />
             ) : (

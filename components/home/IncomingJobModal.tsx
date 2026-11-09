@@ -227,11 +227,23 @@ export function IncomingJobModal({
               pagingEnabled
               scrollEnabled={parentScrollEnabled}
               showsHorizontalScrollIndicator={false}
+              style={styles.pagerScrollView}
               contentContainerStyle={styles.jobPager}
               decelerationRate="fast"
             >
               {activeJobs.map((job, index) => (
-                <View key={job._id} style={[styles.jobPage, { width: screenWidth }]}>
+                <View
+                  key={job._id}
+                  style={[
+                    styles.jobPage,
+                    {
+                      width: screenWidth,
+                      paddingTop: keyboardHeight > 0 ? Math.max(insets.top + 4, 12) : Math.max(insets.top + 44, 56),
+                      paddingBottom: keyboardHeight > 0 ? 8 : Math.max(insets.bottom + 8, 16),
+                      justifyContent: keyboardHeight > 0 ? 'flex-start' : 'center',
+                    },
+                  ]}
+                >
                   <JobDecisionCard
                     job={job}
                     totalJobs={activeJobs.length}
@@ -481,9 +493,13 @@ function JobDecisionCard({
         : t('incomingJobModal.noCommission', 'No commission')
       : t('incomingJobModal.submitQuoteHint', 'Submit your own quote');
 
+  const insets = useSafeAreaInsets();
+  const maxSafeHeight = screenHeight - insets.top - insets.bottom - 74;
+  const maxKeyboardHeight = screenHeight - keyboardHeight - insets.top - 24;
+
   const dynamicMaxHeight = keyboardHeight > 0
-    ? Math.max(260, screenHeight - keyboardHeight - 50)
-    : Math.min(screenHeight * (showCounterInput ? 0.78 : 0.85), 680);
+    ? Math.max(260, maxKeyboardHeight)
+    : Math.min(maxSafeHeight, 680);
 
   return (
     // Clean, smooth subtle entrance animation without bouncy springiness
@@ -503,6 +519,7 @@ function JobDecisionCard({
           {
             borderColor: alpha(accent, 0.45),
             backgroundColor: theme.colors.surface.card,
+            maxHeight: dynamicMaxHeight,
           },
         ]}
       >
@@ -1067,13 +1084,15 @@ function JobDecisionCard({
         </View>
 
         {/* Footer Note */}
-        <View style={styles.footerNoteRow}>
-          <Text style={[styles.footerNoteText, { color: alpha(theme.colors.text.primary, 0.4) }]}>
-            {isInstant
-              ? t('incomingJobModal.instantFooterNote', 'First Ustad to accept gets this urgent job right away!')
-              : t('incomingJobModal.scheduledFooterNote', 'Send your rate so the customer can book you.')}
-          </Text>
-        </View>
+        {!showCounterInput && (
+          <View style={styles.footerNoteRow}>
+            <Text style={[styles.footerNoteText, { color: alpha(theme.colors.text.primary, 0.4) }]}>
+              {isInstant
+                ? t('incomingJobModal.instantFooterNote', 'First Ustad to accept gets this urgent job right away!')
+                : t('incomingJobModal.scheduledFooterNote', 'Send your rate so the customer can book you.')}
+            </Text>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -1221,11 +1240,17 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+  pagerScrollView: {
+    flex: 1,
+    width: '100%',
+  },
   jobPager: {
     alignItems: 'center',
+    flexGrow: 1,
   },
   jobPage: {
     width: SCREEN_WIDTH,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
@@ -1251,8 +1276,12 @@ const styles = StyleSheet.create({
   cardFrame: {
     width: CARD_WIDTH,
     maxHeight: Math.min(SCREEN_HEIGHT * 0.85, 680),
+    flexShrink: 1,
   },
   card: {
+    width: '100%',
+    maxHeight: '100%',
+    flexShrink: 1,
     borderRadius: 22,
     borderWidth: 1.8,
     overflow: 'hidden',
@@ -1269,6 +1298,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1.5,
+    flexShrink: 0,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -1654,8 +1684,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingTop: 10,
-    paddingBottom: 6,
+    paddingBottom: 8,
     borderTopWidth: 1.5,
+    flexShrink: 0,
   },
   skipBtn: {
     height: 48,
@@ -1714,6 +1745,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 8,
     alignItems: 'center',
+    flexShrink: 0,
   },
   footerNoteText: {
     fontSize: 11,

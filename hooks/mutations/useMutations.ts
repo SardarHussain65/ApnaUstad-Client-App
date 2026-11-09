@@ -338,6 +338,31 @@ export function useRejectBidMutation(options?: Omit<UseMutationOptions<any, Erro
 
   return useMutation<any, Error, RejectBidPayload>({
     mutationFn: rejectBid,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.bids.byJob(variables.jobId) });
+      const previousBids = queryClient.getQueryData(queryKeys.bids.byJob(variables.jobId));
+      if (previousBids) {
+        queryClient.setQueryData(queryKeys.bids.byJob(variables.jobId), (old: any) => {
+          if (!old) return old;
+          if (Array.isArray(old)) {
+            return old.filter((b: any) => (b._id || b.id) !== variables.bidId);
+          }
+          if (Array.isArray(old?.bids)) {
+            return {
+              ...old,
+              bids: old.bids.filter((b: any) => (b._id || b.id) !== variables.bidId),
+            };
+          }
+          return old;
+        });
+      }
+      return { previousBids };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousBids) {
+        queryClient.setQueryData(queryKeys.bids.byJob(variables.jobId), context.previousBids);
+      }
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
@@ -353,6 +378,22 @@ export function useCancelJobMutation(options?: Omit<UseMutationOptions<any, Erro
 
   return useMutation<any, Error, CancelJobPayload>({
     mutationFn: cancelJob,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.jobs.detail(variables.jobId) });
+      const previousJob = queryClient.getQueryData(queryKeys.jobs.detail(variables.jobId));
+      if (previousJob) {
+        queryClient.setQueryData(queryKeys.jobs.detail(variables.jobId), (old: any) => {
+          if (!old) return old;
+          return { ...old, status: 'cancelled' };
+        });
+      }
+      return { previousJob };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousJob) {
+        queryClient.setQueryData(queryKeys.jobs.detail(variables.jobId), context.previousJob);
+      }
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
@@ -382,7 +423,60 @@ export function useUpdateBookingStatusMutation(options?: Omit<UseMutationOptions
 
   return useMutation<any, Error, UpdateBookingStatusPayload>({
     mutationFn: updateBookingStatus,
+    onMutate: async (variables) => {
+      // Cancel in-flight queries so they don't overwrite our optimistic state
+      await queryClient.cancelQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
+
+      // Snapshot previous booking
+      const previousBooking = queryClient.getQueryData(queryKeys.bookings.detail(variables.bookingId));
+
+      // Optimistically update the detail query
+      if (previousBooking) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.bookingId), (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            status: variables.status,
+            ...(variables.status === 'completed' ? { isCompleted: true } : {}),
+            ...(variables.cancelReason ? { cancelReason: variables.cancelReason } : {}),
+          };
+        });
+      }
+
+      // Optimistically update lists and home summaries
+      queryClient.setQueriesData({ queryKey: queryKeys.bookings.all }, (oldData: any) => {
+        if (!oldData) return oldData;
+        if (Array.isArray(oldData)) {
+          return oldData.map((b: any) =>
+            (b?._id === variables.bookingId || b?.id === variables.bookingId)
+              ? { ...b, status: variables.status }
+              : b
+          );
+        }
+        if (oldData?.activeBooking && (oldData.activeBooking._id === variables.bookingId || oldData.activeBooking.id === variables.bookingId)) {
+          return {
+            ...oldData,
+            activeBooking: { ...oldData.activeBooking, status: variables.status },
+          };
+        }
+        return oldData;
+      });
+
+      return { previousBooking };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousBooking) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.bookingId), context.previousBooking);
+      }
+    },
     onSuccess: (data, variables) => {
+      if (data) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.bookingId), (prev: any) => ({
+          ...(prev || {}),
+          ...data,
+          status: variables.status,
+        }));
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
@@ -400,13 +494,38 @@ export function useWithdrawBidMutation(options?: Omit<UseMutationOptions<any, Er
 
   return useMutation<any, Error, WithdrawBidPayload>({
     mutationFn: withdrawBid,
-    ...options,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.bids.byWorker() });
+      const previousBids = queryClient.getQueryData(queryKeys.bids.byWorker());
+      if (previousBids) {
+        queryClient.setQueryData(queryKeys.bids.byWorker(), (old: any) => {
+          if (!old) return old;
+          if (Array.isArray(old)) {
+            return old.filter((b: any) => (b._id || b.id) !== variables.bidId);
+          }
+          if (Array.isArray(old?.bids)) {
+            return {
+              ...old,
+              bids: old.bids.filter((b: any) => (b._id || b.id) !== variables.bidId),
+            };
+          }
+          return old;
+        });
+      }
+      return { previousBids };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousBids) {
+        queryClient.setQueryData(queryKeys.bids.byWorker(), context.previousBids);
+      }
+    },
     onSuccess: (data, variables, context, mutation) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.byWorker() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bids.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
       options?.onSuccess?.(data, variables, context, mutation);
     },
+    ...options,
   });
 }
 
@@ -415,7 +534,37 @@ export function usePayBookingMutation(options?: Omit<UseMutationOptions<any, Err
 
   return useMutation<any, Error, PayBookingPayload>({
     mutationFn: payBooking,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
+      const previousBooking = queryClient.getQueryData(queryKeys.bookings.detail(variables.bookingId));
+      if (previousBooking) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.bookingId), (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            paymentStatus: 'paid',
+            isPaid: true,
+            status: 'completed',
+          };
+        });
+      }
+      return { previousBooking };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousBooking) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.bookingId), context.previousBooking);
+      }
+    },
     onSuccess: (data, variables) => {
+      if (data) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.bookingId), (prev: any) => ({
+          ...(prev || {}),
+          ...data,
+          paymentStatus: 'paid',
+          isPaid: true,
+          status: 'completed',
+        }));
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.bookingId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
@@ -434,8 +583,27 @@ export function useCreateReviewMutation(options?: Omit<UseMutationOptions<any, E
 
   return useMutation<any, Error, CreateReviewPayload>({
     mutationFn: createReview,
-    ...options,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.bookings.detail(variables.booking) });
+      const previousBooking = queryClient.getQueryData(queryKeys.bookings.detail(variables.booking));
+      if (previousBooking) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.booking), (old: any) => {
+          if (!old) return old;
+          return { ...old, isReviewed: true };
+        });
+      }
+      return { previousBooking };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousBooking) {
+        queryClient.setQueryData(queryKeys.bookings.detail(variables.booking), context.previousBooking);
+      }
+    },
     onSuccess: (data, variables, context, mutation) => {
+      queryClient.setQueryData(queryKeys.bookings.detail(variables.booking), (prev: any) => {
+        if (!prev) return prev;
+        return { ...prev, isReviewed: true };
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(variables.booking) });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.myBookings() });
@@ -445,6 +613,7 @@ export function useCreateReviewMutation(options?: Omit<UseMutationOptions<any, E
       queryClient.invalidateQueries({ queryKey: queryKeys.reviews.byWorker(variables.worker) });
       options?.onSuccess?.(data, variables, context, mutation);
     },
+    ...options,
   });
 }
 
@@ -542,6 +711,25 @@ export function useToggleFavoriteMutation(options?: Omit<UseMutationOptions<Togg
 
   return useMutation<ToggleFavoriteResponse, Error, ToggleFavoritePayload>({
     mutationFn: toggleFavorite,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.favorites.list(variables.userId) });
+      const previousFavorites = queryClient.getQueryData(queryKeys.favorites.list(variables.userId));
+      if (previousFavorites && Array.isArray(previousFavorites)) {
+        const isFav = previousFavorites.some((w: any) => (w?._id || w?.id || w) === variables.workerId);
+        queryClient.setQueryData(
+          queryKeys.favorites.list(variables.userId),
+          isFav
+            ? previousFavorites.filter((w: any) => (w?._id || w?.id || w) !== variables.workerId)
+            : [...previousFavorites, { _id: variables.workerId }]
+        );
+      }
+      return { previousFavorites };
+    },
+    onError: (err, variables, context: any) => {
+      if (context?.previousFavorites) {
+        queryClient.setQueryData(queryKeys.favorites.list(variables.userId), context.previousFavorites);
+      }
+    },
     onSuccess: (data, variables, context, mutation) => {
       // Invalidate favorites list query
       queryClient.invalidateQueries({ queryKey: queryKeys.favorites.list(variables.userId) });

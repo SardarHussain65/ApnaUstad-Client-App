@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Camera, PlayCircle, X, Plus } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -81,7 +82,12 @@ export function MediaEvidencePicker({
             {selectedMedia.map((asset, i) => (
               <View key={`${asset.type}-${asset.uri}-${i}`} style={styles.imageThumb}>
                 {asset.type === 'image' ? (
-                  <Image source={{ uri: asset.uri }} style={styles.thumbImg} />
+                  <Image
+                    source={{ uri: asset.uri }}
+                    style={styles.thumbImg}
+                    contentFit="cover"
+                    transition={150}
+                  />
                 ) : (
                   <View style={[styles.videoThumb, { backgroundColor: palette.purpleMuted }]}>
                     <PlayCircle size={28} color={palette.purple} strokeWidth={1.7} />

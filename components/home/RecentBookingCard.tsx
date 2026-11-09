@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import {
   Spacing,
   BorderRadius,
@@ -164,7 +165,13 @@ export const RecentBookingCard = React.memo(function RecentBookingCard({
             ]}
           >
             {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                transition={150}
+                cachePolicy="memory-disk"
+              />
             ) : (
               <Text style={[styles.avatarText, { color: palette.avatarText }]}>
                 {initialsFor(personName)}

@@ -183,6 +183,9 @@ export default function TransactionDetailsScreen() {
   const [truthFeedback, setTruthFeedback] = useState('');
   const [isSubmittingTruth, setIsSubmittingTruth] = useState(false);
 
+  // Chat Unread State
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+
   // Map state
   const cameraRef = useRef<CameraRef>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -207,13 +210,27 @@ export default function TransactionDetailsScreen() {
   refetchRef.current = refetch;
   const queryClient = useQueryClient();
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateBookingStatusMutation();
-  const { mutate: payBooking, isPending: isPaying } = usePayBookingMutation();
+  const { mutate: payBooking, mutateAsync: payBookingAsync, isPending: isPaying } = usePayBookingMutation();
 
   // Auto-refresh when TransactionDetails screen regains focus
   useRefreshOnFocus(refetch);
 
+  // Check for existing unread chat messages for this active booking
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (!id) return;
+    let active = true;
+    api.get(`/messages/${id}?limit=20`)
+      .then(res => {
+        if (!active) return;
+        const msgs = res.data?.data || [];
+        const hasUnread = msgs.some((m: any) => m.sender !== user?._id && !m.readAt);
+        if (hasUnread) setHasUnreadChat(true);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [id, user?._id]);
+
+  useEffect(() => {
     const events = [
       'booking:status',
       'booking:accepted',
@@ -229,14 +246,28 @@ export default function TransactionDetailsScreen() {
       'dispute:updated',
       'dispute:resolved',
       'dispute:cancelled',
-      'dispute:message'
+      'dispute:message',
+      'chat:receive'
     ];
 
     const unsubs = events.map(event =>
       socketService.on(event, (data: any) => {
+        if (event === 'chat:receive') {
+          const msgBookingId = String(data?.booking?._id || data?.booking || '');
+          if (msgBookingId === String(id) && data?.sender !== user?._id) {
+            setHasUnreadChat(true);
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            Toast.show({
+              type: 'info',
+              text1: `💬 ${partnerName || t('common.chat', 'Chat')}`,
+              text2: data?.messageType === 'audio' ? '🎤 Voice message' : (data?.content || 'New message'),
+              onPress: navigateToChat,
+            });
+          }
+          return;
+        }
         const incomingId = (data?.bookingId || data?._id || data?.booking?._id)?.toString();
         if (!incomingId || incomingId === String(id) || event.startsWith('dispute:')) {
-          if (timer) clearTimeout(timer);
           setShowStartWorkModal(false);
 
           if (event === 'dispute:created' || event === 'dispute:updated') {
@@ -252,17 +283,30 @@ export default function TransactionDetailsScreen() {
             });
           }
 
+          const bookingPayload = data?.booking || (data?._id ? data : null);
+          if (bookingPayload) {
+            queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+              ...(prev || {}),
+              ...bookingPayload,
+            }));
+          } else if (event === 'booking:ongoing') {
+            queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => prev ? ({ ...prev, status: 'ongoing' }) : prev);
+          } else if (event === 'booking:completed') {
+            queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => prev ? ({ ...prev, status: 'completed', isCompleted: true }) : prev);
+          } else if (event === 'booking:paid') {
+            queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => prev ? ({ ...prev, isPaid: true, paymentStatus: 'paid', status: 'completed' }) : prev);
+          } else if (event === 'booking:cancelled') {
+            queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => prev ? ({ ...prev, status: 'cancelled' }) : prev);
+          }
+
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
           queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-          timer = setTimeout(() => {
-            refetchRef.current();
-          }, 250);
+          refetchRef.current();
         }
       })
     );
 
     return () => {
-      if (timer) clearTimeout(timer);
       unsubs.forEach(u => u());
     };
   }, [id, queryClient, isWorker, t]);
@@ -282,6 +326,7 @@ export default function TransactionDetailsScreen() {
   const canRaiseDispute = disputeMeta?.canRaiseDispute === true;
   const isPaid = booking?.paymentStatus === 'paid';
   const isJobEnded = (status === 'completed' && isPaid) || status === 'cancelled';
+  const isJobCompletedOrEnded = status === 'completed' || status === 'cancelled';
   const showDisputeAction = hasActiveDispute || (canRaiseDispute && !isJobEnded);
   const isCommunicationLocked = isJobEnded;
 
@@ -611,6 +656,7 @@ export default function TransactionDetailsScreen() {
 
   // Handlers
   const navigateToChat = () => {
+    setHasUnreadChat(false);
     if (!partnerProfileId || isCommunicationLocked) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
@@ -653,12 +699,20 @@ export default function TransactionDetailsScreen() {
   };
 
   const handleConfirmStartWorkAgreed = () => {
+    if (isUpdating) return;
     setShowStartWorkModal(false);
     updateStatus(
       { bookingId: id as string, status: 'ongoing' },
       {
-        onSuccess: () => {
+        onSuccess: (data: any) => {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          if (data) {
+            queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+              ...(prev || {}),
+              ...data,
+              status: 'ongoing',
+            }));
+          }
           refetch();
         },
         onError: (error: any) => {
@@ -696,7 +750,7 @@ export default function TransactionDetailsScreen() {
 
     setIsSubmittingPriceIncrease(true);
     try {
-      await api.post(`/bookings/${id}/request-price-increase`, {
+      const res = await api.post(`/bookings/${id}/request-price-increase`, {
         revisedPrice: newPrice,
         reason: priceIncreaseReason.trim(),
       });
@@ -707,6 +761,12 @@ export default function TransactionDetailsScreen() {
         text1: 'Price Increase Sent',
         text2: 'Waiting for customer approval on their phone.',
       });
+      if (res?.data?.data) {
+        queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+          ...(prev || {}),
+          ...res.data.data,
+        }));
+      }
       refetch();
     } catch (err: any) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -720,13 +780,22 @@ export default function TransactionDetailsScreen() {
   const handleApprovePriceIncrease = async () => {
     setIsSubmittingPriceDecision(true);
     try {
-      await api.post(`/bookings/${id}/respond-price-increase`, { approved: true });
+      const res = await api.post(`/bookings/${id}/respond-price-increase`, { approved: true });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Toast.show({
         type: 'success',
         text1: t('transactionDetails.priceApprovedTitle', 'Price Approved & Work Started ⚡'),
         text2: t('transactionDetails.priceApprovedDesc', 'Agreed price updated. Work is now ongoing.'),
       });
+      if (res?.data?.data) {
+        queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+          ...(prev || {}),
+          ...res.data.data,
+          status: 'ongoing',
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
       refetch();
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to approve price increase.';
@@ -739,13 +808,20 @@ export default function TransactionDetailsScreen() {
   const handleDeclinePriceIncrease = async () => {
     setIsSubmittingPriceDecision(true);
     try {
-      await api.post(`/bookings/${id}/respond-price-increase`, { approved: false });
+      const res = await api.post(`/bookings/${id}/respond-price-increase`, { approved: false });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Toast.show({
         type: 'info',
         text1: 'Price Increase Declined',
         text2: 'Original agreed price remains.',
       });
+      if (res?.data?.data) {
+        queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+          ...(prev || {}),
+          ...res.data.data,
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
       refetch();
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to decline price increase.';
@@ -790,29 +866,24 @@ export default function TransactionDetailsScreen() {
         });
       }
 
-      payBooking(
-        { bookingId: id as string, paymentMethod: 'cash' },
-        {
-          onSuccess: () => {
-            setShowTruthModal(false);
-            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
-            queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
-            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
-            queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
-            refetch();
-            setShowReviewModal(true);
-          },
-          onError: (error: any) => {
-            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            const msg = error?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
-            alertModal.showAlert(t('transactionDetails.paymentBlocked', 'Payment paused'), msg, undefined, 'error');
-          },
-        }
-      );
+      await payBookingAsync({ bookingId: id as string, paymentMethod: 'cash' });
+      setShowTruthModal(false);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+        ...(prev || {}),
+        paymentStatus: 'paid',
+        isPaid: true,
+        status: 'completed',
+      }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs.myPosts() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.homeSummary() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.detail(id) });
+      refetch();
+      setShowReviewModal(true);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to record truth verification.';
-      alertModal.showAlert(t('common.error', 'Error'), msg, undefined, 'error');
+      const msg = err?.response?.data?.message || t('transactionDetails.paymentFailed', 'Could not confirm payment.');
+      alertModal.showAlert(t('transactionDetails.paymentBlocked', 'Payment paused'), msg, undefined, 'error');
     } finally {
       setIsSubmittingTruth(false);
     }
@@ -823,6 +894,7 @@ export default function TransactionDetailsScreen() {
   };
 
   const handleCompleteJob = () => {
+    if (isUpdating) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     confirmModal.showConfirm(
       t('transactionDetails.confirmCompleteTitle', 'Complete Service?'),
@@ -832,8 +904,15 @@ export default function TransactionDetailsScreen() {
         updateStatus(
           { bookingId: id as string, status: 'completed' },
           {
-            onSuccess: () => {
+            onSuccess: (data: any) => {
               void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (data) {
+                queryClient.setQueryData(queryKeys.bookings.detail(id), (prev: any) => ({
+                  ...(prev || {}),
+                  ...data,
+                  status: 'completed',
+                }));
+              }
               refetch();
             },
             onError: (error: any) => {
@@ -1346,11 +1425,18 @@ export default function TransactionDetailsScreen() {
                     }}
                     onPress={handleConfirmStartWorkAgreed}
                     activeOpacity={0.82}
+                    disabled={isUpdating}
                   >
-                    <CheckCircle2 size={14} color="#001014" strokeWidth={2.4} />
-                    <Text style={{ color: '#001014', fontWeight: '800', fontSize: 12 }} numberOfLines={1}>
-                      Proceed at Rs. {Number(booking.totalAmount).toLocaleString()}
-                    </Text>
+                    {isUpdating ? (
+                      <ActivityIndicator size="small" color="#001014" />
+                    ) : (
+                      <>
+                        <CheckCircle2 size={14} color="#001014" strokeWidth={2.4} />
+                        <Text style={{ color: '#001014', fontWeight: '800', fontSize: 12 }} numberOfLines={1}>
+                          Proceed at Rs. {Number(booking.totalAmount).toLocaleString()}
+                        </Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
 
@@ -1492,7 +1578,10 @@ export default function TransactionDetailsScreen() {
               disabled={isCommunicationLocked || !partnerProfileId}
               activeOpacity={0.8}
             >
-              <MessageCircle size={15} color={colors.cyan} strokeWidth={2.4} />
+              <View style={styles.chatIconWrapper}>
+                <MessageCircle size={15} color={colors.cyan} strokeWidth={2.4} />
+                {hasUnreadChat && <View style={styles.unreadChatDot} />}
+              </View>
               <Text style={[styles.contactPillText, { color: colors.cyan }]}>
                 {t('common.chat', 'Chat')}
               </Text>
@@ -1816,12 +1905,14 @@ export default function TransactionDetailsScreen() {
                     backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : shieldBg,
                     borderWidth: 1.8,
                     borderColor: shieldBorder,
-                  }
+                  },
+                  isJobCompletedOrEnded && styles.buttonDisabled,
                 ]}
                 onPress={() => {
                   void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   setShowSafetyModal(true);
                 }}
+                disabled={isJobCompletedOrEnded}
                 activeOpacity={0.8}
               >
                 <ShieldCheck size={18} color={shieldColor} strokeWidth={2.4} />
@@ -1852,9 +1943,11 @@ export default function TransactionDetailsScreen() {
                       backgroundColor: isDark ? 'rgba(10, 14, 26, 0.85)' : '#FFFFFF',
                       borderWidth: 1.8,
                       borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : theme.colors.border.default,
-                    }
+                    },
+                    isJobCompletedOrEnded && styles.buttonDisabled,
                   ]}
                   onPress={openExternalMaps}
+                  disabled={isJobCompletedOrEnded}
                   activeOpacity={0.8}
                 >
                   <Navigation size={17} color={theme.id === 'light' ? theme.colors.brand.primary : (theme.id === 'dark' ? '#38BDF8' : '#00E5FF')} strokeWidth={2.4} />
@@ -1911,12 +2004,14 @@ export default function TransactionDetailsScreen() {
                   backgroundColor: shieldBg,
                   borderWidth: 1.8,
                   borderColor: shieldBorder,
-                }
+                },
+                isJobCompletedOrEnded && styles.buttonDisabled,
               ]}
               onPress={() => {
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setShowSafetyModal(true);
               }}
+              disabled={isJobCompletedOrEnded}
               activeOpacity={0.8}
             >
               <ShieldCheck size={18} color={shieldColor} strokeWidth={2.4} />
@@ -1947,9 +2042,11 @@ export default function TransactionDetailsScreen() {
                     backgroundColor: theme.colors.surface.card,
                     borderWidth: 1.8,
                     borderColor: theme.colors.border.default,
-                  }
+                  },
+                  isJobCompletedOrEnded && styles.buttonDisabled,
                 ]}
                 onPress={openExternalMaps}
+                disabled={isJobCompletedOrEnded}
                 activeOpacity={0.8}
               >
                 <Navigation size={17} color={theme.colors.brand.primary} strokeWidth={2.4} />
@@ -2024,8 +2121,14 @@ export default function TransactionDetailsScreen() {
         visible={showDisputeModal}
         onClose={() => setShowDisputeModal(false)}
         bookingId={id as string}
+        bookingStatus={status}
         jobAmount={amountValue}
+        isWorker={isWorker}
         onSubmitted={() => refetch()}
+        onCancelled={() => {
+          refetch();
+          router.replace('/(tabs)' as any);
+        }}
       />
 
       <AlertModal
@@ -2174,10 +2277,15 @@ export default function TransactionDetailsScreen() {
                       style={[styles.primaryModalBtn, { backgroundColor: colors.cyan }]}
                       onPress={handleConfirmStartWorkAgreed}
                       activeOpacity={0.8}
+                      disabled={isUpdating}
                     >
-                      <Text style={[styles.primaryModalBtnText, { color: '#001014', fontWeight: '900' }]}>
-                        {t('transactionDetails.yesStartWork', 'Yes, Start Work (Rs. {{amount}})', { amount: Number(booking?.totalAmount || 0).toLocaleString() })}
-                      </Text>
+                      {isUpdating ? (
+                        <ActivityIndicator size="small" color="#001014" />
+                      ) : (
+                        <Text style={[styles.primaryModalBtnText, { color: '#001014', fontWeight: '900' }]}>
+                          {t('transactionDetails.yesStartWork', 'Yes, Start Work (Rs. {{amount}})', { amount: Number(booking?.totalAmount || 0).toLocaleString() })}
+                        </Text>
+                      )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -2870,6 +2978,22 @@ const styles = StyleSheet.create({
   contactPillText: {
     fontSize: 13,
     fontWeight: '800',
+  },
+  chatIconWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadChatDot: {
+    position: 'absolute',
+    top: -3,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   hubDivider: {
     height: 1.2,
