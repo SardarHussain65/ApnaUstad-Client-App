@@ -104,7 +104,21 @@ export const requestNotificationPermissions = async () => {
     });
   }
 
-  // For iOS, set notification categories
+  // Register notification categories for interactive actions (Accept / Decline) on both Android & iOS
+  await Notifications.setNotificationCategoryAsync('incoming_call', [
+    {
+      identifier: 'accept_call',
+      buttonTitle: 'Accept 📞',
+      options: { opensAppToForeground: true },
+    },
+    {
+      identifier: 'decline_call',
+      buttonTitle: 'Decline ✖️',
+      options: { opensAppToForeground: false, isDestructive: true },
+    },
+  ]);
+
+  // For iOS, set fallback notification categories
   if (Platform.OS === 'ios') {
     await Notifications.setNotificationCategoryAsync('default', [
       {
@@ -249,15 +263,20 @@ export const setupFCMMessageListener = (
       onMessageReceived(remoteMessage);
     }
 
-    if (remoteMessage.notification) {
+    const isCall = remoteMessage.data?.type === 'incoming_call';
+
+    if (remoteMessage.notification || isCall) {
       Notifications.scheduleNotificationAsync({
         content: {
-          title: remoteMessage.notification.title || 'New Notification',
-          body: remoteMessage.notification.body || '',
+          title: remoteMessage.notification?.title || (isCall ? 'Incoming Voice Call' : 'New Notification'),
+          body: remoteMessage.notification?.body || (isCall ? `${remoteMessage.data?.callerName || 'Apna Ustad'} is calling...` : ''),
           data: remoteMessage.data,
+          categoryIdentifier: isCall ? 'incoming_call' : undefined,
+          priority: isCall ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
+          vibrate: isCall ? [0, 1000, 500, 1000, 500, 1000] : [0, 250, 250, 250],
         },
         trigger: {
-          channelId: 'default',
+          channelId: isCall ? 'voice_calls' : 'default',
         } as any,
       });
     }
