@@ -58,6 +58,7 @@ import {
   Check,
   X,
   Pencil,
+  Wrench,
 } from 'lucide-react-native';
 import { Map, Camera, GeoJSONSource, Layer, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 
@@ -127,6 +128,60 @@ const formatCurrency = (val: number | string = 0) => {
   const num = Number(val) || 0;
   return `Rs. ${num.toLocaleString()}`;
 };
+
+interface MapUserMarkerProps {
+  type: 'worker' | 'customer';
+  displayName: string;
+  avatarUrl?: string;
+}
+
+const MapUserMarker: React.FC<MapUserMarkerProps> = React.memo(({ type, displayName, avatarUrl }) => {
+  const [imageError, setImageError] = useState(false);
+  const isWorkerType = type === 'worker';
+  const themeColor = isWorkerType ? '#00E5FF' : '#FF6B35';
+  const glowColor = isWorkerType ? 'rgba(0, 229, 255, 0.35)' : 'rgba(255, 107, 53, 0.35)';
+
+  const hasValidImage = !!avatarUrl && !imageError;
+
+  return (
+    <View style={styles.mapMarkerRoot}>
+      {/* Name / Role Badge Pill */}
+      <View style={[styles.mapMarkerPill, { borderColor: themeColor }]}>
+        <View style={[styles.mapMarkerPillDot, { backgroundColor: themeColor }]} />
+        <Text style={[styles.mapMarkerPillText, { color: themeColor }]} numberOfLines={1}>
+          {displayName}
+        </Text>
+      </View>
+
+      {/* Avatar / Icon Bubble */}
+      <View style={[styles.mapMarkerAvatarContainer, { borderColor: themeColor, shadowColor: themeColor }]}>
+        {hasValidImage ? (
+          <Image
+            source={{ uri: avatarUrl }}
+            style={styles.mapMarkerAvatarImage}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <View style={styles.mapMarkerFallback}>
+            {isWorkerType ? (
+              <Wrench size={18} color="#00E5FF" strokeWidth={2.4} />
+            ) : (
+              <UserRound size={18} color="#FF6B35" strokeWidth={2.4} />
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Pin Needle Pointer */}
+      <View style={[styles.mapMarkerNeedle, { borderTopColor: themeColor }]} />
+
+      {/* Ground Coordinate Pulse Target */}
+      <View style={[styles.mapMarkerGroundTarget, { backgroundColor: glowColor }]}>
+        <View style={[styles.mapMarkerGroundCore, { backgroundColor: themeColor }]} />
+      </View>
+    </View>
+  );
+});
 
 export default function TransactionDetailsScreen() {
   const theme = useTheme();
@@ -530,6 +585,39 @@ export default function TransactionDetailsScreen() {
   // Worker has arrived at customer workplace when status is 'ongoing' or 'completed'
   const isWorkerArrived = status === 'ongoing' || status === 'completed' || (status as string) === 'started' || (status as string) === 'in_progress';
   const showMapSection = !isWorkerArrived && status !== 'cancelled' && status !== 'pending';
+
+  // User/Worker display information for interactive map markers
+  const workerDisplayName = useMemo(() => {
+    if (isWorker) {
+      return t('jobTracking.youUstad', 'You (Ustad)');
+    }
+    const raw = (booking?.worker as any)?.fullName || partnerName || t('common.ustad', 'Ustad');
+    const first = raw.trim().split(' ')[0] || 'Ustad';
+    return `${first} (Ustad)`;
+  }, [isWorker, booking?.worker, partnerName, t]);
+
+  const customerDisplayName = useMemo(() => {
+    if (!isWorker) {
+      return t('jobTracking.youClient', 'You (Client)');
+    }
+    const raw = (booking?.customer as any)?.fullName || partnerName || t('transactionDetails.client', 'Customer');
+    const first = raw.trim().split(' ')[0] || 'Client';
+    return `${first} (Client)`;
+  }, [isWorker, booking?.customer, partnerName, t]);
+
+  const workerAvatarUrl = useMemo(() => {
+    if (isWorker) {
+      return user?.profileImage || (booking?.worker as any)?.profileImage || '';
+    }
+    return partnerImage || (booking?.worker as any)?.profileImage || '';
+  }, [isWorker, user?.profileImage, booking?.worker, partnerImage]);
+
+  const customerAvatarUrl = useMemo(() => {
+    if (!isWorker) {
+      return user?.profileImage || (booking?.customer as any)?.profileImage || '';
+    }
+    return partnerImage || (booking?.customer as any)?.profileImage || '';
+  }, [isWorker, user?.profileImage, booking?.customer, partnerImage]);
 
   // Route calculation
   const drawRouteBetween = useCallback(async (from: LocationType, to: LocationType) => {
@@ -1863,19 +1951,31 @@ export default function TransactionDetailsScreen() {
               </GeoJSONSource>
             )}
 
-            {/* Customer / Service Destination Marker (Orange) */}
-            <Marker id="destination" lngLat={[destinationLocation.longitude, destinationLocation.latitude]}>
-              <View style={styles.destinationMarkerOuter}>
-                <View style={styles.destinationMarkerInner} />
-              </View>
+            {/* Customer / Service Destination Marker */}
+            <Marker
+              id="destination"
+              anchor="bottom"
+              lngLat={[destinationLocation.longitude, destinationLocation.latitude]}
+            >
+              <MapUserMarker
+                type="customer"
+                displayName={customerDisplayName}
+                avatarUrl={customerAvatarUrl}
+              />
             </Marker>
 
-            {/* Worker Marker (Cyan) */}
+            {/* Worker Marker */}
             {workerMarkerLocation && (
-              <Marker id="worker" lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}>
-                <View style={styles.workerMarkerOuter}>
-                  <View style={styles.workerMarkerInner} />
-                </View>
+              <Marker
+                id="worker"
+                anchor="bottom"
+                lngLat={[workerMarkerLocation.longitude, workerMarkerLocation.latitude]}
+              >
+                <MapUserMarker
+                  type="worker"
+                  displayName={workerDisplayName}
+                  avatarUrl={workerAvatarUrl}
+                />
               </Marker>
             )}
           </Map>
@@ -2733,6 +2833,89 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: '#00E5FF',
+  },
+  mapMarkerRoot: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 140,
+  },
+  mapMarkerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(11, 17, 32, 0.94)',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 4,
+    maxWidth: 130,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  mapMarkerPillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
+  },
+  mapMarkerPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  mapMarkerAvatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2.5,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  mapMarkerAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    resizeMode: 'cover',
+  },
+  mapMarkerFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapMarkerNeedle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -1,
+  },
+  mapMarkerGroundTarget: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  mapMarkerGroundCore: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   mapTopControls: {
     position: 'absolute',
