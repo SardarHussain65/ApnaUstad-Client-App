@@ -97,6 +97,15 @@ const handleNotificationTap = async (
       categoryId,
     });
 
+    if (notificationType === 'incoming_call') {
+      console.log('📞 Handling incoming call tap from notification:', data);
+      socketService.notify('call:incoming_push', {
+        ...data,
+        autoAccept: false,
+      });
+      return;
+    }
+
     // Route based on user role and notification type
     if (userRole === 'client') {
       switch (notificationType) {
@@ -277,6 +286,15 @@ export const usePushNotifications = () => {
     const type = data.type || data.notificationType;
     console.log('⚡ Processing foreground notification payload:', type, data);
 
+    if (type === 'incoming_call') {
+      console.log('📞 Foreground incoming call received via notification payload:', data);
+      socketService.notify('call:incoming_push', {
+        ...data,
+        autoAccept: false,
+      });
+      return;
+    }
+
     if (type === 'bid_rejected' || type === 'bid_declined') {
       socketService.notify('bid:rejected', data);
       void queryClient.invalidateQueries({ queryKey: ['bid'] });
@@ -348,18 +366,97 @@ export const usePushNotifications = () => {
         // ✅ NEW: Setup response listener for user taps
         const responseSub = setupNotificationResponseListener((response) => {
           console.log('👆 Notification tapped:', response);
+          const data = response?.notification?.request?.content?.data;
+          if (data?.type === 'incoming_call') {
+            const isAccept = response.actionIdentifier === 'accept_call';
+            const isDecline = response.actionIdentifier === 'decline_call';
+            if (isDecline) {
+              socketService.emit('call:reject', {
+                bookingId: data.bookingId,
+                channelName: data.channelName,
+                callerId: data.callerId,
+                callerType: data.callerType,
+                reason: 'declined',
+              });
+              Notifications.dismissNotificationAsync(response.notification.request.identifier).catch(() => {});
+              return;
+            }
+            socketService.notify('call:incoming_push', {
+              ...data,
+              autoAccept: isAccept,
+            });
+            return;
+          }
           const userRole = role === 'worker' ? 'worker' : 'client';
           handleNotificationTap(response.notification, router, userRole);
         });
         subscriptionsRef.current.push(responseSub);
 
-        // ✅ NEW: Check for initial notification from terminated state
+        // ✅ NEW: Check for initial notification from terminated state (Expo)
         const initialNotification = await Notifications.getLastNotificationResponseAsync();
         if (initialNotification) {
-          console.log('📲 App opened from terminated state via notification');
-          const userRole = role === 'worker' ? 'worker' : 'client';
-          handleNotificationTap(initialNotification.notification, router, userRole);
+          console.log('📲 App opened from terminated state via Expo notification');
+          const data = initialNotification.notification.request.content.data;
+          if (data?.type === 'incoming_call') {
+            const isAccept = initialNotification.actionIdentifier === 'accept_call';
+            const isDecline = initialNotification.actionIdentifier === 'decline_call';
+            if (isDecline) {
+              socketService.emit('call:reject', {
+                bookingId: data.bookingId,
+                channelName: data.channelName,
+                callerId: data.callerId,
+                callerType: data.callerType,
+                reason: 'declined',
+              });
+            } else {
+              socketService.notify('call:incoming_push', {
+                ...data,
+                autoAccept: isAccept,
+              });
+            }
+          } else {
+            const userRole = role === 'worker' ? 'worker' : 'client';
+            handleNotificationTap(initialNotification.notification, router, userRole);
+          }
         }
+
+        // ✅ NEW: Check for FCM initial notification from terminated state (Cold Boot)
+        messaging()
+          .getInitialNotification()
+          .then((remoteMessage) => {
+            if (remoteMessage?.data) {
+              console.log('📲 App opened from quit state via FCM notification:', remoteMessage.data);
+              if (remoteMessage.data.type === 'incoming_call') {
+                socketService.notify('call:incoming_push', {
+                  ...remoteMessage.data,
+                  autoAccept: false,
+                });
+              } else {
+                const userRole = role === 'worker' ? 'worker' : 'client';
+                handleNotificationTap({ request: { content: { data: remoteMessage.data } } } as any, router, userRole);
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn('Error reading initial FCM notification:', err);
+          });
+
+        // ✅ NEW: Listen for FCM notification opened from background state
+        const fcmOpenedSub = messaging().onNotificationOpenedApp((remoteMessage) => {
+          console.log('📲 App opened from background via FCM notification:', remoteMessage?.data);
+          if (remoteMessage?.data) {
+            if (remoteMessage.data.type === 'incoming_call') {
+              socketService.notify('call:incoming_push', {
+                ...remoteMessage.data,
+                autoAccept: false,
+              });
+            } else {
+              const userRole = role === 'worker' ? 'worker' : 'client';
+              handleNotificationTap({ request: { content: { data: remoteMessage.data } } } as any, router, userRole);
+            }
+          }
+        });
+        subscriptionsRef.current.push(fcmOpenedSub);
 
         // ✅ NEW: Setup FCM message listener
         const fcmSub = setupFCMMessageListener((message) => {

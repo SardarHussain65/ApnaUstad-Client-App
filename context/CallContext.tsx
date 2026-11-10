@@ -411,6 +411,68 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       startRingtone();
     });
 
+    const unsubPush = socketService.on('call:incoming_push', async (data: any) => {
+      console.log('[CallContext] Received call:incoming_push event:', data);
+      if (!data?.bookingId) return;
+
+      if (status !== 'idle') {
+        return;
+      }
+
+      setCurrentBookingId(data.bookingId);
+      setCurrentChannelName(data.channelName || `call_booking_${data.bookingId}`);
+      setPartnerId(data.callerId);
+      setPartnerType(data.callerType || 'user');
+      setPartnerName(data.callerName || 'Apna Ustad');
+      setPartnerAvatar(data.callerAvatar);
+
+      if (data.autoAccept) {
+        try {
+          const micAllowed = await requestMicrophonePermission();
+          if (!micAllowed) {
+            Toast.show({
+              type: 'error',
+              text1: 'Microphone Permission Needed',
+              text2: 'Please allow microphone access to talk.',
+            });
+            setStatus('idle');
+            return;
+          }
+
+          stopRingtone();
+          setStatus('calling');
+
+          const tokenData = await callService.getCallToken(data.bookingId);
+          const engine = await initAgora();
+          if (!engine) throw new Error('Voice calling engine is unavailable');
+
+          engine.joinChannel(tokenData.token, tokenData.channelName, tokenData.uid || 2, {
+            clientRoleType: ClientRoleType.ClientRoleBroadcaster,
+            channelProfile: ChannelProfileType.ChannelProfileCommunication,
+            publishMicrophoneTrack: true,
+            autoSubscribeAudio: true,
+            enableAudioRecordingOrPlayout: true,
+          });
+
+          setStatus('connected');
+          startDurationTimer();
+
+          socketService.emit('call:accept', {
+            bookingId: data.bookingId,
+            channelName: tokenData.channelName,
+            callerId: data.callerId,
+            callerType: data.callerType || 'user',
+          });
+        } catch (err: any) {
+          console.error('Failed to auto-accept call from push:', err);
+          handleEndCall();
+        }
+      } else {
+        setStatus('incoming');
+        startRingtone();
+      }
+    });
+
     const unsubAccepted = socketService.on('call:accepted', () => {
       console.log('Call accepted by partner');
       stopRingtone();
@@ -445,6 +507,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       unsubIncoming();
+      unsubPush();
       unsubAccepted();
       unsubRejected();
       unsubEnded();
