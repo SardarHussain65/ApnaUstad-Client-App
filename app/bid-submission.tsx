@@ -60,13 +60,6 @@ const formatPlaybackTime = (seconds: number) => {
   return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
 };
 
-const QUICK_NOTES = [
-  '🛠️ Have complete tools with me',
-  '📍 Nearby, can arrive in 20-30 mins',
-  '⭐ Expert in this work, quality guaranteed',
-  '⚡ Ready to start right away',
-];
-
 const createStyles = (theme: AppTheme) => {
   const isDark = theme.isDark;
   const CYAN = theme.legacy.cyan;
@@ -480,6 +473,238 @@ const createStyles = (theme: AppTheme) => {
       fontSize: 9.5,
       fontWeight: '900',
       marginTop: 2,
+    },
+    // Integrated Customer mini row
+    clientInlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: borderCol,
+    },
+    clientMiniAvatar: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      borderWidth: 1.5,
+      borderColor: alpha(GREEN, 0.4),
+    },
+    clientMiniAvatarFallback: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: alpha(GREEN, 0.12),
+      borderWidth: 1.5,
+      borderColor: alpha(GREEN, 0.3),
+    },
+    clientMiniName: {
+      color: textPrimary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    clientMiniStats: {
+      color: textSecondary,
+      fontSize: 11.5,
+      fontWeight: '600',
+      marginTop: 1,
+    },
+    clientVerifiedPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: alpha(GREEN, 0.1),
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.25),
+    },
+    clientVerifiedText: {
+      color: GREEN,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    // Clean Offer Header
+    offerCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 16,
+    },
+    offerHeaderIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: alpha(CYAN, 0.12),
+      borderWidth: 1.5,
+      borderColor: alpha(CYAN, 0.3),
+    },
+    offerHeaderTitle: {
+      color: textPrimary,
+      fontSize: 16,
+      fontWeight: '900',
+    },
+    offerHeaderSub: {
+      color: textMuted,
+      fontSize: 11.5,
+      fontWeight: '600',
+      marginTop: 1,
+    },
+
+    // Hero Price Input
+    heroPriceShell: {
+      minHeight: 64,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1.8,
+      borderColor: alpha(CYAN, 0.4),
+      backgroundColor: inputBg,
+      marginBottom: 12,
+    },
+    heroPricePrefixBox: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: alpha(CYAN, 0.14),
+      marginRight: 10,
+    },
+    heroPricePrefix: {
+      color: CYAN,
+      fontSize: 13,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    heroPriceInput: {
+      flex: 1,
+      color: textPrimary,
+      fontSize: 24,
+      fontWeight: '900',
+      letterSpacing: 0.5,
+    },
+    matchBudgetPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: alpha(GREEN, 0.14),
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.4),
+    },
+    matchBudgetText: {
+      color: GREEN,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    // Earnings Summary Strip
+    earningsSummaryStrip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: alpha(GREEN, 0.08),
+      borderWidth: 1,
+      borderColor: alpha(GREEN, 0.22),
+      marginBottom: 16,
+    },
+    earningsSummaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    earningsSummaryLabel: {
+      color: textMuted,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    earningsSummaryAmount: {
+      color: GREEN,
+      fontSize: 15,
+      fontWeight: '900',
+    },
+    earningsSummarySub: {
+      color: textMuted,
+      fontSize: 11,
+      fontWeight: '600',
+    },
+
+    // Clean Option Block (Helpers & Team)
+    cleanOptionBlock: {
+      marginBottom: 14,
+    },
+    optionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    cleanOptionTitle: {
+      color: textMuted,
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+      marginBottom: 8,
+    },
+    cleanOptionValue: {
+      color: textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    optionPillRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    optionPill: {
+      flex: 1,
+      minHeight: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 9,
+      borderWidth: 1.4,
+      borderColor: inputBorder,
+      backgroundColor: alpha(theme.colors.text.primary, 0.03),
+      paddingHorizontal: 6,
+    },
+    optionPillActive: {
+      borderColor: CYAN,
+      backgroundColor: alpha(CYAN, 0.12),
+    },
+    optionPillText: {
+      color: textSecondary,
+      fontSize: 11.5,
+      fontWeight: '700',
+    },
+    optionPillTextActive: {
+      color: CYAN,
+      fontWeight: '900',
+    },
+
+    // Clean Note Shell
+    cleanMessageShell: {
+      minHeight: 76,
+      borderRadius: 10,
+      borderWidth: 1.4,
+      borderColor: inputBorder,
+      backgroundColor: inputBg,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+    },
+    cleanMessageInput: {
+      color: inputText,
+      fontSize: 13.5,
+      fontWeight: '600',
+      lineHeight: 18,
     },
     proposalSurface: {
       padding: 14,
@@ -1124,7 +1349,7 @@ export default function BidSubmissionScreen() {
   const clientTotalJobs = Number(client?.totalJobs || 0);
   const clientCompletedJobs = Number(client?.completedJobs || 0);
   const completionRate = clientTotalJobs > 0 ? Math.round((clientCompletedJobs / clientTotalJobs) * 100) : 0;
-  const proposalReady = parsedPrice > 0 && message.trim().length > 0;
+  const proposalReady = parsedPrice > 0;
 
   useEffect(() => {
     if (isCounterProposal && !proposedPrice && budget > 0) {
@@ -1189,10 +1414,7 @@ export default function BidSubmissionScreen() {
       return;
     }
 
-    if (!message.trim()) {
-      toast.error(t('bidSubmission.addShortMessage', 'Add A Short Message'), t('bidSubmission.tellClientHelp', 'Tell the client how you can help with this work.'));
-      return;
-    }
+    const finalMessage = message.trim() || t('bidSubmission.defaultOfferMessage', 'Available and ready to complete this work on time.');
 
     if (estimatedDays && Number(estimatedDays) <= 0) {
       toast.error(t('bidSubmission.checkEstDays', 'Check Estimated Days'), t('bidSubmission.daysGreaterThanZero', 'Estimated days must be greater than zero.'));
@@ -1202,7 +1424,7 @@ export default function BidSubmissionScreen() {
     setIsSubmitting(true);
     try {
       await api.post(`/jobs/${jobId}/bids`, {
-        message: message.trim(),
+        message: finalMessage,
         proposedPrice: parsedPrice,
         rateBasis,
         helperCount,
@@ -1400,41 +1622,36 @@ export default function BidSubmissionScreen() {
                   </ScrollView>
                 </View>
               )}
-            </Surface>
-          </Animated.View>
 
-          <Animated.View entering={FadeInUp.delay(80).duration(450)}>
-            <Surface accent={GREEN} style={styles.clientSurface}>
-              <SectionTitle icon={UserRound} title={t('bidSubmission.clientHistory', 'Client history')} color={GREEN} />
-              <View style={styles.clientRow}>
+              {/* Integrated Customer mini row */}
+              <View style={styles.clientInlineRow}>
                 {client?.profileImage ? (
-                  <Image source={{ uri: client.profileImage }} style={styles.clientAvatar} />
+                  <Image source={{ uri: client.profileImage }} style={styles.clientMiniAvatar} />
                 ) : (
-                  <View style={styles.clientAvatarFallback}>
-                    <UserRound size={22} color={GREEN} />
+                  <View style={styles.clientMiniAvatarFallback}>
+                    <UserRound size={16} color={GREEN} />
                   </View>
                 )}
-                <View style={styles.clientCopy}>
-                  <Text style={styles.clientName}>{client?.fullName || t('transactionDetails.client', 'Client')}</Text>
-                  <View style={styles.clientStatusRow}>
-                    <ShieldCheck size={12} color={GREEN} />
-                    <Text style={styles.clientStatusText}>
-                      {clientTotalJobs > 0 ? t('bidSubmission.completedJobsCount', { completed: clientCompletedJobs, total: clientTotalJobs }) : t('bidSubmission.newClientProfile', 'New client profile')}
-                    </Text>
-                  </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.clientMiniName}>
+                    {client?.fullName || t('transactionDetails.client', 'Customer')}
+                  </Text>
+                  <Text style={styles.clientMiniStats}>
+                    {clientTotalJobs > 0
+                      ? `${clientCompletedJobs} of ${clientTotalJobs} jobs completed (${completionRate}%)`
+                      : t('bidSubmission.newClientProfile', 'Verified Customer')}
+                  </Text>
                 </View>
-                {clientTotalJobs > 0 && (
-                  <View style={styles.reliabilityBadge}>
-                    <Text style={styles.reliabilityValue}>{completionRate}%</Text>
-                    <Text style={styles.reliabilityLabel}>{t('bidSubmission.history', 'HISTORY')}</Text>
-                  </View>
-                )}
+                <View style={styles.clientVerifiedPill}>
+                  <ShieldCheck size={12} color={GREEN} />
+                  <Text style={styles.clientVerifiedText}>{t('common.verified', 'Verified')}</Text>
+                </View>
               </View>
             </Surface>
           </Animated.View>
 
           {isInstant && !isCounterProposal ? (
-            <Animated.View entering={FadeInUp.delay(140).duration(450)}>
+            <Animated.View entering={FadeInUp.delay(100).duration(450)}>
               <Surface accent={CYAN} style={styles.instantSurface}>
                 <SectionTitle icon={Zap} title={t('bidSubmission.readyToRespond', 'Ready to respond?')} color={CYAN} />
                 <Text style={styles.instantText}>
@@ -1450,72 +1667,71 @@ export default function BidSubmissionScreen() {
               </Surface>
             </Animated.View>
           ) : (
-            <Animated.View entering={FadeInUp.delay(140).duration(450)}>
-              <Surface accent={CYAN} style={styles.proposalSurface}>
-                <SectionTitle
-                  icon={Send}
-                  title={isInstant ? t('bidSubmission.yourFairPrice', 'Your fair price') : t('bidSubmission.yourPrice', 'Your price')}
-                  detail={proposalReady ? t('bidSubmission.readyToSend', 'Ready to send') : t('bidSubmission.quoteRequired', 'Quote required')}
-                  color={CYAN}
-                />
-
-                <Text style={styles.formLabel}>RATE BASIS & TEAM</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                  {[
-                    { id: 'total', label: 'Total Job' },
-                    { id: 'per_day', label: 'Per Day (Dihari)' },
-                    { id: 'per_hour', label: 'Per Hour' },
-                  ].map(item => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.quoteSuggestion,
-                        { flex: 1, minHeight: 36, paddingHorizontal: 4 },
-                        rateBasis === item.id && styles.quoteSuggestionSelected,
-                      ]}
-                      onPress={() => setRateBasis(item.id as any)}
-                    >
-                      <Text style={[styles.quoteSuggestionText, rateBasis === item.id && styles.quoteSuggestionTextSelected, { fontSize: 11 }]}>
-                        {item.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+            <Animated.View entering={FadeInUp.delay(100).duration(450)}>
+              <Surface accent={isInstant ? CYAN : ORANGE} style={styles.proposalSurface}>
+                <View style={styles.offerCardHeader}>
+                  <View style={[styles.offerHeaderIconWrap, { backgroundColor: alpha(isInstant ? CYAN : ORANGE, 0.12), borderColor: alpha(isInstant ? CYAN : ORANGE, 0.3) }]}>
+                    <CircleDollarSign size={18} color={isInstant ? CYAN : ORANGE} strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.offerHeaderTitle}>
+                      {isInstant ? t('bidSubmission.yourFairPrice', 'Your Fair Price') : t('bidSubmission.sendProposal', 'Your Offer')}
+                    </Text>
+                    <Text style={styles.offerHeaderSub}>
+                      {t('bidSubmission.quoteSubtitle', 'Enter your price and customize your offer')}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                  {[
-                    { count: 0, label: 'Solo (Just Me)' },
-                    { count: 1, label: '+1 Helper' },
-                    { count: 2, label: '+2 Helpers' },
-                  ].map(h => (
+                {/* Hero Price Input */}
+                <View style={[styles.heroPriceShell, { borderColor: alpha(isInstant ? CYAN : ORANGE, 0.45) }]}>
+                  <View style={[styles.heroPricePrefixBox, { backgroundColor: alpha(isInstant ? CYAN : ORANGE, 0.14) }]}>
+                    <Text style={[styles.heroPricePrefix, { color: isInstant ? CYAN : ORANGE }]}>PKR</Text>
+                  </View>
+                  <TextInput
+                    style={styles.heroPriceInput}
+                    value={proposedPrice}
+                    onChangeText={value => setProposedPrice(keepDigits(value))}
+                    keyboardType="number-pad"
+                    placeholder={budget > 0 ? String(budget) : '500'}
+                    placeholderTextColor={TEXT_MUTED}
+                  />
+                  {budget > 0 && parsedPrice !== budget && (
                     <TouchableOpacity
-                      key={h.count}
-                      style={[
-                        styles.quoteSuggestion,
-                        { flex: 1, minHeight: 32, paddingHorizontal: 4 },
-                        helperCount === h.count && styles.quoteSuggestionSelected,
-                      ]}
-                      onPress={() => setHelperCount(h.count)}
+                      style={styles.matchBudgetPill}
+                      onPress={() => setProposedPrice(String(budget))}
+                      activeOpacity={0.75}
                     >
-                      <Text style={[styles.quoteSuggestionText, helperCount === h.count && styles.quoteSuggestionTextSelected, { fontSize: 11 }]}>
-                        {h.label}
+                      <Text style={styles.matchBudgetText}>
+                        {t('bidSubmission.matchBudget', 'Match Rs. {{budget}}', { budget })}
                       </Text>
                     </TouchableOpacity>
-                  ))}
+                  )}
                 </View>
 
-                <Text style={styles.formLabel}>{t('bidSubmission.quickQuote', 'QUICK QUOTE')}</Text>
+                {/* Quick Quote Chips */}
                 <View style={styles.quoteSuggestionRow}>
                   {quoteSuggestions.map(suggestion => {
                     const isSelected = parsedPrice === suggestion;
                     return (
                       <TouchableOpacity
                         key={suggestion}
-                        style={[styles.quoteSuggestion, isSelected && styles.quoteSuggestionSelected]}
+                        style={[
+                          styles.quoteSuggestion,
+                          isSelected && {
+                            borderColor: isInstant ? CYAN : ORANGE,
+                            backgroundColor: alpha(isInstant ? CYAN : ORANGE, 0.14),
+                          },
+                        ]}
                         onPress={() => setProposedPrice(String(suggestion))}
                         activeOpacity={0.78}
                       >
-                        <Text style={[styles.quoteSuggestionText, isSelected && styles.quoteSuggestionTextSelected]}>
+                        <Text
+                          style={[
+                            styles.quoteSuggestionText,
+                            isSelected && { color: isInstant ? CYAN : ORANGE, fontWeight: '900' },
+                          ]}
+                        >
                           {formatMoney(suggestion)}
                         </Text>
                       </TouchableOpacity>
@@ -1523,82 +1739,42 @@ export default function BidSubmissionScreen() {
                   })}
                 </View>
 
-                <View style={styles.inputRow}>
-                  <View style={styles.quoteInputGroup}>
-                    <Text style={styles.formLabel}>{parsedPrice === budget ? t('bidSubmission.acceptClientOffer', 'ACCEPT CLIENT OFFER') : t('bidSubmission.yourCounterOffer', 'YOUR COUNTER OFFER')}</Text>
-                    <View style={styles.inputShell}>
-                      <Text style={styles.inputPrefix}>PKR</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={proposedPrice}
-                        onChangeText={value => setProposedPrice(keepDigits(value))}
-                        keyboardType="number-pad"
-                        placeholder={t('bidSubmission.enterAmount', 'Enter amount')}
-                        placeholderTextColor={TEXT_MUTED}
-                      />
+                {/* Live Transparent Earnings Strip */}
+                {parsedPrice > 0 && (
+                  <View style={styles.earningsSummaryStrip}>
+                    <View style={styles.earningsSummaryRow}>
+                      <Text style={styles.earningsSummaryLabel}>
+                        {t('bidSubmission.youReceive', 'You Receive')}:
+                      </Text>
+                      <Text style={styles.earningsSummaryAmount}>
+                        {formatMoney(estimatedNetEarning)}
+                      </Text>
                     </View>
+                    <Text style={styles.earningsSummarySub}>
+                      {t('bidSubmission.feeExplainer', 'App fee ({{pct}}%): -{{fee}}', {
+                        pct: commissionPercentage,
+                        fee: formatMoney(estimatedCommission),
+                      })}
+                    </Text>
                   </View>
-                  <View style={styles.daysInputGroup}>
-                    <Text style={styles.formLabel}>{t('bidSubmission.estDays', 'EST. DAYS')}</Text>
-                    <View style={styles.inputShell}>
-                      <CalendarDays size={16} color={ORANGE} />
-                      <TextInput
-                        style={styles.input}
-                        value={estimatedDays}
-                        onChangeText={value => setEstimatedDays(keepDigits(value))}
-                        keyboardType="number-pad"
-                        placeholder={t('common.optional', 'Optional')}
-                        placeholderTextColor={TEXT_MUTED}
-                      />
-                    </View>
-                  </View>
-                </View>
+                )}
 
-                <Text style={styles.formLabel}>{t('bidSubmission.messageToClient', 'MESSAGE TO CLIENT')}</Text>
-
-                <View style={styles.quickNotesRow}>
-                  {QUICK_NOTES.map(note => {
-                    const isSelected = message === note;
-                    return (
-                      <TouchableOpacity
-                        key={note}
-                        style={[styles.quickNoteChip, isSelected && styles.quickNoteChipSelected]}
-                        onPress={() => setMessage(note)}
-                        activeOpacity={0.78}
-                      >
-                        <Text style={[styles.quickNoteText, isSelected && styles.quickNoteTextSelected]}>
-                          {note}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <View style={[styles.inputShell, styles.messageShell]}>
-                  <MessageSquare size={16} color={CYAN} style={styles.messageIcon} />
-                  <TextInput
-                    style={[styles.input, styles.messageInput]}
-                    value={message}
-                    onChangeText={setMessage}
-                    multiline
-                    maxLength={300}
-                    placeholder={t('bidSubmission.messagePlaceholder', 'Briefly explain how you will handle this work.')}
-                    placeholderTextColor={TEXT_MUTED}
-                    textAlignVertical="top"
-                  />
-                  <Text style={styles.messageCount}>{message.length}/300</Text>
-                </View>
-
-                <View style={styles.settlementBlock}>
-                  <View style={styles.settlementHeader}>
-                    <Text style={styles.settlementTitle}>{t('bidSubmission.estSettlement', 'Estimated settlement')}</Text>
-                    <Text style={styles.settlementHint}>{t('bidSubmission.cashCollected', 'Cash collected after completion')}</Text>
-                  </View>
-                  <View style={styles.settlementRow}>
-                    <SettlementItem label={t('bidSubmission.yourQuote', 'Your quote')} value={formatMoney(parsedPrice)} />
-                    <View style={styles.settlementDivider} />
-                    <SettlementItem label={t('bidSubmission.feeLabel', { percentage: commissionPercentage })} value={`- ${formatMoney(estimatedCommission)}`} color={ORANGE} />
-                    <View style={styles.settlementDivider} />
-                    <SettlementItem label={t('bidSubmission.youReceive', 'You receive')} value={formatMoney(estimatedNetEarning)} color={GREEN} />
+                {/* Offer Note / Description */}
+                <View style={[styles.cleanOptionBlock, { marginTop: 12 }]}>
+                  <Text style={styles.cleanOptionTitle}>
+                    {t('bidSubmission.messageToClient', 'NOTE FOR CUSTOMER (OPTIONAL)')}
+                  </Text>
+                  <View style={styles.cleanMessageShell}>
+                    <TextInput
+                      style={styles.cleanMessageInput}
+                      value={message}
+                      onChangeText={setMessage}
+                      multiline
+                      maxLength={300}
+                      placeholder={t('bidSubmission.messagePlaceholder', 'Write a short note for the customer...')}
+                      placeholderTextColor={TEXT_MUTED}
+                      textAlignVertical="top"
+                    />
                   </View>
                 </View>
               </Surface>
@@ -1656,14 +1832,16 @@ export default function BidSubmissionScreen() {
                   {isInstant && !isCounterProposal ? <Zap size={19} color={theme.colors.button.primaryText} /> : <Send size={18} color={theme.colors.button.primaryText} />}
                   <View style={styles.submitCopy}>
                     <Text style={[styles.submitTitle, { color: theme.colors.button.primaryText }]}>
-                      {isInstant ? (isCounterProposal ? t('bidSubmission.sendFairPrice', 'SEND FAIR PRICE') : t('bidSubmission.sendAvailability', 'SEND AVAILABILITY')) : t('bidSubmission.sendProposal', 'SEND PROPOSAL')}
+                      {isInstant
+                        ? (isCounterProposal ? t('bidSubmission.sendFairPrice', 'SEND FAIR PRICE') : t('bidSubmission.sendAvailability', 'SEND AVAILABILITY'))
+                        : (proposalReady ? `${t('bidSubmission.sendProposal', 'SEND OFFER')} • ${formatMoney(parsedPrice)}` : t('bidSubmission.sendProposal', 'SEND OFFER'))}
                     </Text>
-                    <Text style={[styles.submitSubtitle, { color: alpha(theme.colors.button.primaryText, 0.68) }]}>
+                    <Text style={[styles.submitSubtitle, { color: alpha(theme.colors.button.primaryText, 0.75) }]}>
                       {isInstant && !isCounterProposal
-                        ? t('bidSubmission.clientConfirmationRequired', 'Client confirmation required')
+                        ? t('bidSubmission.clientConfirmationRequired', 'Customer will confirm booking')
                         : proposalReady
-                          ? t('bidSubmission.proposalSummary', { quote: formatMoney(parsedPrice), earning: formatMoney(estimatedNetEarning) })
-                          : t('bidSubmission.quoteAndMessageRequired', 'Add your quote and a short message')}
+                          ? `${t('bidSubmission.youReceive', 'You keep')} ${formatMoney(estimatedNetEarning)}`
+                          : t('bidSubmission.quoteRequired', 'Enter your rate to send offer')}
                     </Text>
                   </View>
                 </>
