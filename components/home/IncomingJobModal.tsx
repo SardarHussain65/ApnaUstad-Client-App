@@ -328,19 +328,19 @@ function JobDecisionCard({
     Number(job.amount || 0) === 0 ||
     signal.isOpenPricing === true;
 
-  // Inline Counter Offer state
-  const [showCounterInput, setShowCounterInput] = useState(isOpenPricing);
-  const [counterPrice, setCounterPrice] = useState(isOpenPricing ? '500' : '');
+  // Inline Counter Offer state (only for instant jobs; scheduled jobs quote via full bid submission screen)
+  const [showCounterInput, setShowCounterInput] = useState(isInstant && isOpenPricing);
+  const [counterPrice, setCounterPrice] = useState(isInstant && isOpenPricing ? '500' : '');
   const [submittingCounter, setSubmittingCounter] = useState(false);
   const [activeCounterPrice, setActiveCounterPrice] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    setShowCounterInput(isOpenPricing);
-    if (isOpenPricing && !counterPrice) {
+    setShowCounterInput(isInstant && isOpenPricing);
+    if (isInstant && isOpenPricing && !counterPrice) {
       setCounterPrice('500');
     }
-  }, [job?._id, isOpenPricing]);
+  }, [job?._id, isOpenPricing, isInstant]);
 
   useEffect(() => {
     if (showCounterInput || keyboardHeight > 0) {
@@ -486,7 +486,7 @@ function JobDecisionCard({
       : signal.clientBudgetText || (offerAmount > 0 ? formatMoney(offerAmount) : t('incomingJobModal.openBudget', 'Open budget'));
 
   const primaryAmountHint = isOpenPricing
-    ? t('incomingJobModal.clientReviewsQuotes', 'Quote your rate below')
+    ? (isInstant ? t('incomingJobModal.clientReviewsQuotes', 'Quote your rate below') : t('incomingJobModal.clientReviewsProposals', 'Review & submit your offer'))
     : isInstant
       ? commission > 0
         ? t('incomingJobModal.commissionText', '{{amount}} commission', { amount: formatMoney(commission) })
@@ -734,8 +734,8 @@ function JobDecisionCard({
             </TouchableOpacity>
           )}
 
-          {/* Active Counter Offer Badge if submitted */}
-          {activeCounterPrice !== null && (
+          {/* Active Counter Offer Badge if submitted (instant only) */}
+          {isInstant && activeCounterPrice !== null && (
             <View style={[styles.activeCounterBadge, { backgroundColor: alpha(colors.success, 0.1), borderColor: alpha(colors.success, 0.25) }]}>
               <Check size={14} color={colors.success} strokeWidth={2.5} />
               <Text style={[styles.activeCounterText, { color: colors.success }]}>
@@ -752,8 +752,8 @@ function JobDecisionCard({
             </View>
           )}
 
-          {/* Inline Quick Counter Row (expanded by default for open pricing or when requested) */}
-          {showCounterInput && (
+          {/* Inline Quick Counter Row (expanded by default for open pricing or when requested - instant only) */}
+          {isInstant && showCounterInput && (
             <View style={[styles.counterBox, { backgroundColor: theme.colors.surface.subtle, borderColor: alpha(accent, 0.4) }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={[styles.counterBoxTitle, { color: theme.colors.text.primary, marginBottom: 0 }]}>
@@ -853,19 +853,27 @@ function JobDecisionCard({
               },
             ]}
             onPress={
-              isOpenPricing
+              !isInstant
                 ? onReject
-                : showCounterInput
-                  ? () => {
-                    setShowCounterInput(false);
-                    setCounterPrice('');
-                  }
-                  : onReject
+                : isOpenPricing
+                  ? onReject
+                  : showCounterInput
+                    ? () => {
+                      setShowCounterInput(false);
+                      setCounterPrice('');
+                    }
+                    : onReject
             }
             disabled={isLoading || submittingCounter}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={isOpenPricing ? t('common.skip', 'Skip') : showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
+            accessibilityLabel={
+              !isInstant || isOpenPricing
+                ? t('common.skip', 'Skip')
+                : showCounterInput
+                  ? t('common.cancel', 'Cancel')
+                  : t('common.skip', 'Skip')
+            }
           >
             <X size={isSmallDevice ? 14 : 17} color={theme.colors.text.secondary} strokeWidth={2.4} />
             {(!hasThreeActions || !isVerySmallDevice) && (
@@ -879,7 +887,11 @@ function JobDecisionCard({
                 ]}
                 numberOfLines={1}
               >
-                {isOpenPricing ? t('common.skip', 'Skip') : showCounterInput ? t('common.cancel', 'Cancel') : t('common.skip', 'Skip')}
+                {!isInstant || isOpenPricing
+                  ? t('common.skip', 'Skip')
+                  : showCounterInput
+                    ? t('common.cancel', 'Cancel')
+                    : t('common.skip', 'Skip')}
               </Text>
             )}
           </TouchableOpacity>
@@ -1037,7 +1049,11 @@ function JobDecisionCard({
                   <ActivityIndicator color={theme.colors.text.onBrand} size="small" />
                 ) : isWalletEligible ? (
                   <>
-                    <Check size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.8} style={{ flexShrink: 0 }} />
+                    {isInstant ? (
+                      <Check size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.8} style={{ flexShrink: 0 }} />
+                    ) : (
+                      <Send size={primaryIconSize} color={theme.colors.text.onBrand} strokeWidth={2.4} style={{ flexShrink: 0 }} />
+                    )}
                     <Text
                       style={[
                         styles.primaryBtnText,
@@ -1054,7 +1070,7 @@ function JobDecisionCard({
                     >
                       {isInstant
                         ? t('incomingJobModal.acceptOffer', 'Accept Offer')
-                        : t('incomingJobModal.continueBid', 'Send Proposal')}
+                        : t('incomingJobModal.sendOffer', 'Send Offer')}
                     </Text>
                   </>
                 ) : (
@@ -1089,7 +1105,7 @@ function JobDecisionCard({
             <Text style={[styles.footerNoteText, { color: alpha(theme.colors.text.primary, 0.4) }]}>
               {isInstant
                 ? t('incomingJobModal.instantFooterNote', 'First Ustad to accept gets this urgent job right away!')
-                : t('incomingJobModal.scheduledFooterNote', 'Send your rate so the customer can book you.')}
+                : t('incomingJobModal.scheduledFooterNote', 'Tap Send Offer to specify your rate, helpers and message.')}
             </Text>
           </View>
         )}
