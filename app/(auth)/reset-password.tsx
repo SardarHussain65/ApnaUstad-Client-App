@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import {
-  Dimensions,
-  I18nManager,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react-native';
-import { OtpInput } from 'react-native-otp-entry';
+import { Eye, EyeOff, Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { AnimatedButton } from '../../components/AnimatedButton';
@@ -28,12 +24,14 @@ import api from '../../services/api';
 import { alpha, BorderRadius, Spacing, useTheme, useThemeColors } from '../../constants/Theme';
 import { useAlertModal, useToast } from '../../hooks';
 
-const { width } = Dimensions.get('window');
-
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { email, role } = useLocalSearchParams<{ email: string; role?: string }>();
+  const { email, code, role } = useLocalSearchParams<{
+    email: string;
+    code: string;
+    role?: string;
+  }>();
   const isWorker = role === 'worker';
   const theme = useTheme();
   const colors = useThemeColors();
@@ -41,7 +39,6 @@ export default function ResetPasswordScreen() {
   const alertModal = useAlertModal();
   const accentColor = isWorker ? colors.worker : colors.cyan;
 
-  const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -52,31 +49,31 @@ export default function ResetPasswordScreen() {
   const resetMutation = useMutation({
     mutationFn: async () => {
       const response = await api.post('/otp/forgot-password/reset', {
-        email: email.trim().toLowerCase(),
-        code: otp.trim(),
+        email: (email || '').trim().toLowerCase(),
+        code: (code || '').trim(),
         newPassword,
-        type: role || 'user',
+        type: isWorker ? 'worker' : 'user',
       });
       return response.data;
     },
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       alertModal.showAlert(
-        t('resetPassword.passwordUpdated'),
-        t('resetPassword.readySignIn'),
+        t('resetPassword.passwordUpdated', 'Password Changed!'),
+        t('resetPassword.readySignIn', 'Your new password is saved. You can sign in now.'),
         () => router.replace({
           pathname: '/(auth)/login' as never,
           params: { role },
         }),
         'success',
-        t('resetPassword.signIn')
+        t('resetPassword.signIn', 'Sign In')
       );
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       alertModal.showAlert(
-        t('resetPassword.unableReset'),
-        error.message || t('resetPassword.invalidCode'),
+        t('resetPassword.unableReset', 'Could not change password'),
+        error?.response?.data?.message || error.message || t('resetPassword.invalidCode', 'The code is wrong or expired. Please request a new one.'),
         undefined,
         'error'
       );
@@ -87,17 +84,18 @@ export default function ResetPasswordScreen() {
     setPasswordError('');
     setConfirmError('');
 
-    if (otp.length !== 6) {
+    if (!code) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      toast.warning(t('resetPassword.codeRequired'), t('resetPassword.enterCode'));
+      toast.error(t('resetPassword.codeRequired', 'Code Needed'), t('resetPassword.enterCode', 'Verification code is missing. Please verify again.'));
+      router.back();
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError(t('resetPassword.useMinChars'));
+      setPasswordError(t('resetPassword.useMinChars', 'Password must be at least 6 characters.'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setConfirmError(t('resetPassword.passwordsMismatch'));
+      setConfirmError(t('resetPassword.passwordsMismatch', 'Both passwords must match.'));
       return;
     }
 
@@ -116,58 +114,33 @@ export default function ResetPasswordScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AuthHeader title={t('resetPassword.title')} onBack={() => router.back()} accentColor={accentColor} />
+            <AuthHeader title={t('resetPassword.title', 'New Password')} onBack={() => router.back()} accentColor={accentColor} />
             <AuthHero
               accentColor={accentColor}
               align="center"
-              description={t('resetPassword.desc', { email })}
-              highlight={t('resetPassword.highlight')}
-              icon={<ShieldCheck size={36} color={accentColor} strokeWidth={1.8} />}
-              title={t('resetPassword.createNew')}
+              description={t('resetPassword.desc', { email, defaultValue: 'Enter and confirm your new password to secure your account.' })}
+              highlight={t('resetPassword.highlight', 'new password')}
+              icon={<Lock size={36} color={accentColor} strokeWidth={1.8} />}
+              title={t('resetPassword.createNew', 'Choose a')}
             />
 
-<GlassCard
-               intensity={25}
-               padding={Spacing.l}
-               style={[styles.otpCard, { borderColor: theme.colors.border.default }]}
-               gradient={[alpha(accentColor, 0.14), alpha(theme.colors.brand.secondary, 0.05)]}
-             >
-              <Text style={[styles.otpLabel, { color: theme.colors.text.muted }]}>{t('resetPassword.recoveryCode')}</Text>
-              <OtpInput
-                numberOfDigits={6}
-                focusColor={accentColor}
-                focusStickBlinkingDuration={500}
-                onFilled={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
-                onTextChange={setOtp}
-                theme={{
-                  containerStyle: styles.otpContainer,
-                  pinCodeContainerStyle: {
-                    ...styles.otpCell,
-                    borderColor: theme.colors.border.default,
-                    backgroundColor: theme.colors.input.background,
-                  },
-                  pinCodeTextStyle: { ...styles.otpText, color: theme.colors.text.primary },
-                  focusStickStyle: { ...styles.focusStick, backgroundColor: accentColor },
-                  focusedPinCodeContainerStyle: {
-                    ...styles.activeOtpCell,
-                    borderColor: accentColor,
-                    shadowColor: accentColor,
-                    backgroundColor: alpha(accentColor, 0.08),
-                  },
-                }}
-              />
-
+            <GlassCard
+              intensity={25}
+              padding={Spacing.l}
+              style={[styles.formCard, { borderColor: theme.colors.border.default }]}
+              gradient={[alpha(accentColor, 0.14), alpha(theme.colors.brand.secondary, 0.05)]}
+            >
               <InputField
                 accentColor={accentColor}
                 autoCapitalize="none"
                 error={passwordError}
                 icon={<Lock size={18} color={accentColor} />}
-                label={t('resetPassword.newPassword')}
+                label={t('resetPassword.newPassword', 'New password')}
                 onChangeText={(value) => {
                   setNewPassword(value);
                   if (passwordError) setPasswordError('');
                 }}
-                placeholder={t('resetPassword.atLeast6')}
+                placeholder={t('resetPassword.atLeast6', 'At least 6 characters')}
                 rightIcon={
                   <PasswordVisibilityButton
                     isVisible={showNewPassword}
@@ -182,12 +155,12 @@ export default function ResetPasswordScreen() {
                 autoCapitalize="none"
                 error={confirmError}
                 icon={<Lock size={18} color={accentColor} />}
-                label={t('resetPassword.confirmNewPassword')}
+                label={t('resetPassword.confirmNewPassword', 'Type new password again')}
                 onChangeText={(value) => {
                   setConfirmPassword(value);
                   if (confirmError) setConfirmError('');
                 }}
-                placeholder={t('resetPassword.repeatNew')}
+                placeholder={t('resetPassword.repeatNew', 'Re-enter new password')}
                 rightIcon={
                   <PasswordVisibilityButton
                     isVisible={showConfirmPassword}
@@ -198,16 +171,16 @@ export default function ResetPasswordScreen() {
                 value={confirmPassword}
               />
 
-<AnimatedButton
-                 isLoading={resetMutation.isPending}
-                 onPress={handleResetPassword}
-                 style={styles.verifyButton}
-                 title={t('resetPassword.updatePassword')}
-                 variant={isWorker ? 'orange' : 'cyan'}
-               />
+              <AnimatedButton
+                isLoading={resetMutation.isPending}
+                onPress={handleResetPassword}
+                style={styles.saveButton}
+                title={t('resetPassword.updatePassword', 'Save New Password')}
+                variant={isWorker ? 'orange' : 'cyan'}
+              />
             </GlassCard>
 
-            <SecurityNote accentColor={accentColor} text={t('resetPassword.securityNote')} />
+            <SecurityNote accentColor={accentColor} text={t('resetPassword.securityNote', 'Once saved, you can sign in right away with your new password.')} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -252,58 +225,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.l,
     paddingBottom: Spacing.xl,
   },
-  otpCard: {
+  formCard: {
     borderRadius: BorderRadius.xxl,
     borderWidth: 1.8,
   },
-  otpLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    marginBottom: Spacing.m,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  otpContainer: {
-    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  otpCell: {
-    width: (width - 48 - 64 - 40) / 6,
-    height: 58,
-    borderRadius: BorderRadius.m,
-    borderWidth: 1,
-  },
-  activeOtpCell: {
-    borderWidth: 1.5,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-  },
-  otpText: {
-    fontSize: 22,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  focusStick: {
-    width: 2,
-    height: 24,
-  },
-  verifyButton: {
+  saveButton: {
     marginTop: Spacing.xl,
     width: '100%',
-  },
-  resendRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: Spacing.xl,
-  },
-  resendHint: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  resendButton: {
-    fontSize: 12,
-    fontWeight: '800',
   },
 });
