@@ -604,13 +604,6 @@ export default function FindingWorkerScreen() {
     }
   };
 
-  const handleViewAllBids = () => {
-    router.push({
-      pathname: '/bids-list' as any,
-      params: { jobId: jobId as string },
-    });
-  };
-
   const handleBackHome = () => {
     bypassBeforeRemoveRef.current = true;
     queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all });
@@ -1218,7 +1211,7 @@ export default function FindingWorkerScreen() {
 
                 {/* List of Offers */}
                 <View style={styles.applicantCardsList}>
-                  {applicants.slice(0, 5).map((applicant, index) => {
+                  {applicants.map((applicant, index) => {
                     const isAcceptingThis = isAccepting && acceptingBidId === applicant._id;
                     const isRejectingThis = isRejecting && rejectingBidId === applicant._id;
                     const workerRating = getWorkerRating(applicant.worker);
@@ -1229,6 +1222,8 @@ export default function FindingWorkerScreen() {
                       ...applicants.map((a: any) => Number(a.proposedPrice || Infinity))
                     );
                     const isLowest = applicants.length > 1 && proposed === minPrice;
+                    const reviewCount = applicant.worker?.totalReviews ?? applicant.worker?.totalJobs ?? 0;
+                    const categoryText = applicant.worker?.category || applicant.worker?.specialty;
 
                     return (
                       <View
@@ -1294,10 +1289,22 @@ export default function FindingWorkerScreen() {
                               {workerRating > 0 && (
                                 <View style={styles.ratingBadge}>
                                   <Star size={11} color="#FFD700" fill="#FFD700" />
-                                  <Text style={styles.ratingBadgeText}>{workerRating.toFixed(1)}</Text>
+                                  <Text style={styles.ratingBadgeText}>
+                                    {workerRating.toFixed(1)}
+                                    {reviewCount > 0 ? ` (${reviewCount})` : ''}
+                                  </Text>
                                 </View>
                               )}
                             </View>
+
+                            {Boolean(categoryText) && (
+                              <Text
+                                style={[styles.workerCategoryText, { color: colors.text.muted }]}
+                                numberOfLines={1}
+                              >
+                                {categoryText}
+                              </Text>
+                            )}
 
                             <View style={styles.priceRow}>
                               <Text style={styles.quotedPriceText}>
@@ -1328,6 +1335,26 @@ export default function FindingWorkerScreen() {
                             style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
                           />
                         </TouchableOpacity>
+
+                        {/* Proposal Message Note (if provided by Ustad) */}
+                        {Boolean(applicant.message) && (
+                          <View
+                            style={[
+                              styles.proposalMessageBubble,
+                              {
+                                backgroundColor: theme.isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
+                                borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[styles.proposalMessageText, { color: theme.colors.text.secondary }]}
+                              numberOfLines={2}
+                            >
+                              "{applicant.message}"
+                            </Text>
+                          </View>
+                        )}
 
                         {/* Actions Row: Accept / Decline */}
                         <View
@@ -1387,39 +1414,6 @@ export default function FindingWorkerScreen() {
                     );
                   })}
                 </View>
-
-                {/* Compare All Offers Button (when multiple) */}
-                {applicants.length > 1 && (
-                  <TouchableOpacity
-                    style={[
-                      styles.compareOffersBtn,
-                      {
-                        backgroundColor: theme.isDark ? 'rgba(0, 245, 255, 0.12)' : alpha(colors.brand.primary, 0.1),
-                        borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.3)' : alpha(colors.brand.primary, 0.3),
-                      },
-                    ]}
-                    onPress={handleViewAllBids}
-                    activeOpacity={0.8}
-                  >
-                    <Users size={15} color={theme.isDark ? Colors.cyan : colors.brand.primary} />
-                    <Text
-                      style={[
-                        styles.compareOffersBtnText,
-                        { color: theme.isDark ? Colors.cyan : colors.brand.primary },
-                      ]}
-                    >
-                      {t('findingWorker.compareOffersBtn', {
-                        count: applicants.length,
-                        defaultValue: `Compare All ${applicants.length} Offers`,
-                      })}
-                    </Text>
-                    <ChevronRight
-                      size={16}
-                      color={theme.isDark ? Colors.cyan : colors.brand.primary}
-                      style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-                    />
-                  </TouchableOpacity>
-                )}
               </LinearGradient>
             </Animated.View>
           )}
@@ -2088,6 +2082,11 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     fontWeight: '800',
   },
+  workerCategoryText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 3,
+  },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2137,6 +2136,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#F97316',
+  },
+  proposalMessageBubble: {
+    marginTop: 8,
+    marginBottom: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  proposalMessageText: {
+    fontSize: 11.5,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
   applicantActionsRow: {
     flexDirection: 'row',

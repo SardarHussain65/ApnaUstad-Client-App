@@ -138,8 +138,12 @@ export default function BidsListScreen() {
   }, [jobId]);
 
   useEffect(() => {
+    if (jobId) {
+      router.replace({ pathname: '/finding-worker', params: { jobId } });
+      return;
+    }
     fetchBids();
-  }, [fetchBids]);
+  }, [fetchBids, jobId, router]);
 
   // Real-time socket updates for incoming and withdrawn bids
   useEffect(() => {

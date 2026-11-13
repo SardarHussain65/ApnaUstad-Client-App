@@ -750,7 +750,7 @@ export default function JobDetailsScreen() {
                   <PrimaryAction
                     icon={Eye}
                     label={bidSummary.total > 0 ? t('jobDetails.viewProposalsCount', { count: bidSummary.total }) : t('jobDetails.viewProposals')}
-                    onPress={() => router.push({ pathname: '/bids-list', params: { jobId: job._id } })}
+                    onPress={() => router.push({ pathname: '/finding-worker', params: { jobId: job._id } })}
                   />
                 </>
               )}

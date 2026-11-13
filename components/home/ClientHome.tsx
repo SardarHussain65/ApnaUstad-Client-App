@@ -593,7 +593,7 @@ export function ClientHome() {
 
                 <TouchableOpacity
                   style={[styles.heroCtaBtn, { backgroundColor: colors.orange }]}
-                  onPress={() => router.push({ pathname: '/bids-list', params: { jobId: activeSearchJob._id } })}
+                  onPress={() => router.push({ pathname: '/finding-worker', params: { jobId: activeSearchJob._id } })}
                   activeOpacity={0.84}
                 >
                   <Text style={[styles.heroCtaBtnText, { color: '#000' }]}>
