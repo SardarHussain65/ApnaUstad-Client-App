@@ -622,33 +622,8 @@ export default function RegisterDetailsScreen() {
 
                 {/* Single Unified Form Card */}
                 <GlassCard intensity={25} style={styles.unifiedCard}>
-                  {/* Worker CNIC Notice (Verification is done after signup) */}
-                  {isWorker && (
-                    <View
-                      style={[
-                        styles.verificationNoteCard,
-                        {
-                          backgroundColor: alpha(accentColor, 0.08),
-                          borderColor: alpha(accentColor, 0.25),
-                        },
-                      ]}
-                    >
-                      <View style={[styles.verificationNoteIconWrap, { backgroundColor: alpha(accentColor, 0.15) }]}>
-                        <ShieldCheck size={20} color={accentColor} />
-                      </View>
-                      <View style={styles.verificationNoteTextWrap}>
-                        <Text style={[styles.verificationNoteTitle, { color: accentColor }]}>
-                          {t('registerDetails.fastRegistration', 'Fast & Easy Sign Up')}
-                        </Text>
-                        <Text style={styles.verificationNoteSub}>
-                          {t('registerDetails.cnicOptionalNotice', 'CNIC verification is optional right now. You can verify your account anytime from your dashboard to unlock live customer jobs.')}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
-
                   {/* City */}
-                  <View style={[styles.fieldBlock, isWorker && { marginTop: 18 }]}>
+                  <View style={styles.fieldBlock}>
                     <Text style={styles.label}>{t('registerDetails.city')}</Text>
                     <View style={styles.inputWrapper}>
                       <View style={styles.iconContainer}><Building size={18} color={accentColor} /></View>
@@ -1102,36 +1077,6 @@ const createStyles = (theme: AppTheme, colors: any) =>
       borderWidth: 1,
       borderColor: theme.colors.border.subtle,
       backgroundColor: theme.colors.surface.card,
-    },
-    verificationNoteCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: Spacing.m,
-      borderRadius: BorderRadius.lg,
-      borderWidth: 1,
-      marginBottom: 12,
-    },
-    verificationNoteIconWrap: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    verificationNoteTextWrap: {
-      flex: 1,
-      marginLeft: 10,
-    },
-    verificationNoteTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      marginBottom: 2,
-    },
-    verificationNoteSub: {
-      fontSize: 11.5,
-      lineHeight: 16,
-      color: theme.colors.text.muted,
-      fontWeight: '500',
     },
     cnicBlock: {
       marginBottom: 4,

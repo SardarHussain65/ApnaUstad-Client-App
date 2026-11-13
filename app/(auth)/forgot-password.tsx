@@ -40,7 +40,7 @@ export default function ForgotPasswordScreen() {
     mutationFn: async (emailAddress: string) => {
       const response = await api.post('/otp/forgot-password/send-otp', {
         email: emailAddress.trim().toLowerCase(),
-        type: role || 'user',
+        type: isWorker ? 'worker' : 'user',
       });
       return response.data;
     },
@@ -50,8 +50,8 @@ export default function ForgotPasswordScreen() {
         t('forgotPassword.recoveryCodeSent'),
         t('forgotPassword.checkEmail'),
         () => router.push({
-          pathname: '/(auth)/reset-password' as never,
-          params: { email: email.trim().toLowerCase(), role },
+          pathname: '/(auth)/verify-reset' as never,
+          params: { email: email.trim().toLowerCase(), role: isWorker ? 'worker' : 'user' },
         }),
         'success',
         t('forgotPassword.continue')

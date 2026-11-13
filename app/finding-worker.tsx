@@ -85,7 +85,29 @@ export default function FindingWorkerScreen() {
   const typography = useThemeTypography();
 
   const [applicants, setApplicants] = useState<any[]>([]);
+  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const cardLayoutsRef = useRef<{ [key: string]: number }>({});
   const confirmModal = useConfirmModal();
+
+  useEffect(() => {
+    if (applicants.length > 0) {
+      setSelectedApplicantId((prev) => {
+        if (prev && applicants.some((a) => a._id === prev)) return prev;
+        return applicants[0]._id;
+      });
+    } else {
+      setSelectedApplicantId(null);
+    }
+  }, [applicants]);
+
+  const handleSelectOfferTab = (applicantId: string) => {
+    setSelectedApplicantId(applicantId);
+    const targetY = cardLayoutsRef.current[applicantId];
+    if (typeof targetY === 'number' && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: Math.max(0, targetY - 24), animated: true });
+    }
+  };
 
   // Collapsible Job Request Brief state
   const [isRequestExpanded, setIsRequestExpanded] = useState(false);
@@ -685,7 +707,8 @@ export default function FindingWorkerScreen() {
         </View>
 
         <ScrollView
-          showsVerticalScrollIndicator={false}
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={true}
           contentContainerStyle={styles.scrollContent}
         >
           {/* Modern Searching Hero Card */}
@@ -707,7 +730,7 @@ export default function FindingWorkerScreen() {
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.searchHeroGradient}
+              style={[styles.searchHeroGradient, hasOffers && styles.searchHeroGradientSmall]}
             >
               {/* Radar Scanner Animation */}
               <View style={[styles.animationContainer, hasOffers && styles.animationContainerSmall]}>
@@ -715,6 +738,7 @@ export default function FindingWorkerScreen() {
                 <Animated.View
                   style={[
                     styles.pulseRingOuter,
+                    hasOffers && styles.pulseRingOuterSmall,
                     ringStyle2,
                     { borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.35)' : alpha(colors.brand.primary, 0.25) },
                   ]}
@@ -723,6 +747,7 @@ export default function FindingWorkerScreen() {
                 <Animated.View
                   style={[
                     styles.pulseRing,
+                    hasOffers && styles.pulseRingSmall,
                     ringStyle1,
                     { borderColor: theme.isDark ? 'rgba(0, 245, 255, 0.75)' : alpha(colors.brand.primary, 0.45) },
                   ]}
@@ -733,21 +758,40 @@ export default function FindingWorkerScreen() {
                   {applicants.slice(0, 6).map((app, index) => {
                     const angle =
                       (index * (360 / Math.max(Math.min(applicants.length, 6), 1))) * (Math.PI / 180);
-                    const radius = hasOffers ? 68 : 84;
+                    const radius = hasOffers ? 52 : 84;
                     const tx = radius * Math.cos(angle);
                     const ty = radius * Math.sin(angle);
+                    const isSelected = (selectedApplicantId || applicants[0]?._id) === app._id;
 
                     return (
                       <TouchableOpacity
                         key={app._id}
-                        onPress={() => handleWorkerPress(app)}
+                        onPress={() => {
+                          if (hasOffers) {
+                            handleSelectOfferTab(app._id);
+                          } else {
+                            handleWorkerPress(app);
+                          }
+                        }}
                         style={[
                           styles.satelliteContainer,
+                          hasOffers && styles.satelliteContainerSmall,
                           { transform: [{ translateX: tx }, { translateY: ty }] },
                         ]}
                         activeOpacity={0.8}
                       >
-                        <Animated.View entering={FadeIn.delay(120 * index).duration(350)} style={styles.satelliteGlow}>
+                        <Animated.View
+                          entering={FadeIn.delay(120 * index).duration(350)}
+                          style={[
+                            styles.satelliteGlow,
+                            hasOffers && styles.satelliteGlowSmall,
+                            isSelected && {
+                              borderColor: '#10B981',
+                              borderWidth: 2.2,
+                              shadowColor: '#10B981',
+                            },
+                          ]}
+                        >
                           <Image
                             source={{ uri: app.worker?.profileImage || 'https://via.placeholder.com/150' }}
                             style={styles.satelliteImage}
@@ -755,8 +799,22 @@ export default function FindingWorkerScreen() {
                             transition={150}
                             cachePolicy="memory-disk"
                           />
-                          <View style={styles.satellitePricePill}>
-                            <Text style={styles.satellitePriceText}>{formatMoney(app.proposedPrice)}</Text>
+                          <View
+                            style={[
+                              styles.satellitePricePill,
+                              hasOffers && styles.satellitePricePillSmall,
+                              isSelected && { borderColor: '#10B981' },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.satellitePriceText,
+                                hasOffers && styles.satellitePriceTextSmall,
+                                isSelected && { color: '#10B981' },
+                              ]}
+                            >
+                              {formatMoney(app.proposedPrice)}
+                            </Text>
                           </View>
                         </Animated.View>
                       </TouchableOpacity>
@@ -791,18 +849,18 @@ export default function FindingWorkerScreen() {
                   {isBidsLoading ? (
                     <ActivityIndicator size="small" color={colors.brand.primary} />
                   ) : (
-                    <Search color={theme.isDark ? Colors.cyan : colors.brand.primary} size={hasOffers ? 20 : 26} />
+                    <Search color={theme.isDark ? Colors.cyan : colors.brand.primary} size={hasOffers ? 18 : 26} />
                   )}
                 </View>
               </View>
 
               {/* Status Title & Subtitle */}
-              <Text style={[styles.statusText, { color: colors.text.primary }]}>
+              <Text style={[styles.statusText, hasOffers && styles.statusTextSmall, { color: colors.text.primary }]}>
                 {hasOffers
                   ? t('findingWorker.offersReceivedTitle', 'Offers Received!')
                   : t('findingWorker.searchingUstads', 'Broadcasting Request...')}
               </Text>
-              <Text style={[styles.subText, { color: colors.text.secondary }]}>
+              <Text style={[styles.subText, hasOffers && styles.subTextSmall, { color: colors.text.secondary }]}>
                 {hasOffers
                   ? t('findingWorker.offersReviewSubtext', 'Review quotes below and tap Hire to confirm your Ustad.')
                   : isInstant
@@ -811,7 +869,7 @@ export default function FindingWorkerScreen() {
               </Text>
 
               {/* Status Chips Row */}
-              <View style={styles.chipsRow}>
+              <View style={[styles.chipsRow, hasOffers && styles.chipsRowSmall]}>
                 {isInstant ? (
                   <>
                     <View
@@ -877,8 +935,8 @@ export default function FindingWorkerScreen() {
                 )}
               </View>
 
-              {/* Notified Nearby Badge */}
-              {!!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
+              {/* Notified Nearby Badge (shown while searching) */}
+              {!hasOffers && !!job?.notifiedWorkersCount && job.notifiedWorkersCount > 0 && (
                 <View
                   style={[
                     styles.notifiedPill,
@@ -1075,7 +1133,12 @@ export default function FindingWorkerScreen() {
                       </Text>
                     </View>
                     <Text style={[styles.offersSectionTitle, { color: colors.text.primary }]}>
-                      {t('findingWorker.reviewOffers', { count: applicants.length, defaultValue: 'Available Ustads' })}
+                      {applicants.length === 1
+                        ? t('findingWorker.reviewOffers', { count: 1, defaultValue: 'View 1 offer' })
+                        : t('findingWorker.reviewOffersPlural', {
+                            count: applicants.length,
+                            defaultValue: `View ${applicants.length} offers`,
+                          })}
                     </Text>
                   </View>
                   <Text style={[styles.offersSectionSubtitle, { color: colors.text.secondary }]}>
@@ -1083,26 +1146,121 @@ export default function FindingWorkerScreen() {
                   </Text>
                 </View>
 
+                {/* Quick Offer Switcher Tabs (when multiple offers exist) */}
+                {applicants.length > 1 && (
+                  <View style={styles.offerTabsWrapper}>
+                    <Text style={[styles.offerTabsHeaderLabel, { color: colors.text.muted }]}>
+                      {t('findingWorker.selectOfferToReview', 'SELECT OFFER TO ACCEPT:')}
+                    </Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.offerTabsScrollContent}
+                    >
+                      {applicants.map((app, idx) => {
+                        const isTabActive = (selectedApplicantId || applicants[0]?._id) === app._id;
+                        const proposed = Number(app.proposedPrice || 0);
+                        const minPrice = Math.min(
+                          ...applicants.map((a: any) => Number(a.proposedPrice || Infinity))
+                        );
+                        const isLowest = applicants.length > 1 && proposed === minPrice;
+                        return (
+                          <TouchableOpacity
+                            key={app._id}
+                            style={[
+                              styles.offerTabPill,
+                              {
+                                backgroundColor: isTabActive
+                                  ? (theme.isDark ? 'rgba(0, 245, 255, 0.15)' : alpha(colors.brand.primary, 0.12))
+                                  : (theme.isDark ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9'),
+                                borderColor: isTabActive
+                                  ? (theme.isDark ? Colors.cyan : colors.brand.primary)
+                                  : (theme.isDark ? 'rgba(255, 255, 255, 0.1)' : '#CBD5E1'),
+                              },
+                            ]}
+                            onPress={() => handleSelectOfferTab(app._id)}
+                            activeOpacity={0.75}
+                          >
+                            <View
+                              style={[
+                                styles.offerTabDot,
+                                {
+                                  backgroundColor: isTabActive
+                                    ? (theme.isDark ? Colors.cyan : colors.brand.primary)
+                                    : '#94A3B8',
+                                },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.offerTabTitle,
+                                {
+                                  color: isTabActive
+                                    ? (theme.isDark ? Colors.cyan : colors.brand.primary)
+                                    : colors.text.primary,
+                                  fontWeight: isTabActive ? '800' : '600',
+                                },
+                              ]}
+                            >
+                              {app.worker?.fullName?.split(' ')[0] || `Ustad ${idx + 1}`} ({formatMoney(app.proposedPrice)})
+                            </Text>
+                            {isLowest && (
+                              <View style={styles.offerTabBestBadge}>
+                                <Text style={styles.offerTabBestText}>Best</Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                )}
+
                 {/* List of Offers */}
                 <View style={styles.applicantCardsList}>
-                  {applicants.slice(0, 3).map((applicant) => {
+                  {applicants.slice(0, 5).map((applicant, index) => {
                     const isAcceptingThis = isAccepting && acceptingBidId === applicant._id;
                     const isRejectingThis = isRejecting && rejectingBidId === applicant._id;
                     const workerRating = getWorkerRating(applicant.worker);
                     const proposed = Number(applicant.proposedPrice || 0);
                     const priceDiff = basePrice - proposed;
+                    const isSelected = (selectedApplicantId || applicants[0]?._id) === applicant._id;
+                    const minPrice = Math.min(
+                      ...applicants.map((a: any) => Number(a.proposedPrice || Infinity))
+                    );
+                    const isLowest = applicants.length > 1 && proposed === minPrice;
 
                     return (
                       <View
                         key={applicant._id}
+                        onLayout={(e) => {
+                          cardLayoutsRef.current[applicant._id] = e.nativeEvent.layout.y;
+                        }}
                         style={[
                           styles.applicantCard,
                           {
                             backgroundColor: theme.isDark ? 'rgba(15, 23, 42, 0.75)' : '#FFFFFF',
-                            borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle,
+                            borderColor: isSelected
+                              ? (theme.isDark ? Colors.cyan : colors.brand.primary)
+                              : (theme.isDark ? 'rgba(255, 255, 255, 0.08)' : theme.colors.border.subtle),
+                            borderWidth: isSelected ? 1.8 : 1,
                           },
                         ]}
                       >
+                        {/* Offer Index and Best Price Badge */}
+                        <View style={styles.applicantCardTopRow}>
+                          <View style={styles.offerIndexPill}>
+                            <Text style={styles.offerIndexPillText}>
+                              {`OFFER ${index + 1} OF ${applicants.length}`}
+                            </Text>
+                          </View>
+                          {isLowest && (
+                            <View style={styles.bestOfferBadge}>
+                              <Sparkles size={11} color="#10B981" />
+                              <Text style={styles.bestOfferBadgeText}>BEST PRICE</Text>
+                            </View>
+                          )}
+                        </View>
                         {/* Worker Identity Row (Tap opens Profile) */}
                         <TouchableOpacity
                           style={styles.applicantHeaderRow}
@@ -1556,6 +1714,10 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 20,
   },
+  searchHeroGradientSmall: {
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
   animationContainer: {
     width: 210,
     height: 210,
@@ -1564,8 +1726,8 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   animationContainerSmall: {
-    width: 170,
-    height: 170,
+    width: 140,
+    height: 140,
     marginVertical: 0,
   },
   pulseRingOuter: {
@@ -1575,12 +1737,22 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     borderWidth: 1.2,
   },
+  pulseRingOuterSmall: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+  },
   pulseRing: {
     position: 'absolute',
     width: 160,
     height: 160,
     borderRadius: 80,
     borderWidth: 1.5,
+  },
+  pulseRingSmall: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
   },
   centerNode: {
     width: 64,
@@ -1595,9 +1767,9 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   centerNodeSmall: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
   },
   orbitContainer: {
     position: 'absolute',
@@ -1606,8 +1778,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   orbitContainerSmall: {
-    width: 144,
-    height: 144,
+    width: 124,
+    height: 124,
   },
   orbitNode: {
     width: 8,
@@ -1629,6 +1801,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  satelliteContainerSmall: {
+    width: 40,
+    height: 40,
+  },
   satelliteGlow: {
     width: 44,
     height: 44,
@@ -1641,6 +1817,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 8,
+  },
+  satelliteGlowSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
   },
   satelliteImage: {
     width: '100%',
@@ -1658,10 +1839,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.cyan,
   },
+  satellitePricePillSmall: {
+    bottom: -6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
   satellitePriceText: {
     fontSize: 8,
     fontWeight: '900',
     color: Colors.cyan,
+  },
+  satellitePriceTextSmall: {
+    fontSize: 7.5,
   },
   statusText: {
     fontSize: 18,
@@ -1669,6 +1858,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
     letterSpacing: -0.2,
+  },
+  statusTextSmall: {
+    fontSize: 16,
+    marginTop: 4,
   },
   subText: {
     fontSize: 13,
@@ -1678,6 +1871,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     maxWidth: 290,
   },
+  subTextSmall: {
+    fontSize: 11.5,
+    marginTop: 2,
+    lineHeight: 16,
+  },
   chipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1685,6 +1883,9 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 12,
     flexWrap: 'wrap',
+  },
+  chipsRowSmall: {
+    marginTop: 6,
   },
   chipPill: {
     flexDirection: 'row',
@@ -1758,6 +1959,83 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '500',
     marginTop: 2,
+  },
+  offerTabsWrapper: {
+    marginBottom: 10,
+  },
+  offerTabsHeaderLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  offerTabsScrollContent: {
+    gap: 8,
+    paddingRight: 6,
+  },
+  offerTabPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    gap: 6,
+  },
+  offerTabDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  offerTabTitle: {
+    fontSize: 12,
+  },
+  offerTabBestBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  offerTabBestText: {
+    color: '#FFFFFF',
+    fontSize: 8.5,
+    fontWeight: '900',
+  },
+  applicantCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  offerIndexPill: {
+    backgroundColor: 'rgba(0, 245, 255, 0.08)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  offerIndexPillText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: Colors.cyan,
+    letterSpacing: 0.5,
+  },
+  bestOfferBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  bestOfferBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: '#10B981',
+    letterSpacing: 0.5,
   },
   applicantCardsList: {
     gap: 10,
