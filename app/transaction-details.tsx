@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -26,6 +27,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -240,6 +242,17 @@ export default function TransactionDetailsScreen() {
 
   // Chat Unread State
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
+
+  // Screen & App Visibility Focus
+  const isFocused = useIsFocused();
+  const [isAppActive, setIsAppActive] = useState<boolean>(true);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      setIsAppActive(nextState === 'active');
+    });
+    return () => sub.remove();
+  }, []);
 
   // Map state
   const cameraRef = useRef<CameraRef>(null);
@@ -503,31 +516,16 @@ export default function TransactionDetailsScreen() {
         void startBackgroundLocationTracking(id as string);
       }
 
-      (async () => {
-        const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
-        if (permStatus !== 'granted' || !isMounted) return;
+      // Only run aggressive foreground watchPositionAsync when worker is actively viewing this screen
+      if (isFocused && isAppActive) {
+        (async () => {
+          const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
+          if (permStatus !== 'granted' || !isMounted) return;
 
-        try {
-          const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          if (isMounted) {
-            const loc = { latitude: current.coords.latitude, longitude: current.coords.longitude };
-            if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
-              setWorkerLocation(loc);
-              if (id) {
-                socketService.emit('worker:location', {
-                  bookingId: id,
-                  latitude: loc.latitude,
-                  longitude: loc.longitude,
-                });
-              }
-            }
-          }
-
-          subscription = await Location.watchPositionAsync(
-            { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
-            (newPos) => {
-              if (!isMounted) return;
-              const loc = { latitude: newPos.coords.latitude, longitude: newPos.coords.longitude };
+          try {
+            const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            if (isMounted) {
+              const loc = { latitude: current.coords.latitude, longitude: current.coords.longitude };
               if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
                 setWorkerLocation(loc);
                 if (id) {
@@ -539,23 +537,41 @@ export default function TransactionDetailsScreen() {
                 }
               }
             }
-          );
-        } catch (err) {
-          console.warn('GPS location error:', err);
-        }
-      })();
+
+            subscription = await Location.watchPositionAsync(
+              { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+              (newPos) => {
+                if (!isMounted) return;
+                const loc = { latitude: newPos.coords.latitude, longitude: newPos.coords.longitude };
+                if (isValidPakistanCoord(loc.latitude, loc.longitude)) {
+                  setWorkerLocation(loc);
+                  if (id) {
+                    socketService.emit('worker:location', {
+                      bookingId: id,
+                      latitude: loc.latitude,
+                      longitude: loc.longitude,
+                    });
+                  }
+                }
+              }
+            );
+          } catch (err) {
+            console.warn('GPS location error:', err);
+          }
+        })();
+      }
     }
 
     return () => {
       isMounted = false;
       if (subscription) subscription.remove();
-      if (isWorker) {
+      if (isWorker && status !== 'accepted') {
         void stopBackgroundLocationTracking();
       }
     };
-  }, [isWorker, status, id, isValidPakistanCoord]);
+  }, [isWorker, status, id, isValidPakistanCoord, isFocused, isAppActive]);
 
-  // Client listens to socket for worker location updates
+  // Client listens to socket for worker location updates (only while viewing the active map screen)
   useEffect(() => {
     if (isWorker || status === 'ongoing' || status === 'completed' || status === 'cancelled') return;
 
@@ -570,6 +586,9 @@ export default function TransactionDetailsScreen() {
       }
     }
 
+    // Only subscribe to live socket location updates when client is actively viewing this map screen
+    if (!isFocused || !isAppActive) return;
+
     const unsub = socketService.on('worker:location', (data: any) => {
       if (data && isValidPakistanCoord(data.latitude, data.longitude)) {
         setWorkerLocation({
@@ -582,7 +601,7 @@ export default function TransactionDetailsScreen() {
     return () => {
       unsub();
     };
-  }, [isWorker, status, booking?.worker, isValidPakistanCoord]);
+  }, [isWorker, status, booking?.worker, isValidPakistanCoord, isFocused, isAppActive]);
 
   // Worker live or profile location (Exact coordinates, no fake offsets)
   const workerMarkerLocation = useMemo<LocationType | null>(() => {
@@ -612,6 +631,7 @@ export default function TransactionDetailsScreen() {
   // Worker has arrived at customer workplace when status is 'ongoing' or 'completed'
   const isWorkerArrived = status === 'ongoing' || status === 'completed' || (status as string) === 'started' || (status as string) === 'in_progress';
   const showMapSection = !isWorkerArrived && status !== 'cancelled' && status !== 'pending';
+  const isMapScreenActive = isFocused && isAppActive && showMapSection;
 
   // User/Worker display information for interactive map markers
   const workerDisplayName = useMemo(() => {
@@ -680,18 +700,24 @@ export default function TransactionDetailsScreen() {
   }, [mapReady]);
 
   const lastDrawnCoordRef = useRef<LocationType | null>(null);
+  const lastRouteFetchTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!mapReady || !showMapSection) return;
+    // Only calculate routes if the map is visible, loaded, and user is viewing it actively
+    if (!mapReady || !isMapScreenActive) return;
+
     if (workerMarkerLocation) {
+      const now = Date.now();
       if (lastDrawnCoordRef.current) {
         const movedMeters = calculateDistance(lastDrawnCoordRef.current, workerMarkerLocation);
-        // If worker has moved less than 25 meters, skip expensive route recalculation
-        if (movedMeters < 25 && routeCoords.length > 0) {
+        const timeSinceLastFetch = now - lastRouteFetchTimeRef.current;
+        // If worker has moved less than 25 meters AND less than 15 seconds elapsed, skip expensive route recalculation
+        if (movedMeters < 25 && routeCoords.length > 0 && timeSinceLastFetch < 15000) {
           return;
         }
       }
       lastDrawnCoordRef.current = workerMarkerLocation;
+      lastRouteFetchTimeRef.current = now;
       drawRouteBetween(workerMarkerLocation, destinationLocation);
     } else {
       lastDrawnCoordRef.current = null;
@@ -699,7 +725,7 @@ export default function TransactionDetailsScreen() {
       setRouteDistance(null);
       setRouteETA(null);
     }
-  }, [mapReady, showMapSection, workerMarkerLocation, destinationLocation, drawRouteBetween, routeCoords.length]);
+  }, [mapReady, isMapScreenActive, workerMarkerLocation, destinationLocation, drawRouteBetween, routeCoords.length]);
 
   const routeGeoJSON = useMemo(() => ({
     type: 'Feature',
