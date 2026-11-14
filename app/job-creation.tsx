@@ -158,6 +158,7 @@ export default function JobCreationScreen() {
   const [latitude, setLatitude] = useState<number>(initialCachedLoc?.latitude || 33.6927);
   const [longitude, setLongitude] = useState<number>(initialCachedLoc?.longitude || 73.0743);
   const [isGettingLocation, setIsGettingLocation] = useState<boolean>(false);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState<boolean>(false);
   const [showLocationModal, setShowLocationModal] = useState<boolean>(false);
   const [tempAddressInput, setTempAddressInput] = useState<string>(cleanAddressString(initialCachedLoc?.address) || '');
 
@@ -283,6 +284,62 @@ export default function JobCreationScreen() {
       setIsGettingLocation(false);
     }
   }, [showError, success]);
+
+  // ─── Custom Address Forward-Geocoding ───────────────────────────────────────
+  const handleSaveCustomAddress = useCallback(async () => {
+    const raw = tempAddressInput.trim();
+    if (!raw) {
+      setShowLocationModal(false);
+      return;
+    }
+    const trimmed = cleanAddressString(raw);
+    setAddress(trimmed);
+    setIsGeocodingAddress(true);
+
+    try {
+      // Forward geocode typed address to acquire real geographical coordinates
+      const geocodeResults = await Location.geocodeAsync(trimmed);
+      if (geocodeResults && geocodeResults.length > 0) {
+        const { latitude: newLat, longitude: newLng } = geocodeResults[0];
+        setLatitude(newLat);
+        setLongitude(newLng);
+
+        let detectedCity = 'Unknown';
+        try {
+          const rev = await Location.reverseGeocodeAsync({ latitude: newLat, longitude: newLng });
+          if (rev && rev.length > 0 && rev[0].city) {
+            detectedCity = rev[0].city;
+          }
+        } catch {
+          // ignore reverse geocoding error
+        }
+
+        const cached = getCachedUserLocation();
+        setCachedUserLocation({
+          city: detectedCity !== 'Unknown' ? detectedCity : (cached?.city || 'Unknown'),
+          country: cached?.country || 'Pakistan',
+          address: trimmed,
+          latitude: newLat,
+          longitude: newLng,
+        });
+        success(t('common.success', 'Success'), t('jobCreation.addressGeocoded', 'Location coordinates updated for your address.'));
+      } else {
+        const cached = getCachedUserLocation();
+        if (cached) {
+          setCachedUserLocation({ ...cached, address: trimmed });
+        }
+      }
+    } catch (e) {
+      console.warn('Address forward-geocoding error:', e);
+      const cached = getCachedUserLocation();
+      if (cached) {
+        setCachedUserLocation({ ...cached, address: trimmed });
+      }
+    } finally {
+      setIsGeocodingAddress(false);
+      setShowLocationModal(false);
+    }
+  }, [tempAddressInput, success, t]);
 
   // Run location fetch on mount if cached location is not ready
   useEffect(() => {
@@ -1001,6 +1058,7 @@ export default function JobCreationScreen() {
                   <TouchableOpacity
                     style={[styles.modalCancelBtn, { borderColor: cardBorder, backgroundColor: inactivePillBg }]}
                     onPress={() => setShowLocationModal(false)}
+                    disabled={isGeocodingAddress}
                   >
                     <Text style={[styles.modalCancelText, { color: palette.textSecondary }]}>
                       {t('common.cancel', 'Cancel')}
@@ -1009,21 +1067,16 @@ export default function JobCreationScreen() {
 
                   <TouchableOpacity
                     style={[styles.modalSaveBtn, { backgroundColor: activeColor }]}
-                    onPress={() => {
-                      if (tempAddressInput.trim()) {
-                        const trimmed = cleanAddressString(tempAddressInput.trim());
-                        setAddress(trimmed);
-                        const cached = getCachedUserLocation();
-                        if (cached) {
-                          setCachedUserLocation({ ...cached, address: trimmed });
-                        }
-                      }
-                      setShowLocationModal(false);
-                    }}
+                    onPress={handleSaveCustomAddress}
+                    disabled={isGeocodingAddress}
                   >
-                    <Text style={[styles.modalSaveText, { color: activeSolidText }]}>
-                      {t('common.done', 'Done')}
-                    </Text>
+                    {isGeocodingAddress ? (
+                      <ActivityIndicator size="small" color={activeSolidText} />
+                    ) : (
+                      <Text style={[styles.modalSaveText, { color: activeSolidText }]}>
+                        {t('common.done', 'Done')}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>

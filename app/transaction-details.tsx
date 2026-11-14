@@ -443,6 +443,30 @@ export default function TransactionDetailsScreen() {
     return lat >= 23.0 && lat <= 37.5 && lng >= 60.0 && lng <= 78.5;
   }, []);
 
+  const [geocodedDestination, setGeocodedDestination] = useState<LocationType | null>(null);
+
+  // If coordinates in booking are missing or invalid, forward geocode the booking address
+  useEffect(() => {
+    const coords = booking?.location?.coordinates || (booking?.customer as any)?.location?.coordinates;
+    const lat = Number(coords?.[1] ?? (booking?.location as any)?.latitude);
+    const lng = Number(coords?.[0] ?? (booking?.location as any)?.longitude);
+    const hasValidCoords = isValidPakistanCoord(lat, lng);
+    const addressToGeocode = booking?.address || meta?.location?.address;
+
+    if (!hasValidCoords && addressToGeocode) {
+      Location.geocodeAsync(addressToGeocode).then(results => {
+        if (results && results.length > 0) {
+          const first = results[0];
+          if (isValidPakistanCoord(first.latitude, first.longitude)) {
+            setGeocodedDestination({ latitude: first.latitude, longitude: first.longitude });
+          }
+        }
+      }).catch((e) => {
+        console.warn('Geocoding booking destination fallback error:', e);
+      });
+    }
+  }, [booking?.location, booking?.customer, booking?.address, meta?.location?.address, isValidPakistanCoord]);
+
   // Destination Location (Customer / Service address)
   const destinationLocation = useMemo<LocationType>(() => {
     const coords = booking?.location?.coordinates || (booking?.customer as any)?.location?.coordinates;
@@ -451,8 +475,11 @@ export default function TransactionDetailsScreen() {
     if (isValidPakistanCoord(lat, lng)) {
       return { latitude: lat, longitude: lng };
     }
+    if (geocodedDestination && isValidPakistanCoord(geocodedDestination.latitude, geocodedDestination.longitude)) {
+      return geocodedDestination;
+    }
     return { latitude: 33.6430, longitude: 73.0733 }; // Islamabad/Rawalpindi fallback
-  }, [booking?.location, booking?.customer, isValidPakistanCoord]);
+  }, [booking?.location, booking?.customer, geocodedDestination, isValidPakistanCoord]);
 
   // Clean Address
   const rawAddress = meta?.location?.address || booking?.address || '';
@@ -683,20 +710,17 @@ export default function TransactionDetailsScreen() {
     properties: {},
   }), [routeCoords]);
 
-  // ETA display text
+  // Distance display text (distance-based without variable ETA minutes)
   const etaText = useMemo(() => {
     if (status === 'completed') return t('bookingStatus.completed.title', 'Job Completed');
     if (status === 'ongoing') return t('bookingStatus.ongoing.title', 'Work in progress');
     if (!workerMarkerLocation) return t('jobTracking.locating', 'Locating Ustad...');
-    if (isLoadingRoute) return t('jobTracking.updating', 'Calculating ETA...');
-    if (routeETA && routeDistance) {
-      return `${routeETA} min away • ${routeDistance}`;
-    }
+    if (isLoadingRoute) return t('jobTracking.updatingDistance', 'Calculating distance...');
     if (routeDistance) {
       return `${routeDistance} away`;
     }
     return t('jobTracking.liveBadge', 'Live Tracking');
-  }, [status, workerMarkerLocation, isLoadingRoute, routeETA, routeDistance, t]);
+  }, [status, workerMarkerLocation, isLoadingRoute, routeDistance, t]);
 
   // Status headline
   const statusHeadline = useMemo(() => {
