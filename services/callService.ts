@@ -27,6 +27,20 @@ export interface CallTokenResponse {
   uid: number;
 }
 
+export interface ActiveCallSession {
+  bookingId: string;
+  channelName: string;
+  callerId: string;
+  callerType: 'user' | 'worker';
+  callerName: string;
+  callerAvatar?: string;
+  recipientId: string;
+  recipientType: 'user' | 'worker';
+  status: 'ringing' | 'connected' | 'ended';
+  isCaller: boolean;
+  createdAt: number;
+}
+
 export const callService = {
   /**
    * Request Agora token and session information to start an in-app voice call
@@ -64,5 +78,33 @@ export const callService = {
       throw new Error(backendMessage || err?.message || 'Failed to fetch call token');
     }
   },
+
+  /**
+   * Check if there is an active ongoing or ringing call session on the server
+   */
+  async getActiveCallSession(): Promise<ActiveCallSession | null> {
+    try {
+      const response = await api.get('/calls/active-session');
+      if (response.data?.success && response.data?.hasActiveCall) {
+        return response.data.call;
+      }
+      return null;
+    } catch (err: any) {
+      console.warn('[CallService] getActiveCallSession error:', err?.response?.data?.message || err?.message);
+      return null;
+    }
+  },
+
+  /**
+   * End or cancel an active call session via REST API fallback
+   */
+  async endCallSession(bookingId: string): Promise<void> {
+    try {
+      await api.post('/calls/end', { bookingId });
+    } catch (err: any) {
+      console.warn('[CallService] endCallSession error:', err?.response?.data?.message || err?.message);
+    }
+  },
 };
+
 
