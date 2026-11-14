@@ -34,7 +34,7 @@ const savePushTokenWithRetry = async (
   maxRetries = 3
 ) => {
   let lastError;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await api.post('/notifications/save-token', {
@@ -43,7 +43,7 @@ const savePushTokenWithRetry = async (
         platform,
         deviceId,
       });
-      
+
       console.log(`✅ Push token saved successfully (attempt ${attempt})`);
       return { success: true, data: response.data };
     } catch (error: any) {
@@ -62,7 +62,7 @@ const savePushTokenWithRetry = async (
         `⚠️ Attempt ${attempt}/${maxRetries} to save token failed:`,
         error.message
       );
-      
+
       if (attempt < maxRetries) {
         // Exponential backoff: 1s, 2s, 4s
         const delay = Math.pow(2, attempt - 1) * 1000;
@@ -71,7 +71,7 @@ const savePushTokenWithRetry = async (
       }
     }
   }
-  
+
   console.error('❌ Failed to save push token after retries', lastError);
   return { success: false, error: lastError };
 };
@@ -295,6 +295,12 @@ export const usePushNotifications = () => {
       return;
     }
 
+    if (type === 'call_cancelled' || type === 'call_ended') {
+      console.log('📞 Call cancelled/ended payload received:', data);
+      socketService.notify('call:cancelled_push', data);
+      return;
+    }
+
     if (type === 'bid_rejected' || type === 'bid_declined') {
       socketService.notify('bid:rejected', data);
       void queryClient.invalidateQueries({ queryKey: ['bid'] });
@@ -332,95 +338,40 @@ export const usePushNotifications = () => {
       try {
         console.log('🔔 Setting up push notifications for user:', user._id);
 
-        // Initialize and get push token
-        const pushToken = await initializePushNotifications();
-        const deviceId = await getDeviceId();
-
-        if (pushToken) {
-          console.log('📱 Push token obtained:', pushToken.substring(0, 20) + '...');
-          
-          // Save initial token with retry
-          const saveResult = await savePushTokenWithRetry(
-            pushToken,
-            user._id,
-            Platform.OS,
-            deviceId
-          );
-
-          if (saveResult.success) {
-            lastSavedTokenRef.current = pushToken;
-          } else {
-            console.warn(
-              '⚠️ Failed to save initial token, but continuing with setup'
-            );
-          }
-        }
-
-        // ✅ NEW: Setup foreground notification listener
-        const foregroundSub = setupForegroundNotificationListener((notification) => {
-          console.log('📲 App received foreground notification:', notification);
-          handleForegroundData(notification.request.content.data);
-        });
-        subscriptionsRef.current.push(foregroundSub);
-
-        // ✅ NEW: Setup response listener for user taps
-        const responseSub = setupNotificationResponseListener((response) => {
-          console.log('👆 Notification tapped:', response);
-          const data = response?.notification?.request?.content?.data;
-          if (data?.type === 'incoming_call') {
-            const isAccept = response.actionIdentifier === 'accept_call';
-            const isDecline = response.actionIdentifier === 'decline_call';
-            if (isDecline) {
-              socketService.emit('call:reject', {
-                bookingId: data.bookingId,
-                channelName: data.channelName,
-                callerId: data.callerId,
-                callerType: data.callerType,
-                reason: 'declined',
-              });
-              Notifications.dismissNotificationAsync(response.notification.request.identifier).catch(() => {});
-              return;
-            }
-            socketService.notify('call:incoming_push', {
-              ...data,
-              autoAccept: isAccept,
-            });
-            return;
-          }
-          const userRole = role === 'worker' ? 'worker' : 'client';
-          handleNotificationTap(response.notification, router, userRole);
-        });
-        subscriptionsRef.current.push(responseSub);
-
-        // ✅ NEW: Check for initial notification from terminated state (Expo)
-        const initialNotification = await Notifications.getLastNotificationResponseAsync();
-        if (initialNotification) {
-          console.log('📲 App opened from terminated state via Expo notification');
-          const data = initialNotification.notification.request.content.data;
-          if (data?.type === 'incoming_call') {
-            const isAccept = initialNotification.actionIdentifier === 'accept_call';
-            const isDecline = initialNotification.actionIdentifier === 'decline_call';
-            if (isDecline) {
-              socketService.emit('call:reject', {
-                bookingId: data.bookingId,
-                channelName: data.channelName,
-                callerId: data.callerId,
-                callerType: data.callerType,
-                reason: 'declined',
-              });
+        // 1. Process cold-boot initial notification IMMEDIATELY so call screens pop up without delay
+        try {
+          const initialNotification = await Notifications.getLastNotificationResponseAsync();
+          if (initialNotification) {
+            console.log('📲 App opened from terminated state via Expo notification');
+            const data = initialNotification.notification.request.content.data;
+            if (data?.type === 'incoming_call') {
+              const isAccept = initialNotification.actionIdentifier === 'accept_call';
+              const isDecline = initialNotification.actionIdentifier === 'decline_call';
+              if (isDecline) {
+                socketService.emit('call:reject', {
+                  bookingId: data.bookingId,
+                  channelName: data.channelName,
+                  callerId: data.callerId,
+                  callerType: data.callerType,
+                  reason: 'declined',
+                });
+                Notifications.dismissNotificationAsync(initialNotification.notification.request.identifier).catch(() => { });
+              } else {
+                socketService.notify('call:incoming_push', {
+                  ...data,
+                  autoAccept: isAccept,
+                });
+              }
             } else {
-              socketService.notify('call:incoming_push', {
-                ...data,
-                autoAccept: isAccept,
-              });
+              const userRole = role === 'worker' ? 'worker' : 'client';
+              handleNotificationTap(initialNotification.notification, router, userRole);
             }
-          } else {
-            const userRole = role === 'worker' ? 'worker' : 'client';
-            handleNotificationTap(initialNotification.notification, router, userRole);
           }
+        } catch (initErr) {
+          console.warn('Error reading initial Expo notification:', initErr);
         }
 
-        // ✅ NEW: Check for FCM initial notification from terminated state (Cold Boot)
+        // Also check FCM cold-boot initial notification
         messaging()
           .getInitialNotification()
           .then((remoteMessage) => {
@@ -441,7 +392,41 @@ export const usePushNotifications = () => {
             console.warn('Error reading initial FCM notification:', err);
           });
 
-        // ✅ NEW: Listen for FCM notification opened from background state
+        // 2. Setup listeners immediately
+        const foregroundSub = setupForegroundNotificationListener((notification) => {
+          console.log('📲 App received foreground notification:', notification);
+          handleForegroundData(notification.request.content.data);
+        });
+        subscriptionsRef.current.push(foregroundSub);
+
+        const responseSub = setupNotificationResponseListener((response) => {
+          console.log('👆 Notification tapped:', response);
+          const data = response?.notification?.request?.content?.data;
+          if (data?.type === 'incoming_call') {
+            const isAccept = response.actionIdentifier === 'accept_call';
+            const isDecline = response.actionIdentifier === 'decline_call';
+            if (isDecline) {
+              socketService.emit('call:reject', {
+                bookingId: data.bookingId,
+                channelName: data.channelName,
+                callerId: data.callerId,
+                callerType: data.callerType,
+                reason: 'declined',
+              });
+              Notifications.dismissNotificationAsync(response.notification.request.identifier).catch(() => { });
+              return;
+            }
+            socketService.notify('call:incoming_push', {
+              ...data,
+              autoAccept: isAccept,
+            });
+            return;
+          }
+          const userRole = role === 'worker' ? 'worker' : 'client';
+          handleNotificationTap(response.notification, router, userRole);
+        });
+        subscriptionsRef.current.push(responseSub);
+
         const fcmOpenedSub = messaging().onNotificationOpenedApp((remoteMessage) => {
           console.log('📲 App opened from background via FCM notification:', remoteMessage?.data);
           if (remoteMessage?.data) {
@@ -458,12 +443,32 @@ export const usePushNotifications = () => {
         });
         subscriptionsRef.current.push(fcmOpenedSub);
 
-        // ✅ NEW: Setup FCM message listener
         const fcmSub = setupFCMMessageListener((message) => {
           console.log('💬 Received FCM message:', message);
           handleForegroundData(message.data);
         });
         subscriptionsRef.current.push(fcmSub);
+
+        // 3. Obtain push token and register with backend in background
+        const pushToken = await initializePushNotifications();
+        const deviceId = await getDeviceId();
+
+        if (pushToken) {
+          console.log('📱 Push token obtained:', pushToken.substring(0, 20) + '...');
+
+          const saveResult = await savePushTokenWithRetry(
+            pushToken,
+            user._id,
+            Platform.OS,
+            deviceId
+          );
+
+          if (saveResult.success) {
+            lastSavedTokenRef.current = pushToken;
+          } else {
+            console.warn('⚠️ Failed to save initial token, but continuing with setup');
+          }
+        }
 
         // ✅ CRITICAL NEW: Listen for token refreshes
         const tokenRefreshSub = messaging().onTokenRefresh(async (newToken) => {
@@ -471,10 +476,10 @@ export const usePushNotifications = () => {
             '🔄 FCM token refreshed:',
             newToken.substring(0, 20) + '...'
           );
-          
+
           // Only save if token actually changed
           if (newToken !== lastSavedTokenRef.current) {
-            await AsyncStorage.setItem(FCM_TOKEN_STORAGE_KEY, newToken).catch(() => {});
+            await AsyncStorage.setItem(FCM_TOKEN_STORAGE_KEY, newToken).catch(() => { });
             const saveResult = await savePushTokenWithRetry(
               newToken,
               user._id,
@@ -508,9 +513,9 @@ export const usePushNotifications = () => {
       cleanupListeners(subscriptionsRef.current);
       subscriptionsRef.current = [];
     };
-  // Depend only on the user ID (not the full user/token objects).
-  // This prevents the entire notification setup from re-running every time
-  // the access token is silently refreshed in the background.
+    // Depend only on the user ID (not the full user/token objects).
+    // This prevents the entire notification setup from re-running every time
+    // the access token is silently refreshed in the background.
   }, [user?._id, isLoading, router]);
 
   return {

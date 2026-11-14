@@ -2,19 +2,45 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { socketService } from './socketService';
 
 // Configure how notifications are handled when app is in foreground
+// Suppress incoming voice call banners in foreground since VoiceCallModal displays directly
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    const isCall = notification?.request?.content?.data?.type === 'incoming_call';
+    return {
+      shouldShowAlert: !isCall,
+      shouldPlaySound: !isCall,
+      shouldSetBadge: true,
+      shouldShowBanner: !isCall,
+      shouldShowList: !isCall,
+    };
+  },
 });
+
+/**
+ * Dismiss any incoming call notification presented in system notification tray
+ */
+export const dismissCallNotification = async (bookingId?: string) => {
+  try {
+    if (bookingId) {
+      await Notifications.dismissNotificationAsync(`call_${bookingId}`).catch(() => { });
+    }
+    const presented = await Notifications.getPresentedNotificationsAsync().catch(() => []);
+    for (const notif of presented) {
+      const data = notif.request?.content?.data;
+      if (data?.type === 'incoming_call') {
+        if (!bookingId || data?.bookingId === bookingId) {
+          await Notifications.dismissNotificationAsync(notif.request.identifier).catch(() => { });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Error dismissing call notification:', err);
+  }
+};
 
 /**
  * Gets a unique identifier for this physical device.
@@ -259,24 +285,38 @@ export const setupFCMMessageListener = (
   const unsubscribe = messaging().onMessage(async (remoteMessage) => {
     console.log('FCM Message (foreground):', remoteMessage);
 
+    const isCall = remoteMessage.data?.type === 'incoming_call';
+    const isCallCancelled = remoteMessage.data?.type === 'call_cancelled' || remoteMessage.data?.type === 'call_ended';
+
+    if (isCallCancelled) {
+      const bookingId = remoteMessage.data?.bookingId ? String(remoteMessage.data.bookingId) : undefined;
+      await dismissCallNotification(bookingId);
+      socketService.notify('call:cancelled_push', remoteMessage.data);
+      return;
+    }
+
     if (onMessageReceived) {
       onMessageReceived(remoteMessage);
     }
 
-    const isCall = remoteMessage.data?.type === 'incoming_call';
+    // Suppress local push notification scheduling for incoming calls when in foreground!
+    // The in-app incoming call UI modal (VoiceCallModal) is displayed immediately instead.
+    if (isCall) {
+      return;
+    }
 
-    if (remoteMessage.notification || isCall) {
+    if (remoteMessage.notification) {
       Notifications.scheduleNotificationAsync({
         content: {
-          title: remoteMessage.notification?.title || (isCall ? 'Incoming Voice Call' : 'New Notification'),
-          body: remoteMessage.notification?.body || (isCall ? `${remoteMessage.data?.callerName || 'Apna Ustad'} is calling...` : ''),
+          title: remoteMessage.notification?.title || 'New Notification',
+          body: remoteMessage.notification?.body || '',
           data: remoteMessage.data,
-          categoryIdentifier: isCall ? 'incoming_call' : undefined,
-          priority: isCall ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.HIGH,
-          vibrate: isCall ? [0, 1000, 500, 1000, 500, 1000] : [0, 250, 250, 250],
+          categoryIdentifier: undefined,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          vibrate: [0, 250, 250, 250],
         },
         trigger: {
-          channelId: isCall ? 'voice_calls' : 'default',
+          channelId: 'default',
         } as any,
       });
     }

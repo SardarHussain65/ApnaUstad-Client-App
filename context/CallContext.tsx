@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform, AppState } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Toast from 'react-native-toast-message';
 import {
@@ -12,6 +12,7 @@ import {
 import { createAudioPlayer } from 'expo-audio';
 import { socketService } from '../services/socketService';
 import { callService, InitiateCallResponse } from '../services/callService';
+import { dismissCallNotification } from '../services/notificationService';
 import { AGORA_APP_ID } from '../constants/Config';
 import { VoiceCallModal, CallStatus } from '../components/call/VoiceCallModal';
 import { useAuth } from './AuthContext';
@@ -43,6 +44,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const agoraEngineRef = useRef<IRtcEngine | null>(null);
 
   const [status, setStatus] = useState<CallStatus>('idle');
+  const statusRef = useRef<CallStatus>(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
   const [partnerName, setPartnerName] = useState<string>('');
   const [partnerAvatar, setPartnerAvatar] = useState<string | undefined>(undefined);
   const [partnerRole, setPartnerRole] = useState<string | undefined>(undefined);
@@ -59,6 +65,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const timerRef = useRef<any>(null);
   const ringtonePlayerRef = useRef<any>(null);
   const vibrationTimerRef = useRef<any>(null);
+  const pendingBackgroundCallRef = useRef<{ data: any; autoAccept?: boolean } | null>(null);
 
   // Request runtime microphone permission on Android
   const requestMicrophonePermission = async (): Promise<boolean> => {
@@ -101,9 +108,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Pulse vibration rhythmically every 1.5s
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => { });
     vibrationTimerRef.current = setInterval(() => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => { });
     }, 1500);
   };
 
@@ -112,7 +119,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         ringtonePlayerRef.current.pause();
         ringtonePlayerRef.current.remove();
-      } catch (e) {}
+      } catch (e) { }
       ringtonePlayerRef.current = null;
     }
     if (vibrationTimerRef.current) {
@@ -225,7 +232,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setPartnerRole(options.recipientRole);
       setCurrentBookingId(options.bookingId);
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
 
       // 2. Fetch Agora Token & Call metadata from backend
       const session: InitiateCallResponse = await callService.initiateCall(options.bookingId);
@@ -241,7 +248,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Voice calling engine is unavailable');
       }
 
-      // Explicitly publish microphone audio & auto-subscribe remote audio
       engine.joinChannel(session.token, session.channelName, session.uid || 1, {
         clientRoleType: ClientRoleType.ClientRoleBroadcaster,
         channelProfile: ChannelProfileType.ChannelProfileCommunication,
@@ -273,11 +279,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
-   * Accept an Incoming Call
+   * Connect to and join an incoming call channel
    */
-  const acceptCall = async () => {
+  const executeAccept = async (
+    bookingId: string,
+    channelName?: string,
+    cId?: string,
+    cType?: 'user' | 'worker'
+  ) => {
     try {
-      if (!currentBookingId) return;
+      if (!bookingId) return;
+
+      dismissCallNotification(bookingId);
 
       // 1. Check microphone permission
       const micAllowed = await requestMicrophonePermission();
@@ -287,14 +300,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           text1: 'Microphone Permission Needed',
           text2: 'Please allow microphone access to talk.',
         });
+        setStatus('idle');
         return;
       }
 
       stopRingtone();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => { });
+      setStatus('calling');
 
       // 2. Fetch token for this booking channel (recipient token)
-      const tokenData = await callService.getCallToken(currentBookingId);
+      const tokenData = await callService.getCallToken(bookingId);
 
       // 3. Join Agora Channel
       const engine = await initAgora();
@@ -313,10 +328,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 4. Notify caller via socket
       socketService.emit('call:accept', {
-        bookingId: currentBookingId,
+        bookingId,
         channelName: tokenData.channelName,
-        callerId: partnerId,
-        callerType: partnerType,
+        callerId: cId || partnerId,
+        callerType: cType || partnerType,
       });
     } catch (err: any) {
       console.error('Failed to accept call:', err);
@@ -330,10 +345,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   /**
+   * Accept an Incoming Call
+   */
+  const acceptCall = async () => {
+    await executeAccept(currentBookingId, currentChannelName, partnerId, partnerType);
+  };
+
+  /**
    * Reject an Incoming Call
    */
   const rejectCall = () => {
     stopRingtone();
+    dismissCallNotification(currentBookingId);
     socketService.emit('call:reject', {
       bookingId: currentBookingId,
       channelName: currentChannelName,
@@ -341,6 +364,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       callerType: partnerType,
       reason: 'declined',
     });
+    callService.endCallSession(currentBookingId).catch(() => { });
     setStatus('declined');
     setTimeout(() => {
       setStatus('idle');
@@ -353,12 +377,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const handleEndCall = () => {
     stopRingtone();
+    dismissCallNotification(currentBookingId);
     socketService.emit('call:end', {
       bookingId: currentBookingId,
       channelName: currentChannelName,
       partnerId,
       partnerType,
     });
+    callService.endCallSession(currentBookingId).catch(() => { });
     setStatus('ended');
     setTimeout(() => {
       setStatus('idle');
@@ -383,12 +409,15 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsSpeakerOn(nextSpeaker);
   };
 
-  // Socket Event Listeners for Call Lifecycle
-  useEffect(() => {
-    const unsubIncoming = socketService.on('call:incoming', (data) => {
-      console.log('Incoming call received via socket:', data);
-      if (status !== 'idle') {
-        // Already on a call, auto-reject with busy
+  /**
+   * Core router for incoming calls from either socket or push payload
+   */
+  const handleIncomingCallData = (data: any, autoAccept: boolean = false) => {
+    if (!data?.bookingId) return;
+
+    if (statusRef.current !== 'idle') {
+      // Already on a call, auto-reject with busy if not the same booking
+      if (data.bookingId !== currentBookingId) {
         socketService.emit('call:reject', {
           bookingId: data.bookingId,
           channelName: data.channelName,
@@ -396,93 +425,147 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           callerType: data.callerType,
           reason: 'busy',
         });
-        return;
+      }
+      return;
+    }
+
+    // BACKGROUND STATE: Do NOT force-open the app modal or play in-app audio!
+    // Instead, save to pending ref so the native push notification displays cleanly.
+    if (AppState.currentState !== 'active') {
+      console.log('[CallContext] Incoming call received while in background. Preserving state, suppressing modal.');
+      pendingBackgroundCallRef.current = { data, autoAccept };
+      return;
+    }
+
+    // FOREGROUND STATE: Immediately route to incoming call screen and ring!
+    setCurrentBookingId(data.bookingId);
+    setCurrentChannelName(data.channelName || `call_booking_${data.bookingId}`);
+    setPartnerId(data.callerId);
+    setPartnerType(data.callerType || 'worker');
+    setPartnerName(data.callerName || 'Apna Ustad');
+    setPartnerAvatar(data.callerAvatar);
+
+    if (autoAccept) {
+      executeAccept(data.bookingId, data.channelName, data.callerId, data.callerType);
+    } else {
+      setStatus('incoming');
+      startRingtone();
+    }
+  };
+
+  /**
+   * Active call synchronization:
+   * Checks backend for any active ringing call for this user.
+   * Handles Cold Boot, unlocking device, and manual app opens while call is ringing.
+   */
+  const syncActiveCallState = async () => {
+    if (!user?._id) return;
+    if (statusRef.current !== 'idle') return;
+
+    try {
+      const activeSession = await callService.getActiveCallSession();
+      if (activeSession && activeSession.status === 'ringing') {
+        // If current user is the recipient of an active ringing call
+        if (activeSession.recipientId === user._id) {
+          console.log('[CallContext] Active ringing call discovered on server:', activeSession);
+          dismissCallNotification(activeSession.bookingId);
+          pendingBackgroundCallRef.current = null;
+
+          setCurrentBookingId(activeSession.bookingId);
+          setCurrentChannelName(activeSession.channelName);
+          setPartnerId(activeSession.callerId);
+          setPartnerType(activeSession.callerType);
+          setPartnerName(activeSession.callerName || 'Apna Ustad');
+          setPartnerAvatar(activeSession.callerAvatar);
+          setStatus('incoming');
+          startRingtone();
+          return;
+        }
       }
 
-      setCurrentBookingId(data.bookingId);
-      setCurrentChannelName(data.channelName);
-      setPartnerId(data.callerId);
-      setPartnerType(data.callerType);
-      setPartnerName(data.callerName || 'Apna Ustad');
-      setPartnerAvatar(data.callerAvatar);
-      setStatus('incoming');
+      // If no active call is ringing on the server, clear any stale state and dismiss residual notifications
+      if (pendingBackgroundCallRef.current) {
+        console.log('[CallContext] Pending background call is no longer active on server, clearing.');
+        pendingBackgroundCallRef.current = null;
+        dismissCallNotification();
+      }
+    } catch (err) {
+      console.warn('[CallContext] Error syncing active call state:', err);
+    }
+  };
 
-      // Start ringing sound & vibration
-      startRingtone();
+  // Sync active call on mount or when user authenticates
+  useEffect(() => {
+    if (user?._id) {
+      syncActiveCallState();
+    }
+  }, [user?._id]);
+
+  // Handle AppState changes (e.g. user unlocks phone, taps notification, or opens app from launcher)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      console.log('[CallContext] AppState changed to:', nextAppState);
+      if (nextAppState === 'active') {
+        if (pendingBackgroundCallRef.current) {
+          const pending = pendingBackgroundCallRef.current;
+          pendingBackgroundCallRef.current = null;
+          handleIncomingCallData(pending.data, pending.autoAccept);
+        } else {
+          syncActiveCallState();
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [user?._id]);
+
+  // Socket Event Listeners for Call Lifecycle
+  useEffect(() => {
+    const unsubIncoming = socketService.on('call:incoming', (data) => {
+      console.log('[CallContext] Incoming call received via socket:', data);
+      handleIncomingCallData(data, false);
     });
 
     const unsubPush = socketService.on('call:incoming_push', async (data: any) => {
       console.log('[CallContext] Received call:incoming_push event:', data);
-      if (!data?.bookingId) return;
+      handleIncomingCallData(data, data?.autoAccept ?? false);
+    });
 
-      if (status !== 'idle') {
-        return;
-      }
+    // Caller cancelled or call timed out
+    const unsubCancelled = socketService.on('call:cancelled_push', (data: any) => {
+      console.log('[CallContext] Received call:cancelled_push:', data);
+      dismissCallNotification(data?.bookingId);
+      pendingBackgroundCallRef.current = null;
 
-      setCurrentBookingId(data.bookingId);
-      setCurrentChannelName(data.channelName || `call_booking_${data.bookingId}`);
-      setPartnerId(data.callerId);
-      setPartnerType(data.callerType || 'user');
-      setPartnerName(data.callerName || 'Apna Ustad');
-      setPartnerAvatar(data.callerAvatar);
-
-      if (data.autoAccept) {
-        try {
-          const micAllowed = await requestMicrophonePermission();
-          if (!micAllowed) {
-            Toast.show({
-              type: 'error',
-              text1: 'Microphone Permission Needed',
-              text2: 'Please allow microphone access to talk.',
-            });
-            setStatus('idle');
-            return;
-          }
-
-          stopRingtone();
-          setStatus('calling');
-
-          const tokenData = await callService.getCallToken(data.bookingId);
-          const engine = await initAgora();
-          if (!engine) throw new Error('Voice calling engine is unavailable');
-
-          engine.joinChannel(tokenData.token, tokenData.channelName, tokenData.uid || 2, {
-            clientRoleType: ClientRoleType.ClientRoleBroadcaster,
-            channelProfile: ChannelProfileType.ChannelProfileCommunication,
-            publishMicrophoneTrack: true,
-            autoSubscribeAudio: true,
-            enableAudioRecordingOrPlayout: true,
-          });
-
-          setStatus('connected');
-          startDurationTimer();
-
-          socketService.emit('call:accept', {
-            bookingId: data.bookingId,
-            channelName: tokenData.channelName,
-            callerId: data.callerId,
-            callerType: data.callerType || 'user',
-          });
-        } catch (err: any) {
-          console.error('Failed to auto-accept call from push:', err);
-          handleEndCall();
-        }
-      } else {
-        setStatus('incoming');
-        startRingtone();
+      if (statusRef.current === 'incoming' || statusRef.current === 'calling') {
+        stopRingtone();
+        setStatus('declined');
+        Toast.show({
+          type: 'info',
+          text1: 'Call Cancelled',
+          text2: data?.reason === 'timeout' ? 'Call timed out.' : 'The caller cancelled the call.',
+        });
+        setTimeout(() => {
+          setStatus('idle');
+          cleanupAgoraSession();
+        }, 1200);
       }
     });
 
     const unsubAccepted = socketService.on('call:accepted', () => {
-      console.log('Call accepted by partner');
+      console.log('[CallContext] Call accepted by partner');
       stopRingtone();
       setStatus('connected');
       startDurationTimer();
     });
 
     const unsubRejected = socketService.on('call:rejected', (data) => {
-      console.log('Call was rejected:', data?.reason);
+      console.log('[CallContext] Call was rejected:', data?.reason);
       stopRingtone();
+      dismissCallNotification(currentBookingId);
+      pendingBackgroundCallRef.current = null;
       setStatus('declined');
       Toast.show({
         type: 'info',
@@ -495,9 +578,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, 1500);
     });
 
-    const unsubEnded = socketService.on('call:ended', () => {
-      console.log('Call ended by partner');
+    const unsubEnded = socketService.on('call:ended', (data) => {
+      console.log('[CallContext] Call ended by partner:', data?.reason);
       stopRingtone();
+      dismissCallNotification(currentBookingId);
+      pendingBackgroundCallRef.current = null;
       setStatus('ended');
       setTimeout(() => {
         setStatus('idle');
@@ -508,11 +593,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       unsubIncoming();
       unsubPush();
+      unsubCancelled();
       unsubAccepted();
       unsubRejected();
       unsubEnded();
     };
-  }, [status, currentBookingId, currentChannelName, partnerId, partnerType]);
+  }, [currentBookingId, currentChannelName, partnerId, partnerType]);
 
   // Clean up on unmount
   useEffect(() => {
